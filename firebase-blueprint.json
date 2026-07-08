@@ -1,0 +1,95 @@
+{
+  "$schema": "https://raw.githubusercontent.com/firebase/firebase-tools/master/schema/blueprint.json",
+  "entities": [
+    {
+      "title": "DanceEvent",
+      "description": "Latin dance events, parties, courses, and trips",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "descriptionAr": { "type": "string" },
+        "descriptionEn": { "type": "string" },
+        "category": { "type": "string" },
+        "styles": { "type": "array", "items": { "type": "string" } },
+        "mediaType": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "uploadDate": { "type": "string" },
+        "eventDate": { "type": "string" },
+        "priceAr": { "type": "string" },
+        "priceEn": { "type": "string" },
+        "likesCount": { "type": "number" },
+        "isFeatured": { "type": "boolean" },
+        "isWeeklyPromo": { "type": "boolean" },
+        "location": { "type": "object" },
+        "contact": { "type": "object" }
+      },
+      "required": ["titleAr", "titleEn", "category", "mediaUrl"]
+    },
+    {
+      "title": "UserProfile",
+      "description": "User profiles and favorites",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "avatar": { "type": "string" },
+        "favoriteStyles": { "type": "array", "items": { "type": "string" } },
+        "likedEventIds": { "type": "array", "items": { "type": "string" } },
+        "bookedEventIds": { "type": "array", "items": { "type": "string" } },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email"]
+    },
+    {
+      "title": "NotificationItem",
+      "description": "App notifications and alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "messageAr": { "type": "string" },
+        "messageEn": { "type": "string" },
+        "date": { "type": "string" },
+        "read": { "type": "boolean" },
+        "type": { "type": "string" }
+      },
+      "required": ["titleAr", "titleEn", "date"]
+    },
+    {
+      "title": "AdSubmission",
+      "description": "VIP advertisement submissions with payment receipt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "advertiserName": { "type": "string" },
+        "phone": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "status": { "type": "string" },
+        "submittedAt": { "type": "string" }
+      },
+      "required": ["invoiceNumber", "phone", "status"]
+    }
+  ],
+  "relations": [],
+  "rules": [
+    {
+      "description": "Allow public read and write for dance events",
+      "read": "true",
+      "write": "true"
+    },
+    {
+      "description": "Allow public read and write for user profiles, notifications, and ad submissions",
+      "read": "true",
+      "write": "true"
+    }
+  ]
+}

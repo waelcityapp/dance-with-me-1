@@ -1,0 +1,6 @@
+{
+  "name": "Dance With Me",
+  "description": "Luxury Latin Dance PWA for Parties, Trips & Specialized Courses with Offline Caching, Video Auto-Expiry, and Bilingual RTL/LTR support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

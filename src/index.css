@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Cairo", ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: "Cairo", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-neutral-950 text-neutral-100 antialiased selection:bg-amber-500/30 selection:text-amber-300;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom glow effects and gradients for Immersive UI dark aesthetic */
+.gold-glow {
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+}
+
+.gold-glow-lg {
+  box-shadow: 0 0 35px rgba(251, 191, 36, 0.4);
+}
+
+.card-gradient {
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 0.9) 100%);
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.gold-text-gradient {
+  background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f59e0b;
+}
+
+/* Plyr Player Theme Customization to match Amber-Gold */
+:root {
+  --plyr-color-main: #f59e0b; /* Amber 500 */
+  --plyr-video-control-color-hover: #fbbf24; /* Amber 400 */
+  --plyr-control-radius: 12px;
+}
+
+/* Ensure Plyr fits within mobile screens and doesn't overflow or cut controls */
+.plyr {
+  max-height: 75vh !important;
+  width: 100% !important;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+.plyr__video-wrapper {
+  max-height: 75vh !important;
+  background-color: #000 !important;
+}
+.plyr video {
+  object-fit: contain !important;
+  max-height: 75vh !important;
+}
+
+@media (max-height: 700px) {
+  .plyr {
+    max-height: 65vh !important;
+  }
+  .plyr__video-wrapper {
+    max-height: 65vh !important;
+  }
+  .plyr video {
+    max-height: 65vh !important;
+  }
+}
+
+/* Light Theme Luxury Adaptations */
+.light {
+  color-scheme: light;
+}
+.light body {
+  background-color: #faf8f5 !important;
+  color: #1a1816 !important;
+}
+.light .bg-neutral-950,
+.light .bg-neutral-950\/80,
+.light .bg-neutral-950\/90,
+.light .bg-neutral-950\/95 {
+  background-color: rgba(250, 248, 245, 0.95) !important;
+}
+.light .bg-neutral-900,
+.light .bg-neutral-900\/50,
+.light .bg-neutral-900\/80,
+.light .bg-neutral-900\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+.light .bg-neutral-800,
+.light .bg-neutral-800\/50,
+.light .bg-neutral-800\/40 {
+  background-color: rgba(243, 241, 238, 0.9) !important;
+}
+.light .border-neutral-800,
+.light .border-neutral-800\/50,
+.light .border-neutral-800\/40,
+.light .border-neutral-700,
+.light .border-neutral-700\/50 {
+  border-color: rgba(225, 220, 213, 0.8) !important;
+}
+.light .text-neutral-100,
+.light .text-neutral-200,
+.light .text-white {
+  color: #1c1917 !important;
+}
+.light .text-neutral-300,
+.light .text-neutral-400 {
+  color: #44403c !important;
+}
+.light .text-neutral-500 {
+  color: #78716c !important;
+}
+.light .card-gradient {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.96) 100%) !important;
+}
+.light ::-webkit-scrollbar-track {
+  background: #faf8f5;
+}
+.light ::-webkit-scrollbar-thumb {
+  background: #d6d3ce;
+}
+
