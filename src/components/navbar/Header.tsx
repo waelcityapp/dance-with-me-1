@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth, onOpenInstallModal }) => {
-  const { lang, setLang, theme, setTheme, unreadCount, setActiveTab, user, openGuestAlert, openSupportModal, isAdminUser } = useApp();
+  const { lang, setLang, theme, setTheme, unreadCount, setActiveTab, user, openGuestAlert, openSupportModal, isAdminUnlocked, setIsAdminLockModalOpen, appAssets } = useApp();
   const [copied, setCopied] = useState(false);
 
   const toggleLanguage = () => {
@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
             className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl overflow-hidden border border-amber-500/40 shadow-xl bg-neutral-900 shrink-0"
           >
             <img 
-              src="/icon.svg?v=20260706" 
+              src={appAssets?.app_icon_url || "/icon.svg?v=20260706"} 
               alt="Dance With Me Logo" 
               className="h-full w-full object-cover"
             />
@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
           
           <div className="flex flex-col justify-center">
             <h1 className="font-sans text-xl sm:text-2xl font-bold tracking-tighter bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent leading-tight">
-              Dance With Me
+              {appAssets?.appNameEn || appAssets?.appNameAr || "Dance With Me"}
             </h1>
             <span className="font-mono text-[10px] text-amber-500/70 font-semibold tracking-widest leading-none">
               Beta 1.01
@@ -179,13 +179,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
           </div>
 
           {/* Admin Panel Button */}
-          {isAdminUser && (
+          {user?.isAdmin && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                setActiveTab('admin');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (isAdminUnlocked) {
+                  setActiveTab('admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  setIsAdminLockModalOpen(true);
+                }
               }}
               className="flex items-center gap-1.5 rounded-xl border border-amber-400 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-3 py-1.5 text-xs font-black text-neutral-950 transition-all shadow-md h-9 gold-glow cursor-pointer"
               title={lang === 'ar' ? 'لوحة تحكم ومراجعة الإعلانات VIP' : 'VIP Ads Admin Panel'}

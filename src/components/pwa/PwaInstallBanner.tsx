@@ -8,7 +8,7 @@ interface PwaInstallBannerProps {
 }
 
 export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ onOpenInstallModal }) => {
-  const { lang } = useApp();
+  const { lang, appAssets } = useApp();
   const [showBanner, setShowBanner] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -41,7 +41,7 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ onOpenInstal
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl overflow-hidden border border-amber-500/40 shadow-lg bg-neutral-900">
-              <img src="/icon.svg?v=20260706" alt="DWM Icon" className="h-full w-full object-cover" />
+              <img src={appAssets?.app_icon_url || "/icon.svg?v=20260706"} alt="DWM Icon" className="h-full w-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">

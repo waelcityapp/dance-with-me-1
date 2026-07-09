@@ -19,7 +19,10 @@ import {
   checkAndSeedEvents,
   isValidMediaUrl,
   cleanUpImagelessAndDuplicateAds,
-  logoutWithFirebase
+  logoutWithFirebase,
+  checkAndSeedAppAssets,
+  updateAppAssets,
+  subscribeToAppAssets
 } from '../lib/firebase';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'default';
@@ -70,9 +73,10 @@ interface AppContextType {
   cleanUpDuplicateAds: () => Promise<number>;
   isAdminUnlocked: boolean;
   setIsAdminUnlocked: (val: boolean) => void;
-  isAdminUser: boolean;
   isAdminLockModalOpen: boolean;
   setIsAdminLockModalOpen: (val: boolean) => void;
+  appAssets: any;
+  updateBrandingAssets: (assets: any) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -98,18 +102,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'dark';
   });
 
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(true);
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [isAdminLockModalOpen, setIsAdminLockModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabType>('explore');
 
   const handleSetActiveTab = (tab: TabType) => {
-    if (tab === 'admin' && !isAdminUser) {
-      setActiveTab('explore');
-      return;
-    }
     setActiveTab(tab);
   };
+
+  // Automatically switch tab and close modal once unlocked to prevent race conditions
+  useEffect(() => {
+    if (isAdminUnlocked) {
+      setActiveTab('admin');
+      setIsAdminLockModalOpen(false);
+    }
+  }, [isAdminUnlocked]);
 
   const [selectedCategory, setSelectedCategory] = useState<DanceCategory>('all');
   const [showExpiredArchive, setShowExpiredArchive] = useState<boolean>(false);
@@ -160,30 +168,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  const isAdminUser = useMemo(() => {
-    const email = user?.email?.trim().toLowerCase();
-    const authEmail = auth.currentUser?.email?.trim().toLowerCase();
-    return Boolean(
-      user?.isAdmin ||
-      email === 'waelvts@gmail.com' ||
-      email === 'waelcityapp@gmail.com' ||
-      authEmail === 'waelvts@gmail.com' ||
-      authEmail === 'waelcityapp@gmail.com'
-    );
-  }, [user?.isAdmin, user?.email, auth.currentUser?.email]);
-
-  useEffect(() => {
-    if (activeTab === 'admin' && !isAdminUser) {
-      setActiveTab('explore');
-    }
-  }, [activeTab, isAdminUser]);
-
-  useEffect(() => {
-    if (isAdminUnlocked && isAdminLockModalOpen) {
-      setIsAdminLockModalOpen(false);
-    }
-  }, [isAdminUnlocked, isAdminLockModalOpen]);
-
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
@@ -205,6 +189,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const openSupportModal = () => setIsSupportModalOpen(true);
   const closeSupportModal = () => setIsSupportModalOpen(false);
+
+  // App Assets / Branding state loaded from Firestore with fallback to default paths
+  const [appAssets, setAppAssets] = useState<any>(() => {
+    return {
+      id: 'current_branding',
+      app_icon_url: '/icon.svg',
+      app_logo_url: '/logo.svg',
+      appNameAr: 'Dance With Me',
+      appNameEn: 'Dance With Me',
+      whatsappSupport: '201012345678',
+      instagramUrl: 'https://instagram.com/dancewithme_luxury'
+    };
+  });
+
+  const updateBrandingAssets = async (newAssets: any): Promise<boolean> => {
+    const success = await updateAppAssets(newAssets);
+    if (success) {
+      setAppAssets((prev: any) => ({ ...prev, ...newAssets }));
+    }
+    return success;
+  };
 
   // Save to localStorage whenever state changes
   useEffect(() => {
@@ -235,10 +240,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     // 1. Check and seed initial data if Firestore database is empty
     checkAndSeedEvents(MOCK_EVENTS);
+    checkAndSeedAppAssets().then((seeded) => {
+      if (seeded) setAppAssets(seeded);
+    });
 
     // 2. Subscribe to live events collection
     const unsubEvents = subscribeToEvents((liveEvents) => {
       setEvents(liveEvents || []);
+    });
+
+    // 2b. Subscribe to live app assets collection
+    const unsubAssets = subscribeToAppAssets((liveAssets) => {
+      if (liveAssets) setAppAssets(liveAssets);
     });
 
     // 3. Subscribe to live notifications collection
@@ -254,16 +267,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 5. Listen to Firebase Auth state changes for session persistence across reloads
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.email) {
-        const email = firebaseUser.email.trim().toLowerCase();
-        const isUserAdmin = email === 'waelvts@gmail.com' || email === 'waelcityapp@gmail.com';
+        const adminEmail = (import.meta as any).env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
+        const isUserAdmin = adminEmail ? firebaseUser.email.trim().toLowerCase() === adminEmail : false;
         const existing = await getUserByEmailFromFirestore(firebaseUser.email);
-        const resolvedUser: UserProfile | null = existing ? {
-          ...existing,
-          email: existing.email?.trim().toLowerCase() || firebaseUser.email.trim().toLowerCase(),
-          isAdmin: isUserAdmin ? true : Boolean(existing.isAdmin)
-        } : null;
-        if (resolvedUser) {
-          if (resolvedUser.isSuspended) {
+        if (existing) {
+          if (existing.isSuspended) {
             console.warn('Authenticated user is suspended. Signing out.');
             await logoutWithFirebase();
             setUser(null);
@@ -273,9 +281,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             alert(lang === 'ar' ? '⚠️ هذا الحساب معطل مؤقتاً من قبل الإدارة.' : '⚠️ This account is temporarily suspended by the administration.');
             return;
           }
-          setUser(resolvedUser);
+          if (isUserAdmin) {
+            existing.isAdmin = true;
+          }
+          setUser(existing);
           try {
-            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(resolvedUser));
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(existing));
           } catch (e) {}
         } else {
           try {
@@ -289,15 +300,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   localStorage.removeItem(STORAGE_KEYS.USER);
                   return;
                 }
-                const normalizedParsed = {
-                  ...parsed,
-                  email: parsed.email?.trim().toLowerCase() || firebaseUser.email.trim().toLowerCase(),
-                  isAdmin: isUserAdmin ? true : Boolean(parsed.isAdmin)
-                };
-                setUser(normalizedParsed);
-                try {
-                  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(normalizedParsed));
-                } catch (e) {}
+                if (isUserAdmin) {
+                  parsed.isAdmin = true;
+                }
+                setUser(parsed);
               }
             }
           } catch (e) {}
@@ -313,6 +319,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => {
       unsubEvents();
+      unsubAssets();
       unsubNotifs();
       unsubSupport();
       unsubAuth();
@@ -434,7 +441,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Actions
   const loginUser = async (name: string, email: string, avatar?: string, customId?: string, password?: string) => {
     const cleanEmail = email.trim().toLowerCase();
-    const isUserAdmin = cleanEmail === 'waelvts@gmail.com' || cleanEmail === 'waelcityapp@gmail.com';
+    const adminEmail = (import.meta as any).env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
+    const isUserAdmin = adminEmail ? cleanEmail === adminEmail : false;
     const existing = await getUserByEmailFromFirestore(cleanEmail);
     if (existing) {
       if (existing.isSuspended) {
@@ -826,11 +834,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       closeSupportModal,
       isSupportModalOpen,
       cleanUpDuplicateAds,
-      isAdminUser,
       isAdminUnlocked,
       setIsAdminUnlocked,
       isAdminLockModalOpen,
-      setIsAdminLockModalOpen
+      setIsAdminLockModalOpen,
+      appAssets,
+      updateBrandingAssets
     }}>
       {children}
     </AppContext.Provider>

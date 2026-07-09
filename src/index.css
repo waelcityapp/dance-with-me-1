@@ -104,10 +104,19 @@
   background-color: rgba(250, 248, 245, 0.95) !important;
 }
 .light .bg-neutral-900,
+.light .bg-neutral-900\/40,
 .light .bg-neutral-900\/50,
+.light .bg-neutral-900\/60,
 .light .bg-neutral-900\/80,
-.light .bg-neutral-900\/90 {
-  background-color: rgba(255, 255, 255, 0.9) !important;
+.light .bg-neutral-900\/90,
+.light .bg-neutral-900\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+.light .bg-neutral-900\/10 {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+.light .bg-neutral-900\/30 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
 }
 .light .bg-neutral-800,
 .light .bg-neutral-800\/50,

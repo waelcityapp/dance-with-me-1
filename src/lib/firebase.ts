@@ -24,11 +24,24 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 import { DanceEvent, UserProfile, NotificationItem, AdSubmission, SupportMessage } from '../types';
 
+// Construct dynamic firebase configuration preferring env variables, falling back to local config json
+const resolvedFirebaseConfig = {
+  apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
+  authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+  projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+  storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
+  messagingSenderId: (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+  appId: (import.meta as any).env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
+  measurementId: (import.meta as any).env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfig.measurementId,
+};
+
+const databaseId = (import.meta as any).env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId;
+
 // Initialize Firebase App gracefully
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+const app = !getApps().length ? initializeApp(resolvedFirebaseConfig) : getApps()[0];
 
 // Initialize Firestore Database with specific database ID
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, databaseId);
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
@@ -312,20 +325,12 @@ export async function saveUserToFirestore(user: UserProfile): Promise<boolean> {
  */
 export async function getUserByEmailFromFirestore(email: string): Promise<UserProfile | null> {
   try {
-    const normalizedEmail = email.trim().toLowerCase();
     const usersRef = collection(db, COLLECTIONS.USERS);
-    const q = query(usersRef, where('email', '==', normalizedEmail), limit(1));
+    const q = query(usersRef, where('email', '==', email.trim().toLowerCase()), limit(1));
     const snap = await getDocs(q);
     if (!snap.empty) {
       return snap.docs[0].data() as UserProfile;
     }
-
-    const fallbackQ = query(usersRef, where('email', '==', email.trim()), limit(1));
-    const fallbackSnap = await getDocs(fallbackQ);
-    if (!fallbackSnap.empty) {
-      return fallbackSnap.docs[0].data() as UserProfile;
-    }
-
     return null;
   } catch (error) {
     console.warn('Error fetching user by email from Firestore:', error);
@@ -673,3 +678,91 @@ export function subscribeToSecurityViolations(
     return () => {};
   }
 }
+
+/**
+ * Seeding and managing application assets / branding links in the 'app_assets' collection
+ */
+export async function checkAndSeedAppAssets(): Promise<any> {
+  try {
+    const assetsRef = doc(db, 'app_assets', 'current_branding');
+    const snap = await getDoc(assetsRef);
+    
+    const defaultAssets = {
+      id: 'current_branding',
+      app_icon_url: '/icon.svg',
+      app_logo_url: '/logo.svg',
+      appNameAr: 'Dance With Me',
+      appNameEn: 'Dance With Me',
+      whatsappSupport: '201012345678',
+      instagramUrl: 'https://instagram.com/dancewithme_luxury',
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!snap.exists()) {
+      console.log('App assets not found in Firestore. Seeding under collection "app_assets"...');
+      await setDoc(assetsRef, defaultAssets);
+      return defaultAssets;
+    } else {
+      const data = snap.data();
+      // Auto-repair if old absolute URL or old translated Arabic name is stored
+      if (
+        data.app_icon_url?.includes('https://ais-pre-') || 
+        data.app_logo_url?.includes('https://ais-pre-') ||
+        data.appNameAr === 'Dance With Me | ارقص معي'
+      ) {
+        console.log('Updating legacy/broken app assets in Firestore with local-relative fallback...');
+        const repaired = {
+          ...data,
+          app_icon_url: '/icon.svg',
+          app_logo_url: '/logo.svg',
+          appNameAr: 'Dance With Me',
+          appNameEn: 'Dance With Me',
+          updatedAt: new Date().toISOString()
+        };
+        await setDoc(assetsRef, repaired, { merge: true });
+        return repaired;
+      }
+      return data;
+    }
+  } catch (error) {
+    console.warn('Error during app assets seeding/fetching:', error);
+    return null;
+  }
+}
+
+/**
+ * Update app assets in Firestore (e.g. from Admin panel)
+ */
+export async function updateAppAssets(assets: any): Promise<boolean> {
+  try {
+    const assetsRef = doc(db, 'app_assets', 'current_branding');
+    await setDoc(assetsRef, {
+      ...assets,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Error updating app assets:', error);
+    return false;
+  }
+}
+
+/**
+ * Subscribe to live app assets updates
+ */
+export function subscribeToAppAssets(onUpdate: (assets: any) => void): () => void {
+  try {
+    const assetsRef = doc(db, 'app_assets', 'current_branding');
+    return onSnapshot(assetsRef, (docSnap) => {
+      if (docSnap.exists()) {
+        onUpdate(docSnap.data());
+      }
+    }, (error) => {
+      console.warn('Firestore subscribe to app assets error:', error);
+    });
+  } catch (error) {
+    console.warn('Failed to setup app assets subscription:', error);
+    return () => {};
+  }
+}
+

@@ -230,7 +230,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-br from-neutral-900 via-neutral-900/90 to-neutral-950 p-6 sm:p-8 shadow-2xl gold-glow"
+        className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900/90 dark:to-neutral-950 p-6 sm:p-8 shadow-2xl gold-glow"
       >
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-start">
           <div className="relative group cursor-pointer flex flex-col items-center" onClick={() => setShowAvatarPicker(!showAvatarPicker)}>
@@ -359,7 +359,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <motion.div
             whileHover={{ scale: 1.02, y: -3 }}
             onClick={() => setActiveSection('booked')}
-            className="rounded-3xl border border-white/10 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
+            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -387,7 +387,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <motion.div
             whileHover={{ scale: 1.02, y: -3 }}
             onClick={() => setActiveSection('liked')}
-            className="rounded-3xl border border-white/10 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-red-500/50 transition-all group flex flex-col justify-between"
+            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-red-500/50 transition-all group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -415,7 +415,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <motion.div
             whileHover={{ scale: 1.02, y: -3 }}
             onClick={() => setActiveSection('ads')}
-            className="rounded-3xl border border-white/10 bg-gradient-to-br from-neutral-900 via-neutral-900/90 to-amber-950/20 p-6 shadow-xl cursor-pointer hover:border-amber-500/50 transition-all group flex flex-col justify-between gold-glow"
+            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900/90 dark:to-amber-950/20 p-6 shadow-xl cursor-pointer hover:border-amber-500/50 transition-all group flex flex-col justify-between gold-glow"
           >
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -443,7 +443,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <motion.div
             whileHover={{ scale: 1.02, y: -3 }}
             onClick={() => setActiveSection('support')}
-            className="rounded-3xl border border-white/10 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-blue-500/50 transition-all group flex flex-col justify-between"
+            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-blue-500/50 transition-all group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -471,7 +471,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <motion.div
             whileHover={{ scale: 1.02, y: -3 }}
             onClick={() => setActiveSection('archive')}
-            className="rounded-3xl border border-white/10 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-amber-500/50 transition-all group flex flex-col justify-between sm:col-span-2 lg:col-span-2"
+            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-amber-500/50 transition-all group flex flex-col justify-between sm:col-span-2 lg:col-span-2"
           >
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -595,7 +595,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* VIP Ad Submissions & Archive Section */}
       {activeSection === 'ads' && (
-      <div className="rounded-3xl border-2 border-amber-500/40 bg-gradient-to-br from-neutral-900 via-neutral-900/95 to-amber-950/20 p-6 sm:p-8 shadow-2xl gold-glow space-y-6">
+      <div className="rounded-3xl border-2 border-amber-500/40 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900/95 dark:to-amber-950/20 p-6 sm:p-8 shadow-2xl gold-glow space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-neutral-950 shadow-lg gold-glow shrink-0">
@@ -656,7 +656,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   className={`rounded-2xl border p-5 sm:p-6 transition-all ${
                     isArchived
-                      ? 'border-amber-500/60 bg-gradient-to-r from-neutral-900 via-neutral-900/90 to-amber-950/30 shadow-xl'
+                      ? 'border-amber-500/60 bg-neutral-900 dark:bg-gradient-to-r dark:from-neutral-900 dark:via-neutral-900/90 dark:to-amber-950/30 shadow-xl'
                       : sub.status === 'approved'
                       ? 'border-emerald-500/40 bg-neutral-900/80'
                       : sub.status === 'pending'
@@ -880,7 +880,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-neutral-900 border border-emerald-500/40 space-y-2 gold-glow"
+                    className="p-4 rounded-2xl bg-emerald-500/10 dark:bg-gradient-to-br dark:from-emerald-950/40 dark:to-neutral-900 border border-emerald-500/40 space-y-2 gold-glow"
                   >
                     <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
                       <span className="flex items-center gap-1.5 font-mono">

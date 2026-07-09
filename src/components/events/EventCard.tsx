@@ -364,12 +364,19 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
 
           <div 
             onClick={() => onOpenMap(event)}
-            className="flex items-center gap-2.5 text-neutral-300 hover:text-amber-400 cursor-pointer group/map transition-colors"
+            className="flex items-center justify-between gap-2 text-neutral-300 hover:text-amber-400 cursor-pointer group/map transition-colors"
           >
-            <MapPin className="h-4 w-4 text-amber-400 shrink-0 group-hover/map:scale-110 transition-transform" />
-            <span className="truncate underline decoration-neutral-700 group-hover/map:decoration-amber-400 font-bold">
-              {lang === 'ar' ? event.location.nameAr : event.location.nameEn}
-            </span>
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <MapPin className="h-4 w-4 text-amber-400 shrink-0 group-hover/map:scale-110 transition-transform" />
+              <span className="truncate underline decoration-neutral-700 group-hover/map:decoration-amber-400 font-bold">
+                {lang === 'ar' ? event.location.nameAr : event.location.nameEn}
+              </span>
+            </div>
+            {event.location?.googleMapsUrl && event.location.googleMapsUrl.trim().length > 0 && (
+              <span className="text-[10px] text-amber-400 font-black shrink-0 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans">
+                {lang === 'ar' ? 'استخدم الخريطة 🗺️' : 'Use Map 🗺️'}
+              </span>
+            )}
           </div>
         </div>
 

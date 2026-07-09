@@ -10,7 +10,7 @@ interface PwaInstallModalProps {
 }
 
 export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ isOpen, onClose }) => {
-  const { lang } = useApp();
+  const { lang, appAssets } = useApp();
   const [activeTab, setActiveTab] = useState<'ios' | 'android'>('ios');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [installed, setInstalled] = useState(false);
@@ -63,7 +63,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ isOpen, onClos
           <div className="flex items-center justify-between border-b border-white/10 bg-neutral-950 p-5 shrink-0">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-lg shrink-0 overflow-hidden">
-                <img src="/icon.svg?v=20260706" alt="DWM" className="h-full w-full object-cover" />
+                <img src={appAssets?.app_icon_url || "/icon.svg?v=20260706"} alt="DWM" className="h-full w-full object-cover" />
               </div>
               <div>
                 <div className="flex items-center gap-2">

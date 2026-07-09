@@ -56,16 +56,17 @@ import {
 } from '../../lib/firebase';
 
 export const AdminPanel: React.FC = () => {
-  const { lang, setActiveTab, user, addNewEvent, events, deleteEvent, notifications, supportMessages, replyToSupportMessage, cleanUpDuplicateAds } = useApp();
+  const { lang, setActiveTab, user, addNewEvent, events, deleteEvent, notifications, supportMessages, replyToSupportMessage, cleanUpDuplicateAds, appAssets, updateBrandingAssets } = useApp();
   const [submissions, setSubmissions] = useState<AdSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const [cleaningUp, setCleaningUp] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'archived'>('pending');
   const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'replied'>('pending');
   const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | null>(null);
+  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | null>(null);
   const [dbSubTab, setDbSubTab] = useState<'events' | 'submissions' | 'notifications' | 'schema'>('events');
   const [selectedJsonDoc, setSelectedJsonDoc] = useState<{ id: string; title: string; data: any } | null>(null);
   
@@ -86,6 +87,46 @@ export const AdminPanel: React.FC = () => {
   const handleAlertPhoneChange = (val: string) => {
     setAdminAlertPhone(val);
     localStorage.setItem('dwm_admin_whatsapp_phone', val);
+  };
+
+  // Branding & Assets States
+  const [formAppNameAr, setFormAppNameAr] = useState('');
+  const [formAppNameEn, setFormAppNameEn] = useState('');
+  const [formAppIconUrl, setFormAppIconUrl] = useState('');
+  const [formAppLogoUrl, setFormAppLogoUrl] = useState('');
+  const [formWhatsappSupport, setFormWhatsappSupport] = useState('');
+  const [formInstagramUrl, setFormInstagramUrl] = useState('');
+  const [savingBranding, setSavingBranding] = useState(false);
+
+  useEffect(() => {
+    if (appAssets) {
+      setFormAppNameAr(appAssets.appNameAr || '');
+      setFormAppNameEn(appAssets.appNameEn || '');
+      setFormAppIconUrl(appAssets.app_icon_url || '');
+      setFormAppLogoUrl(appAssets.app_logo_url || '');
+      setFormWhatsappSupport(appAssets.whatsappSupport || '');
+      setFormInstagramUrl(appAssets.instagramUrl || '');
+    }
+  }, [appAssets]);
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingBranding(true);
+    const updated = {
+      appNameAr: formAppNameAr.trim(),
+      appNameEn: formAppNameEn.trim(),
+      app_icon_url: formAppIconUrl.trim(),
+      app_logo_url: formAppLogoUrl.trim(),
+      whatsappSupport: formWhatsappSupport.trim(),
+      instagramUrl: formInstagramUrl.trim()
+    };
+    const ok = await updateBrandingAssets(updated);
+    setSavingBranding(false);
+    if (ok) {
+      alert(lang === 'ar' ? '🎉 تم تحديث شعارات وهوية التطبيق وتخزينها في كوليكشن app_assets بنجاح!' : '🎉 App branding assets and links have been updated in "app_assets" collection successfully!');
+    } else {
+      alert(lang === 'ar' ? '❌ فشل تحديث البيانات في قاعدة البيانات.' : '❌ Failed to save changes to Firestore.');
+    }
   };
 
   const filteredUsers = allUsers.filter(u => {
@@ -162,6 +203,41 @@ export const AdminPanel: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleManualRefresh = () => {
+    if (manualRefreshing) return;
+    setManualRefreshing(true);
+    setLoading(true);
+    
+    const unsubscribe = subscribeToAdSubmissions((list) => {
+      const loadLocal = (): AdSubmission[] => {
+        try {
+          const local = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
+          return local as AdSubmission[];
+        } catch (e) {
+          return [];
+        }
+      };
+
+      const localList = loadLocal();
+      const map = new Map<string, AdSubmission>();
+      localList.forEach(item => map.set(item.id, item));
+      list.forEach(item => map.set(item.id, item));
+      
+      const merged = Array.from(map.values());
+      merged.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      setSubmissions(merged);
+      setLoading(false);
+      setManualRefreshing(false);
+    });
+
+    // Fallback/Safety timeout to clear loading if Firestore has no updates or is offline
+    setTimeout(() => {
+      setLoading(false);
+      setManualRefreshing(false);
+      unsubscribe();
+    }, 2000);
+  };
 
   const updateLocalStorageItem = (updatedSub: AdSubmission | null, deleteId?: string) => {
     try {
@@ -469,6 +545,7 @@ export const AdminPanel: React.FC = () => {
               adminSection === 'database' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400' :
               adminSection === 'support' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
               adminSection === 'security' ? 'bg-red-500/10 border border-red-500/30 text-red-400' :
+              adminSection === 'branding' ? 'bg-pink-500/10 border border-pink-500/30 text-pink-400' :
               'bg-purple-500/10 border border-purple-500/30 text-purple-400'
             }`}>
               {adminSection === 'submissions' && <Crown className="h-6 w-6" />}
@@ -476,6 +553,7 @@ export const AdminPanel: React.FC = () => {
               {adminSection === 'support' && <MessageSquare className="h-6 w-6" />}
               {adminSection === 'users' && <Users className="h-6 w-6" />}
               {adminSection === 'security' && <ShieldAlert className="h-6 w-6" />}
+              {adminSection === 'branding' && <Sparkles className="h-6 w-6 animate-pulse" />}
             </div>
             <div>
               <h2 className="text-xl font-black text-white">
@@ -484,6 +562,7 @@ export const AdminPanel: React.FC = () => {
                 {adminSection === 'support' && (lang === 'ar' ? '💬 صندوق رسائل ومقترحات التطبيق' : '💬 Support Messages & Feedback')}
                 {adminSection === 'users' && (lang === 'ar' ? '👥 إدارة ومراقبة مستخدمي التطبيق' : '👥 App Users Management')}
                 {adminSection === 'security' && (lang === 'ar' ? '🔒 إدارة الأمان وجدار الحماية وسجلات الاختراق' : '🔒 Security Firewall & Violation Logs')}
+                {adminSection === 'branding' && (lang === 'ar' ? '🎨 هوية التطبيق وتطوير المظهر والشعارات' : '🎨 App Identity & Visual Branding')}
               </h2>
               <p className="text-xs text-neutral-400 mt-1">
                 {adminSection === 'submissions' && (lang === 'ar' ? 'مراجعة وتفعيل الإعلانات الفاخرة وتتبع إيصالات التحويل البنكي.' : 'Manage premium ad campaigns, analyze bank receipts, and activate VIP slots.')}
@@ -491,6 +570,7 @@ export const AdminPanel: React.FC = () => {
                 {adminSection === 'support' && (lang === 'ar' ? 'التواصل المباشر وحل المشاكل التقنية للأعضاء وإرسال الردود الرسمية.' : 'Read user feedback and inquiries directly and send notifications.')}
                 {adminSection === 'users' && (lang === 'ar' ? 'البحث عن الحسابات بالأرقام السرية أو الإيميل، تجميد أو حذف الأعضاء.' : 'Audit member profiles, passwords, registration dates, suspend or delete records.')}
                 {adminSection === 'security' && (lang === 'ar' ? 'تغيير العبارة السرية، مراقبة محاولات الاختراق، عناوين الـ IP للمهاجمين، وإعداد بلاغات أمنية.' : 'Update VIP secret code, monitor unauthorized access logs, block IPs, and prepare security reports.')}
+                {adminSection === 'branding' && (lang === 'ar' ? 'تعديل وتخصيص أسماء التطبيق وشعاراته وأيقوناته وروابط الاتصال بقاعدة البيانات في الوقت الفعلي.' : 'Modify app names, icons, brand logos, support contact phone, and other static assets.')}
               </p>
             </div>
           </div>
@@ -512,7 +592,7 @@ export const AdminPanel: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-3xl border-2 border-amber-500/50 bg-gradient-to-r from-neutral-900 via-neutral-900/95 to-amber-950/40 p-6 sm:p-8 shadow-2xl gold-glow relative overflow-hidden"
+            className="rounded-3xl border-2 border-amber-500/50 bg-neutral-900 dark:bg-gradient-to-r dark:from-neutral-900 dark:via-neutral-900/95 dark:to-amber-950/40 p-6 sm:p-8 shadow-2xl gold-glow relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
             
@@ -594,7 +674,7 @@ export const AdminPanel: React.FC = () => {
                 setAdminSection('submissions');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-amber-500/30 hover:border-amber-400 bg-gradient-to-br from-neutral-900 via-neutral-900 to-amber-950/20 p-6 shadow-xl hover:shadow-amber-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-amber-500/30 hover:border-amber-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-xl hover:shadow-amber-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
               <div>
@@ -627,7 +707,7 @@ export const AdminPanel: React.FC = () => {
                 setAdminSection('database');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-blue-500/30 hover:border-blue-400 bg-gradient-to-br from-neutral-900 via-neutral-900 to-blue-950/20 p-6 shadow-xl hover:shadow-blue-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-blue-500/30 hover:border-blue-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-blue-950/20 p-6 shadow-xl hover:shadow-blue-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-500" />
               <div>
@@ -660,7 +740,7 @@ export const AdminPanel: React.FC = () => {
                 setAdminSection('support');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-gradient-to-br from-neutral-900 via-neutral-900 to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
               <div>
@@ -693,7 +773,7 @@ export const AdminPanel: React.FC = () => {
                 setAdminSection('users');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-purple-500/30 hover:border-purple-400 bg-gradient-to-br from-neutral-900 via-neutral-900 to-purple-950/20 p-6 shadow-xl hover:shadow-purple-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-purple-500/30 hover:border-purple-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-purple-950/20 p-6 shadow-xl hover:shadow-purple-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all duration-500" />
               <div>
@@ -726,7 +806,7 @@ export const AdminPanel: React.FC = () => {
                 setAdminSection('security');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-red-500/30 hover:border-red-400 bg-gradient-to-br from-neutral-900 via-neutral-900 to-red-950/20 p-6 shadow-xl hover:shadow-red-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-red-500/30 hover:border-red-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-red-950/20 p-6 shadow-xl hover:shadow-red-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-red-500/10 rounded-full blur-3xl group-hover:bg-red-500/20 transition-all duration-500" />
               <div>
@@ -751,6 +831,39 @@ export const AdminPanel: React.FC = () => {
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
+
+            {/* Card 6: Branding & App Assets */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              onClick={() => {
+                setAdminSection('branding');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="rounded-3xl border-2 border-pink-500/30 hover:border-pink-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-pink-950/20 p-6 shadow-xl hover:shadow-pink-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+            >
+              <div className="absolute -right-8 -top-8 w-24 h-24 bg-pink-500/10 rounded-full blur-3xl group-hover:bg-pink-500/20 transition-all duration-500" />
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400 shrink-0">
+                    <Sparkles className="h-6 w-6 stroke-[2]" />
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 text-xs font-black font-mono">
+                    ASSETS
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                  {lang === 'ar' ? '🎨 هوية التطبيق والشعارات' : '🎨 App Identity & Assets'}
+                </h3>
+                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'التحكم باسم التطبيق، شعار الهوية (Logo)، أيقونة العرض، روابط الدعم المباشرة وتطوير المظهر.'
+                    : 'Manage application title, branding logos, visual icons, custom social links, and contact settings.'}
+                </p>
+              </div>
+              <div className="flex items-center justify-end text-xs font-black text-pink-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
+              </div>
+            </motion.div>
           </div>
         </div>
       )}
@@ -758,7 +871,7 @@ export const AdminPanel: React.FC = () => {
       {adminSection === 'database' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Firebase Connection Card */}
-          <div className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-neutral-900 via-neutral-900 to-blue-950/40 p-6 shadow-xl">
+          <div className="rounded-3xl border border-blue-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-blue-950/40 p-6 shadow-xl">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
               <div className="flex items-center gap-4">
                 <div className="h-14 w-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
@@ -1115,10 +1228,19 @@ export const AdminPanel: React.FC = () => {
                 <span>{lang === 'ar' ? '⚡ فحص ونقل المنتهي للأرشيف وتنبيه المعلن' : '⚡ Auto-Archive Expired & Notify'}</span>
               </button>
 
-              <div className="text-xs text-neutral-400 font-mono flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800/60 sm:border-transparent sm:bg-transparent">
-                <RefreshCw className={`h-3.5 w-3.5 text-amber-400 ${loading ? 'animate-spin' : ''}`} />
-                <span>{lang === 'ar' ? 'تحديث تلقائي لحظي' : 'Live Firebase Sync'}</span>
-              </div>
+              <button
+                onClick={handleManualRefresh}
+                disabled={manualRefreshing || loading}
+                title={lang === 'ar' ? 'تحديث ومزامنة البيانات من فليستور الآن' : 'Force refresh data from Firestore now'}
+                className="text-xs text-neutral-300 font-mono flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800/60 hover:bg-neutral-800 hover:border-amber-500/30 transition-all cursor-pointer shadow-md disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-amber-400 ${(loading || manualRefreshing) ? 'animate-spin' : ''}`} />
+                <span>
+                  {manualRefreshing 
+                    ? (lang === 'ar' ? 'جاري التحديث...' : 'Syncing...') 
+                    : (lang === 'ar' ? 'تحديث تلقائي لحظي' : 'Live Firebase Sync')}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -1340,7 +1462,7 @@ export const AdminPanel: React.FC = () => {
       {adminSection === 'support' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Header Card */}
-          <div className="rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-neutral-900 via-neutral-900 to-emerald-950/40 p-6 shadow-xl">
+          <div className="rounded-3xl border border-emerald-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/40 p-6 shadow-xl">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
@@ -1524,7 +1646,7 @@ export const AdminPanel: React.FC = () => {
       {adminSection === 'users' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Header Card */}
-          <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-br from-neutral-900 via-neutral-900 to-purple-950/40 p-6 shadow-xl">
+          <div className="rounded-3xl border border-purple-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-purple-950/40 p-6 shadow-xl">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="h-14 w-14 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 shadow-inner">
@@ -1620,7 +1742,7 @@ export const AdminPanel: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-neutral-800/60">
                     {filteredUsers.map((u) => {
-                      const isOwner = u.email?.trim().toLowerCase() === 'waelvts@gmail.com';
+                      const isOwner = u.id === user?.id;
                       return (
                         <tr 
                           key={u.id} 
@@ -2016,6 +2138,161 @@ export const AdminPanel: React.FC = () => {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'branding' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="rounded-3xl border border-pink-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-pink-950/20 p-6 shadow-xl relative overflow-hidden">
+            <h3 className="text-lg sm:text-xl font-extrabold text-white mb-2 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-pink-400 animate-pulse" />
+              <span>{lang === 'ar' ? '🎨 إدارة الهوية والشعارات والأصول بقاعدة البيانات' : '🎨 Live Identity & Assets Manager'}</span>
+            </h3>
+            <p className="text-xs text-neutral-400 leading-relaxed mb-6">
+              {lang === 'ar'
+                ? 'تحكم في المظهر والشعارات واسم التطبيق وأي صور قديمة عبر استبدالها بروابط صور ويب حية. يتم تخزين وتحديث هذه الروابط فورياً في كوليكشن app_assets وتحت مستند باسم current_branding لتسهيل الهجرة والتحكم المستقبلي.'
+                : 'Control application branding, logos, display names, and local images by converting them to online links. All changes are stored under the "app_assets" collection with document ID "current_branding".'}
+            </p>
+
+            <form onSubmit={handleSaveBranding} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* App Name */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'اسم التطبيق الموحد (بالإنكليزية أو العربية دون ترجمة):' : 'Unified App Name (No translation, used for all languages):'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formAppNameEn}
+                    onChange={(e) => {
+                      setFormAppNameEn(e.target.value);
+                      setFormAppNameAr(e.target.value);
+                    }}
+                    required
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm transition-all outline-none"
+                    placeholder="Dance With Me"
+                  />
+                </div>
+
+                {/* App Icon URL */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط أيقونة التطبيق (App Icon URL):' : 'App Icon Image URL:'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formAppIconUrl}
+                      onChange={(e) => setFormAppIconUrl(e.target.value)}
+                      required
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://.../icon.svg"
+                      dir="ltr"
+                    />
+                    <div className="h-12 w-12 rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                      <img
+                        src={formAppIconUrl || "/icon.svg"}
+                        alt="Icon Preview"
+                        className="h-full w-full object-cover rounded-xl"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/icon.svg'; }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الأيقونة المربعة المستخدمة في واجهة التطبيق، الهيدر وبانر التثبيت PWA.' : '💡 Square icon used in app navbar header, install prompts and banners.'}
+                  </p>
+                </div>
+
+                {/* App Logo URL */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط شعار العلامة الكامل (App Logo URL):' : 'App Full Logo Image URL:'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formAppLogoUrl}
+                      onChange={(e) => setFormAppLogoUrl(e.target.value)}
+                      required
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://.../logo.svg"
+                      dir="ltr"
+                    />
+                    <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                      <img
+                        src={formAppLogoUrl || "/logo.svg"}
+                        alt="Logo Preview"
+                        className="h-full w-full object-contain"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/logo.svg'; }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الشعار المستطيل الكامل المستخدم في صفحات الدخول والبانرات الاحترافية.' : '💡 Full rectangle brand logo used in premium banners and auth landing pages.'}
+                  </p>
+                </div>
+
+                {/* WhatsApp Support Number */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رقم الدعم الفني للواتساب (بدون كود الدولة أو رموزه):' : 'WhatsApp Support Number (Raw, digits only):'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formWhatsappSupport}
+                    onChange={(e) => setFormWhatsappSupport(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm font-mono transition-all outline-none"
+                    placeholder="201012345678"
+                    dir="ltr"
+                  />
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الرقم الموجه له زر الاستفسار عبر الواتساب للأعضاء.' : '💡 The WhatsApp phone number used for general member inquiries and complaints.'}
+                  </p>
+                </div>
+
+                {/* Instagram URL */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط حساب إنستجرام الرسمي:' : 'Official Instagram Account URL:'}
+                  </label>
+                  <input
+                    type="url"
+                    value={formInstagramUrl}
+                    onChange={(e) => setFormInstagramUrl(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm font-mono transition-all outline-none"
+                    placeholder="https://instagram.com/..."
+                    dir="ltr"
+                  />
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 رابط حساب إنستجرام الرسمي لتثبيت المتابعين والوصول إليه.' : '💡 Instagram account URL for official social integration.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminSection(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-5 py-3 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white font-bold text-sm transition-all cursor-pointer"
+                >
+                  {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBranding}
+                  className="px-6 py-3 rounded-xl bg-pink-600 text-white hover:bg-pink-500 font-extrabold text-sm transition-all flex items-center gap-2 shadow-lg hover:shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <RefreshCw className={`h-4 w-4 ${savingBranding ? 'animate-spin' : ''}`} />
+                  <span>{lang === 'ar' ? (savingBranding ? 'جاري الحفظ...' : 'حفظ التغييرات بقاعدة البيانات') : (savingBranding ? 'Saving...' : 'Save Changes to Firestore')}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

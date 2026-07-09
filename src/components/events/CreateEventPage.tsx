@@ -25,7 +25,8 @@ import {
   FolderOpen,
   Upload,
   X,
-  Maximize2
+  Maximize2,
+  Compass
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
@@ -33,13 +34,43 @@ import { EventPaymentCheckout } from './EventPaymentCheckout';
 import { convertCloudStorageUrl, isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
 
+// Helper to parse coordinates from any Google Maps URL structure
+const parseCoordinates = (url: string): { lat: number; lng: number } => {
+  const defaultCoords = { lat: 30.0444, lng: 31.2357 }; // Cairo
+  if (!url) return defaultCoords;
+
+  try {
+    // 1. Check for @lat,lng
+    const atMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (atMatch) {
+      return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+    }
+
+    // 2. Check for q=lat,lng or query=lat,lng
+    const qMatch = url.match(/[?&](q|query|saddr|daddr)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (qMatch) {
+      return { lat: parseFloat(qMatch[2]), lng: parseFloat(qMatch[3]) };
+    }
+
+    // 3. Check for general path coordinate pair /lat,lng
+    const pathMatch = url.match(/\/(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (pathMatch) {
+      return { lat: parseFloat(pathMatch[1]), lng: parseFloat(pathMatch[2]) };
+    }
+  } catch (e) {
+    console.error('Failed to parse coordinates from URL', e);
+  }
+
+  return defaultCoords;
+};
+
 interface CreateEventPageProps {
   onComplete: () => void;
   onCancel?: () => void;
 }
 
 export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, onCancel }) => {
-  const { lang, user, addNewEvent, updateEvent, editingEvent, setEditingEvent } = useApp();
+  const { lang, user, addNewEvent, updateEvent, editingEvent, setEditingEvent, isAdminUnlocked } = useApp();
 
   const [step, setStep] = useState<'form' | 'payment'>('form');
   const [titleAr, setTitleAr] = useState(editingEvent ? editingEvent.titleAr : '');
@@ -63,24 +94,81 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [whatsapp, setWhatsapp] = useState(editingEvent ? editingEvent.contact.whatsapp : (user?.phone ? user.phone.replace(/[^0-9]/g, '') : '201011223344'));
   const [locationNameAr, setLocationNameAr] = useState(editingEvent ? editingEvent.location.nameAr : 'أستوديو الرقص - الزمالك');
   const [locationNameEn, setLocationNameEn] = useState(editingEvent ? editingEvent.location.nameEn : 'Dance Studio - Zamalek');
+  const [addressAr, setAddressAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressAr || 'القاهرة، مصر') : 'القاهرة، مصر');
+  const [addressEn, setAddressEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressEn || 'Cairo, Egypt') : 'Cairo, Egypt');
+  const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent && editingEvent.location ? editingEvent.location.googleMapsUrl : 'https://maps.google.com/?q=30.0444,31.2357');
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent ? editingEvent.styles : ['Salsa', 'Bachata']);
   const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   
-  // Cloudinary direct upload state
-  const [cloudinaryCloudName, setCloudinaryCloudName] = useState(() => {
-    return localStorage.getItem('cloudinary_cloud_name') || 'dt97z8g5z';
-  });
-  const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState(() => {
-    return localStorage.getItem('cloudinary_upload_preset') || 'dwm_unsigned';
-  });
-  const [showCloudinarySettings, setShowCloudinarySettings] = useState(false);
+  // Cloudinary configuration credentials from environment variables (safe and secure for git)
+  const cloudinaryCloudName = (import.meta as any).env.VITE_CLOUDINARY_CLOUD_NAME;
+  const cloudinaryUploadPreset = (import.meta as any).env.VITE_CLOUDINARY_UPLOAD_PRESET;
+  const cloudinaryApiKey = (import.meta as any).env.VITE_CLOUDINARY_API_KEY;
+  const cloudinaryApiSecret = (import.meta as any).env.VITE_CLOUDINARY_API_SECRET;
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Client-side automatic image compression helper
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      // If the file is small enough (< 300KB), don't compress
+      if (file.size < 300 * 1024) {
+        resolve(file);
+        return;
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Downscale to max 1080px width or height to optimize mobile delivery
+          const MAX_DIM = 1080;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(compressedFile);
+              } else {
+                resolve(file);
+              }
+            }, 'image/jpeg', 0.82); // 82% quality is visually indistinguishable but extremely small
+          } else {
+            resolve(file);
+          }
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
 
   const handleCancelClick = () => {
     setEditingEvent(null);
@@ -94,42 +182,83 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setUploadError(null);
+    setUploadProgress(0);
     if (file) {
       setIsUploadingMedia(true);
       setUploadedFileName(file.name);
       
       try {
+        let fileToUpload = file;
+        
+        // Auto-compress image files on the client before upload to save bandwidth and time
+        if (file.type.startsWith('image/')) {
+          try {
+            fileToUpload = await compressImage(file);
+            console.log(`Image auto-optimized! Original size: ${(file.size / 1024 / 1024).toFixed(2)}MB, Optimized: ${(fileToUpload.size / 1024).toFixed(1)}KB`);
+          } catch (compressErr) {
+            console.error('Image compression failed, proceeding with original file', compressErr);
+          }
+        }
+
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', fileToUpload);
         formData.append('upload_preset', cloudinaryUploadPreset);
 
         const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/${resourceType}/upload`, {
-          method: 'POST',
-          body: formData,
+        
+        // Use XMLHttpRequest to track exact upload percentage progress
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/${resourceType}/upload`, true);
+          
+          xhr.upload.onprogress = (progressEvent) => {
+            if (progressEvent.lengthComputable) {
+              const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              setUploadProgress(percent);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.secure_url) {
+                  setMediaUrl(response.secure_url);
+                  resolve();
+                } else {
+                  reject(new Error('No secure URL returned from Cloudinary'));
+                }
+              } catch (parseErr) {
+                reject(new Error('Failed to parse Cloudinary response'));
+              }
+            } else {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                reject(new Error(response?.error?.message || `Upload failed with status ${xhr.status}`));
+              } catch (err) {
+                reject(new Error(`Upload failed with status ${xhr.status}`));
+              }
+            }
+          };
+
+          xhr.onerror = () => {
+            reject(new Error(lang === 'ar' ? 'فشل الاتصال بالخادم السحابي' : 'Network connection error'));
+          };
+
+          xhr.send(formData);
         });
 
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData?.error?.message || 'Failed to upload to Cloudinary');
-        }
-
-        const data = await res.json();
-        if (data.secure_url) {
-          setMediaUrl(data.secure_url);
-        } else {
-          throw new Error('No secure URL returned from Cloudinary');
-        }
       } catch (err: any) {
         console.error('Cloudinary upload error:', err);
         setUploadError(
           lang === 'ar'
-            ? `❌ فشل الرفع إلى كلاوديناري: ${err.message || 'تأكد من إعدادات الحساب ومسبق الرفع'}`
-            : `❌ Cloudinary Upload Failed: ${err.message || 'Verify your Cloud Name and Upload Preset'}`
+            ? `❌ فشل الرفع إلى كلاوديناري: ${err.message || 'تأكد من اتصالك بالإنترنت'}`
+            : `❌ Cloudinary Upload Failed: ${err.message || 'Make sure your internet is stable'}`
         );
         setUploadedFileName(null);
       } finally {
         setIsUploadingMedia(false);
+        setUploadProgress(0);
       }
     }
   };
@@ -192,6 +321,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           ...editingEvent.location,
           nameAr: locationNameAr,
           nameEn: locationNameEn,
+          addressAr: addressAr || 'القاهرة، مصر',
+          addressEn: addressEn || 'Cairo, Egypt',
+          googleMapsUrl: googleMapsUrl || 'https://maps.google.com/?q=30.0444,31.2357',
+          lat: parseCoordinates(googleMapsUrl).lat,
+          lng: parseCoordinates(googleMapsUrl).lng
         },
         contact: {
           ...editingEvent.contact,
@@ -218,11 +352,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         location: {
           nameAr: locationNameAr,
           nameEn: locationNameEn,
-          addressAr: 'القاهرة، مصر',
-          addressEn: 'Cairo, Egypt',
-          googleMapsUrl: 'https://maps.google.com/?q=30.0444,31.2357',
-          lat: 30.0444,
-          lng: 31.2357
+          addressAr: addressAr || 'القاهرة، مصر',
+          addressEn: addressEn || 'Cairo, Egypt',
+          googleMapsUrl: googleMapsUrl || 'https://maps.google.com/?q=30.0444,31.2357',
+          lat: parseCoordinates(googleMapsUrl).lat,
+          lng: parseCoordinates(googleMapsUrl).lng
         },
         contact: {
           phone,
@@ -293,11 +427,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           location: {
             nameAr: locationNameAr,
             nameEn: locationNameEn,
-            addressAr: 'القاهرة، مصر',
-            addressEn: 'Cairo, Egypt',
-            googleMapsUrl: 'https://maps.google.com/?q=30.0444,31.2357',
-            lat: 30.0444,
-            lng: 31.2357
+            addressAr: addressAr || 'القاهرة، مصر',
+            addressEn: addressEn || 'Cairo, Egypt',
+            googleMapsUrl: googleMapsUrl || 'https://maps.google.com/?q=30.0444,31.2357',
+            lat: parseCoordinates(googleMapsUrl).lat,
+            lng: parseCoordinates(googleMapsUrl).lng
           },
           contact: {
             phone,
@@ -575,19 +709,46 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   className="hidden"
                 />
 
-                {/* Uploaded File Confirmation / Preview */}
+                {/* Uploaded File Confirmation / Preview & Progress */}
                 {isUploadingMedia && (
-                  <div className="mt-2 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2 text-xs text-amber-400 font-bold">
-                    <span className="h-4 w-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin inline-block shrink-0" />
-                    <span>{lang === 'ar' ? 'جاري تحسين وضغط الملف وتحويله لقاعدة البيانات...' : 'Optimizing and processing file...'}</span>
+                  <div className="mt-3 p-4 rounded-2xl bg-neutral-900 border border-amber-500/30 space-y-3 animate-pulse shadow-lg shadow-amber-500/5">
+                    <div className="flex items-center justify-between text-xs font-bold text-amber-400">
+                      <div className="flex items-center gap-2">
+                        <span className="h-4.5 w-4.5 rounded-full border-2 border-amber-500 border-t-transparent animate-spin inline-block shrink-0" />
+                        <span>
+                          {lang === 'ar' 
+                            ? `جاري الرفع والتحميل: ${uploadProgress}%` 
+                            : `Uploading & hosting: ${uploadProgress}%`}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs">{uploadProgress}%</span>
+                    </div>
+                    {/* Glowing Progress bar track */}
+                    <div className="w-full h-2.5 bg-neutral-950 rounded-full overflow-hidden border border-white/5">
+                      <div 
+                        className="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                        style={{ width: `${uploadProgress || 5}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-neutral-400 leading-relaxed font-sans">
+                      {mediaType === 'image' 
+                        ? (lang === 'ar' 
+                            ? '⚡ تم ضغط وتحسين الصورة تلقائياً بالكامل في المتصفح لتوفير الباقة والرفع الفوري!' 
+                            : '⚡ Image was automatically compressed client-side to guarantee an instant, data-saving upload!')
+                        : (lang === 'ar' 
+                            ? '💡 رفع الفيديو قد يستغرق بعض الوقت بناءً على سرعة الإنترنت وحجم الملف.' 
+                            : '💡 Video uploads might take longer depending on your connection and file size.')}
+                    </p>
                   </div>
                 )}
+                
                 {uploadError && (
                   <div className="mt-2 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-start gap-2 text-xs text-red-400 font-bold leading-relaxed animate-fade-in">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                     <span>{uploadError}</span>
                   </div>
                 )}
+                
                 {uploadedFileName && !isUploadingMedia && (
                   <div className="mt-2 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2.5 text-emerald-400 font-bold overflow-hidden">
@@ -600,78 +761,25 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         setMediaUrl('');
                         setUploadedFileName(null);
                       }}
-                      className="text-neutral-400 hover:text-rose-400 font-mono text-[11px] underline shrink-0 transition-colors"
+                      className="text-neutral-400 hover:text-rose-400 font-mono text-[11px] underline shrink-0 transition-colors cursor-pointer"
                     >
                       {lang === 'ar' ? 'إزالة' : 'Remove'}
                     </button>
                   </div>
                 )}
 
-                {/* Cloudinary Configuration Settings */}
-                <div className="mt-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCloudinarySettings(!showCloudinarySettings)}
-                    className="flex items-center justify-between w-full text-xs font-bold text-amber-400 font-mono focus:outline-none"
-                  >
-                    <span>⚙️ {lang === 'ar' ? 'إعدادات منصة Cloudinary لرفع الميديا' : 'Cloudinary Media Upload Settings'}</span>
-                    <span className="text-neutral-500">{showCloudinarySettings ? '▲' : '▼'}</span>
-                  </button>
+                {/* Helpful native video compressor tip */}
+                {mediaType === 'video' && !isUploadingMedia && (
+                  <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl text-[11px] text-neutral-400 space-y-1 font-sans animate-fade-in mt-1">
+                    <span className="font-bold text-amber-400">💡 {lang === 'ar' ? 'نصيحة ذهبية لسرعة فائقة:' : 'Golden speed tip:'}</span>
+                    <p className="leading-relaxed">
+                      {lang === 'ar'
+                        ? 'لرفع الفيديوهات من الموبايل بسرعة البرق، يُنصح دائماً بأن لا تزيد مدة الفيديو عن 15 ثانية وأن يكون حجمه صغيراً. يمكنك ضغطه في ثوانٍ بمجرد إرساله لنفسك على الواتساب ثم حفظه، حيث يقوم واتساب بضغط الفيديوهات تلقائياً لنسبة تزيد عن 90% مع الحفاظ على وضوحها التام!'
+                        : 'For lightning-fast mobile uploads, keep video under 15 seconds. You can instantly compress it by sending it to yourself on WhatsApp first and saving it; WhatsApp automatically compresses videos by over 90% while keeping excellent clarity!'}
+                    </p>
+                  </div>
+                )}
 
-                  {showCloudinarySettings && (
-                    <div className="space-y-3 pt-2 text-xs border-t border-white/5 animate-fade-in">
-                      <p className="text-neutral-400 leading-relaxed">
-                        {lang === 'ar'
-                          ? 'يستخدم التطبيق الآن منصة Cloudinary السحابية لرفع الميديا (صور وفيديو) وحفظها سحابياً لضمان تشغيلها الفوري مئة بالمئة على الهواتف والكمبيوتر دون أي قيود على المساحة أو مشكلة الشاشة السوداء.'
-                          : 'The application now integrates with Cloudinary to host your images and videos, ensuring high-speed delivery and perfect mobile video decoding without database storage limits.'}
-                      </p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                        <div>
-                          <label className="block text-[11px] text-neutral-300 font-semibold mb-1">
-                            {lang === 'ar' ? 'اسم السحابة (Cloud Name):' : 'Cloud Name:'}
-                          </label>
-                          <input
-                            type="text"
-                            value={cloudinaryCloudName}
-                            onChange={(e) => {
-                              const val = e.target.value.trim();
-                              setCloudinaryCloudName(val);
-                              localStorage.setItem('cloudinary_cloud_name', val);
-                            }}
-                            placeholder="e.g. dt97z8g5z"
-                            className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-2 px-3 font-mono text-[11px] text-white outline-none focus:border-amber-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-neutral-300 font-semibold mb-1">
-                            {lang === 'ar' ? 'مسبق الرفع غير الموقع (Upload Preset):' : 'Unsigned Upload Preset:'}
-                          </label>
-                          <input
-                            type="text"
-                            value={cloudinaryUploadPreset}
-                            onChange={(e) => {
-                              const val = e.target.value.trim();
-                              setCloudinaryUploadPreset(val);
-                              localStorage.setItem('cloudinary_upload_preset', val);
-                            }}
-                            placeholder="e.g. dwm_unsigned"
-                            className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-2 px-3 font-mono text-[11px] text-white outline-none focus:border-amber-500"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="p-2.5 bg-amber-500/5 rounded-xl border border-amber-500/10 text-[10.5px] text-neutral-400 leading-relaxed space-y-1">
-                        <p className="font-bold text-amber-400">💡 {lang === 'ar' ? 'كيف تحصل على حساب كلاوديناري مجاني في دقيقة؟' : 'How to get a free Cloudinary account?'}</p>
-                        <p>
-                          {lang === 'ar'
-                            ? '1. سجل في cloudinary.com مجاناً. | 2. انسخ الـ Cloud Name الخاص بك وضعه هنا. | 3. اذهب إلى Settings -> Upload -> Upload Presets، وقم بإضافة مسبق رفع جديد واجعل وضعه (Unsigned)، ثم انسخ اسمه وضعه هنا لترفع عليه وسائط إعلاناتك مباشرة!'
-                            : '1. Sign up for free at cloudinary.com. | 2. Copy your Cloud Name and paste it above. | 3. Go to Settings -> Upload -> Upload Presets, add a new preset, set its signing mode to "Unsigned", and copy its name here.'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
 
               {/* URL fallback & Preview */}
@@ -865,6 +973,54 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div>
                 <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-amber-500" />
+                  <span>{lang === 'ar' ? 'العنوان بالتفصيل (بالعربية)' : 'Detailed Address (Arabic)'}</span>
+                </label>
+                <input
+                  type="text"
+                  value={addressAr}
+                  onChange={e => setAddressAr(e.target.value)}
+                  placeholder={lang === 'ar' ? 'مثال: العين السخنة، البحر الأحمر' : 'e.g. Ain Sokhna, Red Sea'}
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-amber-500" />
+                  <span>{lang === 'ar' ? 'العنوان بالتفصيل (بالإنجليزية)' : 'Detailed Address (English)'}</span>
+                </label>
+                <input
+                  type="text"
+                  value={addressEn}
+                  onChange={e => setAddressEn(e.target.value)}
+                  placeholder={lang === 'ar' ? 'مثال: Ain Sokhna, Red Sea' : 'e.g. Ain Sokhna, Red Sea'}
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                <Compass className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+                <span>{lang === 'ar' ? 'رابط موقع جوجل ماب (Google Maps Link)' : 'Google Maps Location Link'}</span>
+              </label>
+              <input
+                type="url"
+                value={googleMapsUrl}
+                onChange={e => setGoogleMapsUrl(e.target.value)}
+                placeholder={lang === 'ar' ? 'ضع هنا رابط موقع الحدث من خرائط جوجل ماب' : 'Paste Google Maps location link here'}
+                className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
+              />
+              <p className="mt-1.5 text-[11px] text-neutral-400 leading-relaxed font-sans">
+                {lang === 'ar'
+                  ? '💡 انسخ رابط الموقع الجغرافي من تطبيق Google Maps وضعه هنا، ليتيح للزوار الانتقال الفوري لمكانك بضغطة زر واحدة!'
+                  : '💡 Simply copy and paste the Google Maps location share link here, so attendees can navigate to your event instantly!'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
                   <Phone className="h-3.5 w-3.5 text-amber-400" />
                   <span>{lang === 'ar' ? 'رقم الهاتف للاستفسار' : 'Contact Phone'}</span>
                 </label>
@@ -971,25 +1127,27 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </div>
           </div>
 
-          {/* Ad Placement Number (Sequence position) */}
-          <div className="space-y-4 border-t border-white/5 pt-6">
-            <h4 className="text-sm font-bold text-amber-400 font-mono tracking-wider uppercase">
-              {lang === 'ar' ? 'ترتيب الإعلان في الصفحة (رقم الترتيب)' : 'Ad Placement Position (Order Number)'}
-            </h4>
-            <div className="rounded-2xl bg-neutral-950 p-5 border border-neutral-800/80 space-y-2">
-              <label className="block text-xs font-semibold text-neutral-300 mb-1">
-                {lang === 'ar' ? 'حدد رقم ترتيب الإعلان لتحديد مكان ظهوره (مثال: رقم 1 يظهر أولاً، رقم 2 يظهر ثانياً، وهكذا)' : 'Specify the position number to determine where this ad appears (e.g. 1 appears first, 2 appears second, etc.)'}
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={position || ''}
-                onChange={e => setPosition(e.target.value ? Number(e.target.value) : 0)}
-                placeholder={lang === 'ar' ? 'مثال: 1' : 'e.g. 1'}
-                className="w-full sm:w-48 rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner font-mono"
-              />
+          {/* Ad Placement Number (Sequence position) - Admin Only */}
+          {(user?.isAdmin || isAdminUnlocked) && (
+            <div className="space-y-4 border-t border-white/5 pt-6">
+              <h4 className="text-sm font-bold text-amber-400 font-mono tracking-wider uppercase">
+                {lang === 'ar' ? 'ترتيب الإعلان في الصفحة (رقم الترتيب)' : 'Ad Placement Position (Order Number)'}
+              </h4>
+              <div className="rounded-2xl bg-neutral-950 p-5 border border-neutral-800/80 space-y-2">
+                <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                  {lang === 'ar' ? 'حدد رقم ترتيب الإعلان لتحديد مكان ظهوره (مثال: رقم 1 يظهر أولاً، رقم 2 يظهر ثانياً، وهكذا)' : 'Specify the position number to determine where this ad appears (e.g. 1 appears first, 2 appears second, etc.)'}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={position || ''}
+                  onChange={e => setPosition(e.target.value ? Number(e.target.value) : 0)}
+                  placeholder={lang === 'ar' ? 'مثال: 1' : 'e.g. 1'}
+                  className="w-full sm:w-48 rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner font-mono"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* SECTION 7: Terms & Conditions Agreement & Checkbox */}
           <div className="space-y-4 border-t border-white/5 pt-6">
