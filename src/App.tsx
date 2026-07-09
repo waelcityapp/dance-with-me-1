@@ -21,7 +21,7 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { DanceEvent } from './types';
 
 const AppContent: React.FC = () => {
-  const { activeTab, setActiveTab, user, openGuestAlert, guestAlertState, closeGuestAlert, isSupportModalOpen, closeSupportModal, setEditingEvent } = useApp();
+  const { activeTab, setActiveTab, user, isAdminUser, openGuestAlert, guestAlertState, closeGuestAlert, isSupportModalOpen, closeSupportModal, setEditingEvent } = useApp();
 
   // Modal States
   const [selectedMapEvent, setSelectedMapEvent] = useState<DanceEvent | null>(null);
@@ -71,7 +71,7 @@ const AppContent: React.FC = () => {
             }}
           />
         )}
-        {activeTab === 'admin' && <AdminPanel />}
+        {activeTab === 'admin' && isAdminUser && <AdminPanel />}
         {activeTab !== 'profile' && activeTab !== 'create_ad' && activeTab !== 'admin' && (
           <HomeFeed
             onOpenMap={(ev) => setSelectedMapEvent(ev)}

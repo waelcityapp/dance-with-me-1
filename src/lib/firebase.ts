@@ -312,12 +312,20 @@ export async function saveUserToFirestore(user: UserProfile): Promise<boolean> {
  */
 export async function getUserByEmailFromFirestore(email: string): Promise<UserProfile | null> {
   try {
+    const normalizedEmail = email.trim().toLowerCase();
     const usersRef = collection(db, COLLECTIONS.USERS);
-    const q = query(usersRef, where('email', '==', email.trim().toLowerCase()), limit(1));
+    const q = query(usersRef, where('email', '==', normalizedEmail), limit(1));
     const snap = await getDocs(q);
     if (!snap.empty) {
       return snap.docs[0].data() as UserProfile;
     }
+
+    const fallbackQ = query(usersRef, where('email', '==', email.trim()), limit(1));
+    const fallbackSnap = await getDocs(fallbackQ);
+    if (!fallbackSnap.empty) {
+      return fallbackSnap.docs[0].data() as UserProfile;
+    }
+
     return null;
   } catch (error) {
     console.warn('Error fetching user by email from Firestore:', error);

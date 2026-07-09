@@ -70,6 +70,7 @@ interface AppContextType {
   cleanUpDuplicateAds: () => Promise<number>;
   isAdminUnlocked: boolean;
   setIsAdminUnlocked: (val: boolean) => void;
+  isAdminUser: boolean;
   isAdminLockModalOpen: boolean;
   setIsAdminLockModalOpen: (val: boolean) => void;
 }
@@ -103,16 +104,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTab, setActiveTab] = useState<TabType>('explore');
 
   const handleSetActiveTab = (tab: TabType) => {
+    if (tab === 'admin' && !isAdminUser) {
+      setActiveTab('explore');
+      return;
+    }
     setActiveTab(tab);
   };
-
-  // Automatically switch tab and close modal once unlocked to prevent race conditions
-  useEffect(() => {
-    if (isAdminUnlocked) {
-      setActiveTab('admin');
-      setIsAdminLockModalOpen(false);
-    }
-  }, [isAdminUnlocked]);
 
   const [selectedCategory, setSelectedCategory] = useState<DanceCategory>('all');
   const [showExpiredArchive, setShowExpiredArchive] = useState<boolean>(false);
@@ -162,6 +159,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {}
     return null;
   });
+
+  const isAdminUser = useMemo(() => {
+    const email = user?.email?.trim().toLowerCase();
+    const authEmail = auth.currentUser?.email?.trim().toLowerCase();
+    return Boolean(
+      user?.isAdmin ||
+      email === 'waelvts@gmail.com' ||
+      email === 'waelcityapp@gmail.com' ||
+      authEmail === 'waelvts@gmail.com' ||
+      authEmail === 'waelcityapp@gmail.com'
+    );
+  }, [user?.isAdmin, user?.email, auth.currentUser?.email]);
+
+  useEffect(() => {
+    if (activeTab === 'admin' && !isAdminUser) {
+      setActiveTab('explore');
+    }
+  }, [activeTab, isAdminUser]);
+
+  useEffect(() => {
+    if (isAdminUnlocked && isAdminLockModalOpen) {
+      setIsAdminLockModalOpen(false);
+    }
+  }, [isAdminUnlocked, isAdminLockModalOpen]);
 
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
@@ -233,10 +254,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 5. Listen to Firebase Auth state changes for session persistence across reloads
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.email) {
-        const isUserAdmin = firebaseUser.email.trim().toLowerCase() === 'waelvts@gmail.com';
+        const email = firebaseUser.email.trim().toLowerCase();
+        const isUserAdmin = email === 'waelvts@gmail.com' || email === 'waelcityapp@gmail.com';
         const existing = await getUserByEmailFromFirestore(firebaseUser.email);
-        if (existing) {
-          if (existing.isSuspended) {
+        const resolvedUser: UserProfile | null = existing ? {
+          ...existing,
+          email: existing.email?.trim().toLowerCase() || firebaseUser.email.trim().toLowerCase(),
+          isAdmin: isUserAdmin ? true : Boolean(existing.isAdmin)
+        } : null;
+        if (resolvedUser) {
+          if (resolvedUser.isSuspended) {
             console.warn('Authenticated user is suspended. Signing out.');
             await logoutWithFirebase();
             setUser(null);
@@ -246,12 +273,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             alert(lang === 'ar' ? '⚠️ هذا الحساب معطل مؤقتاً من قبل الإدارة.' : '⚠️ This account is temporarily suspended by the administration.');
             return;
           }
-          if (isUserAdmin) {
-            existing.isAdmin = true;
-          }
-          setUser(existing);
+          setUser(resolvedUser);
           try {
-            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(existing));
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(resolvedUser));
           } catch (e) {}
         } else {
           try {
@@ -265,10 +289,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   localStorage.removeItem(STORAGE_KEYS.USER);
                   return;
                 }
-                if (isUserAdmin) {
-                  parsed.isAdmin = true;
-                }
-                setUser(parsed);
+                const normalizedParsed = {
+                  ...parsed,
+                  email: parsed.email?.trim().toLowerCase() || firebaseUser.email.trim().toLowerCase(),
+                  isAdmin: isUserAdmin ? true : Boolean(parsed.isAdmin)
+                };
+                setUser(normalizedParsed);
+                try {
+                  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(normalizedParsed));
+                } catch (e) {}
               }
             }
           } catch (e) {}
@@ -405,7 +434,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Actions
   const loginUser = async (name: string, email: string, avatar?: string, customId?: string, password?: string) => {
     const cleanEmail = email.trim().toLowerCase();
-    const isUserAdmin = cleanEmail === 'waelvts@gmail.com';
+    const isUserAdmin = cleanEmail === 'waelvts@gmail.com' || cleanEmail === 'waelcityapp@gmail.com';
     const existing = await getUserByEmailFromFirestore(cleanEmail);
     if (existing) {
       if (existing.isSuspended) {
@@ -797,6 +826,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       closeSupportModal,
       isSupportModalOpen,
       cleanUpDuplicateAds,
+      isAdminUser,
       isAdminUnlocked,
       setIsAdminUnlocked,
       isAdminLockModalOpen,

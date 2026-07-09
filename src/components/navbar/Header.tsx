@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth, onOpenInstallModal }) => {
-  const { lang, setLang, theme, setTheme, unreadCount, setActiveTab, user, openGuestAlert, openSupportModal } = useApp();
+  const { lang, setLang, theme, setTheme, unreadCount, setActiveTab, user, openGuestAlert, openSupportModal, isAdminUser } = useApp();
   const [copied, setCopied] = useState(false);
 
   const toggleLanguage = () => {
@@ -179,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
           </div>
 
           {/* Admin Panel Button */}
-          {(user?.isAdmin || user?.email?.trim().toLowerCase() === 'waelvts@gmail.com') && (
+          {isAdminUser && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
