@@ -5,6 +5,7 @@ import { EventCard } from '../events/EventCard';
 import { WeeklyPromoBanner } from '../events/WeeklyPromoBanner';
 import { Sparkles, Music, GraduationCap, Palmtree, PlusCircle, Filter, Search, Clock, CheckCircle2, ArrowUp, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { logAnalyticsEvent } from '../../lib/firebase';
 
 interface HomeFeedProps {
   onOpenMap: (event: DanceEvent) => void;
@@ -88,10 +89,13 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-              {lang === 'ar' ? 'اكتشف فعاليات وحفلات الرقص اللاتيني' : 'Discover Luxury Latin Dance Events'}
+              {lang === 'ar' ? 'اكتشف فعاليات و حفلات' : 'Discover Events & Parties'}
             </h2>
-            <p className="text-xs sm:text-sm text-neutral-400 mt-1 font-medium">
-              {lang === 'ar' ? 'سالسا، باتشاتا، كيزومبا، تانجو، بول روم في أرقى الفنادق والأستوديوهات والمنتجعات' : 'Salsa, Bachata, Kizomba, Tango, Ballroom at premium hotels, studios and resorts'}
+            <h3 className="text-xl sm:text-2xl font-black text-amber-400 mt-1 leading-tight">
+              {lang === 'ar' ? 'اللاتينى | الشرقى | الغربي| متنوعات' : 'Latin | Oriental | Western | Variety'}
+            </h3>
+            <p className="text-xs sm:text-sm text-neutral-400 mt-2 font-medium leading-relaxed">
+              {lang === 'ar' ? 'سالسا بتشاتا كيزومبا تانجو بول روم  شرقى غربى كريوكى متنوعات فى ارقى الاماكن و المنتجعات' : 'Salsa, Bachata, Kizomba, Tango, Ballroom, Oriental, Western, Karaoke, Variety in the finest venues & resorts'}
             </p>
           </div>
 
@@ -134,7 +138,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
             {styleChips.map(style => (
               <button
                 key={style}
-                onClick={() => setSelectedStyleFilter(style)}
+                onClick={() => {
+                  setSelectedStyleFilter(style);
+                  if (style !== 'all') {
+                    // Normalize the name to make it simple/safe for database fields
+                    const normalized = style.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                    logAnalyticsEvent(`style_${normalized}`);
+                  }
+                }}
                 className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold whitespace-nowrap transition-all border ${
                   selectedStyleFilter === style
                     ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-sm'
@@ -158,7 +169,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           return (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => {
+                setSelectedCategory(cat.id);
+                logAnalyticsEvent(`category_${cat.id}`);
+              }}
               className={`flex items-center justify-between p-4 rounded-3xl border transition-all duration-200 ${
                 isSelected
                   ? 'bg-neutral-900 border-amber-500/50 text-white shadow-xl gold-glow'

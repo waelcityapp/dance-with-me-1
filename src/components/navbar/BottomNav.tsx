@@ -15,8 +15,8 @@ export const BottomNav: React.FC = () => {
     { id: 'trips', labelAr: 'الرحلات', labelEn: 'Trips', icon: Palmtree, category: 'trip' },
     { 
       id: 'profile', 
-      labelAr: user ? 'حسابي' : 'إنشاء حساب أو دخول', 
-      labelEn: user ? 'Account' : 'Login / Register', 
+      labelAr: user ? (user.name.trim().split(' ')[0] || 'حسابي') : 'إنشاء حساب أو دخول', 
+      labelEn: user ? (user.name.trim().split(' ')[0] || 'Account') : 'Login / Register', 
       icon: User 
     }
   ];
@@ -68,7 +68,7 @@ export const BottomNav: React.FC = () => {
               </motion.div>
 
               <span
-                className={`text-[9px] sm:text-[10px] font-medium transition-colors duration-200 text-center leading-tight whitespace-nowrap ${
+                className={`text-[9px] sm:text-[10px] font-medium transition-colors duration-200 text-center leading-tight whitespace-nowrap max-w-[64px] truncate block ${
                   isActive
                     ? 'text-amber-400 font-bold'
                     : 'text-neutral-500 group-hover:text-white'

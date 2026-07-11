@@ -11,7 +11,8 @@ import {
   query, 
   orderBy,
   where,
-  limit
+  limit,
+  increment
 } from 'firebase/firestore';
 import { 
   getAuth, 
@@ -775,4 +776,71 @@ export function subscribeToAppAssets(onUpdate: (assets: any) => void): () => voi
     return () => {};
   }
 }
+
+/**
+ * Log a simple, free real-time analytics event
+ */
+export async function logAnalyticsEvent(field: string): Promise<void> {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // 1. Update overall counters doc
+    const globalRef = doc(db, 'analytics', 'counters');
+    const updateObj: Record<string, any> = {};
+    updateObj[field] = increment(1);
+    await setDoc(globalRef, updateObj, { merge: true });
+
+    // 2. Update daily timeline document
+    const dailyRef = doc(db, 'analytics_daily', todayStr);
+    const dailyUpdate: Record<string, any> = {
+      date: todayStr
+    };
+    dailyUpdate[field] = increment(1);
+    await setDoc(dailyRef, dailyUpdate, { merge: true });
+  } catch (error) {
+    // Silent fail so it does not block user experience
+    console.warn('Analytics logging failed:', error);
+  }
+}
+
+/**
+ * Subscribe to overall counters analytics
+ */
+export function subscribeToAnalyticsCounters(onUpdate: (data: any) => void): () => void {
+  try {
+    const docRef = doc(db, 'analytics', 'counters');
+    return onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        onUpdate(docSnap.data());
+      } else {
+        onUpdate({});
+      }
+    }, (err) => {
+      console.warn('Subscribe to analytics counters error:', err);
+    });
+  } catch (e) {
+    return () => {};
+  }
+}
+
+/**
+ * Subscribe to daily stats history (e.g. last 14 days)
+ */
+export function subscribeToDailyAnalytics(onUpdate: (dailyList: any[]) => void): () => void {
+  try {
+    const colRef = collection(db, 'analytics_daily');
+    const q = query(colRef, orderBy('date', 'desc'), limit(14));
+    return onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort ascending for chart presentation
+      list.sort((a: any, b: any) => a.date.localeCompare(b.date));
+      onUpdate(list);
+    }, (err) => {
+      console.warn('Subscribe to daily analytics error:', err);
+    });
+  } catch (e) {
+    return () => {};
+  }
+}
+
 

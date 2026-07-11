@@ -26,13 +26,17 @@ import {
   Upload,
   X,
   Maximize2,
-  Compass
+  Compass,
+  Eye,
+  FileText,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
 import { EventPaymentCheckout } from './EventPaymentCheckout';
 import { convertCloudStorageUrl, isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
+import { EventCard } from './EventCard';
 
 // Helper to parse coordinates from any Google Maps URL structure
 const parseCoordinates = (url: string): { lat: number; lng: number } => {
@@ -104,6 +108,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
+  
+  const [createTab, setCreateTab] = useState<'form' | 'preview'>('form');
+  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
+  const [previewAlert, setPreviewAlert] = useState<string | null>(null);
   
   // Cloudinary configuration credentials from environment variables (safe and secure for git)
   const cloudinaryCloudName = (import.meta as any).env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -497,13 +505,306 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         </div>
       </motion.div>
 
+      {/* Sub-Tab Switcher for Full Live Preview (Highly prominent card) */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-3xl bg-neutral-950/80 border-2 border-amber-500/30 shadow-2xl relative overflow-hidden backdrop-blur-md mb-8" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="text-right flex items-center gap-3">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+          </span>
+          <div>
+            <h4 className="text-sm font-black text-white flex items-center justify-start gap-2">
+              <span>{lang === 'ar' ? '👀 معاينة مباشرة تفاعلية بالكامل' : '👀 Live Interactive Preview'}</span>
+            </h4>
+            <p className="text-[11px] text-neutral-400">
+              {lang === 'ar' ? 'اعرض مظهر الإعلان النهائي للجمهور أثناء تعبئة الحقول لتعديله فوراً.' : 'See exactly how the final ad renders to dancers as you type.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex rounded-2xl bg-neutral-900 p-1 border border-neutral-800 w-full sm:w-auto shrink-0 relative z-10">
+          <button
+            type="button"
+            onClick={() => setCreateTab('form')}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              createTab === 'form'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 shadow-lg shadow-amber-500/20 border border-amber-400/30 font-black'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            <span>{lang === 'ar' ? '📝 نموذج البيانات' : '📝 Form Builder'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCreateTab('preview');
+              setPreviewAlert(null);
+            }}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              createTab === 'preview'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 shadow-lg shadow-amber-500/20 border border-amber-400/30 font-black'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <Eye className="h-4 w-4" />
+            <span>{lang === 'ar' ? '👁️ المعاينة الحية للجمهور' : '👁️ Live Preview'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Floating Action Button (FAB) for Instant Quick Toggle on Mobile & Desktop - IMPOSSIBLE to miss! */}
+      <div className="fixed bottom-6 left-6 sm:left-12 z-50">
+        <button
+          type="button"
+          onClick={() => {
+            setCreateTab(createTab === 'form' ? 'preview' : 'form');
+            setPreviewAlert(null);
+          }}
+          className="flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-black text-xs sm:text-sm shadow-2xl transition-all hover:scale-105 active:scale-95 border-2 border-amber-400 animate-pulse cursor-pointer shadow-amber-500/40"
+        >
+          <Eye className="h-5 w-5 text-neutral-950" />
+          <span>
+            {createTab === 'form' 
+              ? (lang === 'ar' ? '👁️ معاينة الإعلان مباشرة' : '👁️ Preview Ad Now') 
+              : (lang === 'ar' ? '📝 العودة للنموذج' : '📝 Back to Form')}
+          </span>
+          <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-sans uppercase font-black animate-bounce">
+            LIVE
+          </span>
+        </button>
+      </div>
+
+      {createTab === 'preview' && (
+        <div className="space-y-6 animate-fadeIn text-right mb-12" dir={previewLang === 'ar' ? 'rtl' : 'ltr'}>
+          
+          {/* Preview Controls Header Block */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="text-right">
+                <h4 className="text-base sm:text-lg font-black text-white flex items-center justify-start gap-2">
+                  <Eye className="h-5 w-5 text-amber-400 animate-pulse" />
+                  <span>
+                    {lang === 'ar' 
+                      ? '📱 المعاينة التفاعلية الكاملة كما يظهر للجمهور' 
+                      : '📱 Complete Interactive Public Preview'}
+                  </span>
+                </h4>
+                <p className="text-xs text-neutral-400 mt-1">
+                  {lang === 'ar' 
+                    ? 'هذا عرض حقيقي ومطابق تماماً لكيفية ظهور إعلانك للجمهور في صفحة الخلاصة والبحث. جميع الأزرار والروابط تعمل للمعاينة والتدقيق.' 
+                    : 'This is a high-fidelity real-time simulation of your event exactly as visitors will see it. Test interactive components instantly.'}
+                </p>
+              </div>
+
+              {/* Language Switcher for Preview Card rendering */}
+              <div className="flex items-center gap-2 bg-neutral-950 p-1.5 rounded-2xl border border-neutral-800 shrink-0 self-center">
+                <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider px-2 font-mono">
+                  {lang === 'ar' ? 'لغة المعاينة:' : 'Preview Lang:'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewLang('ar');
+                    setPreviewAlert(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    previewLang === 'ar'
+                      ? 'bg-amber-500 text-neutral-950 shadow-md font-black'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  العربية (AR)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewLang('en');
+                    setPreviewAlert(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    previewLang === 'en'
+                      ? 'bg-amber-500 text-neutral-950 shadow-md font-black'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  English (EN)
+                </button>
+              </div>
+            </div>
+
+            {/* Dynamic Simulation Toast */}
+            {previewAlert && (
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs font-bold text-amber-300 flex items-center gap-2.5 animate-fadeIn">
+                <Sparkles className="h-4 w-4 text-amber-400 animate-spin animate-spin-slow" />
+                <span>{previewAlert}</span>
+                <button 
+                  type="button" 
+                  onClick={() => setPreviewAlert(null)} 
+                  className="mr-auto text-neutral-400 hover:text-white cursor-pointer font-sans text-sm font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Grid Layout containing Simulated Device Frame & Checkpoint details */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-right">
+            
+            {/* LEFT: Feed Card Preview */}
+            <div className="lg:col-span-6 flex flex-col items-center justify-start space-y-4">
+              <span className="text-[11px] font-black tracking-wider uppercase text-neutral-500 font-mono">
+                {lang === 'ar' ? '🔍 مظهر الإعلان في بطاقة الخلاصة والشبكة:' : '🔍 Live feed card representation:'}
+              </span>
+              
+              {/* Phone-sized Viewport for maximum realistic feeling */}
+              <div className="w-full max-w-[430px] rounded-[36px] bg-neutral-950 border border-neutral-800 p-4 shadow-2xl relative overflow-hidden ring-4 ring-neutral-900/50">
+                
+                {/* Interactive Camera notch indicator */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 h-4 w-28 bg-neutral-900 rounded-b-2xl border-x border-b border-neutral-800/80 z-40 flex items-center justify-center pointer-events-none">
+                  <div className="h-1.5 w-1.5 rounded-full bg-neutral-800 mr-2" />
+                  <div className="h-1 w-8 rounded bg-neutral-800" />
+                </div>
+                
+                <div className="pt-4">
+                  <EventCard
+                    event={{
+                      id: 'user-preview-id',
+                      titleAr: titleAr.trim() || (lang === 'ar' ? 'سهرة سالسا فخمة في الزمالك' : 'Luxury Salsa Night in Zamalek'),
+                      titleEn: titleEn.trim() || 'Luxury Salsa Night in Zamalek',
+                      descriptionAr: descAr.trim() || (lang === 'ar' ? 'اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور...' : 'Event details and description goes here...'),
+                      descriptionEn: descEn.trim() || 'Event details and description goes here...',
+                      category: category,
+                      styles: selectedStyles,
+                      mediaType: mediaType,
+                      mediaUrl: mediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                      thumbnailUrl: mediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                      uploadDate: new Date().toISOString(),
+                      eventDate: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
+                      priceAr: priceAr.trim() || '250 ج.م',
+                      priceEn: priceEn.trim() || '250 EGP',
+                      location: {
+                        nameAr: locationNameAr.trim() || 'أستوديو الرقص - الزمالك',
+                        nameEn: locationNameEn.trim() || 'Dance Studio - Zamalek',
+                        addressAr: addressAr.trim() || 'القاهرة، مصر',
+                        addressEn: addressEn.trim() || 'Cairo, Egypt',
+                        googleMapsUrl: googleMapsUrl.trim(),
+                        lat: 30.0444,
+                        lng: 31.2357
+                      },
+                      contact: {
+                        phone: phone.trim() || '+201011223344',
+                        whatsapp: whatsapp.trim() || '201011223344',
+                        organizerName: user?.name || 'الإدارة'
+                      },
+                      likesCount: 15,
+                      isFeatured: false,
+                      isWeeklyPromo: false,
+                      position: Number(position) || 0
+                    }}
+                    index={0}
+                    onOpenMap={(ev) => setPreviewAlert(
+                      previewLang === 'ar' 
+                        ? `📍 [محاكاة الخريطة]: تم التعرف على رابط العنوان والخرائط لـ "${ev.location.nameAr}" بنجاح!` 
+                        : `📍 [Maps Simulation]: Handled click for location link "${ev.location.nameEn}" successfully!`
+                    )}
+                    onOpenShare={(ev) => setPreviewAlert(
+                      previewLang === 'ar' 
+                        ? `🔗 [محاكاة المشاركة]: تم توليد رابط ومستند المشاركة التفاعلي للإعلان!` 
+                        : `🔗 [Share Simulation]: Generated share prompt payload and copied link to workspace.`
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT: Checklist, Metadata & Direct Publishing Summary */}
+            <div className="lg:col-span-6 space-y-6 text-right">
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-4">
+                <h5 className="text-xs font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center justify-start gap-2">
+                  <Activity className="h-4 w-4 text-amber-400" />
+                  <span>
+                    {lang === 'ar' ? '🔍 فحص الجاهزية والبيانات الفنية للإعلان' : '🔍 Composed Blueprint & Verification'}
+                  </span>
+                </h5>
+
+                <div className="space-y-3.5 text-xs text-neutral-300 text-right">
+                  {/* Rendered Language title */}
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                    <span className="text-neutral-400">{lang === 'ar' ? 'الاسم المعروض بالعربية:' : 'Arabic Display Title:'}</span>
+                    <span className="font-extrabold text-white truncate max-w-[220px]">{titleAr || '⚠️ غير مكتمل / Empty'}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                    <span className="text-neutral-400">{lang === 'ar' ? 'الاسم المعروض بالإنجليزية:' : 'English Display Title:'}</span>
+                    <span className="font-extrabold text-white truncate max-w-[220px]">{titleEn || '⚠️ غير مكتمل / Empty'}</span>
+                  </div>
+
+                  {/* Venue details */}
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                    <span className="text-neutral-400">{lang === 'ar' ? 'الموقع المقترح:' : 'Venue Name:'}</span>
+                    <span className="font-extrabold text-amber-300">
+                      {previewLang === 'ar' ? locationNameAr : locationNameEn}
+                    </span>
+                  </div>
+
+                  {/* Price rendering */}
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                    <span className="text-neutral-400">{lang === 'ar' ? 'السعر المدخل للراقصين:' : 'Ticket / Price Tag:'}</span>
+                    <span className="font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+                      {previewLang === 'ar' ? priceAr : priceEn}
+                    </span>
+                  </div>
+
+                  {/* Event Date */}
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                    <span className="text-neutral-400">{lang === 'ar' ? 'تاريخ الحفلة أو الكورس:' : 'Scheduled Date:'}</span>
+                    <span className="font-mono font-black text-white">{eventDate || '⚠️ لم يحدد بعد / Missing'}</span>
+                  </div>
+
+                  {/* Location map coordinates status */}
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                    <span className="text-neutral-400">{lang === 'ar' ? 'تثبيت إحداثيات الخريطة (GPS):' : 'GPS Map Coordinates:'}</span>
+                    {googleMapsUrl ? (
+                      <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded animate-pulse">
+                        DETECTED OK ✔
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded">
+                        DEFAULTED CAIRO
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Helper tips and direct save prompt */}
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-5 text-xs text-neutral-400 leading-relaxed space-y-2">
+                <p className="font-bold text-white">
+                  {lang === 'ar' ? '💡 هل كل شيء يبدو ممتازاً وجاهزاً؟' : '💡 Everything looks clean?'}
+                </p>
+                <p>
+                  {lang === 'ar' 
+                    ? 'بإمكانك المراجعة والتعديل اللانهائي. إذا كانت الأبعاد والألوان والنصوص صحيحة ومضبوطة تماماً، يمكنك النقر مباشرة على زر "نموذج البيانات" أو استخدام الزر العائم للرجوع والمتابعة حتى الدفع والنشر.' 
+                    : 'Verify spacing and text fitting. If you are satisfied with both translations, click the "Form Builder" button or use the floating preview button to return and complete publication.'}
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Main Standalone Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="rounded-3xl border border-white/10 bg-neutral-900/90 shadow-2xl p-6 sm:p-8 space-y-8 backdrop-blur-xl"
-      >
+      {createTab === 'form' && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-3xl border border-white/10 bg-neutral-900/90 shadow-2xl p-6 sm:p-8 space-y-8 backdrop-blur-xl"
+        >
         <div className="border-b border-white/10 pb-5">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <Tag className="h-5 w-5 text-amber-400" />
@@ -1390,6 +1691,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
         </form>
       </motion.div>
+      )}
     </div>
   );
 };

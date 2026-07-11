@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
+import { logAnalyticsEvent } from '../../lib/firebase';
 
 interface EventCardProps {
   event: DanceEvent;
@@ -378,7 +379,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
 
           <div 
-            onClick={() => onOpenMap(event)}
+            onClick={() => {
+              onOpenMap(event);
+              logAnalyticsEvent('clicks_maps');
+            }}
             className="flex items-center justify-between gap-2 text-neutral-300 hover:text-amber-400 cursor-pointer group/map transition-colors"
           >
             <div className="flex items-center gap-2.5 overflow-hidden">
@@ -406,6 +410,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                   openGuestAlert('contact');
                   return;
                 }
+                logAnalyticsEvent('clicks_phone');
                 window.location.href = `tel:${event.contact.phone}`;
               }}
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-neutral-300 hover:bg-neutral-800 hover:text-amber-400 border border-neutral-800 transition-all font-bold cursor-pointer"
@@ -421,6 +426,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                   openGuestAlert('contact');
                   return;
                 }
+                logAnalyticsEvent('clicks_whatsapp');
                 const url = `https://wa.me/${event.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، استفسار بخصوص: ${event.titleAr}` : `Hello, inquiry about: ${event.titleEn}`)}`;
                 window.open(url, '_blank', 'noopener,noreferrer');
               }}

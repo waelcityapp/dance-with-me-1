@@ -21,7 +21,8 @@ import {
   logoutWithFirebase,
   checkAndSeedAppAssets,
   updateAppAssets,
-  subscribeToAppAssets
+  subscribeToAppAssets,
+  logAnalyticsEvent
 } from '../lib/firebase';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'default';
@@ -108,6 +109,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleSetActiveTab = (tab: TabType) => {
     setActiveTab(tab);
+    logAnalyticsEvent(`tab_${tab}`);
   };
 
   // Automatically switch tab and close modal once unlocked to prevent race conditions
@@ -237,6 +239,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Connect to Firebase Firestore Database for real-time synchronization
   useEffect(() => {
+    // Log app loads / page views
+    logAnalyticsEvent('total_page_views');
+
+    // Track unique sessions per day using localStorage
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const lastSessionDate = localStorage.getItem('dwm_session_date');
+      if (lastSessionDate !== todayStr) {
+        localStorage.setItem('dwm_session_date', todayStr);
+        logAnalyticsEvent('unique_sessions');
+      }
+    } catch (e) {}
+
     // 1. Check and seed initial data if Firestore database is empty
     checkAndSeedEvents([]);
     checkAndSeedAppAssets().then((seeded) => {

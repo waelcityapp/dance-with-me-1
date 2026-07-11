@@ -64,7 +64,7 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { lang, user, loginUser, logoutUser, updateUserFavorites } = useApp();
+  const { lang, user, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -198,6 +198,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       if (activeTab === 'register') {
         updateUserFavorites(selectedStyles);
       }
+      setAppActiveTab('explore');
       onClose();
     } catch (err: any) {
       console.error('Auth error:', err);
@@ -210,7 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleGoogleLogin = () => {
-    setActiveTab('google_consent');
+    confirmGoogleAuth();
   };
 
   const confirmGoogleAuth = async () => {
@@ -223,6 +224,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         const existing = await getUserByEmailFromFirestore(googleUser.email);
         if (existing) {
           await loginUser(existing.name || googleUser.name, googleUser.email, existing.avatar || googleUser.avatar, existing.id);
+          setAppActiveTab('explore');
           onClose();
           return;
         }
@@ -256,6 +258,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     const finalEmail = email.trim() || 'member@dwm.app';
     await loginUser(finalName, finalEmail, selectedAvatar, googleUid);
     updateUserFavorites(selectedStyles);
+    setAppActiveTab('explore');
     onClose();
   };
 

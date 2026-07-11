@@ -19,6 +19,8 @@ import {
   Check,
   User,
   Users,
+  Heart,
+  MapPin,
   Search,
   Ban,
   ShieldCheck,
@@ -26,6 +28,9 @@ import {
   Image as ImageIcon,
   Database,
   Server,
+  Plus,
+  FilePlus,
+  Video,
   Download,
   Activity,
   Layers,
@@ -37,10 +42,14 @@ import {
   Send,
   Mail,
   MessageCircle,
-  Key
+  Key,
+  BarChart3,
+  TrendingUp,
+  MousePointerClick
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { AdSubmission, DanceEvent, UserProfile } from '../../types';
+import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle } from '../../types';
+import { EventCard } from '../events/EventCard';
 import { 
   subscribeToAdSubmissions, 
   saveAdSubmissionToFirestore, 
@@ -54,7 +63,9 @@ import {
   updateAdminSecretCode,
   subscribeToSecurityViolations,
   resolvedFirebaseConfig,
-  databaseId
+  databaseId,
+  subscribeToAnalyticsCounters,
+  subscribeToDailyAnalytics
 } from '../../lib/firebase';
 
 export const AdminPanel: React.FC = () => {
@@ -68,7 +79,7 @@ export const AdminPanel: React.FC = () => {
   const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'replied'>('pending');
   const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | null>(null);
+  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | 'analytics' | 'create_ad_admin' | null>(null);
   const [dbSubTab, setDbSubTab] = useState<'events' | 'submissions' | 'notifications' | 'schema'>('events');
   const [selectedJsonDoc, setSelectedJsonDoc] = useState<{ id: string; title: string; data: any } | null>(null);
   
@@ -101,6 +112,50 @@ export const AdminPanel: React.FC = () => {
   const [formInstagramUrl, setFormInstagramUrl] = useState('');
   const [savingBranding, setSavingBranding] = useState(false);
 
+  // Analytics States
+  const [analyticsCounters, setAnalyticsCounters] = useState<any>({});
+  const [dailyAnalytics, setDailyAnalytics] = useState<any[]>([]);
+
+  // Admin Direct Create Ad States
+  const [adminTitleAr, setAdminTitleAr] = useState('');
+  const [adminTitleEn, setAdminTitleEn] = useState('');
+  const [adminDescAr, setAdminDescAr] = useState('');
+  const [adminDescEn, setAdminDescEn] = useState('');
+  const [adminCategory, setAdminCategory] = useState<DanceCategory>('party');
+  const [adminMediaType, setAdminMediaType] = useState<'video' | 'image'>('image');
+  const [adminMediaUrl, setAdminMediaUrl] = useState('');
+  const [adminPriceAr, setAdminPriceAr] = useState('250 ج.م');
+  const [adminPriceEn, setAdminPriceEn] = useState('250 EGP');
+  const [adminEventDate, setAdminEventDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+  const [adminPhone, setAdminPhone] = useState('+201011223344');
+  const [adminWhatsapp, setAdminWhatsapp] = useState('201011223344');
+  const [adminOrganizerName, setAdminOrganizerName] = useState('الإدارة / Admin');
+  const [adminLocationNameAr, setAdminLocationNameAr] = useState('أستوديو الرقص - الزمالك');
+  const [adminLocationNameEn, setAdminLocationNameEn] = useState('Dance Studio - Zamalek');
+  const [adminAddressAr, setAdminAddressAr] = useState('القاهرة، مصر');
+  const [adminAddressEn, setAdminAddressEn] = useState('Cairo, Egypt');
+  const [adminGoogleMapsUrl, setAdminGoogleMapsUrl] = useState('https://maps.google.com/?q=30.0444,31.2357');
+  const [adminSelectedStyles, setAdminSelectedStyles] = useState<DanceStyle[]>(['Salsa', 'Bachata']);
+  const [adminPosition, setAdminPosition] = useState<number>(1);
+  const [adminIsWeeklyPromo, setAdminIsWeeklyPromo] = useState(false);
+  const [adminIsFeatured, setAdminIsFeatured] = useState(true);
+  
+  // Media Upload States for Admin Create Ad
+  const [adminUploadedFileName, setAdminUploadedFileName] = useState<string | null>(null);
+  const [adminIsUploadingMedia, setAdminIsUploadingMedia] = useState(false);
+  const [adminUploadProgress, setAdminUploadProgress] = useState<number>(0);
+  const [adminUploadError, setAdminUploadError] = useState<string | null>(null);
+  const [adminSaveStatus, setAdminSaveStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [adminCreateTab, setAdminCreateTab] = useState<'form' | 'preview'>('form');
+  const [previewAlert, setPreviewAlert] = useState<string | null>(null);
+  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
+
+  const cloudinaryCloudName = (import.meta as any).env.VITE_CLOUDINARY_CLOUD_NAME;
+  const cloudinaryUploadPreset = (import.meta as any).env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+  const adminCameraInputRef = React.useRef<HTMLInputElement>(null);
+  const adminFileInputRef = React.useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (appAssets) {
       setFormAppNameAr(appAssets.appNameAr || '');
@@ -111,6 +166,269 @@ export const AdminPanel: React.FC = () => {
       setFormInstagramUrl(appAssets.instagramUrl || '');
     }
   }, [appAssets]);
+
+  useEffect(() => {
+    if (adminSection === 'analytics') {
+      const unsubCounters = subscribeToAnalyticsCounters((data) => {
+        setAnalyticsCounters(data || {});
+      });
+      const unsubDaily = subscribeToDailyAnalytics((list) => {
+        setDailyAnalytics(list || []);
+      });
+      return () => {
+        unsubCounters();
+        unsubDaily();
+      };
+    }
+  }, [adminSection]);
+
+  const compressAdminImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      if (file.size < 300 * 1024) {
+        resolve(file);
+        return;
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_DIM = 1080;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(compressedFile);
+              } else {
+                resolve(file);
+              }
+            }, 'image/jpeg', 0.82);
+          } else {
+            resolve(file);
+          }
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
+  const handleAdminFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setAdminUploadError(null);
+    setAdminUploadProgress(0);
+    if (file) {
+      setAdminIsUploadingMedia(true);
+      setAdminUploadedFileName(file.name);
+      
+      try {
+        let fileToUpload = file;
+        if (file.type.startsWith('image/')) {
+          try {
+            fileToUpload = await compressAdminImage(file);
+          } catch (compressErr) {
+            console.error('Image compression failed', compressErr);
+          }
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileToUpload);
+        formData.append('upload_preset', cloudinaryUploadPreset);
+
+        const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+        
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/${resourceType}/upload`, true);
+          
+          xhr.upload.onprogress = (progressEvent) => {
+            if (progressEvent.lengthComputable) {
+              const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              setAdminUploadProgress(percent);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.secure_url) {
+                  setAdminMediaUrl(response.secure_url);
+                  setAdminMediaType(resourceType);
+                  resolve();
+                } else {
+                  reject(new Error('No secure URL returned'));
+                }
+              } catch (parseErr) {
+                reject(new Error('Failed to parse response'));
+              }
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          };
+
+          xhr.onerror = () => {
+            reject(new Error(lang === 'ar' ? 'فشل الاتصال بالخادم السحابي' : 'Network connection error'));
+          };
+
+          xhr.send(formData);
+        });
+
+      } catch (err: any) {
+        console.error('Cloudinary upload error:', err);
+        setAdminUploadError(err.message || 'Upload failed');
+        setAdminUploadedFileName(null);
+      } finally {
+        setAdminIsUploadingMedia(false);
+        setAdminUploadProgress(0);
+      }
+    }
+  };
+
+  const parseAdminCoordinates = (url: string): { lat: number; lng: number } => {
+    try {
+      if (!url) return { lat: 30.0444, lng: 31.2357 }; // Cairo defaults
+      const coordsRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const match = url.match(coordsRegex);
+      if (match) {
+        return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+      }
+      
+      const queryRegex = /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const queryMatch = url.match(queryRegex);
+      if (queryMatch) {
+        return { lat: parseFloat(queryMatch[1]), lng: parseFloat(queryMatch[2]) };
+      }
+      
+      const daddrRegex = /[?&]daddr=(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const daddrMatch = url.match(daddrRegex);
+      if (daddrMatch) {
+        return { lat: parseFloat(daddrMatch[1]), lng: parseFloat(daddrMatch[2]) };
+      }
+    } catch (e) {
+      console.error('Error parsing coordinates:', e);
+    }
+    return { lat: 30.0444, lng: 31.2357 }; // Cairo defaults
+  };
+
+  const handleAdminPublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminTitleAr.trim() || !adminTitleEn.trim()) {
+      alert(lang === 'ar' ? 'الرجاء إدخال اسم الفعالية بالعربية والإنجليزية' : 'Please input both Arabic and English Titles.');
+      return;
+    }
+    if (!adminDescAr.trim() || !adminDescEn.trim()) {
+      alert(lang === 'ar' ? 'الرجاء إدخال وصف الفعالية بالعربية والإنجليزية' : 'Please input both Arabic and English Descriptions.');
+      return;
+    }
+    if (!adminEventDate) {
+      alert(lang === 'ar' ? 'الرجاء تحديد تاريخ الفعالية' : 'Please specify the event date.');
+      return;
+    }
+
+    setAdminSaveStatus('loading');
+    try {
+      const coords = parseAdminCoordinates(adminGoogleMapsUrl);
+      
+      const newEventId = `ev-adm-${Date.now()}`;
+      const finalMediaUrl = adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200'; // high-res fallback
+
+      const createdEvent: DanceEvent = {
+        id: newEventId,
+        titleAr: adminTitleAr.trim(),
+        titleEn: adminTitleEn.trim(),
+        descriptionAr: adminDescAr.trim(),
+        descriptionEn: adminDescEn.trim(),
+        category: adminCategory,
+        styles: adminSelectedStyles,
+        mediaType: adminMediaType,
+        mediaUrl: finalMediaUrl,
+        thumbnailUrl: finalMediaUrl,
+        uploadDate: new Date().toISOString(),
+        eventDate: new Date(adminEventDate).toISOString(),
+        priceAr: adminPriceAr.trim() || '250 ج.م',
+        priceEn: adminPriceEn.trim() || '250 EGP',
+        location: {
+          nameAr: adminLocationNameAr.trim() || 'أستوديو الرقص - الزمالك',
+          nameEn: adminLocationNameEn.trim() || 'Dance Studio - Zamalek',
+          addressAr: adminAddressAr.trim() || 'القاهرة، مصر',
+          addressEn: adminAddressEn.trim() || 'Cairo, Egypt',
+          googleMapsUrl: adminGoogleMapsUrl.trim(),
+          lat: coords.lat,
+          lng: coords.lng
+        },
+        contact: {
+          phone: adminPhone.trim() || '+201011223344',
+          whatsapp: adminWhatsapp.trim() || '201011223344',
+          organizerName: adminOrganizerName.trim() || 'الإدارة / Admin'
+        },
+        likesCount: 15,
+        isFeatured: adminIsFeatured,
+        isWeeklyPromo: adminIsWeeklyPromo,
+        position: Number(adminPosition) || 999999
+      };
+
+      // Save to Firestore
+      await saveEventToFirestore(createdEvent);
+
+      // Save notification to Firestore so all clients get pushed
+      const newNotifId = `notif-adm-${Date.now()}`;
+      const newNotif = {
+        id: newNotifId,
+        titleAr: `🔥 إعلان جديد: ${createdEvent.titleAr}`,
+        titleEn: `🔥 New Announcement: ${createdEvent.titleEn}`,
+        messageAr: `تم إضافة حدث جديد في التصنيف "${createdEvent.category === 'party' ? 'سهرة' : createdEvent.category === 'course' ? 'دورة' : 'رحلة'}". تصفحه الآن!`,
+        messageEn: `A new ${createdEvent.category} has been published. Explore details now!`,
+        date: new Date().toISOString(),
+        read: false,
+        type: 'new_party' as const,
+        relatedEventId: createdEvent.id
+      };
+      await saveNotificationToFirestore(newNotif);
+
+      setAdminSaveStatus('success');
+      alert(lang === 'ar' ? '🎉 تم إنشاء ونشر الإعلان فوراً وربطه بالتنبيهات العامة بنجاح!' : '🎉 Ad has been published and broadcasted via real-time alerts successfully!');
+      
+      // Reset Admin Form Fields
+      setAdminTitleAr('');
+      setAdminTitleEn('');
+      setAdminDescAr('');
+      setAdminDescEn('');
+      setAdminMediaUrl('');
+      setAdminUploadedFileName(null);
+      setAdminPosition(1);
+      
+      // Navigate to DB inspect
+      setAdminSection('database');
+      setDbSubTab('events');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (err) {
+      console.error('Error publishing admin event:', err);
+      setAdminSaveStatus('error');
+      alert(lang === 'ar' ? '❌ فشل حفظ الإعلان في قاعدة البيانات. يرجى مراجعة الصلاحيات واتصال الإنترنت.' : '❌ Failed to store ad in database. Please check Firestore network connections.');
+    }
+  };
 
   const handleSaveBranding = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -560,6 +878,8 @@ export const AdminPanel: React.FC = () => {
               adminSection === 'support' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
               adminSection === 'security' ? 'bg-red-500/10 border border-red-500/30 text-red-400' :
               adminSection === 'branding' ? 'bg-pink-500/10 border border-pink-500/30 text-pink-400' :
+              adminSection === 'analytics' ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400' :
+              adminSection === 'create_ad_admin' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400' :
               'bg-purple-500/10 border border-purple-500/30 text-purple-400'
             }`}>
               {adminSection === 'submissions' && <Crown className="h-6 w-6" />}
@@ -568,6 +888,8 @@ export const AdminPanel: React.FC = () => {
               {adminSection === 'users' && <Users className="h-6 w-6" />}
               {adminSection === 'security' && <ShieldAlert className="h-6 w-6" />}
               {adminSection === 'branding' && <Sparkles className="h-6 w-6 animate-pulse" />}
+              {adminSection === 'analytics' && <BarChart3 className="h-6 w-6" />}
+              {adminSection === 'create_ad_admin' && <FilePlus className="h-6 w-6 animate-pulse" />}
             </div>
             <div>
               <h2 className="text-xl font-black text-white">
@@ -577,6 +899,8 @@ export const AdminPanel: React.FC = () => {
                 {adminSection === 'users' && (lang === 'ar' ? '👥 إدارة ومراقبة مستخدمي التطبيق' : '👥 App Users Management')}
                 {adminSection === 'security' && (lang === 'ar' ? '🔒 إدارة الأمان وجدار الحماية وسجلات الاختراق' : '🔒 Security Firewall & Violation Logs')}
                 {adminSection === 'branding' && (lang === 'ar' ? '🎨 هوية التطبيق وتطوير المظهر والشعارات' : '🎨 App Identity & Visual Branding')}
+                {adminSection === 'analytics' && (lang === 'ar' ? '📊 إحصائيات زوار الموقع الحقيقيين واهتمام الجمهور' : '📊 Real-time Analytics & Audience Interest')}
+                {adminSection === 'create_ad_admin' && (lang === 'ar' ? '➕ إنشاء إعلان / حفلة جديدة فوراً بواسطة الإدارة' : '➕ Create & Publish Event Immediately (Admin)')}
               </h2>
               <p className="text-xs text-neutral-400 mt-1">
                 {adminSection === 'submissions' && (lang === 'ar' ? 'مراجعة وتفعيل الإعلانات الفاخرة وتتبع إيصالات التحويل البنكي.' : 'Manage premium ad campaigns, analyze bank receipts, and activate VIP slots.')}
@@ -585,6 +909,8 @@ export const AdminPanel: React.FC = () => {
                 {adminSection === 'users' && (lang === 'ar' ? 'البحث عن الحسابات بالأرقام السرية أو الإيميل، تجميد أو حذف الأعضاء.' : 'Audit member profiles, passwords, registration dates, suspend or delete records.')}
                 {adminSection === 'security' && (lang === 'ar' ? 'تغيير العبارة السرية، مراقبة محاولات الاختراق، عناوين الـ IP للمهاجمين، وإعداد بلاغات أمنية.' : 'Update VIP secret code, monitor unauthorized access logs, block IPs, and prepare security reports.')}
                 {adminSection === 'branding' && (lang === 'ar' ? 'تعديل وتخصيص أسماء التطبيق وشعاراته وأيقوناته وروابط الاتصال بقاعدة البيانات في الوقت الفعلي.' : 'Modify app names, icons, brand logos, support contact phone, and other static assets.')}
+                {adminSection === 'analytics' && (lang === 'ar' ? 'تحليل حركة المرور الحية، واهتمامات الراقصين بالأنماط المختلفة، ونسب استخدام أزرار التواصل والخريطة.' : 'Live traffic insights, style-specific popularity heatmaps, and call-to-action click rates.')}
+                {adminSection === 'create_ad_admin' && (lang === 'ar' ? 'نموذج لوحة الإدارة المتكامل لإنشاء ونشر الفعاليات وتثبيتها وتحديد ترتيب ظهورها مباشرة دون انتظار أو دفع.' : 'Admin panel integrated form to compose, publish, pin, and prioritize events directly in real-time.')}
               </p>
             </div>
           </div>
@@ -894,6 +1220,72 @@ export const AdminPanel: React.FC = () => {
                 </p>
               </div>
               <div className="flex items-center justify-end text-xs font-black text-pink-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
+              </div>
+            </motion.div>
+
+            {/* Card 7: Live App Analytics & Traffic */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              onClick={() => {
+                setAdminSection('analytics');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="rounded-3xl border-2 border-cyan-500/30 hover:border-cyan-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-cyan-950/20 p-6 shadow-xl hover:shadow-cyan-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+            >
+              <div className="absolute -right-8 -top-8 w-24 h-24 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all duration-500" />
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                    <BarChart3 className="h-6 w-6 stroke-[2]" />
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-black font-mono">
+                    REALTIME
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                  {lang === 'ar' ? '📊 إحصائيات زوار الموقع واهتمام الجمهور' : '📊 Realtime Analytics & Interest'}
+                </h3>
+                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'مراقبة عدد الزوار الفعليين، مشاهدات الأقسام، واهتمام الجمهور بكل رقصة (سالسا، باتشاتا، إلخ) وتتبع النقرات بشكل حي مجاني.'
+                    : 'Track actual site visitors, active session metrics, style interests (Salsa, Bachata) and contact button click rates in real-time, 100% free.'}
+                </p>
+              </div>
+              <div className="flex items-center justify-end text-xs font-black text-cyan-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
+              </div>
+            </motion.div>
+
+            {/* Card 8: Create Event / Ad (Admin) */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              onClick={() => {
+                setAdminSection('create_ad_admin');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="rounded-3xl border-2 border-indigo-500/30 hover:border-indigo-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-indigo-950/20 p-6 shadow-xl hover:shadow-indigo-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+            >
+              <div className="absolute -right-8 -top-8 w-24 h-24 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-500" />
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <FilePlus className="h-6 w-6 stroke-[2]" />
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-black font-mono">
+                    ADMIN ONLY
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                  {lang === 'ar' ? '➕ إنشاء إعلان بواسطة الإدارة' : '➕ Create Event (Admin Mode)'}
+                </h3>
+                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'إنشاء ونشر الفعاليات الفورية مع التحكم في ترتيب الظهور (الترتيب الرقمي) لتثبيت وعرض أي إعلان أولاً.'
+                    : 'Compose and publish active events instantly. Define exact custom display priority (numerical order) to pin ads.'}
+                </p>
+              </div>
+              <div className="flex items-center justify-end text-xs font-black text-indigo-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
@@ -2358,6 +2750,1337 @@ export const AdminPanel: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {adminSection === 'analytics' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          {/* Summary KPIs Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* KPI 1: Unique Sessions */}
+            <div className="rounded-3xl border border-cyan-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-cyan-400">
+                <Users className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '👥 زوار فريدون (نشاط الأجهزة)' : '👥 UNIQUE VISITORS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.unique_sessions || 0}
+              </h4>
+              <p className="text-[10px] text-cyan-400 mt-2 font-medium">
+                {lang === 'ar' ? '✨ تحديث مباشر فوري مجاني' : '✨ Live real-time & completely free'}
+              </p>
+            </div>
+
+            {/* KPI 2: Total Page Views */}
+            <div className="rounded-3xl border border-pink-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-pink-400">
+                <Eye className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '📊 إجمالي مشاهدات التطبيق' : '📊 TOTAL PAGE VIEWS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.total_page_views || 0}
+              </h4>
+              <p className="text-[10px] text-pink-400 mt-2 font-medium">
+                {lang === 'ar' ? '🔥 نشاط تصفح ومشاركات حقيقي' : '🔥 Active browser impressions'}
+              </p>
+            </div>
+
+            {/* KPI 3: Engagement Factor */}
+            <div className="rounded-3xl border border-amber-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-amber-400">
+                <TrendingUp className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '⚡ متوسط التفاعل بالجلسة' : '⚡ ENGAGEMENT METRIC'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {((analyticsCounters.total_page_views || 0) / (analyticsCounters.unique_sessions || 1)).toFixed(1)}
+              </h4>
+              <p className="text-[10px] text-amber-400 mt-2 font-medium">
+                {lang === 'ar' ? '🔄 معدل زيارة الصفحات لكل مستخدم' : '🔄 Page views per active session'}
+              </p>
+            </div>
+
+            {/* KPI 4: Outbound Contacts */}
+            <div className="rounded-3xl border border-emerald-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-emerald-400">
+                <MousePointerClick className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '🎯 نقرات التواصل السريع' : '🎯 CALL-TO-ACTION CLICKS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {(analyticsCounters.clicks_whatsapp || 0) + (analyticsCounters.clicks_phone || 0) + (analyticsCounters.clicks_maps || 0)}
+              </h4>
+              <p className="text-[10px] text-emerald-400 mt-2 font-medium">
+                {lang === 'ar' ? '✅ واتساب واتصالات وخرائط' : '✅ Active Maps & Chat actions'}
+              </p>
+            </div>
+          </div>
+
+          {/* Core Analytics Details Split Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left/Right Column: Dance Styles Popularity / Audience Interest (7 Cols) */}
+            <div className="lg:col-span-7 rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  {lang === 'ar' ? '🔥 اهتمام الجمهور بحسب نوع الرقصة والأنماط' : '🔥 Audience Interest & Dance Styles Preference'}
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  {lang === 'ar' 
+                    ? 'ترتيب تنازلي فوري لأنواع الرقصات الأكثر طلباً وبحثاً وتصفية من قبل زوار الموقع والجمهور الحقيقي.' 
+                    : 'Real-time ranking of music and dance genres selected by active visitors.'}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {(() => {
+                  const rawStyles = [
+                    { name: 'Salsa', count: analyticsCounters.style_salsa || 0, color: 'bg-amber-500' },
+                    { name: 'Bachata', count: analyticsCounters.style_bachata || 0, color: 'bg-purple-500' },
+                    { name: 'Kizomba', count: analyticsCounters.style_kizomba || 0, color: 'bg-pink-500' },
+                    { name: 'Merengue', count: analyticsCounters.style_merengue || 0, color: 'bg-emerald-500' },
+                    { name: 'Tango', count: analyticsCounters.style_tango || 0, color: 'bg-red-500' },
+                    { name: 'Zouk', count: analyticsCounters.style_zouk || 0, color: 'bg-blue-500' },
+                    { name: 'Cha-Cha', count: analyticsCounters.style_cha_cha || 0, color: 'bg-indigo-500' },
+                    { name: 'Reggaeton', count: analyticsCounters.style_reggaeton || 0, color: 'bg-rose-500' },
+                    { name: 'Ballroom', count: analyticsCounters.style_ballroom || 0, color: 'bg-yellow-500' },
+                    { name: 'Mix & Latin', count: (analyticsCounters.style_mix___latin || analyticsCounters.style_mix_latin || 0), color: 'bg-teal-500' },
+                    { name: 'Arabic & Oriental', count: (analyticsCounters.style_arabic___oriental || analyticsCounters.style_arabic_oriental || 0), color: 'bg-cyan-500' }
+                  ];
+                  const sortedStyles = [...rawStyles].sort((a, b) => b.count - a.count);
+                  const maxStyleCount = Math.max(...sortedStyles.map(s => s.count), 1);
+
+                  return sortedStyles.map((item, index) => {
+                    const pct = Math.min(Math.round((item.count / maxStyleCount) * 100), 100);
+                    return (
+                      <div key={item.name} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-neutral-500 w-5 text-center">
+                              #{index + 1}
+                            </span>
+                            <span className="font-extrabold text-neutral-200">
+                              {getStyleLabel(item.name, lang)}
+                            </span>
+                          </div>
+                          <span className="font-bold text-neutral-400">
+                            {item.count} {lang === 'ar' ? 'نقرة' : 'clicks'} ({pct}%)
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/50">
+                          <div 
+                            className={`h-full ${item.color} rounded-full transition-all duration-1000`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+
+            {/* Right Column: Interaction Clicks & Tab Navigation Breakdown (5 Cols) */}
+            <div className="lg:col-span-5 flex flex-col gap-6 text-right">
+              {/* Box 1: Clicks Breakdown */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <MousePointerClick className="h-4.5 w-4.5 text-emerald-400" />
+                    <span>{lang === 'ar' ? '🎯 الإجراءات المتخذة (CTA)' : '🎯 Customer Call-to-Actions'}</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {lang === 'ar' ? 'تتبع أزرار الاتصال الأكثر استخداماً للوصول إلى المنظمين.' : 'Metrics on actual customer conversions and outreach.'}
+                  </p>
+                </div>
+
+                <div className="space-y-3.5 pt-2">
+                  {/* WhatsApp */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <MessageCircle className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'نقرات التواصل عبر واتساب' : 'WhatsApp Chats Started'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">wa.me outbound link clicks</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-emerald-400">{analyticsCounters.clicks_whatsapp || 0}</span>
+                  </div>
+
+                  {/* Google Maps */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <MapPin className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'خرائط جوجل ومواقع الفعاليات' : 'Google Maps Open'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">location map navigation requests</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-cyan-400">{analyticsCounters.clicks_maps || 0}</span>
+                  </div>
+
+                  {/* Phone Calls */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <Phone className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'المكالمات الهاتفية المباشرة' : 'Direct Phone Calls'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">tel: links launched</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-amber-400">{analyticsCounters.clicks_phone || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Box 2: Sections engagement */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <Layers className="h-4.5 w-4.5 text-purple-400" />
+                    <span>{lang === 'ar' ? '🗺️ نشاط تصفح أقسام التطبيق' : '🗺️ Section & Navigation Usage'}</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {lang === 'ar' ? 'توزع الزوار بين الأبواب الرئيسية في التطبيق.' : 'Page view count breakdown across system tabs.'}
+                  </p>
+                </div>
+
+                <div className="space-y-2 font-mono text-xs text-right">
+                  {/* Explore */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '✨ قسم الاستكشاف الرئيسي' : 'Explore Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_explore || 0}</span>
+                  </div>
+                  {/* Trips */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '🌴 قسم الرحلات والمصايف' : 'Trips Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_trips || 0}</span>
+                  </div>
+                  {/* Profile */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '👤 صفحة الحساب والمجتمع' : 'Profile/Account Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_profile || 0}</span>
+                  </div>
+                  {/* Create Ad */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '➕ صفحة إنشاء الإعلانات' : 'Create Ad Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_create_ad || 0}</span>
+                  </div>
+                  {/* Admin Panel */}
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '⚙️ لوحة تحكم الإدارة' : 'Admin Panel Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_admin || 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Most Favorited Events & Ads Leaderboard */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-500 fill-red-500" />
+                <span>{lang === 'ar' ? '💖 إعلانات الحفلات الأكثر حفظاً في المفضلة للجمهور' : '💖 Most Favorited (Saved) Events & Ads Leaderboard'}</span>
+              </h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                {lang === 'ar' 
+                  ? 'قائمة مرتبة تنازلياً توضح عدد المستخدمين الفعليين الذين قاموا بحفظ كل إعلان في قائمتهم المفضلة الخاصة.' 
+                  : 'Real-time leaderboard showing how many unique user accounts saved each active event or ad.'}
+              </p>
+            </div>
+
+            {events.length === 0 ? (
+              <div className="py-12 text-center text-xs text-neutral-500 font-mono">
+                {lang === 'ar' ? '📭 لا توجد إعلانات نشطة حالياً في قاعدة البيانات.' : '📭 No active events found in the database.'}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                  <thead>
+                    <tr className="border-b border-neutral-800/60 text-neutral-400 font-bold text-neutral-300">
+                      <th className="py-3 px-4 text-center w-12">#</th>
+                      <th className="py-3 px-4 text-right">{lang === 'ar' ? 'اسم الإعلان / الحفلة' : 'Event / Ad Title'}</th>
+                      <th className="py-3 px-4 text-center">{lang === 'ar' ? 'التصنيف' : 'Category'}</th>
+                      <th className="py-3 px-4 text-center">{lang === 'ar' ? 'تاريخ الفعالية' : 'Event Date'}</th>
+                      <th className="py-3 px-4 text-center w-36">{lang === 'ar' ? 'مرات الحفظ في المفضلة' : 'Favorite Count'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const sortedEvents = [...events].sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
+                      const maxLikes = Math.max(...sortedEvents.map(e => e.likesCount || 0), 1);
+
+                      return sortedEvents.map((ev, index) => {
+                        const likes = ev.likesCount || 0;
+                        const pct = Math.min(Math.round((likes / maxLikes) * 100), 100);
+                        const isTop3 = index < 3;
+                        const medalColors = ['text-yellow-500', 'text-slate-300', 'text-amber-600'];
+
+                        return (
+                          <tr key={ev.id} className="border-b border-neutral-800/40 hover:bg-neutral-950/40 transition-colors">
+                            {/* Rank Column */}
+                            <td className="py-3.5 px-4 text-center font-bold font-mono">
+                              {isTop3 ? (
+                                <span className={`text-sm font-black`}>
+                                  {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                                </span>
+                              ) : (
+                                <span className="text-neutral-500">#{index + 1}</span>
+                              )}
+                            </td>
+
+                            {/* Title & Styles */}
+                            <td className="py-3.5 px-4 font-extrabold text-white text-right">
+                              <div>
+                                <p className="text-sm line-clamp-1">
+                                  {lang === 'ar' ? ev.titleAr || ev.titleEn : ev.titleEn || ev.titleAr}
+                                </p>
+                                <div className="flex flex-wrap gap-1 mt-1 justify-start">
+                                  {ev.styles?.slice(0, 3).map(style => (
+                                    <span key={style} className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-neutral-800 text-neutral-400 font-mono">
+                                      {getStyleLabel(style, lang)}
+                                    </span>
+                                  ))}
+                                  {ev.isWeeklyPromo && (
+                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                                      VIP PROMO
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Category Badge */}
+                            <td className="py-3.5 px-4 text-center">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono ${
+                                ev.category === 'party' 
+                                  ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                                  : ev.category === 'course' 
+                                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              }`}>
+                                {ev.category === 'party' 
+                                  ? (lang === 'ar' ? 'حفلة' : 'Party') 
+                                  : ev.category === 'course' 
+                                    ? (lang === 'ar' ? 'دورة' : 'Course') 
+                                    : (lang === 'ar' ? 'رحلة' : 'Trip')}
+                              </span>
+                            </td>
+
+                            {/* Event Date */}
+                            <td className="py-3.5 px-4 text-center text-[11px] font-mono font-bold text-neutral-400">
+                              {(() => {
+                                try {
+                                  return new Date(ev.eventDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  });
+                                } catch (e) {
+                                  return ev.eventDate;
+                                }
+                              })()}
+                            </td>
+
+                            {/* Favorite Clicks & Visual Indicator */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-3 justify-center">
+                                {/* Favorite count bubble */}
+                                <div className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-2xl text-red-400 shrink-0">
+                                  <Heart className="h-3 w-3 fill-current text-red-500" />
+                                  <span className="font-extrabold font-mono text-sm">{likes}</span>
+                                </div>
+                                {/* Progress visualizer */}
+                                <div className="hidden sm:block h-1.5 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/50">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-pink-500 to-red-500 rounded-full transition-all duration-1000"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Daily Traffic Chart Card (Full Width) */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Activity className="h-5 w-5 text-cyan-400" />
+                <span>{lang === 'ar' ? '📈 مخطط حركة المرور والزوار اليومي' : '📈 Daily Visitor & Traffic Timeline'}</span>
+              </h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                {lang === 'ar' 
+                  ? 'رسم بياني يعرض نشاط الزوار الفريدين (بالأزرق 🔷) وإجمالي مشاهدات الصفحات (بالوردي 🌸) للـ 10 أيام الماضية.' 
+                  : 'Time-series bar visualization tracking active unique sessions (cyan) vs total page impressions (pink).'}
+              </p>
+            </div>
+
+            {dailyAnalytics.length === 0 ? (
+              <div className="py-12 text-center text-xs text-neutral-500 font-mono">
+                {lang === 'ar' ? '📭 لا توجد بيانات مسجلة في السجل اليومي بعد.' : '📭 No daily history records found in Firestore yet.'}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Horizontal Bar Chart representation */}
+                <div className="space-y-4">
+                  {(() => {
+                    const maxSessions = Math.max(...dailyAnalytics.map(d => d.unique_sessions || 0), 1);
+                    const maxPageViews = Math.max(...dailyAnalytics.map(d => d.total_page_views || 0), 1);
+
+                    return [...dailyAnalytics].reverse().slice(0, 10).map((day) => {
+                      const sessionPct = Math.min(Math.round(((day.unique_sessions || 0) / maxSessions) * 100), 100);
+                      const viewsPct = Math.min(Math.round(((day.total_page_views || 0) / maxPageViews) * 100), 100);
+
+                      return (
+                        <div key={day.date} className="grid grid-cols-1 md:grid-cols-12 items-center gap-3 border-b border-neutral-800/40 pb-3 text-right">
+                          {/* Date Label */}
+                          <div className="md:col-span-2 text-xs font-bold font-mono text-neutral-300">
+                            📅 {day.date}
+                          </div>
+
+                          {/* Dual Bar Render */}
+                          <div className="md:col-span-8 space-y-1.5">
+                            {/* Sessions (Cyan) */}
+                            <div className="flex items-center gap-2">
+                              <div className="h-2.5 bg-cyan-500 rounded-full transition-all duration-1000" style={{ width: `${sessionPct}%` }} />
+                              <span className="text-[10px] font-mono font-bold text-cyan-400">{day.unique_sessions || 0}</span>
+                            </div>
+
+                            {/* Pageviews (Pink) */}
+                            <div className="flex items-center gap-2">
+                              <div className="h-2.5 bg-pink-500 rounded-full transition-all duration-1000" style={{ width: `${viewsPct}%` }} />
+                              <span className="text-[10px] font-mono font-bold text-pink-400">{day.total_page_views || 0}</span>
+                            </div>
+                          </div>
+
+                          {/* Quick details */}
+                          <div className="md:col-span-2 text-left md:text-right text-[11px] font-mono text-neutral-400 flex md:flex-col justify-between">
+                            <div><strong className="text-cyan-400">{day.unique_sessions || 0}</strong> {lang === 'ar' ? 'زائر' : 'visitors'}</div>
+                            <div><strong className="text-pink-400">{day.total_page_views || 0}</strong> {lang === 'ar' ? 'مشاهدة' : 'views'}</div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Chart Legend */}
+                <div className="flex items-center justify-center gap-6 pt-4 border-t border-neutral-800 text-xs font-mono">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 w-3.5 rounded bg-cyan-500" />
+                    <span className="text-cyan-400 font-extrabold">{lang === 'ar' ? 'الزوار الفريدين (Unique sessions)' : 'Unique visitors'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 w-3.5 rounded bg-pink-500" />
+                    <span className="text-pink-400 font-extrabold">{lang === 'ar' ? 'إجمالي المشاهدات (Page views)' : 'Total page impressions'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Back Button */}
+          <div className="flex justify-end pt-4 border-t border-neutral-800">
+            <button
+              onClick={() => {
+                setAdminSection(null);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-5 py-3 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white font-extrabold text-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>{lang === 'ar' ? 'الرجوع للوحة التحكم' : 'Back to Dashboard'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'create_ad_admin' && (
+        <div className="space-y-6 animate-fadeIn" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <form onSubmit={handleAdminPublish} className="space-y-6">
+            
+            {/* Master Control Notice */}
+            <div className="rounded-3xl border border-indigo-500/30 bg-neutral-900 p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute right-0 top-0 h-full w-1/3 bg-indigo-500/5 blur-3xl pointer-events-none" />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <Sparkles className="h-6 w-6 animate-pulse" />
+                  </div>
+                  <div className="text-right">
+                    <h3 className="text-base sm:text-lg font-black text-white">
+                      {lang === 'ar' ? 'نظام النشر المباشر للإدارة' : 'Admin Instant Publisher'}
+                    </h3>
+                    <p className="text-xs text-neutral-400 mt-1">
+                      {lang === 'ar' 
+                        ? 'أنت تقوم بإنشاء إعلان بشكل مباشر في قاعدة البيانات. سيتجاوز هذا الإعلان المراجعة والدفع ويظهر للجمهور فوراً.' 
+                        : 'You are composing an event directly inside Firestore. This bypasses the payment/review queue and updates live feeds instantly.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-mono font-black">
+                    BYPASS ACTIVE
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Tab Switcher for Full Live Preview (A separate page/tab of its own because of space/area constraints) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-3xl bg-neutral-950/80 border-2 border-indigo-500/30 shadow-2xl relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="text-right flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+                </span>
+                <div>
+                  <h4 className="text-sm font-black text-white">
+                    {lang === 'ar' ? '👀 معاينة مباشرة تفاعلية بالكامل' : '👀 Live Interactive Preview'}
+                  </h4>
+                  <p className="text-[11px] text-neutral-400">
+                    {lang === 'ar' ? 'اعرض مظهر الإعلان النهائي للجمهور أثناء تعبئة الحقول لتعديله فوراً.' : 'See exactly how the final ad renders to dancers as you type.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex rounded-2xl bg-neutral-900 p-1 border border-neutral-800 w-full sm:w-auto shrink-0 relative z-10">
+                <button
+                  type="button"
+                  onClick={() => setAdminCreateTab('form')}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    adminCreateTab === 'form'
+                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>{lang === 'ar' ? '📝 نموذج البيانات' : '📝 Form Builder'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminCreateTab('preview');
+                    setPreviewAlert(null);
+                  }}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    adminCreateTab === 'preview'
+                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>{lang === 'ar' ? '👁️ المعاينة الحية للجمهور' : '👁️ Live Preview'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Floating Action Button (FAB) for Instant Quick Toggle on Mobile & Desktop - IMPOSSIBLE to miss! */}
+            <div className="fixed bottom-6 left-6 sm:left-12 z-50">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminCreateTab(adminCreateTab === 'form' ? 'preview' : 'form');
+                  setPreviewAlert(null);
+                }}
+                className="flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-black text-xs sm:text-sm shadow-2xl transition-all hover:scale-105 active:scale-95 border-2 border-indigo-400 animate-pulse cursor-pointer shadow-indigo-500/40"
+              >
+                <Eye className="h-5 w-5 text-indigo-200" />
+                <span>
+                  {adminCreateTab === 'form' 
+                    ? (lang === 'ar' ? '👁️ معاينة الإعلان مباشرة' : '👁️ Preview Ad Now') 
+                    : (lang === 'ar' ? '📝 العودة للنموذج' : '📝 Back to Form')}
+                </span>
+                <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-sans uppercase font-black animate-bounce">
+                  LIVE
+                </span>
+              </button>
+            </div>
+
+            {adminCreateTab === 'form' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
+              
+              {/* LEFT COLUMN: Main Form Details */}
+              <div className="lg:col-span-8 space-y-6">
+                
+                {/* Section 1: Titles & Descriptions */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '📝 تفاصيل ونص الإعلان' : '📝 Event Content & Copy'}</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Title Arabic */}
+                    <div className="space-y-2 text-right">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالعربية) *' : 'Event Title (Arabic) *'}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={adminTitleAr}
+                        onChange={(e) => setAdminTitleAr(e.target.value)}
+                        placeholder="مثال: سهرة سالسا فخمة في الزمالك"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
+                      />
+                    </div>
+
+                    {/* Title English */}
+                    <div className="space-y-2 text-left">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالإنجليزية) *' : 'Event Title (English) *'}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={adminTitleEn}
+                        onChange={(e) => setAdminTitleEn(e.target.value)}
+                        placeholder="e.g. Luxury Salsa Night in Zamalek"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-left"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Desc Arabic */}
+                    <div className="space-y-2 text-right">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالعربية) *' : 'Event Description (Arabic) *'}
+                      </label>
+                      <textarea
+                        required
+                        rows={4}
+                        value={adminDescAr}
+                        onChange={(e) => setAdminDescAr(e.target.value)}
+                        placeholder="اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور..."
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
+                      />
+                    </div>
+
+                    {/* Desc English */}
+                    <div className="space-y-2 text-left">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالإنجليزية) *' : 'Event Description (English) *'}
+                      </label>
+                      <textarea
+                        required
+                        rows={4}
+                        value={adminDescEn}
+                        onChange={(e) => setAdminDescEn(e.target.value)}
+                        placeholder="Write details of the event, instructors, music styles, dress codes..."
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-left"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Category & Dance Styles */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '🏷️ تصنيف وموديل الرقص' : '🏷️ Category & Dance Styles'}</span>
+                  </h4>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-neutral-300">
+                      {lang === 'ar' ? 'تصنيف الفعالية الرئيسي' : 'Main Event Category'}
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {(['party', 'course', 'trip'] as DanceCategory[]).map((cat) => (
+                        <button
+                          type="button"
+                          key={cat}
+                          onClick={() => setAdminCategory(cat)}
+                          className={`py-3 rounded-2xl text-xs font-bold transition-all border cursor-pointer ${
+                            adminCategory === cat
+                              ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400 font-extrabold shadow-md'
+                              : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white'
+                          }`}
+                        >
+                          {cat === 'party' 
+                            ? (lang === 'ar' ? '🎉 سهرة / حفلة' : '🎉 Party / Social') 
+                            : cat === 'course' 
+                              ? (lang === 'ar' ? '🎓 كورس / تدريب' : '🎓 Course / Workshop') 
+                              : (lang === 'ar' ? '✈️ رحلة / مهرجان' : '✈️ Trip / Festival')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-neutral-300">
+                      {lang === 'ar' ? 'أنماط الرقص المتوفرة (اختر نمطاً واحداً أو أكثر)' : 'Styles / Dance Genres (Multi-select)'}
+                    </label>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {ALL_DANCE_STYLES.map((style) => {
+                        const isSelected = adminSelectedStyles.includes(style);
+                        return (
+                          <button
+                            type="button"
+                            key={style}
+                            onClick={() => {
+                              if (isSelected) {
+                                setAdminSelectedStyles(prev => prev.filter(s => s !== style));
+                              } else {
+                                setAdminSelectedStyles(prev => [...prev, style]);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                              isSelected 
+                                ? 'bg-indigo-500 text-white border border-indigo-400 shadow-md shadow-indigo-500/20' 
+                                : 'bg-neutral-950 text-neutral-400 border border-neutral-800 hover:text-neutral-200'
+                            }`}
+                          >
+                            {getStyleLabel(style, lang)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Time & Price & Contact */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '🕒 الوقت والأسعار ومعلومات التواصل' : '🕒 Schedule, Prices & Outreach'}</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Event Date */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'تاريخ الفعالية *' : 'Event Date *'}
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={adminEventDate}
+                        onChange={(e) => setAdminEventDate(e.target.value)}
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                      />
+                    </div>
+
+                    {/* Price Arabic */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'السعر المقترح بالعربية' : 'Price text (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminPriceAr}
+                        onChange={(e) => setAdminPriceAr(e.target.value)}
+                        placeholder="مثال: 250 ج.م شامل المشروب"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* Price English */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'السعر المقترح بالإنجليزية' : 'Price text (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminPriceEn}
+                        onChange={(e) => setAdminPriceEn(e.target.value)}
+                        placeholder="e.g. 250 EGP (Includes Soft Drink)"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Phone */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300 font-mono">
+                        {lang === 'ar' ? 'رقم هاتف المنظم' : 'Organizer Phone'}
+                      </label>
+                      <input
+                        type="tel"
+                        value={adminPhone}
+                        onChange={(e) => setAdminPhone(e.target.value)}
+                        placeholder="+201011223344"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                      />
+                    </div>
+
+                    {/* WhatsApp */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300 font-mono">
+                        {lang === 'ar' ? 'رقم واتساب (بدون أصفار أو علامة +)' : 'WhatsApp (Clean format)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminWhatsapp}
+                        onChange={(e) => setAdminWhatsapp(e.target.value)}
+                        placeholder="201011223344"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                      />
+                    </div>
+
+                    {/* Organizer Name */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'اسم منظم الفعالية' : 'Organizer Name'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminOrganizerName}
+                        onChange={(e) => setAdminOrganizerName(e.target.value)}
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 4: Location details */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '📍 تفاصيل الموقع الجغرافي والخرائط' : '📍 Geographic Location & Maps'}</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Location Name Ar */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'اسم قاعة المكان / الاستوديو بالعربية' : 'Venue/Studio Name (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminLocationNameAr}
+                        onChange={(e) => setAdminLocationNameAr(e.target.value)}
+                        placeholder="مثال: أستوديو الرقص بالزمالك"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* Location Name En */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'اسم قاعة المكان / الاستوديو بالإنجليزية' : 'Venue/Studio Name (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminLocationNameEn}
+                        onChange={(e) => setAdminLocationNameEn(e.target.value)}
+                        placeholder="e.g. Dance Studio - Zamalek"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Address Ar */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'العنوان التفصيلي بالعربية' : 'Detailed Address (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminAddressAr}
+                        onChange={(e) => setAdminAddressAr(e.target.value)}
+                        placeholder="مثال: الزمالك، عمارة المرعشلي، الدور الرابع"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* Address En */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'العنوان التفصيلي بالإنجليزية' : 'Detailed Address (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminAddressEn}
+                        onChange={(e) => setAdminAddressEn(e.target.value)}
+                        placeholder="e.g. Zamalek, El-Maraashly St, 4th Floor"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Google Maps Link */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-neutral-300 flex items-center gap-1.5">
+                      <span>{lang === 'ar' ? 'رابط خرائط جوجل (Google Maps Link)' : 'Google Maps Link'}</span>
+                      <span className="text-[10px] text-neutral-500 font-mono font-normal">({lang === 'ar' ? 'لتحميل الإحداثيات تلقائياً' : 'autodetects lat/lng coords'})</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={adminGoogleMapsUrl}
+                      onChange={(e) => setAdminGoogleMapsUrl(e.target.value)}
+                      placeholder="https://maps.google.com/?q=..."
+                      className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono animate-pulse"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Media Uploads, Priority, & Pinned (Featured) Settings */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* Section A: Banner Media File / Video / Image */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '🖼️ صورة أو فيديو الإعلان' : '🖼️ Event Flyer / Video'}</span>
+                  </h4>
+
+                  {/* Media upload area */}
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border-2 border-dashed border-neutral-800 hover:border-indigo-500/50 bg-neutral-950 p-4 transition-all text-center relative overflow-hidden group">
+                      
+                      {adminIsUploadingMedia ? (
+                        <div className="py-8 space-y-3">
+                          <RefreshCw className="h-8 w-8 text-indigo-400 animate-spin mx-auto" />
+                          <p className="text-xs text-indigo-300 font-bold">
+                            {lang === 'ar' ? `جاري ضغط ورفع الملف... ${adminUploadProgress}%` : `Uploading... ${adminUploadProgress}%`}
+                          </p>
+                          <div className="h-1.5 w-3/4 bg-neutral-900 rounded-full mx-auto overflow-hidden border border-neutral-800">
+                            <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${adminUploadProgress}%` }} />
+                          </div>
+                        </div>
+                      ) : adminMediaUrl ? (
+                        <div className="space-y-3">
+                          {adminMediaType === 'video' ? (
+                            <video src={adminMediaUrl} className="max-h-48 w-full rounded-xl object-cover bg-neutral-950" controls />
+                          ) : (
+                            <img src={adminMediaUrl} alt="Flyer Preview" className="max-h-48 w-full rounded-xl object-cover bg-neutral-950" referrerPolicy="no-referrer" />
+                          )}
+                          <div className="flex items-center justify-between gap-2 px-2">
+                            <span className="text-[10px] text-neutral-500 truncate max-w-[150px] font-mono">
+                              {adminUploadedFileName || 'Uploaded File'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAdminMediaUrl('');
+                                setAdminUploadedFileName(null);
+                              }}
+                              className="text-xs text-red-400 hover:text-red-300 font-bold transition-colors cursor-pointer"
+                            >
+                              {lang === 'ar' ? 'إزالة' : 'Remove'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-6 space-y-2">
+                          <p className="text-xs text-neutral-400">
+                            {lang === 'ar' ? 'اختر ملف الصورة أو الفيديو للنشر المباشر' : 'Upload custom flyer or video presentation'}
+                          </p>
+                          <div className="flex justify-center gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => adminFileInputRef.current?.click()}
+                              className="px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-bold border border-indigo-500/20 transition-all cursor-pointer"
+                            >
+                              {lang === 'ar' ? '📁 تصفح المعرض' : '📁 Choose File'}
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-neutral-600 font-mono">Max size 50MB (Images compressed automatically)</p>
+                        </div>
+                      )}
+
+                      <input
+                        type="file"
+                        ref={adminFileInputRef}
+                        onChange={handleAdminFileUpload}
+                        accept="image/*,video/*"
+                        className="hidden"
+                      />
+                    </div>
+
+                    {/* Direct Text URL Link Input (Fallback) */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-black text-neutral-400">
+                        {lang === 'ar' ? 'أو أدخل رابط ميديا خارجي مباشرة (URL):' : 'Or enter custom Media URL link:'}
+                      </label>
+                      <input
+                        type="url"
+                        value={adminMediaUrl}
+                        onChange={(e) => setAdminMediaUrl(e.target.value)}
+                        placeholder="https://example.com/flyer.jpg"
+                        className="w-full rounded-xl bg-neutral-950 border border-neutral-800 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section B: Display Position & Sorting Priority */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '🔢 أولوية وترتيب ظهور الإعلان' : '🔢 Display Sort Position'}</span>
+                  </h4>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1.5 text-right">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'رقم الترتيب في الصفحة الرئيسية' : 'Homepage Display Sort Order'}
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={adminPosition}
+                        onChange={(e) => setAdminPosition(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm font-mono font-bold text-indigo-400 focus:outline-none focus:border-indigo-500 transition-colors text-right"
+                      />
+                    </div>
+                    <p className="text-[10px] text-neutral-400 leading-relaxed text-right">
+                      {lang === 'ar' 
+                        ? '💡 الأرقام الصغيرة تظهر أولاً (مثال: الإعلانات ذات الرقم 1 أو 2 أو 3 تظهر دائماً في بداية الصفحة الرئيسية وتتفوق على الإعلانات العادية).' 
+                        : '💡 Lower numbers appear first. Setting this to 1, 2, or 3 will force this ad to remain pinned at the very top of the homepage.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Section C: VIP & Banner Placement Flags */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '⭐ مميزات ومواضع ظهور الـ VIP' : '⭐ Premium VIP Toggles'}</span>
+                  </h4>
+
+                  <div className="space-y-3.5">
+                    {/* Weekly Promo Toggle */}
+                    <label className="flex items-start gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800/80 hover:border-indigo-500/30 transition-all cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={adminIsWeeklyPromo}
+                        onChange={(e) => setAdminIsWeeklyPromo(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-neutral-800 text-indigo-500 bg-neutral-900 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                      />
+                      <div className="text-right">
+                        <p className="text-xs font-extrabold text-white">
+                          {lang === 'ar' ? 'تثبيت في البنر العلوي كإعلان VIP مميز' : 'Pin to VIP Banner Slider'}
+                        </p>
+                        <p className="text-[10px] text-neutral-500 mt-0.5">
+                          {lang === 'ar' ? 'سيعرض هذا الإعلان في شريط العرض الدائري الرئيسي في هيدر الموقع.' : 'Showcases this ad inside the dynamic sliding header on the home feed.'}
+                        </p>
+                      </div>
+                    </label>
+
+                    {/* Featured Status Toggle */}
+                    <label className="flex items-start gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800/80 hover:border-indigo-500/30 transition-all cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={adminIsFeatured}
+                        onChange={(e) => setAdminIsFeatured(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-neutral-800 text-indigo-500 bg-neutral-900 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                      />
+                      <div className="text-right">
+                        <p className="text-xs font-extrabold text-white">
+                          {lang === 'ar' ? 'تفعيل كإعلان VIP نشط ومميز' : 'Activate as VIP Featured Card'}
+                        </p>
+                        <p className="text-[10px] text-neutral-500 mt-0.5">
+                          {lang === 'ar' ? 'يمنح الإعلان إطاراً ذهبياً ووسم VIP متوهجاً لزيادة جذب انتباه الراقصين.' : 'Surrounds the event card with an glowing border and golden VIP badges.'}
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+            {adminCreateTab === 'preview' && (
+              <div className="space-y-6 animate-fadeIn text-right" dir={previewLang === 'ar' ? 'rtl' : 'ltr'}>
+                
+                {/* Preview Controls Header Block */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="text-right">
+                      <h4 className="text-base sm:text-lg font-black text-white flex items-center justify-start gap-2">
+                        <Eye className="h-5 w-5 text-indigo-400 animate-pulse" />
+                        <span>
+                          {lang === 'ar' 
+                            ? '📱 المعاينة التفاعلية الكاملة كما يظهر للجمهور' 
+                            : '📱 Complete Interactive Public Preview'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-neutral-400 mt-1">
+                        {lang === 'ar' 
+                          ? 'هذا عرض حقيقي ومطابق تماماً لكيفية ظهور إعلانك للجمهور في صفحة الخلاصة والبحث. جميع الأزرار والروابط تعمل للمعاينة والتدقيق.' 
+                          : 'This is a high-fidelity real-time simulation of your event exactly as visitors will see it. Test interactive components instantly.'}
+                      </p>
+                    </div>
+
+                    {/* Language Switcher for Preview Card rendering */}
+                    <div className="flex items-center gap-2 bg-neutral-950 p-1.5 rounded-2xl border border-neutral-800 shrink-0 self-center">
+                      <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider px-2 font-mono">
+                        {lang === 'ar' ? 'لغة المعاينة:' : 'Preview Lang:'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewLang('ar');
+                          setPreviewAlert(null);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          previewLang === 'ar'
+                            ? 'bg-indigo-500 text-white shadow-md'
+                            : 'text-neutral-400 hover:text-neutral-200'
+                        }`}
+                      >
+                        العربية (AR)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewLang('en');
+                          setPreviewAlert(null);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          previewLang === 'en'
+                            ? 'bg-indigo-500 text-white shadow-md'
+                            : 'text-neutral-400 hover:text-neutral-200'
+                        }`}
+                      >
+                        English (EN)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Simulation Toast */}
+                  {previewAlert && (
+                    <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-xs font-bold text-indigo-300 flex items-center gap-2.5 animate-fadeIn">
+                      <Sparkles className="h-4 w-4 text-indigo-400 animate-spin" />
+                      <span>{previewAlert}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setPreviewAlert(null)} 
+                        className="mr-auto text-neutral-400 hover:text-white cursor-pointer font-sans text-sm font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Grid Layout containing Simulated Device Frame & Checkpoint details */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-right">
+                  
+                  {/* LEFT: Feed Card Preview */}
+                  <div className="lg:col-span-6 flex flex-col items-center justify-start space-y-4">
+                    <span className="text-[11px] font-black tracking-wider uppercase text-neutral-500 font-mono">
+                      {lang === 'ar' ? '🔍 مظهر الإعلان في بطاقة الخلاصة والشبكة:' : '🔍 Live feed card representation:'}
+                    </span>
+                    
+                    {/* Phone-sized Viewport for maximum realistic feeling */}
+                    <div className="w-full max-w-[430px] rounded-[36px] bg-neutral-950 border border-neutral-800 p-4 shadow-2xl relative overflow-hidden ring-4 ring-neutral-900/50">
+                      
+                      {/* Interactive Camera notch indicator */}
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 h-4 w-28 bg-neutral-900 rounded-b-2xl border-x border-b border-neutral-800/80 z-40 flex items-center justify-center pointer-events-none">
+                        <div className="h-1.5 w-1.5 rounded-full bg-neutral-800 mr-2" />
+                        <div className="h-1 w-8 rounded bg-neutral-800" />
+                      </div>
+                      
+                      <div className="pt-4">
+                        <EventCard
+                          event={{
+                            id: 'preview-id',
+                            titleAr: adminTitleAr.trim() || (lang === 'ar' ? 'سهرة سالسا فخمة في الزمالك' : 'Luxury Salsa Night in Zamalek'),
+                            titleEn: adminTitleEn.trim() || 'Luxury Salsa Night in Zamalek',
+                            descriptionAr: adminDescAr.trim() || (lang === 'ar' ? 'اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور...' : 'Event details and description goes here...'),
+                            descriptionEn: adminDescEn.trim() || 'Event details and description goes here...',
+                            category: adminCategory,
+                            styles: adminSelectedStyles,
+                            mediaType: adminMediaType,
+                            mediaUrl: adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                            thumbnailUrl: adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                            uploadDate: new Date().toISOString(),
+                            eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
+                            priceAr: adminPriceAr.trim() || '250 ج.م',
+                            priceEn: adminPriceEn.trim() || '250 EGP',
+                            location: {
+                              nameAr: adminLocationNameAr.trim() || 'أستوديو الرقص - الزمالك',
+                              nameEn: adminLocationNameEn.trim() || 'Dance Studio - Zamalek',
+                              addressAr: adminAddressAr.trim() || 'القاهرة، مصر',
+                              addressEn: adminAddressEn.trim() || 'Cairo, Egypt',
+                              googleMapsUrl: adminGoogleMapsUrl.trim(),
+                              lat: 30.0444,
+                              lng: 31.2357
+                            },
+                            contact: {
+                              phone: adminPhone.trim() || '+201011223344',
+                              whatsapp: adminWhatsapp.trim() || '201011223344',
+                              organizerName: adminOrganizerName.trim() || 'الإدارة'
+                            },
+                            likesCount: 15,
+                            isFeatured: adminIsFeatured,
+                            isWeeklyPromo: adminIsWeeklyPromo,
+                            position: Number(adminPosition) || 1
+                          }}
+                          index={0}
+                          onOpenMap={(ev) => setPreviewAlert(
+                            previewLang === 'ar' 
+                              ? `📍 [محاكاة الخريطة]: تم التعرف على رابط العنوان والخرائط لـ "${ev.location.nameAr}" بنجاح!` 
+                              : `📍 [Maps Simulation]: Handled click for location link "${ev.location.nameEn}" successfully!`
+                          )}
+                          onOpenShare={(ev) => setPreviewAlert(
+                            previewLang === 'ar' 
+                              ? `🔗 [محاكاة المشاركة]: تم توليد رابط ومستند المشاركة التفاعلي للإعلان!` 
+                              : `🔗 [Share Simulation]: Generated share prompt payload and copied link to workspace.`
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* RIGHT: Checklist, Metadata & Direct Publishing Summary */}
+                  <div className="lg:col-span-6 space-y-6">
+                    <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-4">
+                      <h5 className="text-xs font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center justify-start gap-2">
+                        <Activity className="h-4 w-4 text-indigo-400" />
+                        <span>
+                          {lang === 'ar' ? '🔍 فحص الجاهزية والبيانات الفنية للإعلان' : '🔍 Composed Blueprint & Verification'}
+                        </span>
+                      </h5>
+
+                      <div className="space-y-3.5 text-xs text-neutral-300">
+                        {/* Rendered Language title */}
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                          <span className="text-neutral-400">{lang === 'ar' ? 'الاسم المعروض بالعربية:' : 'Arabic Display Title:'}</span>
+                          <span className="font-extrabold text-white truncate max-w-[220px]">{adminTitleAr || '⚠️ غير مكتمل / Empty'}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                          <span className="text-neutral-400">{lang === 'ar' ? 'الاسم المعروض بالإنجليزية:' : 'English Display Title:'}</span>
+                          <span className="font-extrabold text-white truncate max-w-[220px]">{adminTitleEn || '⚠️ غير مكتمل / Empty'}</span>
+                        </div>
+
+                        {/* Venue details */}
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                          <span className="text-neutral-400">{lang === 'ar' ? 'الموقع المقترح:' : 'Venue Name:'}</span>
+                          <span className="font-extrabold text-indigo-300">
+                            {previewLang === 'ar' ? adminLocationNameAr : adminLocationNameEn}
+                          </span>
+                        </div>
+
+                        {/* Price rendering */}
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                          <span className="text-neutral-400">{lang === 'ar' ? 'السعر المدخل للراقصين:' : 'Ticket / Price Tag:'}</span>
+                          <span className="font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+                            {previewLang === 'ar' ? adminPriceAr : adminPriceEn}
+                          </span>
+                        </div>
+
+                        {/* Event Date */}
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                          <span className="text-neutral-400">{lang === 'ar' ? 'تاريخ الحفلة أو الكورس:' : 'Scheduled Date:'}</span>
+                          <span className="font-mono font-black text-white">{adminEventDate || '⚠️ لم يحدد بعد / Missing'}</span>
+                        </div>
+
+                        {/* Location map coordinates status */}
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                          <span className="text-neutral-400">{lang === 'ar' ? 'تثبيت إحداثيات الخريطة (GPS):' : 'GPS Map Coordinates:'}</span>
+                          {adminGoogleMapsUrl ? (
+                            <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded">
+                              DETECTED OK ✔
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded">
+                              DEFAULTED CAIRO
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Featured Toggles details */}
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
+                          <span className="text-neutral-400">{lang === 'ar' ? 'المظهر الإداري الخاص (VIP):' : 'VIP featured options:'}</span>
+                          <div className="flex gap-1">
+                            {adminIsFeatured && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                Featured VIP card
+                              </span>
+                            )}
+                            {adminIsWeeklyPromo && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+                                Slide banner (top)
+                              </span>
+                            )}
+                            {!adminIsFeatured && !adminIsWeeklyPromo && (
+                              <span className="text-[10px] text-neutral-500">Standard Feed Post</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Helper tips and direct save prompt */}
+                    <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-5 text-xs text-neutral-400 leading-relaxed space-y-2">
+                      <p className="font-bold text-white">
+                        {lang === 'ar' ? '💡 هل كل شيء يبدو ممتازاً وجاهزاً؟' : '💡 Everything looks clean?'}
+                      </p>
+                      <p>
+                        {lang === 'ar' 
+                          ? 'بإمكانك المراجعة والتعديل اللانهائي. إذا كانت الأبعاد والألوان والنصوص صحيحة ومضبوطة تماماً، يمكنك النقر مباشرة على زر النشر الملون بالأسفل لبث هذا الإعلان فوراً وبشكل حي لكافة المستخدمين وتنبيههم!' 
+                          : 'Verify spacing and text fitting. If you are satisfied with both translations, you can hit the Publish button below to instantly write the ad to Firestore and broadcast notifications.'}
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Action Footer Bar */}
+            <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminSection(null);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-sm font-extrabold transition-all cursor-pointer text-center"
+              >
+                {lang === 'ar' ? '❌ إلغاء والعودة للوحة الإدارة' : '❌ Cancel & Return'}
+              </button>
+
+              <button
+                type="submit"
+                disabled={adminSaveStatus === 'loading' || adminIsUploadingMedia}
+                className="w-full sm:w-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-500 text-white font-black text-sm shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {adminSaveStatus === 'loading' ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>{lang === 'ar' ? 'جاري الحفظ والنشر...' : 'Publishing to Firestore...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    <span>{lang === 'ar' ? '🚀 نشر الإعلان فوراً وبث التنبيهات' : '🚀 Publish Event & Broadcast Now'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+          </form>
         </div>
       )}
     </div>
