@@ -22,7 +22,8 @@ import {
   checkAndSeedAppAssets,
   updateAppAssets,
   subscribeToAppAssets,
-  logAnalyticsEvent
+  logAnalyticsEvent,
+  handleGoogleAuthRedirect
 } from '../lib/firebase';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'default';
@@ -251,6 +252,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logAnalyticsEvent('unique_sessions');
       }
     } catch (e) {}
+
+    // Handle Google OAuth redirect result (for iframe-safe auth)
+    handleGoogleAuthRedirect().catch(err => {
+      console.warn('Error handling Google auth redirect:', err);
+    });
 
     // 1. Check and seed initial data if Firestore database is empty
     checkAndSeedEvents([]);

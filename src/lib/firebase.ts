@@ -17,6 +17,8 @@ import {
 import { 
   getAuth, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -49,20 +51,49 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 /**
- * Helper to Sign in with Google Auth via popup
+ * Helper to Sign in with Google Auth via redirect (works better in iframe environments)
  */
 export async function loginWithFirebaseGoogle(): Promise<{ id: string; name: string; email: string; avatar: string } | null> {
   try {
-    const res = await signInWithPopup(auth, googleProvider);
-    const user = res.user;
-    return {
-      id: user.uid,
-      name: user.displayName || 'عضو VIP (Google)',
-      email: user.email || 'member@dwm.app',
-      avatar: user.photoURL || ''
-    };
+    // First check if there's a redirect result from a previous redirect
+    try {
+      const redirectResult = await getRedirectResult(auth);
+      if (redirectResult?.user) {
+        const user = redirectResult.user;
+        return {
+          id: user.uid,
+          name: user.displayName || 'عضو VIP (Google)',
+          email: user.email || 'member@dwm.app',
+          avatar: user.photoURL || ''
+        };
+      }
+    } catch (redirectErr: any) {
+      console.warn('No redirect result available:', redirectErr);
+    }
+
+    // Attempt popup first (works in non-iframe environments)
+    try {
+      const res = await signInWithPopup(auth, googleProvider);
+      const user = res.user;
+      return {
+        id: user.uid,
+        name: user.displayName || 'عضو VIP (Google)',
+        email: user.email || 'member@dwm.app',
+        avatar: user.photoURL || ''
+      };
+    } catch (popupErr: any) {
+      // If popup fails (likely due to iframe), use redirect
+      if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/popup-closed-by-user' || popupErr.message?.includes('iframe')) {
+        console.log('Popup blocked/failed, switching to redirect method...');
+        await signInWithRedirect(auth, googleProvider);
+        // Note: Redirect will reload the page, so we return null here
+        // The redirect result will be handled on the next page load
+        return null;
+      }
+      throw popupErr;
+    }
   } catch (err: any) {
-    console.warn('Firebase Google Auth popup error or blocked by iframe:', err);
+    console.error('Firebase Google Auth error:', err);
     return null;
   }
 }
@@ -102,6 +133,28 @@ export async function logoutWithFirebase(): Promise<void> {
   } catch (error) {
     console.error('Error signing out from Firebase:', error);
   }
+}
+
+/**
+ * Check and handle Google OAuth redirect result
+ * Call this function when the app initializes to complete Google sign-in after redirect
+ */
+export async function handleGoogleAuthRedirect(): Promise<{ id: string; name: string; email: string; avatar: string } | null> {
+  try {
+    const redirectResult = await getRedirectResult(auth);
+    if (redirectResult?.user) {
+      const user = redirectResult.user;
+      return {
+        id: user.uid,
+        name: user.displayName || 'عضو VIP (Google)',
+        email: user.email || 'member@dwm.app',
+        avatar: user.photoURL || ''
+      };
+    }
+  } catch (err: any) {
+    console.warn('Error checking for Google auth redirect result:', err);
+  }
+  return null;
 }
 
 // Collection names

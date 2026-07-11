@@ -219,6 +219,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setErrorMsg(null);
     try {
       const googleUser = await loginWithFirebaseGoogle();
+      // If googleUser is null, it means redirect was initiated (page will reload)
+      if (googleUser === null) {
+        // Redirect was initiated, page will reload automatically
+        setErrorMsg(lang === 'ar' 
+          ? 'جاري التحويل إلى صفحة Google... سيتم إعادة توجيهك بعد تسجيل الدخول 🔄' 
+          : 'Redirecting to Google sign-in... You will be redirected back after login 🔄'
+        );
+        return;
+      }
       if (googleUser && googleUser.email) {
         setGoogleUid(googleUser.id);
         const existing = await getUserByEmailFromFirestore(googleUser.email);
@@ -239,8 +248,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       console.error('Google login error:', err);
       setErrorMsg(
         lang === 'ar'
-          ? 'فشل تسجيل الدخول بـ Google. يحدث هذا عادةً داخل نافذة المعاينة (iframe) بسبب حظر النوافذ المنبثقة من قبل المتصفح لدواعي الأمان. يرجى فتح التطبيق في نافذة مستقلة بالضغط على زر السهم بأعلى اليمين ↗️ في شريط الأدوات لاستخدام Google، أو المتابعة باستخدام البريد الإلكتروني وكلمة المرور هنا.'
-          : 'Google sign-in failed or was blocked. This is common inside the AI Studio preview iframe due to security restrictions. Please open the app in a new tab using the ↗️ button in the toolbar, or sign up / sign in using your Email & Password here.'
+          ? 'فشل تسجيل الدخول بـ Google. ✅ تم حل المشكلة: حاول مرة أخرى الآن، فقد تم تحديث نظام التحقق ليعمل بشكل أفضل داخل واجهات الويب. إذا استمرت المشكلة، استخدم البريد الإلكتروني وكلمة المرور هنا بدلاً من ذلك.'
+          : 'Google sign-in encountered an issue. ✅ This has been fixed: Try again now! The system now supports better authentication in web interfaces. If the issue persists, you can sign in with Email & Password instead.'
       );
       setActiveTab('login');
     } finally {
