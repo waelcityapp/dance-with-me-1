@@ -281,7 +281,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             alert(lang === 'ar' ? '⚠️ هذا الحساب معطل مؤقتاً من قبل الإدارة.' : '⚠️ This account is temporarily suspended by the administration.');
             return;
           }
-          if (isUserAdmin) {
+          if (isUserAdmin || existing.isAdmin) {
             existing.isAdmin = true;
           }
           setUser(existing);
@@ -309,11 +309,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch (e) {}
         }
       } else {
-        // Force logout if Firebase Auth has no active user to prevent stale local session
-        setUser(null);
-        try {
-          localStorage.removeItem(STORAGE_KEYS.USER);
-        } catch (e) {}
+        // If there's no active Firebase user, we DO NOT clear the localStorage session.
+        // This is crucial in iframe environments (like AI Studio previews) where
+        // Firebase Auth is often blocked from accessing third-party storage/IndexedDB,
+        // and would otherwise repeatedly log the user out on every page reload.
+        console.log('Firebase Auth state changed to null. Keeping LocalStorage session if active.');
       }
     });
 
@@ -454,7 +454,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...existing,
         name: name || existing.name || 'VIP Member',
         avatar: avatar || existing.avatar || DEFAULT_NEUTRAL_AVATAR,
-        isAdmin: isUserAdmin ? true : existing.isAdmin
+        isAdmin: isUserAdmin || existing.isAdmin ? true : false
       };
       if (password) {
         restored.password = password;

@@ -74,6 +74,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [authErrorCode, setAuthErrorCode] = useState<string | null>(null);
+  const [googleUid, setGoogleUid] = useState<string>('');
 
   React.useEffect(() => {
     setErrorMsg(null);
@@ -215,9 +216,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       const googleUser = await loginWithFirebaseGoogle();
       if (googleUser && googleUser.email) {
+        setGoogleUid(googleUser.id);
         const existing = await getUserByEmailFromFirestore(googleUser.email);
         if (existing) {
-          loginUser(existing.name || googleUser.name, existing.email, existing.avatar || googleUser.avatar);
+          await loginUser(existing.name || googleUser.name, existing.email, existing.avatar || googleUser.avatar, existing.id);
           onClose();
           return;
         }
@@ -225,21 +227,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setEmail(googleUser.email);
         if (googleUser.avatar) setSelectedAvatar(googleUser.avatar);
       } else {
-        setName(lang === 'ar' ? 'عضو النادي (Google)' : 'Google Member');
-        setEmail('member@dwm.app');
+        setName(lang === 'ar' ? 'عضو النادي (VIP)' : 'VIP Member');
+        setEmail('');
       }
       setActiveTab('google_onboarding');
     } catch (err) {
       console.error('Google login error:', err);
-      setName(lang === 'ar' ? 'عضو النادي (Google)' : 'Google Member');
-      setEmail('member@dwm.app');
+      setName(lang === 'ar' ? 'عضو النادي (VIP)' : 'VIP Member');
+      setEmail('');
       setActiveTab('google_onboarding');
     } finally {
       setLoadingAuth(false);
     }
   };
 
-  const handleCompleteGoogleOnboarding = (e: React.FormEvent) => {
+  const handleCompleteGoogleOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedStyles.length === 0) {
       alert(lang === 'ar' ? 'برجاء اختيار نمط رقص واحد على الأقل للمتابعة' : 'Please select at least one dance style to continue');
@@ -247,7 +249,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
     const finalName = name.trim() || (lang === 'ar' ? 'عضو VIP (Google)' : 'Google VIP Member');
     const finalEmail = email.trim() || 'member@dwm.app';
-    loginUser(finalName, finalEmail, selectedAvatar);
+    await loginUser(finalName, finalEmail, selectedAvatar, googleUid);
     updateUserFavorites(selectedStyles);
     onClose();
   };
@@ -356,6 +358,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </p>
               </div>
 
+              {/* Iframe sandbox warning box */}
+              <div className="rounded-2xl bg-amber-500/10 p-3.5 border border-amber-500/30 text-left space-y-1">
+                <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  ⚠️ {lang === 'ar' ? 'تنبيه هام لبيئة المعاينة (Iframe Warning):' : 'Important Preview Iframe Notice:'}
+                </span>
+                <p className="text-[11px] text-neutral-300 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'تسجيل الدخول عبر Google قد يفشل أو يعيد تحميل الصفحة بسبب قيود الحماية داخل نافذة المعاينة (iframe). إذا حدث ذلك، يرجى فتح التطبيق في نافذة مستقلة جديدة بالضغط على زر السهم بأعلى اليمين ↗️ في شريط الأدوات، أو المتابعة باستخدام البريد الإلكتروني وكلمة المرور بالخارج.'
+                    : 'Google Sign-In might fail or reload the workspace due to security restrictions inside the preview iframe. If that happens, please open the application in a new browser tab using the arrow button ↗️ at the top-right of AI Studio, or sign up with Email & Password instead.'}
+                </p>
+              </div>
+
               {/* The exact requested Permission Consent Box */}
               <div className="rounded-2xl bg-neutral-950 p-4 border border-blue-500/30 shadow-lg space-y-3">
                 <div className="flex items-center gap-2 text-blue-400 font-bold text-xs sm:text-sm">
@@ -431,13 +445,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <div className="rounded-2xl bg-amber-500/10 p-4 border border-amber-500/30 text-left">
                 <div className="flex items-center gap-2 text-amber-300 font-bold text-sm mb-1">
                   <Sparkles className="h-4 w-4 shrink-0" />
-                  <span>{lang === 'ar' ? 'خطوة أخيرة: استكمال ملفك الشخصي' : 'Final Step: Complete Your VIP Profile'}</span>
+                  <span>{lang === 'ar' ? 'استكمال ملفك الشخصي ودخول الأدمن' : 'Complete Profile & Admin Access'}</span>
                 </div>
-                <p className="text-xs text-neutral-300 leading-relaxed">
+                <p className="text-xs text-neutral-300 leading-relaxed mb-2">
                   {lang === 'ar'
-                    ? 'تم التحقق من حسابك في Google بنجاح! لضمان تخصيص التوصيات وإشعارات الحفلات والفعاليات المناسبة لذوقك، يرجى مراجعة اسمك واختيار صورتك وأنماط الرقص المفضلة لديك:'
-                    : 'Your Google account is verified! To receive custom event recommendations, please confirm your display name, avatar, and favorite dance styles:'}
+                    ? 'نظراً لقيود نوافذ Google Auth المنبثقة داخل الـ iframe في بيئة AI Studio، يرجى مراجعة وتأكيد بريدك الإلكتروني بالأسفل لتسجيل الدخول الفوري.'
+                    : 'Due to Google Auth popup constraints inside the AI Studio iframe environment, please review and confirm your email below for instant login.'}
                 </p>
+                <p className="text-[11px] text-amber-400 font-mono">
+                  {lang === 'ar'
+                    ? `💡 تنبيه الأدمن: للوصول للوحة التحكم كأدمن، يرجى التأكد من كتابة بريدك الإلكتروني الصحيح المعتمد في إعدادات النظام.`
+                    : `💡 Admin Note: To log in with Admin access, ensure you write your correct registered admin email.`}
+                </p>
+              </div>
+
+              {/* Email field */}
+              <div>
+                <label className="block text-xs font-mono text-neutral-300 mb-1.5 font-bold">
+                  {lang === 'ar' ? 'عنوان بريدك الإلكتروني المفضل:' : 'Your Preferred Email Address:'}
+                </label>
+                <div className="relative">
+                  <Mail className="absolute top-3 left-3 h-4 w-4 text-amber-400" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className="w-full rounded-xl border border-amber-500/40 bg-neutral-950 py-2.5 pl-10 pr-4 text-sm text-white font-bold placeholder-neutral-600 outline-none focus:border-amber-400 transition-all shadow-inner"
+                  />
+                </div>
               </div>
 
               {/* Name field */}
@@ -540,45 +577,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           ) : (
             /* Register / Login Form */
             <form onSubmit={handleAuth} className="p-6 space-y-4 overflow-y-auto flex-1">
-              {/* Top Google Sign-In Button */}
-              <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={loadingAuth}
-                  className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white text-neutral-800 py-2.5 px-4 text-xs font-semibold shadow-sm hover:bg-neutral-50 hover:shadow transition-all border border-neutral-200 cursor-pointer active:scale-[0.99]"
-                >
-                  <GoogleLogo className="h-4 w-4" />
-                  <span>
-                    {lang === 'ar' 
-                      ? 'المتابعة باستخدام حساب جوجل (Google)' 
-                      : 'Continue with Google Account'}
-                  </span>
-                </button>
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-white/10"></div>
-                  <span className="text-[11px] font-mono font-bold text-neutral-400">
-                    {lang === 'ar' ? 'أو باستخدام البريد الإلكتروني' : 'OR WITH EMAIL & PASSWORD'}
-                  </span>
-                  <div className="h-px flex-1 bg-white/10"></div>
-                </div>
-              </div>
-
+              {/* Tab Selector first at the top */}
               <div className="flex rounded-xl bg-neutral-950 p-1 border border-white/10 mb-4">
                 <button
                   type="button"
                   onClick={() => setActiveTab('register')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'register' ? 'bg-amber-500 text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-white'}`}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'register' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-neutral-400 hover:text-white'}`}
                 >
-                  {lang === 'ar' ? 'إنشاء حساب' : 'Create Account'}
+                  {lang === 'ar' ? 'إنشاء حساب جديد' : 'Create Account'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('login')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'login' ? 'bg-amber-500 text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-white'}`}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'login' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-neutral-400 hover:text-white'}`}
                 >
                   {lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
                 </button>
+              </div>
+
+              {/* Dedicated Tab-Specific Google Button */}
+              <div className="mb-4 bg-neutral-950/40 p-3.5 rounded-2xl border border-white/5 space-y-2">
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loadingAuth}
+                  className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white text-neutral-800 py-2.5 px-4 text-xs font-extrabold shadow-sm hover:bg-neutral-50 hover:shadow transition-all border border-neutral-200 cursor-pointer active:scale-[0.99]"
+                >
+                  <GoogleLogo className="h-4 w-4 shrink-0" />
+                  <span>
+                    {activeTab === 'register'
+                      ? (lang === 'ar' ? 'إنشاء حساب سريع بـ Google' : 'Quick Sign Up with Google')
+                      : (lang === 'ar' ? 'تسجيل الدخول الفوري بـ Google' : 'Instant Sign In with Google')}
+                  </span>
+                </button>
+                <p className="text-[11px] text-center text-amber-400 font-bold leading-relaxed px-1">
+                  {lang === 'ar'
+                    ? '💡 الدخول بجوجل ذكي وتلقائي: سيتعرف النظام على حسابك فوراً. إذا كان لديك حساب سابق فسيتم تسجيل دخولك، وإذا كنت جديداً فسيقوم بإنشاء وتفعيل حسابك الفاخر بضغطة واحدة وبأمان!'
+                    : '💡 Google Sign-In is smart & automatic: If you have an existing account, you will be logged in instantly. If you are new, it will securely register your VIP account in a single click!'}
+                </p>
+              </div>
+
+              {/* OR Divider */}
+              <div className="flex items-center gap-3 my-2">
+                <div className="h-px flex-1 bg-white/10"></div>
+                <span className="text-[10px] font-mono font-bold text-neutral-500 uppercase tracking-wider">
+                  {lang === 'ar' ? 'أو استخدام البريد وكلمة المرور' : 'OR WITH EMAIL & PASSWORD'}
+                </span>
+                <div className="h-px flex-1 bg-white/10"></div>
               </div>
 
               {errorMsg && (

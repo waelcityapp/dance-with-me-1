@@ -241,18 +241,20 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             <span className={`rounded-lg px-2.5 py-1 text-xs font-bold border backdrop-blur-md shadow-sm ${currentCat.color}`}>
               {lang === 'ar' ? currentCat.ar : currentCat.en}
             </span>
-            <span 
-              className="flex h-7 px-2.5 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[11px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" 
-              title={lang === 'ar' ? 'الترتيب في الصفحة' : 'Page order'}
-            >
-              #{index !== undefined ? (index + 1) : ''}
-              {event.position !== undefined && event.position !== 0 && (
-                <span className="text-[10px] text-neutral-400 font-bold ml-1">
-                  ({event.position})
-                </span>
-              )}
-              {index === undefined && (event.position === undefined || event.position === 0) && '-'}
-            </span>
+            {user?.isAdmin && (
+              <span 
+                className="flex h-7 px-2.5 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[11px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" 
+                title={lang === 'ar' ? 'الترتيب في الصفحة' : 'Page order'}
+              >
+                #{index !== undefined ? (index + 1) : ''}
+                {event.position !== undefined && event.position !== 0 && (
+                  <span className="text-[10px] text-neutral-400 font-bold ml-1">
+                    ({event.position})
+                  </span>
+                )}
+                {index === undefined && (event.position === undefined || event.position === 0) && '-'}
+              </span>
+            )}
           </div>
 
           {/* Expiry Timer Badge */}
@@ -279,6 +281,19 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         {/* Admin Floating Control Toolbar */}
         {user?.isAdmin && (
           <div className="absolute top-14 right-3 z-30 flex flex-col gap-2">
+            {/* Position Display next to Admin controls */}
+            <div 
+              className="flex h-9 items-center justify-center rounded-xl bg-neutral-950/95 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-xl px-2 select-all"
+              title={lang === 'ar' ? 'الترتيب في الصفحة والموضع' : 'Page order & position'}
+            >
+              #{index !== undefined ? (index + 1) : ''}
+              {event.position !== undefined && event.position !== 0 && (
+                <span className="text-[10px] text-neutral-400 font-bold ml-1">
+                  ({event.position})
+                </span>
+              )}
+            </div>
+
             {/* Delete button (triggers local confirm) */}
             <button
               onClick={(e) => {

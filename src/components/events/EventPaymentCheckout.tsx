@@ -190,6 +190,8 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
         }),
         new Promise(resolve => setTimeout(resolve, 2000))
       ]);
+
+
     } catch (err) {
       console.warn('Firestore save completed offline or timed out, local state is saved:', err);
     }

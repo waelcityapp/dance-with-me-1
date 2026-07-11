@@ -33,7 +33,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     deleteEvent,
     supportMessages,
     openSupportModal,
-    cleanUpDuplicateAds
+    cleanUpDuplicateAds,
+    isAdminUnlocked
   } = useApp();
 
   const [adSubmissions, setAdSubmissions] = useState<AdSubmission[]>([]);
@@ -109,11 +110,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     };
     loadLocal();
 
-    const unsubscribe = subscribeToAdSubmissions((list) => {
-      setAdSubmissions(list);
-    });
+    const unsubscribe = subscribeToAdSubmissions(
+      (list) => {
+        setAdSubmissions(list);
+      },
+      user?.id,
+      user?.isAdmin || isAdminUnlocked
+    );
     return () => unsubscribe();
-  }, []);
+  }, [user, isAdminUnlocked]);
 
   const updateLocalAndState = (updated: AdSubmission) => {
     try {
@@ -171,7 +176,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const updated: AdSubmission = {
         ...sub,
         titleAr: editTitleAr || sub.titleAr,
-        titleEn: editTitleEn || sub.titleEn
+        titleEn: editTitleEn || sub.titleEn,
+        eventData: sub.eventData ? {
+          ...sub.eventData,
+          titleAr: editTitleAr || sub.eventData.titleAr || sub.titleAr,
+          titleEn: editTitleEn || sub.eventData.titleEn || sub.titleEn
+        } : undefined
       };
       updateLocalAndState(updated);
       await saveAdSubmissionToFirestore(updated);

@@ -108,8 +108,6 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   // Cloudinary configuration credentials from environment variables (safe and secure for git)
   const cloudinaryCloudName = (import.meta as any).env.VITE_CLOUDINARY_CLOUD_NAME;
   const cloudinaryUploadPreset = (import.meta as any).env.VITE_CLOUDINARY_UPLOAD_PRESET;
-  const cloudinaryApiKey = (import.meta as any).env.VITE_CLOUDINARY_API_KEY;
-  const cloudinaryApiSecret = (import.meta as any).env.VITE_CLOUDINARY_API_SECRET;
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -224,6 +222,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 const response = JSON.parse(xhr.responseText);
                 if (response.secure_url) {
                   setMediaUrl(response.secure_url);
+                  setMediaType(resourceType);
                   resolve();
                 } else {
                   reject(new Error('No secure URL returned from Cloudinary'));
@@ -336,37 +335,41 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       });
       setEditingEvent(null);
     } else {
-      addNewEvent({
-        titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
-        titleEn: titleEn || 'Royal Salsa & Bachata Night',
-        descriptionAr: descAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
-        descriptionEn: descEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
-        category: (category === 'all' ? 'party' : category) as any,
-        styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
-        mediaType,
-        mediaUrl: mediaUrl || (mediaType === 'video' ? defaultVid : defaultImg),
-        thumbnailUrl: defaultImg,
-        eventDate: new Date(eventDate).toISOString(),
-        priceAr,
-        priceEn,
-        location: {
-          nameAr: locationNameAr,
-          nameEn: locationNameEn,
-          addressAr: addressAr || 'القاهرة، مصر',
-          addressEn: addressEn || 'Cairo, Egypt',
-          googleMapsUrl: googleMapsUrl || 'https://maps.google.com/?q=30.0444,31.2357',
-          lat: parseCoordinates(googleMapsUrl).lat,
-          lng: parseCoordinates(googleMapsUrl).lng
-        },
-        contact: {
-          phone,
-          whatsapp,
-          organizerName: user?.name || 'إدارة DWM للرقص'
-        },
-        isFeatured: false,
-        isWeeklyPromo: false,
-        position: position !== undefined ? Number(position) : 0
-      });
+      // Regular users should NOT call addNewEvent. Their ads must go through the Admin approval flow.
+      // Only Admins (or unlocked Admins) can publish an event directly.
+      if (user?.isAdmin || isAdminUnlocked) {
+        addNewEvent({
+          titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
+          titleEn: titleEn || 'Royal Salsa & Bachata Night',
+          descriptionAr: descAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
+          descriptionEn: descEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
+          category: (category === 'all' ? 'party' : category) as any,
+          styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
+          mediaType,
+          mediaUrl: mediaUrl || (mediaType === 'video' ? defaultVid : defaultImg),
+          thumbnailUrl: defaultImg,
+          eventDate: new Date(eventDate).toISOString(),
+          priceAr,
+          priceEn,
+          location: {
+            nameAr: locationNameAr,
+            nameEn: locationNameEn,
+            addressAr: addressAr || 'القاهرة، مصر',
+            addressEn: addressEn || 'Cairo, Egypt',
+            googleMapsUrl: googleMapsUrl || 'https://maps.google.com/?q=30.0444,31.2357',
+            lat: parseCoordinates(googleMapsUrl).lat,
+            lng: parseCoordinates(googleMapsUrl).lng
+          },
+          contact: {
+            phone,
+            whatsapp,
+            organizerName: user?.name || 'إدارة DWM للرقص'
+          },
+          isFeatured: false,
+          isWeeklyPromo: false,
+          position: position !== undefined ? Number(position) : 0
+        });
+      }
     }
 
     onComplete();
@@ -791,8 +794,27 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   type="text"
                   value={mediaUrl}
                   onChange={e => {
-                    setMediaUrl(e.target.value.trim());
+                    const val = e.target.value.trim();
+                    setMediaUrl(val);
                     if (uploadedFileName) setUploadedFileName(null);
+                    
+                    if (val) {
+                      const lowerVal = val.toLowerCase();
+                      const isVid = (
+                        lowerVal.endsWith('.mp4') || 
+                        lowerVal.endsWith('.mov') || 
+                        lowerVal.endsWith('.avi') || 
+                        lowerVal.endsWith('.webm') || 
+                        lowerVal.endsWith('.m3u8') ||
+                        lowerVal.includes('youtube.com/watch') ||
+                        lowerVal.includes('youtu.be/') ||
+                        lowerVal.includes('drive.google.com/file') ||
+                        (lowerVal.includes('dropbox.com') && (lowerVal.includes('.mp4') || lowerVal.includes('.mov') || lowerVal.includes('.avi') || lowerVal.includes('.webm'))) ||
+                        lowerVal.includes('/video/') ||
+                        (lowerVal.includes('res.cloudinary.com/') && lowerVal.includes('/video/'))
+                      );
+                      setMediaType(isVid ? 'video' : 'image');
+                    }
                   }}
                   placeholder={lang === 'ar' ? 'https://example.com/image.jpg أو رابط فيديو mp4 مباشر' : 'https://example.com/image.jpg or direct video mp4'}
                   className="w-full rounded-xl border border-neutral-800 bg-neutral-900 py-2.5 px-3 text-xs font-mono text-white outline-none focus:border-amber-500 transition-colors"

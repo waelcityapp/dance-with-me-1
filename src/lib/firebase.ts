@@ -40,8 +40,8 @@ const databaseId = (import.meta as any).env.VITE_FIREBASE_DATABASE_ID || firebas
 // Initialize Firebase App gracefully
 const app = !getApps().length ? initializeApp(resolvedFirebaseConfig) : getApps()[0];
 
-// Initialize Firestore Database with specific database ID
-export const db = getFirestore(app, databaseId);
+// Initialize Firestore Database with specific database ID or default if '(default)'
+export const db = databaseId && databaseId !== '(default)' ? getFirestore(app, databaseId) : getFirestore(app);
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
@@ -50,11 +50,12 @@ export const googleProvider = new GoogleAuthProvider();
 /**
  * Helper to Sign in with Google Auth via popup
  */
-export async function loginWithFirebaseGoogle(): Promise<{ name: string; email: string; avatar: string } | null> {
+export async function loginWithFirebaseGoogle(): Promise<{ id: string; name: string; email: string; avatar: string } | null> {
   try {
     const res = await signInWithPopup(auth, googleProvider);
     const user = res.user;
     return {
+      id: user.uid,
       name: user.displayName || 'عضو VIP (Google)',
       email: user.email || 'member@dwm.app',
       avatar: user.photoURL || ''
@@ -326,10 +327,19 @@ export async function saveUserToFirestore(user: UserProfile): Promise<boolean> {
 export async function getUserByEmailFromFirestore(email: string): Promise<UserProfile | null> {
   try {
     const usersRef = collection(db, COLLECTIONS.USERS);
-    const q = query(usersRef, where('email', '==', email.trim().toLowerCase()), limit(1));
+    const q = query(usersRef, where('email', '==', email.trim().toLowerCase()));
     const snap = await getDocs(q);
     if (!snap.empty) {
-      return snap.docs[0].data() as UserProfile;
+      // Prioritize document that has isAdmin set to true if duplicates exist
+      let selectedUser = snap.docs[0].data() as UserProfile;
+      for (const docSnap of snap.docs) {
+        const u = docSnap.data() as UserProfile;
+        if (u.isAdmin) {
+          selectedUser = u;
+          break;
+        }
+      }
+      return selectedUser;
     }
     return null;
   } catch (error) {
@@ -381,15 +391,24 @@ export async function saveNotificationToFirestore(notif: NotificationItem): Prom
 }
 
 /**
- * Subscribe to Ad Submissions for Admin Panel
+ * Subscribe to Ad Submissions for Admin Panel or user profiles
  */
 export function subscribeToAdSubmissions(
-  onUpdate: (submissions: AdSubmission[]) => void
+  onUpdate: (submissions: AdSubmission[]) => void,
+  userId?: string,
+  isAdmin?: boolean
 ): () => void {
   try {
-    const subRef = collection(db, COLLECTIONS.AD_SUBMISSIONS);
+    let q;
+    if (isAdmin) {
+      q = collection(db, COLLECTIONS.AD_SUBMISSIONS);
+    } else if (userId) {
+      q = query(collection(db, COLLECTIONS.AD_SUBMISSIONS), where('advertiserId', '==', userId));
+    } else {
+      q = collection(db, COLLECTIONS.AD_SUBMISSIONS);
+    }
     return onSnapshot(
-      subRef,
+      q,
       (snapshot) => {
         const list: AdSubmission[] = [];
         const seenAdKeys = new Set<string>();

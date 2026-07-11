@@ -38,8 +38,9 @@ service cloud.firestore {
     match /ad_submissions/{submissionId} {
       // Anyone can create an ad submission
       allow create: if true;
-      // Only the admin can read, update, or delete submissions
-      allow read, update, delete: if isAdmin();
+      // Admin can manage everything, and users can read or update their own submissions
+      allow read, update: if isAdmin() || (isSignedIn() && (resource == null || resource.data.advertiserId == request.auth.uid));
+      allow delete: if isAdmin();
     }
 
     // 5. Support Messages Collection

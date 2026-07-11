@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
   };
 
   const handleShareApp = async () => {
-    const shareUrl = 'https://dance-with-me-697254017828.europe-west2.run.app/';
+    const shareUrl = typeof window !== 'undefined' ? window.location.origin + '/' : 'https://dance-with-me-697254017828.europe-west2.run.app/';
     const shareData = {
       title: lang === 'ar' ? 'Dance With Me - بوابة الحفلات والكورسات اللاتينية' : 'Dance With Me - Latin Dance Portal',
       text: lang === 'ar' ? 'انضم إلينا في أفضل الحفلات والكورسات اللاتينية!' : 'Join us for the best Latin parties and courses!',

@@ -1,10 +1,10 @@
 {
-  "projectId": "eighth-fuze-l6d0h",
-  "appId": "1:697254017828:web:1e173f10058ad0f38351b1",
-  "apiKey": "AIzaSyAjpAlScXxqAIfQt-M5moLfNFcJaJZXJDA",
-  "authDomain": "eighth-fuze-l6d0h.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-dancewithme-3e67ba5d-19d9-4888-a2ba-3c431d39465d",
-  "storageBucket": "eighth-fuze-l6d0h.firebasestorage.app",
-  "messagingSenderId": "697254017828",
-  "measurementId": ""
+  "projectId": "dance-with-me-35e98",
+  "appId": "1:163649448355:web:85ba28f8797c6f9d57d216",
+  "apiKey": "AIzaSyCUF8UbABOG3mmdUOzBu8oRh5ht0oWk24I",
+  "authDomain": "dance-with-me-35e98.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "dance-with-me-35e98.firebasestorage.app",
+  "messagingSenderId": "163649448355",
+  "measurementId": "G-HJ0PNBHRSF"
 }

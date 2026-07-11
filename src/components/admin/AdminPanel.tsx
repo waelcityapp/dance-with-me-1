@@ -198,9 +198,13 @@ export const AdminPanel: React.FC = () => {
       setLoading(false);
     }
 
-    const unsubscribe = subscribeToAdSubmissions((list) => {
-      mergeAndSet(list);
-    });
+    const unsubscribe = subscribeToAdSubmissions(
+      (list) => {
+        mergeAndSet(list);
+      },
+      user?.id,
+      true
+    );
     return () => unsubscribe();
   }, []);
 
@@ -209,8 +213,9 @@ export const AdminPanel: React.FC = () => {
     setManualRefreshing(true);
     setLoading(true);
     
-    const unsubscribe = subscribeToAdSubmissions((list) => {
-      const loadLocal = (): AdSubmission[] => {
+    const unsubscribe = subscribeToAdSubmissions(
+      (list) => {
+        const loadLocal = (): AdSubmission[] => {
         try {
           const local = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
           return local as AdSubmission[];

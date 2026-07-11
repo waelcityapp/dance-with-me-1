@@ -88,9 +88,11 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             <Sparkles className="h-3.5 w-3.5 fill-current" />
             <span>{lang === 'ar' ? 'فيديو الأسبوع الحصري' : 'Weekly Featured Video'}</span>
           </div>
-          <span className="flex h-7 px-2.5 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[11px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" title={lang === 'ar' ? 'رقم الترتيب' : 'Placement Position'}>
-            #{promoEvent.position !== undefined ? promoEvent.position : '-'}
-          </span>
+          {user?.isAdmin && (
+            <span className="flex h-7 px-2.5 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[11px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" title={lang === 'ar' ? 'رقم الترتيب' : 'Placement Position'}>
+              #{promoEvent.position !== undefined ? promoEvent.position : '-'}
+            </span>
+          )}
         </div>
 
         <div className="rounded-full bg-neutral-950/80 px-3 py-1 text-[11px] font-mono font-bold text-amber-400 border border-neutral-800 backdrop-blur-md">
@@ -141,6 +143,14 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
       {/* Admin Floating Control Toolbar */}
       {user?.isAdmin && (
         <div className="absolute top-14 right-4 z-30 flex flex-col gap-2">
+          {/* Position Display next to Admin controls */}
+          <div 
+            className="flex h-9 items-center justify-center rounded-xl bg-neutral-950/95 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-xl px-2 select-all"
+            title={lang === 'ar' ? 'الموضع والترتيب' : 'Placement position'}
+          >
+            #{promoEvent.position !== undefined ? promoEvent.position : '-'}
+          </div>
+
           {/* Delete button */}
           <button
             onClick={(e) => {
