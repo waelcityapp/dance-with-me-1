@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceEvent, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
 import { EventCard } from '../events/EventCard';
 import { WeeklyPromoBanner } from '../events/WeeklyPromoBanner';
-import { Sparkles, Music, GraduationCap, Palmtree, PlusCircle, Filter, Search, Clock, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Music, GraduationCap, Palmtree, PlusCircle, Filter, Search, Clock, CheckCircle2, ArrowUp, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HomeFeedProps {
@@ -17,12 +17,42 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const { lang, activeTab, selectedCategory, setSelectedCategory, activeEvents, user } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStyleFilter, setSelectedStyleFilter] = useState<string>('all');
+  const [visibleCount, setVisibleCount] = useState(6);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Reset pagination when category, search, or style filter changes
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [selectedCategory, searchQuery, selectedStyleFilter]);
+
+  // Back to Top scroll listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 400) {
+        setShowBackToTop(true);
+      } else {
+        setShowBackToTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Find weekly featured promo event
   const weeklyPromoEvent = activeEvents.find(ev => ev.isWeeklyPromo);
 
   // Filter events
   const filteredEvents = activeEvents.filter(ev => {
+    // Exclude the weekly promo event if it is already displayed in the main banner at the top
+    const isPromoBannerVisible = weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all';
+    if (isPromoBannerVisible && ev.id === weeklyPromoEvent.id) {
+      return false;
+    }
+
     // Category check
     if (selectedCategory !== 'all' && ev.category !== selectedCategory) {
       return false;
@@ -194,20 +224,55 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <AnimatePresence mode="popLayout">
-            {filteredEvents.map((ev, idx) => (
-              <EventCard
-                key={ev.id}
-                event={ev}
-                index={idx}
-                onOpenMap={onOpenMap}
-                onOpenShare={onOpenShare}
-              />
-            ))}
-          </AnimatePresence>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <AnimatePresence mode="popLayout">
+              {filteredEvents.slice(0, visibleCount).map((ev, idx) => (
+                <EventCard
+                  key={ev.id}
+                  event={ev}
+                  index={idx}
+                  onOpenMap={onOpenMap}
+                  onOpenShare={onOpenShare}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Load More Button */}
+          {filteredEvents.length > visibleCount && (
+            <div className="flex justify-center pt-4">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setVisibleCount(prev => prev + 6)}
+                className="flex items-center gap-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:text-amber-400 px-6 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-md cursor-pointer"
+              >
+                <ChevronDown className="h-4 w-4 text-amber-500 animate-bounce" />
+                <span>{lang === 'ar' ? 'المزيد من الإعلانات' : 'Load More Ads'}</span>
+              </motion.button>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Floating Back to Top Button */}
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={scrollToTop}
+            className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-neutral-950 shadow-2xl border border-amber-400 hover:bg-amber-400 transition-all cursor-pointer focus:outline-none"
+            title={lang === 'ar' ? 'العودة إلى الأعلى' : 'Back to Top'}
+          >
+            <ArrowUp className="h-5 w-5 stroke-[2.5]" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -250,22 +250,10 @@ export async function deleteEventFromFirestore(eventId: string): Promise<boolean
 }
 
 /**
- * Check if database is empty, and seed initial mock events if needed
+ * Check if database is empty, and seed initial admin codes if needed (no mock events seeded anymore for clean production)
  */
 export async function checkAndSeedEvents(initialEvents: DanceEvent[]): Promise<void> {
   try {
-    const eventsRef = collection(db, COLLECTIONS.EVENTS);
-    const snapshot = await getDocs(eventsRef);
-    if (snapshot.empty) {
-      console.log('Firestore is empty. Seeding initial events...');
-      const promises = initialEvents.map((ev) => {
-        const docRef = doc(db, COLLECTIONS.EVENTS, ev.id);
-        return setDoc(docRef, ev);
-      });
-      await Promise.all(promises);
-      console.log('Successfully seeded initial events to Firestore.');
-    }
-
     // Seed default admin secret code if empty, and always make sure "2233" is available for user testing
     const codesRef = collection(db, 'admin_codes');
     const codesSnap = await getDocs(codesRef).catch(() => null);
@@ -530,7 +518,8 @@ export async function deleteSupportMessageFromFirestore(messageId: string): Prom
  * Subscribe to all user profiles for Admin Panel
  */
 export function subscribeToAllUsers(
-  onUpdate: (users: UserProfile[]) => void
+  onUpdate: (users: UserProfile[]) => void,
+  onError?: (error: any) => void
 ): () => void {
   try {
     const usersRef = collection(db, COLLECTIONS.USERS);
@@ -551,10 +540,12 @@ export function subscribeToAllUsers(
       },
       (error) => {
         console.warn('Firestore subscribe to users error:', error);
+        if (onError) onError(error);
       }
     );
   } catch (error) {
     console.warn('Failed to setup users subscription:', error);
+    if (onError) onError(error);
     return () => {};
   }
 }

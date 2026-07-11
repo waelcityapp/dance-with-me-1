@@ -301,35 +301,35 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
       </div>
 
       {/* Event Node Details (النود الموجودة تحت بانر الاعلان) */}
-      <div className="relative z-10 -mt-12 p-6 sm:p-8">
-        <div className="flex flex-wrap items-center gap-2 mb-2">
+      <div className="relative z-10 -mt-6 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-2 mb-1.5">
           {promoEvent.styles.map((style) => (
-            <span key={style} className="rounded-md bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-400 border border-amber-400/30 font-mono">
+            <span key={style} className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-400/30 font-mono">
               #{getStyleLabel(style, lang)}
             </span>
           ))}
-          <span className="ml-auto text-xs font-mono text-neutral-500">
+          <span className="ml-auto text-[10px] font-mono text-neutral-500">
             {lang === 'ar' ? 'تاريخ التحميل: ' : 'Uploaded: '}{formatDate(promoEvent.uploadDate, lang)}
           </span>
         </div>
 
-        <h2 className="text-2xl sm:text-4xl font-black text-white mb-2 leading-tight">
+        <h2 className="text-xl sm:text-2xl font-black text-white mb-1.5 leading-tight">
           {lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
         </h2>
 
-        <p className="text-sm text-neutral-300 mb-6 line-clamp-3 leading-relaxed">
+        <p className="text-xs sm:text-sm text-neutral-300 mb-3.5 line-clamp-3 leading-normal">
           {lang === 'ar' ? promoEvent.descriptionAr : promoEvent.descriptionEn}
         </p>
 
         {/* Metadata Grid (Date, Location, Price) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 rounded-3xl bg-neutral-900/50 p-5 border border-neutral-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3.5 rounded-2xl bg-neutral-900/40 p-3 sm:p-4 border border-neutral-800">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
-              <Calendar className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+              <Calendar className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-[11px] font-mono text-neutral-500">{lang === 'ar' ? 'تاريخ الحدث' : 'Event Date'}</p>
-              <p className="text-sm font-bold text-white">{formatDate(promoEvent.eventDate, lang)}</p>
+              <p className="text-[10px] font-mono text-neutral-500 leading-none">{lang === 'ar' ? 'تاريخ الحدث' : 'Event Date'}</p>
+              <p className="text-xs font-bold text-white mt-1">{formatDate(promoEvent.eventDate, lang)}</p>
             </div>
           </div>
 
@@ -337,101 +337,97 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             onClick={() => onOpenMap(promoEvent)}
             className="flex items-center gap-3 cursor-pointer group rounded-xl hover:bg-neutral-800/50 p-1 transition-colors"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0">
-              <MapPin className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0">
+              <MapPin className="h-4.5 w-4.5" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-[11px] font-mono text-neutral-500 flex items-center gap-1">
+              <p className="text-[10px] font-mono text-neutral-500 flex items-center gap-1 leading-none">
                 {lang === 'ar' ? 'الموقع على جوجل ماب' : 'Google Map Location'}
-                <span className="text-amber-500 hover:underline text-[10px] font-bold">({lang === 'ar' ? 'عرض الخريطة' : 'View'})</span>
+                <span className="text-amber-500 hover:underline text-[9px] font-bold">({lang === 'ar' ? 'عرض' : 'View'})</span>
               </p>
-              <p className="text-sm font-bold text-white truncate group-hover:text-amber-400">
+              <p className="text-xs font-bold text-white truncate group-hover:text-amber-400 mt-1">
                 {lang === 'ar' ? promoEvent.location.nameAr : promoEvent.location.nameEn}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Action Bar: Contact, Share, Like, Book */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-neutral-800">
-          {/* Contact Numbers */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                if (!user) {
-                  openGuestAlert('contact');
-                  return;
-                }
-                window.location.href = `tel:${promoEvent.contact.phone}`;
-              }}
-              className="flex items-center gap-1.5 rounded-xl bg-neutral-900 px-3 py-2 text-xs font-bold text-white hover:bg-neutral-800 hover:text-amber-400 border border-neutral-800 transition-all cursor-pointer"
-              title={lang === 'ar' ? 'اتصال مباشر' : 'Direct Call'}
-            >
-              <Phone className="h-3.5 w-3.5 text-amber-400" />
-              <span className="hidden sm:inline font-mono">{promoEvent.contact.phone}</span>
-            </button>
+        {/* Action Bar: Contact, Share, Like, Book in a single row */}
+        <div className="flex flex-row items-center gap-1.5 sm:gap-2 pt-3 border-t border-neutral-800 overflow-x-auto no-scrollbar w-full whitespace-nowrap">
+          {/* Direct Call Button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              if (!user) {
+                openGuestAlert('contact');
+                return;
+              }
+              window.location.href = `tel:${promoEvent.contact.phone}`;
+            }}
+            className="flex items-center justify-center gap-1 rounded-xl bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-white hover:bg-neutral-800 hover:text-amber-400 border border-neutral-800 transition-all shrink-0 cursor-pointer"
+            title={lang === 'ar' ? 'اتصال مباشر' : 'Direct Call'}
+          >
+            <Phone className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+            <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'اتصل' : 'Call'}</span>
+          </button>
 
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                if (!user) {
-                  openGuestAlert('contact');
-                  return;
-                }
-                const url = `https://wa.me/${promoEvent.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، أستفسر عن حجز تذاكر: ${promoEvent.titleAr}` : `Hello, inquiring about: ${promoEvent.titleEn}`)}`;
-                window.open(url, '_blank', 'noopener,noreferrer');
-              }}
-              className="flex items-center gap-1.5 rounded-xl bg-neutral-900 px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-600 hover:text-white border border-neutral-800 transition-all cursor-pointer"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              <span>{lang === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
-            </button>
-          </div>
+          {/* WhatsApp Button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              if (!user) {
+                openGuestAlert('contact');
+                return;
+              }
+              const url = `https://wa.me/${promoEvent.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، أستفسر عن حجز تذاكر: ${promoEvent.titleAr}` : `Hello, inquiring about: ${promoEvent.titleEn}`)}`;
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            className="flex items-center justify-center gap-1 rounded-xl bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-emerald-400 hover:bg-emerald-600 hover:text-white border border-neutral-800 transition-all shrink-0 cursor-pointer"
+          >
+            <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
+          </button>
 
-          {/* Social Actions */}
-          <div className="flex items-center gap-3 ml-auto">
-            {/* Share Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onOpenShare(promoEvent)}
-              className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-900 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-400 border border-neutral-800 transition-all"
-              title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share Event'}
-            >
-              <Share2 className="h-5 w-5" />
-            </motion.button>
+          {/* Share Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onOpenShare(promoEvent)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-400 border border-neutral-800 transition-all shrink-0 cursor-pointer"
+            title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share Event'}
+          >
+            <Share2 className="h-3.5 w-3.5 shrink-0" />
+          </motion.button>
 
-            {/* Like Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={(e) => toggleLikeEvent(promoEvent.id, e.currentTarget)}
-              className={`flex h-12 px-4 items-center justify-center gap-2 rounded-xl border font-bold transition-all ${
-                isLiked
-                  ? 'bg-red-600 text-white border-red-500 shadow-lg'
-                  : 'bg-neutral-900 text-red-600 border-neutral-700 hover:bg-red-600 hover:text-white'
-              }`}
-            >
-              <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="font-mono text-sm">{promoEvent.likesCount}</span>
-            </motion.button>
+          {/* Like Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={(e) => toggleLikeEvent(promoEvent.id, e.currentTarget)}
+            className={`flex h-10 px-2.5 sm:px-3 items-center justify-center gap-1.5 rounded-xl border font-bold transition-all shrink-0 cursor-pointer ${
+              isLiked
+                ? 'bg-red-600 text-white border-red-500 shadow-lg'
+                : 'bg-neutral-900 text-red-500 border-neutral-700 hover:bg-red-600 hover:text-white'
+            }`}
+          >
+            <Heart className={`h-3.5 w-3.5 shrink-0 ${isLiked ? 'fill-current' : ''}`} />
+            <span className="font-mono text-[11px] sm:text-xs">{promoEvent.likesCount}</span>
+          </motion.button>
 
-            {/* Book Now Button */}
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => bookTicket(promoEvent.id)}
-              disabled={isBooked}
-              className={`flex h-12 items-center justify-center gap-2 rounded-xl px-6 text-sm font-bold transition-colors ${
-                isBooked
-                  ? 'bg-emerald-600 text-white cursor-default border border-emerald-500'
-                  : 'bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg'
-              }`}
-            >
-              <span>{isBooked ? (lang === 'ar' ? '✓ تم الحجز' : '✓ Booked') : (lang === 'ar' ? 'احجز الآن' : 'Book Now')}</span>
-            </motion.button>
-          </div>
+          {/* Book Now Button */}
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => bookTicket(promoEvent.id)}
+            disabled={isBooked}
+            className={`flex h-10 flex-1 items-center justify-center gap-1 rounded-xl px-3 sm:px-4 text-xs font-bold transition-colors shrink-0 ${
+              isBooked
+                ? 'bg-emerald-600 text-white cursor-default border border-emerald-500'
+                : 'bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg'
+            }`}
+          >
+            <span className="text-[11px] sm:text-xs">{isBooked ? (lang === 'ar' ? '✓ تم' : '✓ Booked') : (lang === 'ar' ? 'احجز' : 'Book')}</span>
+          </motion.button>
         </div>
       </div>
 

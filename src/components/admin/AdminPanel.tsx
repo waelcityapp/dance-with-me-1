@@ -75,6 +75,7 @@ export const AdminPanel: React.FC = () => {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [usersSubTab, setUsersSubTab] = useState<'search' | 'all'>('all');
   const [userSearchQuery, setUserSearchQuery] = useState<string>('');
+  const [usersError, setUsersError] = useState<string | null>(null);
 
   // Security Section States
   const [securityViolations, setSecurityViolations] = useState<any[]>([]);
@@ -141,9 +142,15 @@ export const AdminPanel: React.FC = () => {
   });
 
   useEffect(() => {
-    const unsubscribe = subscribeToAllUsers((users) => {
-      setAllUsers(users);
-    });
+    const unsubscribe = subscribeToAllUsers(
+      (users) => {
+        setAllUsers(users);
+        setUsersError(null);
+      },
+      (err) => {
+        setUsersError(err.message || String(err));
+      }
+    );
     return () => unsubscribe();
   }, []);
 
@@ -671,6 +678,25 @@ export const AdminPanel: React.FC = () => {
               <span className="text-2xl font-black text-blue-400 mt-1 block font-mono">{events.length}</span>
             </div>
           </div>
+
+          {usersError && (
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-200 text-xs sm:text-sm space-y-2">
+              <p className="font-bold flex items-center gap-2">
+                <AlertCircle className="h-4.5 w-4.5 text-red-400 shrink-0" />
+                <span>
+                  {lang === 'ar' 
+                    ? '⚠️ تنبيه قاعدة البيانات: فشل تحميل قائمة المستخدمين بسبب صلاحيات الوصول!' 
+                    : '⚠️ Database Warning: Failed to load user profiles due to permissions!'}
+                </span>
+              </p>
+              <p className="opacity-90 leading-relaxed text-xs sm:text-sm">
+                {lang === 'ar'
+                  ? 'لم يستجب خادم Firebase بعرض بيانات الأعضاء لأنك غير مسجل الدخول ببريد المسؤول المعتمد (waelvts@gmail.com) في نظام التوثيق. يرجى الانتقال إلى قسم "حسابي" وتسجيل الدخول ببريد المسؤول أولاً وتفعيل حسابك.'
+                  : 'Firebase rejected reading the users collection because your session is not authenticated as the designated admin email (waelvts@gmail.com) in Firebase Auth. Please navigate to the "Account" tab and sign in using the admin email.'}
+              </p>
+              <p className="text-[10px] opacity-70 font-mono select-text">{usersError}</p>
+            </div>
+          )}
 
           {/* Categories Grid Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1740,7 +1766,26 @@ export const AdminPanel: React.FC = () => {
 
           {/* Display Users Table / List */}
           <div className="rounded-3xl bg-neutral-900/60 border border-neutral-800 shadow-xl overflow-hidden">
-            {filteredUsers.length === 0 ? (
+            {usersError ? (
+              <div className="p-8 text-center space-y-4">
+                <div className="mx-auto h-12 w-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <div className="max-w-md mx-auto space-y-2">
+                  <h4 className="text-base font-extrabold text-red-400">
+                    {lang === 'ar' ? '⚠️ فشل تحميل المستخدمين من قاعدة البيانات' : '⚠️ Failed to load users from Firestore'}
+                  </h4>
+                  <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+                    {lang === 'ar'
+                      ? 'تم حظر عملية قراءة كوليكشن المستخدمين بسبب صلاحيات الحماية بـ Firebase Rules. لعرض الحسابات وإدارتها، يجب أولاً تسجيل الدخول ببريد المسؤول waelvts@gmail.com في قسم "حسابي".'
+                      : 'This read query is restricted by Firebase Security Rules. To review, search, and manage registered members, please sign in with your official admin email (waelvts@gmail.com) in the "Account" tab.'}
+                  </p>
+                  <p className="text-[10px] font-mono text-neutral-500 bg-neutral-950 p-2.5 rounded-xl border border-neutral-800 mt-2 select-text">
+                    {usersError}
+                  </p>
+                </div>
+              </div>
+            ) : filteredUsers.length === 0 ? (
               <div className="p-12 text-center text-neutral-400 font-medium">
                 {lang === 'ar' 
                   ? 'لا يوجد مستخدمون متطابقون مع شروط البحث أو قاعدة البيانات فارغة.' 

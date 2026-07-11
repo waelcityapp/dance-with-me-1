@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { DanceCategory, DanceEvent, Language, NotificationItem, TabType, ThemeMode, UserProfile, SupportMessage, DanceStyle } from '../types';
-import { MOCK_EVENTS, MOCK_NOTIFICATIONS, MOCK_USER_DEFAULT } from '../data/mockEvents';
 import { isEventExpired } from '../utils/dateUtils';
 import { DEFAULT_NEUTRAL_AVATAR } from '../utils/avatars';
 import confetti from 'canvas-confetti';
@@ -148,7 +147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Failed to load events from storage');
     }
-    return MOCK_EVENTS;
+    return [];
   });
 
   const [editingEvent, setEditingEvent] = useState<DanceEvent | null>(null);
@@ -174,7 +173,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return MOCK_NOTIFICATIONS;
+    return [];
   });
 
   // Support Messages & Modal
@@ -239,7 +238,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Connect to Firebase Firestore Database for real-time synchronization
   useEffect(() => {
     // 1. Check and seed initial data if Firestore database is empty
-    checkAndSeedEvents(MOCK_EVENTS);
+    checkAndSeedEvents([]);
     checkAndSeedAppAssets().then((seeded) => {
       if (seeded) setAppAssets(seeded);
     });
@@ -267,8 +266,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 5. Listen to Firebase Auth state changes for session persistence across reloads
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.email) {
-        const adminEmail = (import.meta as any).env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
-        const isUserAdmin = adminEmail ? firebaseUser.email.trim().toLowerCase() === adminEmail : false;
+        const adminEmail = ((import.meta as any).env.VITE_ADMIN_EMAIL?.trim().toLowerCase()) || 'waelvts@gmail.com';
+        const isUserAdmin = firebaseUser.email.trim().toLowerCase() === adminEmail;
         const existing = await getUserByEmailFromFirestore(firebaseUser.email);
         if (existing) {
           if (existing.isSuspended) {
@@ -441,8 +440,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Actions
   const loginUser = async (name: string, email: string, avatar?: string, customId?: string, password?: string) => {
     const cleanEmail = email.trim().toLowerCase();
-    const adminEmail = (import.meta as any).env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
-    const isUserAdmin = adminEmail ? cleanEmail === adminEmail : false;
+    const adminEmail = ((import.meta as any).env.VITE_ADMIN_EMAIL?.trim().toLowerCase()) || 'waelvts@gmail.com';
+    const isUserAdmin = cleanEmail === adminEmail;
     const existing = await getUserByEmailFromFirestore(cleanEmail);
     if (existing) {
       if (existing.isSuspended) {

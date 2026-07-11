@@ -70,7 +70,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [password, setPassword] = useState('');
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(['Salsa', 'Bachata']);
   const [selectedAvatar, setSelectedAvatar] = useState(DEFAULT_NEUTRAL_AVATAR);
-  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('register');
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('login');
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [authErrorCode, setAuthErrorCode] = useState<string | null>(null);
@@ -195,7 +195,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           await loginUser(userName, cleanEmail, userAvatar, firebaseUser.uid, password);
         }
       }
-      updateUserFavorites(selectedStyles);
+      if (activeTab === 'register') {
+        updateUserFavorites(selectedStyles);
+      }
       onClose();
     } catch (err: any) {
       console.error('Auth error:', err);
@@ -213,29 +215,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const confirmGoogleAuth = async () => {
     setLoadingAuth(true);
+    setErrorMsg(null);
     try {
       const googleUser = await loginWithFirebaseGoogle();
       if (googleUser && googleUser.email) {
         setGoogleUid(googleUser.id);
         const existing = await getUserByEmailFromFirestore(googleUser.email);
         if (existing) {
-          await loginUser(existing.name || googleUser.name, existing.email, existing.avatar || googleUser.avatar, existing.id);
+          await loginUser(existing.name || googleUser.name, googleUser.email, existing.avatar || googleUser.avatar, existing.id);
           onClose();
           return;
         }
         setName(googleUser.name || (lang === 'ar' ? 'عضو النادي (Google)' : 'Google Member'));
         setEmail(googleUser.email);
         if (googleUser.avatar) setSelectedAvatar(googleUser.avatar);
+        setActiveTab('google_onboarding');
       } else {
-        setName(lang === 'ar' ? 'عضو النادي (VIP)' : 'VIP Member');
-        setEmail('');
+        throw new Error('Google popup blocked or cancelled');
       }
-      setActiveTab('google_onboarding');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Google login error:', err);
-      setName(lang === 'ar' ? 'عضو النادي (VIP)' : 'VIP Member');
-      setEmail('');
-      setActiveTab('google_onboarding');
+      setErrorMsg(
+        lang === 'ar'
+          ? 'فشل تسجيل الدخول بـ Google. يحدث هذا عادةً داخل نافذة المعاينة (iframe) بسبب حظر النوافذ المنبثقة من قبل المتصفح لدواعي الأمان. يرجى فتح التطبيق في نافذة مستقلة بالضغط على زر السهم بأعلى اليمين ↗️ في شريط الأدوات لاستخدام Google، أو المتابعة باستخدام البريد الإلكتروني وكلمة المرور هنا.'
+          : 'Google sign-in failed or was blocked. This is common inside the AI Studio preview iframe due to security restrictions. Please open the app in a new tab using the ↗️ button in the toolbar, or sign up / sign in using your Email & Password here.'
+      );
+      setActiveTab('login');
     } finally {
       setLoadingAuth(false);
     }
