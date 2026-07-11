@@ -25,7 +25,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { DanceEvent, UserProfile, NotificationItem, AdSubmission, SupportMessage } from '../types';
 
 // Construct dynamic firebase configuration preferring env variables, falling back to local config json
-const resolvedFirebaseConfig = {
+export const resolvedFirebaseConfig = {
   apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
   authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
   projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
@@ -35,7 +35,7 @@ const resolvedFirebaseConfig = {
   measurementId: (import.meta as any).env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfig.measurementId,
 };
 
-const databaseId = (import.meta as any).env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId;
+export const databaseId = (import.meta as any).env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId;
 
 // Initialize Firebase App gracefully
 const app = !getApps().length ? initializeApp(resolvedFirebaseConfig) : getApps()[0];

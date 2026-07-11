@@ -52,7 +52,9 @@ import {
   toggleUserSuspensionInFirestore,
   getAdminSecretCodes,
   updateAdminSecretCode,
-  subscribeToSecurityViolations
+  subscribeToSecurityViolations,
+  resolvedFirebaseConfig,
+  databaseId
 } from '../../lib/firebase';
 
 export const AdminPanel: React.FC = () => {
@@ -440,8 +442,8 @@ export const AdminPanel: React.FC = () => {
 
   const handleExportBackup = () => {
     const backupData = {
-      project: 'eighth-fuze-l6d0h',
-      firestoreDbId: 'ai-studio-dancewithme-3e67ba5d-19d9-4888-a2ba-3c431d39465d',
+      project: resolvedFirebaseConfig.projectId || 'Unknown',
+      firestoreDbId: databaseId || '(default)',
       exportedAt: new Date().toISOString(),
       collections: {
         events: events,
@@ -893,32 +895,44 @@ export const AdminPanel: React.FC = () => {
                     </span>
                   </div>
                   <div className="text-xs font-mono text-neutral-400 mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1">
-                    <span>Project ID: <strong className="text-blue-300 select-all">eighth-fuze-l6d0h</strong></span>
-                    <span>Database ID: <strong className="text-blue-300 select-all">ai-studio-dancewithme-3e67ba5d-19d9-4888-a2ba-3c431d39465d</strong></span>
+                    <span>Project ID: <strong className="text-blue-300 select-all">{resolvedFirebaseConfig.projectId || 'Unknown'}</strong></span>
+                    <span>Database ID: <strong className="text-blue-300 select-all">{databaseId || '(default)'}</strong></span>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-                <a
-                  href="https://console.firebase.google.com/project/eighth-fuze-l6d0h/firestore/databases/ai-studio-dancewithme-3e67ba5d-19d9-4888-a2ba-3c431d39465d/data"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20 cursor-pointer border border-blue-400/30"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>{lang === 'ar' ? 'فتح في كونسول Firebase الرسمي 🚀' : 'Open Firebase Console 🚀'}</span>
-                </a>
+                {(() => {
+                  const isDefaultDb = !databaseId || databaseId === '(default)' || databaseId === 'default';
+                  const firebaseConsoleUrl = isDefaultDb
+                    ? `https://console.firebase.google.com/project/${resolvedFirebaseConfig.projectId || 'Unknown'}/firestore/data`
+                    : `https://console.firebase.google.com/project/${resolvedFirebaseConfig.projectId || 'Unknown'}/firestore/databases/${databaseId}/data`;
+                  const cloudConsoleUrl = `https://console.cloud.google.com/firestore/databases/${isDefaultDb ? '(default)' : databaseId}/data?project=${resolvedFirebaseConfig.projectId || 'Unknown'}`;
 
-                <a
-                  href="https://console.cloud.google.com/firestore/databases/ai-studio-dancewithme-3e67ba5d-19d9-4888-a2ba-3c431d39465d/data?project=eighth-fuze-l6d0h"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-bold transition-all border border-white/10"
-                >
-                  <ExternalLink className="h-4 w-4 text-neutral-400" />
-                  <span>{lang === 'ar' ? 'Google Cloud Console ☁️' : 'Cloud Console ☁️'}</span>
-                </a>
+                  return (
+                    <>
+                      <a
+                        href={firebaseConsoleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20 cursor-pointer border border-blue-400/30"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        <span>{lang === 'ar' ? 'فتح في كونسول Firebase الرسمي 🚀' : 'Open Firebase Console 🚀'}</span>
+                      </a>
+
+                      <a
+                        href={cloudConsoleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-bold transition-all border border-white/10"
+                      >
+                        <ExternalLink className="h-4 w-4 text-neutral-400" />
+                        <span>{lang === 'ar' ? 'Google Cloud Console ☁️' : 'Cloud Console ☁️'}</span>
+                      </a>
+                    </>
+                  );
+                })()}
 
                 <button
                   onClick={handleExportBackup}
