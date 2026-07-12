@@ -3,7 +3,8 @@ import {
   getFirestore, 
   collection, 
   doc, 
-  setDoc, 
+  setDoc,
+  updateDoc, 
   deleteDoc, 
   onSnapshot, 
   getDocs, 
@@ -981,3 +982,37 @@ export function subscribeToBookings(
 }
 
 
+export async function markAdSubmissionsAsRead(userId: string) {
+  try {
+    const q = query(collection(db, COLLECTIONS.AD_SUBMISSIONS), where('advertiserId', '==', userId), where('userRead', '==', false));
+    const snap = await getDocs(q);
+    snap.docs.forEach(d => updateDoc(d.ref, { userRead: true }));
+  } catch (e) {}
+}
+export async function markBookingsAsRead(userId: string) {
+  try {
+    const q = query(collection(db, COLLECTIONS.BOOKINGS), where('userId', '==', userId), where('userRead', '==', false));
+    const snap = await getDocs(q);
+    snap.docs.forEach(d => updateDoc(d.ref, { userRead: true }));
+  } catch (e) {}
+}
+export async function markSupportMessagesAsRead(userId: string) {
+  try {
+    const q = query(collection(db, COLLECTIONS.SUPPORT_MESSAGES), where('userId', '==', userId), where('userRead', '==', false));
+    const snap = await getDocs(q);
+    snap.docs.forEach(d => updateDoc(d.ref, { userRead: true }));
+  } catch (e) {}
+}
+
+export async function deleteAllNotificationsFromFirestore(): Promise<boolean> {
+  try {
+    const q = query(collection(db, COLLECTIONS.NOTIFICATIONS));
+    const snapshot = await getDocs(q);
+    const deletePromises = snapshot.docs.map(docSnap => deleteDoc(doc(db, COLLECTIONS.NOTIFICATIONS, docSnap.id)));
+    await Promise.all(deletePromises);
+    return true;
+  } catch (error) {
+    console.error('Error deleting all notifications from Firestore:', error);
+    return false;
+  }
+}

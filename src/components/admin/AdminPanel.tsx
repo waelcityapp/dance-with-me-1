@@ -47,7 +47,8 @@ import {
   Key,
   BarChart3,
   TrendingUp,
-  MousePointerClick
+  MousePointerClick,
+  Bell
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle } from '../../types';
@@ -58,6 +59,7 @@ import {
   deleteAdSubmissionFromFirestore, 
   saveEventToFirestore, 
   saveNotificationToFirestore,
+  deleteAllNotificationsFromFirestore,
   subscribeToAllUsers,
   deleteUserFromFirestore,
   toggleUserSuspensionInFirestore,
@@ -111,6 +113,15 @@ export const AdminPanel: React.FC = () => {
   const [usersSubTab, setUsersSubTab] = useState<'search' | 'all'>('all');
   const [userSearchQuery, setUserSearchQuery] = useState<string>('');
   const [usersError, setUsersError] = useState<string | null>(null);
+
+  // Send Notifications States
+  const [notifTitleAr, setNotifTitleAr] = useState('');
+  const [notifTitleEn, setNotifTitleEn] = useState('');
+  const [notifMessageAr, setNotifMessageAr] = useState('');
+  const [notifMessageEn, setNotifMessageEn] = useState('');
+  const [notifType, setNotifType] = useState<'system' | 'new_party' | 'course_alert' | 'trip' | 'expiry_warning'>('system');
+  const [notifSending, setNotifSending] = useState(false);
+
 
   // Security Section States
   const [securityViolations, setSecurityViolations] = useState<any[]>([]);
@@ -758,23 +769,13 @@ export const AdminPanel: React.FC = () => {
       const updated: AdSubmission = {
         ...sub,
         status: 'approved',
+        userRead: false,
         reviewedAt: new Date().toISOString(),
         expiresAt: expiresAtDate
       };
       updateLocalStorageItem(updated);
       await saveAdSubmissionToFirestore(updated);
 
-      // 3. Send notification in Firestore
-      await saveNotificationToFirestore({
-        id: `notif_app_${Date.now()}`,
-        titleAr: '🎉 تم تفعيل إعلانك VIP بنجاح!',
-        titleEn: '🎉 Your VIP Ad is Now Live!',
-        messageAr: `تم مراجعة وقبول الفاتورة رقم ${sub.invoiceNumber} وتم نشر إعلانك على التطبيق ليراه جميع الأعضاء والمتابعين! سينتهي العرض في ${new Date(expiresAtDate).toLocaleDateString('ar-EG')}.`,
-        messageEn: `Invoice ${sub.invoiceNumber} approved. Your VIP event is now live! Expiring on ${new Date(expiresAtDate).toLocaleDateString('en-US')}.`,
-        date: new Date().toISOString(),
-        read: false,
-        type: 'new_party'
-      });
     } catch (err) {
       console.error('Error approving ad:', err);
     } finally {
@@ -793,18 +794,6 @@ export const AdminPanel: React.FC = () => {
       updateLocalStorageItem(updated);
       await saveAdSubmissionToFirestore(updated);
 
-      await saveNotificationToFirestore({
-        id: `notif_arch_${Date.now()}`,
-        titleAr: '📦 تنبيه: نقل إعلانك إلى الأرشيف (بحد أقصى شهر)',
-        titleEn: '📦 Notice: Your Ad Moved to 30-Day Archive',
-        messageAr: `تم انتهاء فترة عرض الإعلان (فاتورة ${sub.invoiceNumber}) ونقله إلى الأرشيف في قاعدة البيانات بحد أقصى شهر (30 يوماً). يمكنك تجديد الإعلان أو تعديله من ملفك الشخصي قبل حذفه نهائياً.`,
-        messageEn: `Your ad promo period (${sub.invoiceNumber}) has ended and moved to Archive for max 30 days. You can renew or edit it from your profile before permanent deletion.`,
-        date: new Date().toISOString(),
-        read: false,
-        type: 'expiry_warning'
-      });
-    } catch (err) {
-      console.error('Error archiving ad:', err);
     } finally {
       setActionLoading(null);
     }
@@ -833,23 +822,12 @@ export const AdminPanel: React.FC = () => {
       const updated: AdSubmission = {
         ...sub,
         status: 'rejected',
+        userRead: false,
         reviewedAt: new Date().toISOString()
       };
       updateLocalStorageItem(updated);
       await saveAdSubmissionToFirestore(updated);
 
-      await saveNotificationToFirestore({
-        id: `notif_rej_${Date.now()}`,
-        titleAr: '⚠️ إشعار بخصوص الفاتورة رقم ' + sub.invoiceNumber,
-        titleEn: '⚠️ Notice regarding invoice ' + sub.invoiceNumber,
-        messageAr: `عذراً، تعذر تفعيل الإعلان للفاتورة رقم ${sub.invoiceNumber}. سيتم التواصل معك عبر الواتساب أو استرداد المبلغ حسب السياسة.`,
-        messageEn: `Sorry, ad publication was rejected for invoice ${sub.invoiceNumber}. Our team will contact you via WhatsApp.`,
-        date: new Date().toISOString(),
-        read: false,
-        type: 'system'
-      });
-    } catch (err) {
-      console.error('Error rejecting ad:', err);
     } finally {
       setActionLoading(null);
     }
@@ -900,6 +878,52 @@ export const AdminPanel: React.FC = () => {
     return s.status === filter;
   });
 
+
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notifTitleAr || !notifTitleEn || !notifMessageAr || !notifMessageEn) {
+      alert(lang === 'ar' ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields');
+      return;
+    }
+    setNotifSending(true);
+    try {
+      await saveNotificationToFirestore({
+        id: `notif_admin_${Date.now()}`,
+        titleAr: notifTitleAr,
+        titleEn: notifTitleEn,
+        messageAr: notifMessageAr,
+        messageEn: notifMessageEn,
+        type: notifType,
+        date: new Date().toISOString(),
+        read: false
+      });
+      alert(lang === 'ar' ? 'تم إرسال الإشعار بنجاح!' : 'Notification sent successfully!');
+      setNotifTitleAr('');
+      setNotifTitleEn('');
+      setNotifMessageAr('');
+      setNotifMessageEn('');
+    } catch (err) {
+      console.error('Error sending notification:', err);
+      alert(lang === 'ar' ? 'حدث خطأ أثناء إرسال الإشعار' : 'Error sending notification');
+    } finally {
+      setNotifSending(false);
+    }
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    if (window.confirm(lang === 'ar' ? 'هل أنت متأكد من حذف جميع الإشعارات السابقة من قاعدة البيانات؟ لا يمكن التراجع عن هذه العملية.' : 'Are you sure you want to delete all previous notifications from the database? This cannot be undone.')) {
+      setNotifSending(true);
+      try {
+        await deleteAllNotificationsFromFirestore();
+        alert(lang === 'ar' ? 'تم حذف جميع الإشعارات السابقة بنجاح' : 'All previous notifications deleted successfully');
+      } catch (err) {
+        console.error('Error deleting notifications:', err);
+        alert(lang === 'ar' ? 'حدث خطأ أثناء الحذف' : 'Error deleting notifications');
+      } finally {
+        setNotifSending(false);
+      }
+    }
+  };
   return (
     <div className="w-full max-w-5xl mx-auto pt-2 pb-36 sm:pb-44" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       {/* Receipt & JSON Preview Modals */}
@@ -1579,6 +1603,35 @@ export const AdminPanel: React.FC = () => {
                 </p>
               </div>
               <div className="flex items-center justify-end text-xs font-black text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
+              </div>
+            </motion.div>
+            {/* Card 10: Send Notifications */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              onClick={() => {
+                setAdminSection('send_notifications');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="rounded-3xl border-2 border-amber-500/30 hover:border-amber-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-xl hover:shadow-amber-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+            >
+              <div className="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <Bell className="h-6 w-6 stroke-[2]" />
+                  </div>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                  {lang === 'ar' ? '🔔 إرسال الإشعارات والتنبيهات' : '🔔 Send Notifications & Alerts'}
+                </h3>
+                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'إرسال إشعارات عامة لجميع المستخدمين وحذف الإشعارات القديمة.'
+                    : 'Send general notifications to all users and delete old notifications.'}
+                </p>
+              </div>
+              <div className="flex items-center justify-end text-xs font-black text-amber-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
@@ -5372,6 +5425,114 @@ export const AdminPanel: React.FC = () => {
           </form>
         </div>
       )}
+
+      {adminSection === 'send_notifications' && (
+        <div className="space-y-6 animate-fadeIn" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-neutral-900 border border-amber-500/30 p-6 rounded-3xl shadow-xl">
+            <div>
+              <h3 className="text-xl font-bold text-white mb-1">
+                {lang === 'ar' ? '🔔 إرسال تنبيهات لجميع الأعضاء' : '🔔 Send Alerts to All Members'}
+              </h3>
+              <p className="text-sm text-neutral-400">
+                {lang === 'ar' ? 'الإشعار سيظهر فوراً في جرس التنبيهات أعلى الموقع لجميع المستخدمين.' : 'Notification will appear immediately in the top bell icon for all users.'}
+              </p>
+            </div>
+            <button
+              onClick={handleDeleteAllNotifications}
+              disabled={notifSending}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30 transition-colors shrink-0"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="text-sm font-bold">{lang === 'ar' ? 'حذف جميع الإشعارات السابقة' : 'Delete All Old Notifications'}</span>
+            </button>
+          </div>
+
+          <form onSubmit={handleSendNotification} className="bg-neutral-900 border border-white/5 p-6 rounded-3xl shadow-xl space-y-6 relative overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'عنوان الإشعار (عربي) *' : 'Title (Arabic) *'}</label>
+                <input
+                  type="text"
+                  required
+                  value={notifTitleAr}
+                  onChange={(e) => setNotifTitleAr(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors"
+                  placeholder={lang === 'ar' ? 'مثال: خصم جديد على الحفلات' : 'Example: New discount on events'}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'عنوان الإشعار (إنجليزي) *' : 'Title (English) *'}</label>
+                <input
+                  type="text"
+                  required
+                  value={notifTitleEn}
+                  onChange={(e) => setNotifTitleEn(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors"
+                  placeholder={lang === 'ar' ? 'مثال: New Party Discount' : 'Example: New Party Discount'}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'محتوى الإشعار (عربي) *' : 'Message (Arabic) *'}</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={notifMessageAr}
+                  onChange={(e) => setNotifMessageAr(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors resize-none"
+                  placeholder={lang === 'ar' ? 'اكتب تفاصيل الإشعار هنا...' : 'Type notification details here...'}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'محتوى الإشعار (إنجليزي) *' : 'Message (English) *'}</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={notifMessageEn}
+                  onChange={(e) => setNotifMessageEn(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors resize-none"
+                  placeholder={lang === 'ar' ? 'Type notification details here...' : 'Type notification details here...'}
+                  dir="ltr"
+                />
+              </div>
+              
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'نوع الإشعار (يحدد الأيقونة واللون)' : 'Notification Type (determines icon & color)'}</label>
+                <select
+                  value={notifType}
+                  onChange={(e) => setNotifType(e.target.value as any)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors"
+                >
+                  <option value="system">{lang === 'ar' ? 'تنبيه نظام عام (رمادي)' : 'General System (Gray)'}</option>
+                  <option value="new_party">{lang === 'ar' ? 'حفلة جديدة (بنفسجي)' : 'New Party (Purple)'}</option>
+                  <option value="course_alert">{lang === 'ar' ? 'تنبيه كورس (أزرق)' : 'Course Alert (Blue)'}</option>
+                  <option value="trip">{lang === 'ar' ? 'رحلة / مهرجان (أخضر)' : 'Trip / Festival (Green)'}</option>
+                  <option value="expiry_warning">{lang === 'ar' ? 'تنبيه هام / انتهاء (أصفر)' : 'Warning / Expiry (Yellow)'}</option>
+                </select>
+              </div>
+            </div>
+            
+            <button
+              type="submit"
+              disabled={notifSending}
+              className="w-full py-4 rounded-xl font-black text-lg bg-amber-500 text-neutral-950 hover:bg-amber-400 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 mt-4"
+            >
+              {notifSending ? (
+                <>
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  <span>{lang === 'ar' ? 'جاري الإرسال...' : 'Sending...'}</span>
+                </>
+              ) : (
+                <>
+                  <Bell className="h-5 w-5" />
+                  <span>{lang === 'ar' ? 'إرسال الإشعار لجميع الأعضاء الآن' : 'Broadcast to All Members Now'}</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      )}
+
     </div>
   );
 };

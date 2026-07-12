@@ -140,6 +140,7 @@ export interface AdSubmission {
   adType?: 'vip' | 'standard';
   receiptImage?: string;
   status: 'pending' | 'approved' | 'rejected' | 'archived';
+  userRead?: boolean;
   submittedAt: string;
   reviewedAt?: string;
   expiresAt?: string;
@@ -158,6 +159,7 @@ export interface SupportMessage {
   userAvatar?: string;
   message: string;
   status: 'pending' | 'replied';
+  userRead?: boolean;
   replyText?: string;
   createdAt: string;
   repliedAt?: string;
@@ -176,6 +178,7 @@ export interface EventBooking {
   totalAmount: number;
   receiptImage: string;
   status: 'pending' | 'approved' | 'rejected';
+  userRead?: boolean;
   refNumber: string;
   submittedAt: string;
   reviewedAt?: string;

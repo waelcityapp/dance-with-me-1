@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { DanceCategory, DanceEvent, Language, NotificationItem, TabType, ThemeMode, UserProfile, SupportMessage, DanceStyle, EventBooking } from '../types';
+import { DanceCategory, DanceEvent, Language, NotificationItem, TabType, ThemeMode, UserProfile, SupportMessage, DanceStyle, EventBooking, AdSubmission } from '../types';
 import { isEventExpired } from '../utils/dateUtils';
 import { DEFAULT_NEUTRAL_AVATAR } from '../utils/avatars';
 import confetti from 'canvas-confetti';
@@ -29,6 +29,7 @@ import {
   logAnalyticsEvent,
   saveBookingToFirestore,
   subscribeToBookings,
+  subscribeToAdSubmissions,
   deleteBookingFromFirestore
 } from '../lib/firebase';
 import { PricingConfig } from '../types';
@@ -89,6 +90,7 @@ interface AppContextType {
   updatePricingConfig: (config: PricingConfig) => Promise<boolean>;
   loadPricingConfig: () => Promise<void>;
   bookings: EventBooking[];
+  userAdSubmissions: AdSubmission[];
   submitBooking: (bookingData: {
     eventId: string;
     eventTitleAr: string;
@@ -221,6 +223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeSupportModal = () => setIsSupportModalOpen(false);
 
   const [bookings, setBookings] = useState<EventBooking[]>([]);
+  const [userAdSubmissions, setUserAdSubmissions] = useState<AdSubmission[]>([]);
   const [selectedBookingEvent, setSelectedBookingEvent] = useState<DanceEvent | null>(null);
 
   // App Assets / Branding state loaded from Firestore with fallback to default paths
@@ -446,7 +449,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user.id,
       user.isAdmin
     );
-    return () => unsubBookings();
+    const unsubAds = subscribeToAdSubmissions((ads) => setUserAdSubmissions(ads || []), user.id, false);
+    return () => {
+      unsubBookings();
+      unsubAds();
+    };
+
   }, [user]);
 
   const setLang = (newLang: Language) => {
@@ -727,20 +735,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveUserToFirestore(updatedUser);
       }
 
-      // Create notification for the user
-      const userNotif: NotificationItem = {
-        id: `notif_bkg_${Date.now()}`,
-        titleAr: '⏳ حجزك قيد المراجعة الآن',
-        titleEn: '⏳ Your Booking is Under Review',
-        messageAr: `تم استلام طلب حجزك للفعالية "${bookingData.eventTitleAr}" بالرقم المرجعي ${refNumber}. جاري مراجعته من الإدارة وسوف نرسل لك كود الدخول قريباً.`,
-        messageEn: `We have received your booking request for "${bookingData.eventTitleEn}" with reference ${refNumber}. It is under review, and we will send your access code shortly.`,
-        date: new Date().toISOString(),
-        read: false,
-        type: 'system',
-        refNumber: refNumber
-      };
-      setNotifications(prev => [userNotif, ...prev]);
-      saveNotificationToFirestore(userNotif);
 
       // Create notification for the admin
       const adminNotif: NotificationItem = {
@@ -785,6 +779,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedBooking: EventBooking = {
       ...bkg,
       status: 'approved',
+        userRead: false,
       barcodeUrl,
       accessCode: accessCode || `DWM-AC-${Math.floor(1000 + Math.random() * 9000)}`,
       discountAmount,
@@ -796,21 +791,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (success) {
       setBookings(prev => prev.map(b => b.id === bookingId ? updatedBooking : b));
 
-      // Send notification to user
-      const userNotif: NotificationItem = {
-        id: `notif_bkg_approved_${Date.now()}`,
-        titleAr: '🎉 تم تأكيد حجزك وإصدار تذاكرك!',
-        titleEn: '🎉 Your Booking has been Confirmed & Tickets Issued!',
-        messageAr: `تهانينا! تم تأكيد حجزك للفعالية "${bkg.eventTitleAr}". كود الدخول الخاص بك هو: ${updatedBooking.accessCode}. ${discountAmount > 0 ? `تم تطبيق خصم بقيمة ${discountAmount} ج.م، الإجمالي النهائي: ${finalAmount} ج.م.` : ''} يرجى إظهار الباركود في الحساب الشخصي عند الدخول.`,
-        messageEn: `Congratulations! Your booking for "${bkg.eventTitleEn}" is confirmed. Your Access Code is: ${updatedBooking.accessCode}. ${discountAmount > 0 ? `Applied discount of ${discountAmount} EGP, final total: ${finalAmount} EGP.` : ''} Please present the barcode in your profile for entry.`,
-        date: new Date().toISOString(),
-        read: false,
-        type: 'new_party',
-        relatedEventId: bkg.eventId,
-        refNumber: bkg.refNumber
-      };
-      setNotifications(prev => [userNotif, ...prev]);
-      saveNotificationToFirestore(userNotif);
+      
 
       return true;
     }
@@ -826,6 +807,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedBooking: EventBooking = {
       ...bkg,
       status: 'rejected',
+        userRead: false,
       adminNotes,
       reviewedAt: new Date().toISOString()
     };
@@ -834,20 +816,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (success) {
       setBookings(prev => prev.map(b => b.id === bookingId ? updatedBooking : b));
 
-      // Send notification to user
-      const userNotif: NotificationItem = {
-        id: `notif_bkg_rejected_${Date.now()}`,
-        titleAr: '❌ عذراً، تعذر تأكيد حجزك',
-        titleEn: '❌ Sorry, your booking could not be confirmed',
-        messageAr: `تعذر تأكيد طلب حجزك للفعالية "${bkg.eventTitleAr}" (الرقم المرجعي: ${bkg.refNumber}). ${adminNotes ? `سبب الرفض: ${adminNotes}` : 'يرجى مراجعة إيصال التحويل أو التواصل مع الدعم الفني.'}`,
-        messageEn: `Your booking request for "${bkg.eventTitleEn}" (Reference: ${bkg.refNumber}) was not confirmed. ${adminNotes ? `Reason: ${adminNotes}` : 'Please review your payment receipt or contact support.'}`,
-        date: new Date().toISOString(),
-        read: false,
-        type: 'system',
-        refNumber: bkg.refNumber
-      };
-      setNotifications(prev => [userNotif, ...prev]);
-      saveNotificationToFirestore(userNotif);
+      
 
       return true;
     }
@@ -1016,20 +985,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSupportMessages(prev => [newMsg, ...prev]);
     saveSupportMessageToFirestore(newMsg);
 
-    // Also send an instant confirmation notification to the user's notification box
-    const confirmationNotif: NotificationItem = {
-      id: `notif_${Date.now()}`,
-      titleAr: `تم استلام رسالتك برقم مرجعي (${refNumber})`,
-      titleEn: `Support Message Received (${refNumber})`,
-      messageAr: `مرحباً ${user.name}، تم توجيه رسالتك ومقترحك برقم [${refNumber}] إلى صندوق رسائل الإدارة وسنقوم بالرد عليك قريباً.`,
-      messageEn: `Hello ${user.name}, your message [${refNumber}] has been forwarded to admin inbox. We will respond soon.`,
-      date: new Date().toISOString(),
-      read: false,
-      type: 'system',
-      refNumber
-    };
-    setNotifications(prev => [confirmationNotif, ...prev]);
-    saveNotificationToFirestore(confirmationNotif);
+    
 
     return { refNumber, msgId };
   };
@@ -1041,6 +997,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedMsg: SupportMessage = {
       ...targetMsg,
       status: 'replied',
+      userRead: false,
       replyText,
       repliedAt: new Date().toISOString()
     };
@@ -1048,20 +1005,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSupportMessages(prev => prev.map(m => m.id === msgId ? updatedMsg : m));
     await saveSupportMessageToFirestore(updatedMsg);
 
-    // Create a notification directed to the user
-    const replyNotif: NotificationItem = {
-      id: `notif_rep_${Date.now()}`,
-      titleAr: `رد الإدارة على رسالتك (${targetMsg.refNumber})`,
-      titleEn: `Admin Reply to Inquiry (${targetMsg.refNumber})`,
-      messageAr: `مرحباً ${targetMsg.userName}، رداً على رسالتك ومقترحك [${targetMsg.refNumber}]: "${replyText}". نشكرك على تواصلك مع إدارة Dance With Me.`,
-      messageEn: `Hello ${targetMsg.userName}, regarding your inquiry [${targetMsg.refNumber}]: "${replyText}". Thank you for contacting Dance With Me.`,
-      date: new Date().toISOString(),
-      read: false,
-      type: 'support_reply',
-      refNumber: targetMsg.refNumber
-    };
-    setNotifications(prev => [replyNotif, ...prev]);
-    saveNotificationToFirestore(replyNotif);
+    
 
     return true;
   };
@@ -1121,6 +1065,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatePricingConfig,
       loadPricingConfig,
       bookings,
+      userAdSubmissions,
       submitBooking,
       approveBooking,
       rejectBooking,

@@ -98,7 +98,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       reader.onloadend = () => {
         const result = reader.result as string;
         if (result) {
-          setSelectedAvatar(result);
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              // Compress with JPEG at 70% quality
+              const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+              setSelectedAvatar(compressedDataUrl);
+            } else {
+              setSelectedAvatar(result);
+            }
+          };
+          img.src = result;
         }
       };
       reader.readAsDataURL(file);

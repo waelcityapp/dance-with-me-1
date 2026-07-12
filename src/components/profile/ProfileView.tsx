@@ -155,6 +155,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   useEffect(() => {
+    const handleNavigation = (e: any) => {
+      if (e.detail) setActiveSection(e.detail);
+    };
+    window.addEventListener('NAVIGATE_PROFILE_SECTION', handleNavigation);
+    return () => window.removeEventListener('NAVIGATE_PROFILE_SECTION', handleNavigation);
+  }, []);
+
+  useEffect(() => {
     const loadLocal = () => {
       try {
         const local = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
