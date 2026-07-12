@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { DanceCategory, DanceEvent, Language, NotificationItem, TabType, ThemeMode, UserProfile, SupportMessage, DanceStyle } from '../types';
+import { DanceCategory, DanceEvent, Language, NotificationItem, TabType, ThemeMode, UserProfile, SupportMessage, DanceStyle, EventBooking } from '../types';
 import { isEventExpired } from '../utils/dateUtils';
 import { DEFAULT_NEUTRAL_AVATAR } from '../utils/avatars';
 import confetti from 'canvas-confetti';
@@ -22,9 +22,16 @@ import {
   checkAndSeedAppAssets,
   updateAppAssets,
   subscribeToAppAssets,
+  checkAndSeedPricingConfig,
+  updatePricingConfigToFirestore,
+  subscribeToPricingConfig, fetchPricingConfigOnce,
+  DEFAULT_PRICING_CONFIG,
   logAnalyticsEvent,
-  handleGoogleAuthRedirect
+  saveBookingToFirestore,
+  subscribeToBookings,
+  deleteBookingFromFirestore
 } from '../lib/firebase';
+import { PricingConfig } from '../types';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'default';
 
@@ -78,6 +85,27 @@ interface AppContextType {
   setIsAdminLockModalOpen: (val: boolean) => void;
   appAssets: any;
   updateBrandingAssets: (assets: any) => Promise<boolean>;
+  pricingConfig: PricingConfig;
+  updatePricingConfig: (config: PricingConfig) => Promise<boolean>;
+  loadPricingConfig: () => Promise<void>;
+  bookings: EventBooking[];
+  submitBooking: (bookingData: {
+    eventId: string;
+    eventTitleAr: string;
+    eventTitleEn: string;
+    eventPrice: number;
+    userName: string;
+    userPhone: string;
+    numberOfIndividuals: number;
+    totalAmount: number;
+    receiptImage: string;
+  }) => Promise<EventBooking | null>;
+  approveBooking: (bookingId: string, barcodeUrl: string, accessCode: string, discountAmount: number, adminNotes?: string) => Promise<boolean>;
+  rejectBooking: (bookingId: string, adminNotes?: string) => Promise<boolean>;
+  deleteBooking: (bookingId: string) => Promise<boolean>;
+  deleteAllBookings: () => Promise<boolean>;
+  selectedBookingEvent: DanceEvent | null;
+  setSelectedBookingEvent: (event: DanceEvent | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -192,6 +220,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const openSupportModal = () => setIsSupportModalOpen(true);
   const closeSupportModal = () => setIsSupportModalOpen(false);
 
+  const [bookings, setBookings] = useState<EventBooking[]>([]);
+  const [selectedBookingEvent, setSelectedBookingEvent] = useState<DanceEvent | null>(null);
+
   // App Assets / Branding state loaded from Firestore with fallback to default paths
   const [appAssets, setAppAssets] = useState<any>(() => {
     return {
@@ -205,10 +236,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   });
 
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig>(DEFAULT_PRICING_CONFIG);
+
   const updateBrandingAssets = async (newAssets: any): Promise<boolean> => {
     const success = await updateAppAssets(newAssets);
     if (success) {
       setAppAssets((prev: any) => ({ ...prev, ...newAssets }));
+    }
+    return success;
+  };
+
+  
+  const loadPricingConfig = async () => {
+    const config = await fetchPricingConfigOnce();
+    if (config) {
+      setPricingConfig(config);
+    }
+  };
+
+  const updatePricingConfig = async (newConfig: PricingConfig): Promise<boolean> => {
+    const success = await updatePricingConfigToFirestore(newConfig);
+    if (success) {
+      setPricingConfig(newConfig);
     }
     return success;
   };
@@ -253,16 +302,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (e) {}
 
-    // Handle Google OAuth redirect result (for iframe-safe auth)
-    handleGoogleAuthRedirect().catch(err => {
-      console.warn('Error handling Google auth redirect:', err);
-    });
-
     // 1. Check and seed initial data if Firestore database is empty
     checkAndSeedEvents([]);
     checkAndSeedAppAssets().then((seeded) => {
       if (seeded) setAppAssets(seeded);
     });
+    
 
     // 2. Subscribe to live events collection
     const unsubEvents = subscribeToEvents((liveEvents) => {
@@ -273,6 +318,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubAssets = subscribeToAppAssets((liveAssets) => {
       if (liveAssets) setAppAssets(liveAssets);
     });
+
+    
 
     // 3. Subscribe to live notifications collection
     const unsubNotifs = subscribeToNotifications((liveNotifs) => {
@@ -340,7 +387,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       unsubEvents();
       unsubAssets();
-      unsubNotifs();
+            unsubNotifs();
       unsubSupport();
       unsubAuth();
     };
@@ -385,6 +432,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return () => mediaQuery.removeEventListener('change', listener);
     }
   }, [theme]);
+
+  // 5b. Subscribe to live bookings based on the logged-in user
+  useEffect(() => {
+    if (!user) {
+      setBookings([]);
+      return;
+    }
+    const unsubBookings = subscribeToBookings(
+      (liveBookings) => {
+        setBookings(liveBookings || []);
+      },
+      user.id,
+      user.isAdmin
+    );
+    return () => unsubBookings();
+  }, [user]);
 
   const setLang = (newLang: Language) => {
     setLangState(newLang);
@@ -507,7 +570,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const newUser: UserProfile = {
       id: customId || `user-${Date.now()}`,
-      name: name || 'VIP Member',
+      name: name.trim() || (lang === 'ar' ? 'عضو جديد' : 'New Member'),
       email: cleanEmail,
       phone: '+201000000000',
       avatar: avatar || DEFAULT_NEUTRAL_AVATAR,
@@ -608,43 +671,237 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       openGuestAlert('book');
       return;
     }
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 100,
-        origin: { y: 0.5 },
-        colors: ['#f59e0b', '#10b981', '#fbbf24', '#ffffff']
-      });
-    } catch (e) {}
+    const ev = events.find(e => e.id === eventId);
+    if (ev) {
+      setSelectedBookingEvent(ev);
+    }
+  };
 
-    if (user) {
-      if (!user.bookedEventIds.includes(eventId)) {
+  const submitBooking = async (bookingData: {
+    eventId: string;
+    eventTitleAr: string;
+    eventTitleEn: string;
+    eventPrice: number;
+    userName: string;
+    userPhone: string;
+    numberOfIndividuals: number;
+    totalAmount: number;
+    receiptImage: string;
+  }): Promise<EventBooking | null> => {
+    if (!user) {
+      openGuestAlert('book');
+      return null;
+    }
+
+    const refNumber = `DWM-BKG-${Math.floor(100000 + Math.random() * 900000)}`;
+    const id = `booking_${Date.now()}`;
+
+    const newBooking: EventBooking = {
+      id,
+      eventId: bookingData.eventId,
+      eventTitleAr: bookingData.eventTitleAr,
+      eventTitleEn: bookingData.eventTitleEn,
+      eventPrice: bookingData.eventPrice,
+      userId: user.id,
+      userName: bookingData.userName,
+      userPhone: bookingData.userPhone,
+      numberOfIndividuals: bookingData.numberOfIndividuals,
+      totalAmount: bookingData.totalAmount,
+      receiptImage: bookingData.receiptImage,
+      status: 'pending',
+      refNumber,
+      submittedAt: new Date().toISOString()
+    };
+
+    const success = await saveBookingToFirestore(newBooking);
+    if (success) {
+      setBookings(prev => [newBooking, ...prev]);
+
+      // Add to user's booked event IDs
+      if (!user.bookedEventIds.includes(bookingData.eventId)) {
         const updatedUser = {
           ...user,
-          bookedEventIds: [...user.bookedEventIds, eventId]
+          bookedEventIds: [...user.bookedEventIds, bookingData.eventId]
         };
         setUser(updatedUser);
         saveUserToFirestore(updatedUser);
       }
-    }
 
-    // Add confirmation notification
-    const ev = events.find(e => e.id === eventId);
-    if (ev) {
-      const newNotif: NotificationItem = {
-        id: `notif-book-${Date.now()}`,
-        titleAr: '🎉 تم تأكيد حجزك في الفعالية!',
-        titleEn: '🎉 Event Booking Confirmed!',
-        messageAr: `تم حجز تذكرتك في "${ev.titleAr}". يرجى التواصل مع المنظم على الواتساب لتأكيد الدفع والاستلام.`,
-        messageEn: `Your booking for "${ev.titleEn}" is recorded. Please contact organizer via WhatsApp to finalize tickets.`,
+      // Create notification for the user
+      const userNotif: NotificationItem = {
+        id: `notif_bkg_${Date.now()}`,
+        titleAr: '⏳ حجزك قيد المراجعة الآن',
+        titleEn: '⏳ Your Booking is Under Review',
+        messageAr: `تم استلام طلب حجزك للفعالية "${bookingData.eventTitleAr}" بالرقم المرجعي ${refNumber}. جاري مراجعته من الإدارة وسوف نرسل لك كود الدخول قريباً.`,
+        messageEn: `We have received your booking request for "${bookingData.eventTitleEn}" with reference ${refNumber}. It is under review, and we will send your access code shortly.`,
+        date: new Date().toISOString(),
+        read: false,
+        type: 'system',
+        refNumber: refNumber
+      };
+      setNotifications(prev => [userNotif, ...prev]);
+      saveNotificationToFirestore(userNotif);
+
+      // Create notification for the admin
+      const adminNotif: NotificationItem = {
+        id: `notif_admin_bkg_${Date.now()}`,
+        titleAr: '🎟️ طلب حجز تذاكر جديد قيد المراجعة',
+        titleEn: '🎟️ New Ticket Booking Under Review',
+        messageAr: `قام العميل ${bookingData.userName} بطلب حجز لـ ${bookingData.numberOfIndividuals} أفراد في "${bookingData.eventTitleAr}". يرجى مراجعته في لوحة التحكم.`,
+        messageEn: `Customer ${bookingData.userName} requested booking for ${bookingData.numberOfIndividuals} people for "${bookingData.eventTitleEn}". Please review in control panel.`,
+        date: new Date().toISOString(),
+        read: false,
+        type: 'system'
+      };
+      saveNotificationToFirestore(adminNotif);
+
+      try {
+        confetti({
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      } catch (e) {}
+
+      return newBooking;
+    }
+    return null;
+  };
+
+  const approveBooking = async (
+    bookingId: string, 
+    barcodeUrl: string, 
+    accessCode: string, 
+    discountAmount: number, 
+    adminNotes?: string
+  ): Promise<boolean> => {
+    if (!user || !user.isAdmin) return false;
+
+    const bkg = bookings.find(b => b.id === bookingId);
+    if (!bkg) return false;
+
+    const finalAmount = Math.max(0, bkg.totalAmount - discountAmount);
+
+    const updatedBooking: EventBooking = {
+      ...bkg,
+      status: 'approved',
+      barcodeUrl,
+      accessCode: accessCode || `DWM-AC-${Math.floor(1000 + Math.random() * 9000)}`,
+      discountAmount,
+      adminNotes,
+      reviewedAt: new Date().toISOString()
+    };
+
+    const success = await saveBookingToFirestore(updatedBooking);
+    if (success) {
+      setBookings(prev => prev.map(b => b.id === bookingId ? updatedBooking : b));
+
+      // Send notification to user
+      const userNotif: NotificationItem = {
+        id: `notif_bkg_approved_${Date.now()}`,
+        titleAr: '🎉 تم تأكيد حجزك وإصدار تذاكرك!',
+        titleEn: '🎉 Your Booking has been Confirmed & Tickets Issued!',
+        messageAr: `تهانينا! تم تأكيد حجزك للفعالية "${bkg.eventTitleAr}". كود الدخول الخاص بك هو: ${updatedBooking.accessCode}. ${discountAmount > 0 ? `تم تطبيق خصم بقيمة ${discountAmount} ج.م، الإجمالي النهائي: ${finalAmount} ج.م.` : ''} يرجى إظهار الباركود في الحساب الشخصي عند الدخول.`,
+        messageEn: `Congratulations! Your booking for "${bkg.eventTitleEn}" is confirmed. Your Access Code is: ${updatedBooking.accessCode}. ${discountAmount > 0 ? `Applied discount of ${discountAmount} EGP, final total: ${finalAmount} EGP.` : ''} Please present the barcode in your profile for entry.`,
         date: new Date().toISOString(),
         read: false,
         type: 'new_party',
-        relatedEventId: eventId
+        relatedEventId: bkg.eventId,
+        refNumber: bkg.refNumber
       };
-      setNotifications(prev => [newNotif, ...prev]);
-      saveNotificationToFirestore(newNotif);
+      setNotifications(prev => [userNotif, ...prev]);
+      saveNotificationToFirestore(userNotif);
+
+      return true;
     }
+    return false;
+  };
+
+  const rejectBooking = async (bookingId: string, adminNotes?: string): Promise<boolean> => {
+    if (!user || !user.isAdmin) return false;
+
+    const bkg = bookings.find(b => b.id === bookingId);
+    if (!bkg) return false;
+
+    const updatedBooking: EventBooking = {
+      ...bkg,
+      status: 'rejected',
+      adminNotes,
+      reviewedAt: new Date().toISOString()
+    };
+
+    const success = await saveBookingToFirestore(updatedBooking);
+    if (success) {
+      setBookings(prev => prev.map(b => b.id === bookingId ? updatedBooking : b));
+
+      // Send notification to user
+      const userNotif: NotificationItem = {
+        id: `notif_bkg_rejected_${Date.now()}`,
+        titleAr: '❌ عذراً، تعذر تأكيد حجزك',
+        titleEn: '❌ Sorry, your booking could not be confirmed',
+        messageAr: `تعذر تأكيد طلب حجزك للفعالية "${bkg.eventTitleAr}" (الرقم المرجعي: ${bkg.refNumber}). ${adminNotes ? `سبب الرفض: ${adminNotes}` : 'يرجى مراجعة إيصال التحويل أو التواصل مع الدعم الفني.'}`,
+        messageEn: `Your booking request for "${bkg.eventTitleEn}" (Reference: ${bkg.refNumber}) was not confirmed. ${adminNotes ? `Reason: ${adminNotes}` : 'Please review your payment receipt or contact support.'}`,
+        date: new Date().toISOString(),
+        read: false,
+        type: 'system',
+        refNumber: bkg.refNumber
+      };
+      setNotifications(prev => [userNotif, ...prev]);
+      saveNotificationToFirestore(userNotif);
+
+      return true;
+    }
+    return false;
+  };
+
+  const deleteBooking = async (bookingId: string): Promise<boolean> => {
+    if (!user) return false;
+    const bkg = bookings.find(b => b.id === bookingId);
+    if (!bkg) return false;
+
+    const success = await deleteBookingFromFirestore(bookingId);
+    if (success) {
+      setBookings(prev => prev.filter(b => b.id !== bookingId));
+
+      // Check if there are other bookings for the same event
+      const otherBookings = bookings.filter(b => b.id !== bookingId && b.userId === user.id && b.eventId === bkg.eventId);
+      if (otherBookings.length === 0) {
+        const updatedUser = {
+          ...user,
+          bookedEventIds: user.bookedEventIds.filter(id => id !== bkg.eventId)
+        };
+        setUser(updatedUser);
+        saveUserToFirestore(updatedUser);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const deleteAllBookings = async (): Promise<boolean> => {
+    if (!user) return false;
+    const myBookings = bookings.filter(b => b.userId === user.id);
+    if (myBookings.length === 0) return true;
+
+    let allSuccess = true;
+    for (const bkg of myBookings) {
+      const success = await deleteBookingFromFirestore(bkg.id);
+      if (!success) {
+        allSuccess = false;
+      }
+    }
+
+    if (allSuccess) {
+      setBookings(prev => prev.filter(b => b.userId !== user.id));
+      const updatedUser = {
+        ...user,
+        bookedEventIds: []
+      };
+      setUser(updatedUser);
+      saveUserToFirestore(updatedUser);
+      return true;
+    }
+    return false;
   };
 
   const addNewEvent = (newEv: Omit<DanceEvent, 'id' | 'likesCount' | 'uploadDate'>) => {
@@ -859,7 +1116,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isAdminLockModalOpen,
       setIsAdminLockModalOpen,
       appAssets,
-      updateBrandingAssets
+      updateBrandingAssets,
+      pricingConfig,
+      updatePricingConfig,
+      loadPricingConfig,
+      bookings,
+      submitBooking,
+      approveBooking,
+      rejectBooking,
+      deleteBooking,
+      deleteAllBookings,
+      selectedBookingEvent,
+      setSelectedBookingEvent
     }}>
       {children}
     </AppContext.Provider>

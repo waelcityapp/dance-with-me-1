@@ -51,6 +51,19 @@ export interface LocationInfo {
   lng: number;
 }
 
+export interface PricingConfig {
+  vip: {
+    basePrice: number;
+    extraDayPrice: number;
+    videoSurchargePercentage: number;
+  };
+  standard: {
+    basePrice: number;
+    extraDayPrice: number;
+    videoSurchargePercentage: number;
+  };
+}
+
 export interface DanceEvent {
   id: string;
   titleAr: string;
@@ -74,6 +87,8 @@ export interface DanceEvent {
   isExpiredBy15DaysRule?: boolean; // Calculated or manually overridden
   isPaused?: boolean;
   position?: number;
+  adNumber?: string;
+  adType?: 'vip' | 'standard';
 }
 
 export interface UserProfile {
@@ -122,6 +137,7 @@ export interface AdSubmission {
     videoSurcharge: number;
     total: number;
   };
+  adType?: 'vip' | 'standard';
   receiptImage?: string;
   status: 'pending' | 'approved' | 'rejected' | 'archived';
   submittedAt: string;
@@ -145,6 +161,28 @@ export interface SupportMessage {
   replyText?: string;
   createdAt: string;
   repliedAt?: string;
+}
+
+export interface EventBooking {
+  id: string;
+  eventId: string;
+  eventTitleAr: string;
+  eventTitleEn: string;
+  eventPrice: number;
+  userId: string;
+  userName: string;
+  userPhone: string;
+  numberOfIndividuals: number;
+  totalAmount: number;
+  receiptImage: string;
+  status: 'pending' | 'approved' | 'rejected';
+  refNumber: string;
+  submittedAt: string;
+  reviewedAt?: string;
+  barcodeUrl?: string;
+  accessCode?: string;
+  discountAmount?: number;
+  adminNotes?: string;
 }
 
 export type Language = 'ar' | 'en';

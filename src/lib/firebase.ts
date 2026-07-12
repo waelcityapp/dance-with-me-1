@@ -17,15 +17,13 @@ import {
 import { 
   getAuth, 
   signInWithPopup, 
-  signInWithRedirect,
-  getRedirectResult,
   GoogleAuthProvider, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut 
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { DanceEvent, UserProfile, NotificationItem, AdSubmission, SupportMessage } from '../types';
+import { DanceEvent, UserProfile, NotificationItem, AdSubmission, SupportMessage, EventBooking } from '../types';
 
 // Construct dynamic firebase configuration preferring env variables, falling back to local config json
 export const resolvedFirebaseConfig = {
@@ -51,50 +49,21 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 /**
- * Helper to Sign in with Google Auth via redirect (works better in iframe environments)
+ * Helper to Sign in with Google Auth via popup
  */
 export async function loginWithFirebaseGoogle(): Promise<{ id: string; name: string; email: string; avatar: string } | null> {
   try {
-    // First check if there's a redirect result from a previous redirect
-    try {
-      const redirectResult = await getRedirectResult(auth);
-      if (redirectResult?.user) {
-        const user = redirectResult.user;
-        return {
-          id: user.uid,
-          name: user.displayName || 'عضو VIP (Google)',
-          email: user.email || 'member@dwm.app',
-          avatar: user.photoURL || ''
-        };
-      }
-    } catch (redirectErr: any) {
-      console.warn('No redirect result available:', redirectErr);
-    }
-
-    // Attempt popup first (works in non-iframe environments)
-    try {
-      const res = await signInWithPopup(auth, googleProvider);
-      const user = res.user;
-      return {
-        id: user.uid,
-        name: user.displayName || 'عضو VIP (Google)',
-        email: user.email || 'member@dwm.app',
-        avatar: user.photoURL || ''
-      };
-    } catch (popupErr: any) {
-      // If popup fails (likely due to iframe), use redirect
-      if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/popup-closed-by-user' || popupErr.message?.includes('iframe')) {
-        console.log('Popup blocked/failed, switching to redirect method...');
-        await signInWithRedirect(auth, googleProvider);
-        // Note: Redirect will reload the page, so we return null here
-        // The redirect result will be handled on the next page load
-        return null;
-      }
-      throw popupErr;
-    }
+    const res = await signInWithPopup(auth, googleProvider);
+    const user = res.user;
+    return {
+      id: user.uid,
+      name: user.displayName || 'عضو VIP (Google)',
+      email: user.email || 'member@dwm.app',
+      avatar: user.photoURL || ''
+    };
   } catch (err: any) {
-    console.error('Firebase Google Auth error:', err);
-    return null;
+    // We throw the error so the UI can provide specific guidance based on error code
+    throw err;
   }
 }
 
@@ -135,28 +104,6 @@ export async function logoutWithFirebase(): Promise<void> {
   }
 }
 
-/**
- * Check and handle Google OAuth redirect result
- * Call this function when the app initializes to complete Google sign-in after redirect
- */
-export async function handleGoogleAuthRedirect(): Promise<{ id: string; name: string; email: string; avatar: string } | null> {
-  try {
-    const redirectResult = await getRedirectResult(auth);
-    if (redirectResult?.user) {
-      const user = redirectResult.user;
-      return {
-        id: user.uid,
-        name: user.displayName || 'عضو VIP (Google)',
-        email: user.email || 'member@dwm.app',
-        avatar: user.photoURL || ''
-      };
-    }
-  } catch (err: any) {
-    console.warn('Error checking for Google auth redirect result:', err);
-  }
-  return null;
-}
-
 // Collection names
 const COLLECTIONS = {
   EVENTS: 'events',
@@ -164,6 +111,7 @@ const COLLECTIONS = {
   NOTIFICATIONS: 'notifications',
   AD_SUBMISSIONS: 'ad_submissions',
   SUPPORT_MESSAGES: 'support_messages',
+  BOOKINGS: 'bookings',
 };
 
 /**
@@ -831,6 +779,77 @@ export function subscribeToAppAssets(onUpdate: (assets: any) => void): () => voi
 }
 
 /**
+ * Pricing Config Management
+ */
+export const DEFAULT_PRICING_CONFIG = {
+  vip: {
+    basePrice: 100,
+    extraDayPrice: 20,
+    videoSurchargePercentage: 20,
+  },
+  standard: {
+    basePrice: 50,
+    extraDayPrice: 10,
+    videoSurchargePercentage: 10,
+  }
+};
+
+export async function checkAndSeedPricingConfig(): Promise<any> {
+  try {
+    const ref = doc(db, 'app_config', 'pricing');
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, DEFAULT_PRICING_CONFIG);
+      return DEFAULT_PRICING_CONFIG;
+    }
+    return snap.data();
+  } catch (error) {
+    console.error('Error seeding pricing config:', error);
+    return DEFAULT_PRICING_CONFIG;
+  }
+}
+
+export async function updatePricingConfigToFirestore(config: any): Promise<boolean> {
+  try {
+    const ref = doc(db, 'app_config', 'pricing');
+    await setDoc(ref, config, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Error updating pricing config:', error);
+    return false;
+  }
+}
+
+
+export async function fetchPricingConfigOnce() {
+  try {
+    const ref = doc(db, 'app_config', 'pricing');
+    const docSnap = await getDoc(ref);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+  } catch (error) {
+    console.error('Error fetching pricing config:', error);
+  }
+  return null;
+}
+
+export function subscribeToPricingConfig(onUpdate: (config: any) => void): () => void {
+  try {
+    const ref = doc(db, 'app_config', 'pricing');
+    return onSnapshot(ref, (docSnap) => {
+      if (docSnap.exists()) {
+        onUpdate(docSnap.data());
+      }
+    }, (error) => {
+      console.warn('Firestore subscribe to pricing config error:', error);
+    });
+  } catch (error) {
+    return () => {};
+  }
+}
+
+/**
  * Log a simple, free real-time analytics event
  */
 export async function logAnalyticsEvent(field: string): Promise<void> {
@@ -892,6 +911,71 @@ export function subscribeToDailyAnalytics(onUpdate: (dailyList: any[]) => void):
       console.warn('Subscribe to daily analytics error:', err);
     });
   } catch (e) {
+    return () => {};
+  }
+}
+
+/**
+ * Save or update an event booking in Firestore
+ */
+export async function saveBookingToFirestore(booking: EventBooking): Promise<boolean> {
+  try {
+    const docRef = doc(db, COLLECTIONS.BOOKINGS, booking.id);
+    await setDoc(docRef, booking, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Error saving booking to Firestore:', error);
+    return false;
+  }
+}
+
+/**
+ * Delete a booking from Firestore
+ */
+export async function deleteBookingFromFirestore(bookingId: string): Promise<boolean> {
+  try {
+    const docRef = doc(db, COLLECTIONS.BOOKINGS, bookingId);
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.error('Error deleting booking from Firestore:', error);
+    return false;
+  }
+}
+
+/**
+ * Subscribe to Event Bookings
+ */
+export function subscribeToBookings(
+  onUpdate: (bookings: EventBooking[]) => void,
+  userId?: string,
+  isAdmin?: boolean
+): () => void {
+  try {
+    let q;
+    if (isAdmin) {
+      q = collection(db, COLLECTIONS.BOOKINGS);
+    } else if (userId) {
+      q = query(collection(db, COLLECTIONS.BOOKINGS), where('userId', '==', userId));
+    } else {
+      q = collection(db, COLLECTIONS.BOOKINGS);
+    }
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: EventBooking[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as EventBooking);
+        });
+        list.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+        onUpdate(list);
+      },
+      (error) => {
+        console.warn('Firestore bookings subscribe error:', error);
+      }
+    );
+  } catch (error) {
+    console.warn('Failed to setup bookings subscription:', error);
     return () => {};
   }
 }

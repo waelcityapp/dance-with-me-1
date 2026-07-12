@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Sparkles, 
+  Crown,
   Video, 
   Image as ImageIcon, 
   MapPin, 
@@ -29,7 +30,11 @@ import {
   Compass,
   Eye,
   FileText,
-  Activity
+  Edit3,
+  Activity,
+  ChevronRight,
+  ChevronLeft,
+  ChevronUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
@@ -74,8 +79,10 @@ interface CreateEventPageProps {
 }
 
 export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, onCancel }) => {
-  const { lang, user, addNewEvent, updateEvent, editingEvent, setEditingEvent, isAdminUnlocked } = useApp();
+  const { lang, user, addNewEvent, updateEvent, editingEvent, setEditingEvent, isAdminUnlocked, pricingConfig, loadPricingConfig } = useApp();
 
+  const [adType, setAdType] = useState<'vip' | 'standard' | null>(null);
+  const [isLoadingPricing, setIsLoadingPricing] = useState(false);
   const [step, setStep] = useState<'form' | 'payment'>('form');
   const [titleAr, setTitleAr] = useState(editingEvent ? editingEvent.titleAr : '');
   const [titleEn, setTitleEn] = useState(editingEvent ? editingEvent.titleEn : '');
@@ -103,11 +110,13 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent && editingEvent.location ? editingEvent.location.googleMapsUrl : 'https://maps.google.com/?q=30.0444,31.2357');
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent ? editingEvent.styles : ['Salsa', 'Bachata']);
   const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
+  const [adNumber, setAdNumber] = useState<string>(editingEvent && editingEvent.adNumber ? editingEvent.adNumber : '');
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   
   const [createTab, setCreateTab] = useState<'form' | 'preview'>('form');
   const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
@@ -190,103 +199,105 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     setUploadError(null);
     setUploadProgress(0);
     if (file) {
-      setIsUploadingMedia(true);
-      setUploadedFileName(file.name);
-      
-      try {
-        let fileToUpload = file;
-        
-        // Auto-compress image files on the client before upload to save bandwidth and time
-        if (file.type.startsWith('image/')) {
-          try {
-            fileToUpload = await compressImage(file);
-            console.log(`Image auto-optimized! Original size: ${(file.size / 1024 / 1024).toFixed(2)}MB, Optimized: ${(fileToUpload.size / 1024).toFixed(1)}KB`);
-          } catch (compressErr) {
-            console.error('Image compression failed, proceeding with original file', compressErr);
+      if (file.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(video.src);
+          if (video.duration > 120) {
+            alert(lang === 'ar' 
+              ? '❌ عذراً، لا يمكن رفع فيديو أطول من دقيقتين. يرجى اختيار فيديو أقصر.' 
+              : '❌ Sorry, videos longer than 2 minutes are not allowed. Please choose a shorter video.');
+            e.target.value = '';
+            return;
           }
-        }
-
-        const formData = new FormData();
-        formData.append('file', fileToUpload);
-        formData.append('upload_preset', cloudinaryUploadPreset);
-
-        const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
-        
-        // Use XMLHttpRequest to track exact upload percentage progress
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/${resourceType}/upload`, true);
-          
-          xhr.upload.onprogress = (progressEvent) => {
-            if (progressEvent.lengthComputable) {
-              const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-              setUploadProgress(percent);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.secure_url) {
-                  setMediaUrl(response.secure_url);
-                  setMediaType(resourceType);
-                  resolve();
-                } else {
-                  reject(new Error('No secure URL returned from Cloudinary'));
-                }
-              } catch (parseErr) {
-                reject(new Error('Failed to parse Cloudinary response'));
-              }
-            } else {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                reject(new Error(response?.error?.message || `Upload failed with status ${xhr.status}`));
-              } catch (err) {
-                reject(new Error(`Upload failed with status ${xhr.status}`));
-              }
-            }
-          };
-
-          xhr.onerror = () => {
-            reject(new Error(lang === 'ar' ? 'فشل الاتصال بالخادم السحابي' : 'Network connection error'));
-          };
-
-          xhr.send(formData);
-        });
-
-      } catch (err: any) {
-        console.error('Cloudinary upload error:', err);
-        setUploadError(
-          lang === 'ar'
-            ? `❌ فشل الرفع إلى كلاوديناري: ${err.message || 'تأكد من اتصالك بالإنترنت'}`
-            : `❌ Cloudinary Upload Failed: ${err.message || 'Make sure your internet is stable'}`
-        );
-        setUploadedFileName(null);
-      } finally {
-        setIsUploadingMedia(false);
-        setUploadProgress(0);
+          // Valid video
+          setPendingFile(file);
+          setUploadedFileName(file.name);
+          setMediaType('video');
+          setMediaUrl(URL.createObjectURL(file));
+        };
+        video.onerror = () => {
+          window.URL.revokeObjectURL(video.src);
+          alert(lang === 'ar' ? '❌ فشل تحميل بيانات الفيديو' : '❌ Failed to load video metadata');
+        };
+        video.src = URL.createObjectURL(file);
+      } else {
+        // Image
+        setPendingFile(file);
+        setUploadedFileName(file.name);
+        setMediaType('image');
+        setMediaUrl(URL.createObjectURL(file));
       }
+    }
+  };
+
+  const performUpload = async (file: File): Promise<string> => {
+    setIsUploadingMedia(true);
+    setUploadProgress(0);
+    setUploadError(null);
+    
+    try {
+      let fileToUpload = file;
+      if (file.type.startsWith('image/')) {
+        try {
+          fileToUpload = await compressImage(file);
+        } catch (compressErr) {}
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+      formData.append('upload_preset', cloudinaryUploadPreset);
+      const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+      
+      return await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/${resourceType}/upload`, true);
+        xhr.upload.onprogress = (p) => {
+          if (p.lengthComputable) setUploadProgress(Math.round((p.loaded / p.total) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const resp = JSON.parse(xhr.responseText);
+            if (resp.secure_url) resolve(resp.secure_url);
+            else reject(new Error('No URL returned'));
+          } else reject(new Error(`Upload failed ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.send(formData);
+      });
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed');
+      throw err;
+    } finally {
+      setIsUploadingMedia(false);
     }
   };
 
   // Subscription Plan & Terms State
   const [subscriptionDays, setSubscriptionDays] = useState<number>(7);
   const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
+  const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<'instapay' | 'wallet' | 'card'>('instapay');
 
   // Calculate Subscription Pricing
   const getPriceBreakdown = () => {
-    const days = Math.max(7, subscriptionDays);
-    const basePrice = 100;
+    const defaultPricing = { basePrice: 100, extraDayPrice: 20, videoSurchargePercentage: 20 };
+    const config = pricingConfig?.[adType] || pricingConfig?.vip || defaultPricing;
+    const days = Math.max(7, subscriptionDays || 7);
+    const basePrice = Number(config?.basePrice) || 100;
+    const extraDayRate = Number(config?.extraDayPrice) || 20;
+    const videoSurchargePercentage = Number(config?.videoSurchargePercentage) || 20;
     const extraDays = days - 7;
-    const extraPrice = extraDays * 20;
+    const extraPrice = extraDays * extraDayRate;
     const subtotal = basePrice + extraPrice;
-    const videoSurcharge = mediaType === 'video' ? Math.round(subtotal * 0.2) : 0;
+    const videoSurcharge = mediaType === 'video' ? Math.round(subtotal * (videoSurchargePercentage / 100)) : 0;
     const total = subtotal + videoSurcharge;
     return {
       days,
       basePrice,
+      extraDayRate,
+      videoSurchargePercentage,
       extraDays,
       extraPrice,
       subtotal,
@@ -306,10 +317,15 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleFinalPublish = () => {
-    const defaultImg = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
-    const defaultVid = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+  const defaultImg = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
+  const defaultVid = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+  
+  let generatedMediaUrl = mediaUrl || (mediaType === 'video' ? defaultVid : defaultImg);
+  let generatedThumbnailUrl = mediaType === 'video' ? 
+    (generatedMediaUrl.includes('cloudinary.com') ? generatedMediaUrl.replace(/\.[^.]+$/, '.jpg') : defaultImg) 
+    : generatedMediaUrl;
 
+  const handleFinalPublish = () => {
     if (editingEvent) {
       updateEvent({
         ...editingEvent,
@@ -320,7 +336,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         category: (category === 'all' ? 'party' : category) as any,
         styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
         mediaType,
-        mediaUrl: mediaUrl || (mediaType === 'video' ? defaultVid : defaultImg),
+        mediaUrl: mediaUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
         eventDate: new Date(eventDate).toISOString(),
         priceAr,
         priceEn,
@@ -339,7 +356,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           phone,
           whatsapp,
         },
-        position: position !== undefined ? Number(position) : (editingEvent.position || 0)
+        position: position !== undefined ? Number(position) : (editingEvent.position || 0),
+        adNumber: adNumber || editingEvent.adNumber
       });
       setEditingEvent(null);
     } else {
@@ -354,8 +372,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           category: (category === 'all' ? 'party' : category) as any,
           styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
           mediaType,
-          mediaUrl: mediaUrl || (mediaType === 'video' ? defaultVid : defaultImg),
-          thumbnailUrl: defaultImg,
+          mediaUrl: generatedMediaUrl,
+          thumbnailUrl: generatedThumbnailUrl,
           eventDate: new Date(eventDate).toISOString(),
           priceAr,
           priceEn,
@@ -375,7 +393,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           },
           isFeatured: false,
           isWeeklyPromo: false,
-          position: position !== undefined ? Number(position) : 0
+          position: position !== undefined ? Number(position) : 0,
+          adNumber: adNumber || `ADM-${Date.now()}`,
+          adType
         });
       }
     }
@@ -421,7 +441,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         initialPhone={phone}
         category={(category === 'all' ? 'party' : category) as any}
         styles={selectedStyles.length > 0 ? selectedStyles : ['Salsa']}
-        mediaUrl={mediaUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80'}
+        mediaUrl={mediaUrl}
+        pendingFile={pendingFile}
+        cloudinaryConfig={{ cloudName: cloudinaryCloudName, uploadPreset: cloudinaryUploadPreset }}
         eventData={{
           titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
           titleEn: titleEn || 'Royal Salsa & Bachata Night',
@@ -430,8 +452,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           category: (category === 'all' ? 'party' : category) as any,
           styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
           mediaType,
-          mediaUrl: mediaUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
+          mediaUrl: generatedMediaUrl,
+          thumbnailUrl: generatedThumbnailUrl,
           eventDate: new Date(eventDate).toISOString(),
           priceAr,
           priceEn,
@@ -450,7 +472,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             organizerName: user?.name || 'إدارة DWM للرقص'
           },
           isFeatured: false,
-          isWeeklyPromo: false
+          isWeeklyPromo: false,
+          adType
         }}
         onBack={() => {
           setStep('form');
@@ -505,6 +528,76 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         </div>
       </motion.div>
 
+{/* Ad Type Selection */}
+        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/50 p-6 sm:p-8 relative">
+          <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+            <Crown className="h-5 w-5 text-amber-500" />
+            {lang === 'ar' ? 'نوع الإعلان' : 'Ad Type'}
+            {isLoadingPricing && <Sparkles className="h-5 w-5 animate-spin text-amber-500 ml-2" />}
+          </h3>
+          <p className="text-xs text-neutral-400 mt-1">
+            {lang === 'ar' ? 'حدد إن كنت تريد إعلاناً مميزاً في مقدمة القائمة أو إعلاناً عادياً.' : 'Choose whether you want a VIP featured ad at the top of the list or a standard ad.'}
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <button
+              type="button"
+              onClick={async () => {
+                setIsLoadingPricing(true);
+                await loadPricingConfig();
+                setAdType('vip');
+                setIsLoadingPricing(false);
+              }}
+              className={`relative overflow-hidden flex flex-col items-center justify-center p-6 sm:p-8 rounded-3xl border-2 transition-all duration-300 transform shadow-xl ${
+                adType === 'vip' 
+                  ? 'bg-gradient-to-br from-amber-500 to-amber-600 border-amber-400 text-neutral-950 scale-[1.02] ring-4 ring-amber-500/20' 
+                  : 'bg-neutral-800 border-neutral-700 hover:bg-neutral-700 hover:border-amber-500/50 hover:scale-[1.01]'
+              }`}
+            >
+              {adType === 'vip' && (
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
+              )}
+              <div className="flex items-center justify-between w-full mb-2">
+                <span className={`font-black text-lg sm:text-xl ${adType === 'vip' ? 'text-neutral-950' : 'text-white'}`}>
+                  {lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Featured Ad'}
+                </span>
+                {adType === 'vip' && <CheckCircle className="h-6 w-6 text-neutral-950" />}
+              </div>
+              <p className={`text-sm text-center mt-3 leading-relaxed font-bold ${adType === 'vip' ? 'text-neutral-900' : 'text-neutral-400'}`}>
+                {lang === 'ar' ? 'يظهر الإعلان في أول 6 نتائج من القائمة بشكل مميز لضمان أقصى عدد من المشاهدات.' : 'Appears in the first 6 results of the list for maximum visibility.'}
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                setIsLoadingPricing(true);
+                await loadPricingConfig();
+                setAdType('standard');
+                setIsLoadingPricing(false);
+              }}
+              className={`relative overflow-hidden flex flex-col items-center justify-center p-6 sm:p-8 rounded-3xl border-2 transition-all duration-300 transform shadow-xl ${
+                adType === 'standard' 
+                  ? 'bg-neutral-700 border-neutral-400 text-white scale-[1.02] ring-4 ring-neutral-500/20' 
+                  : 'bg-neutral-800 border-neutral-700 hover:bg-neutral-700 hover:border-neutral-500/50 hover:scale-[1.01]'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full mb-2">
+                <span className={`font-black text-lg sm:text-xl text-white`}>
+                  {lang === 'ar' ? 'إعلان عادي' : 'Standard Ad'}
+                </span>
+                {adType === 'standard' && <CheckCircle className="h-6 w-6 text-neutral-200" />}
+              </div>
+              <p className={`text-sm text-center mt-3 leading-relaxed font-bold ${adType === 'standard' ? 'text-neutral-200' : 'text-neutral-400'}`}>
+                {lang === 'ar' ? 'يظهر الإعلان بشكل قياسي في قائمة الفعاليات وفقاً لتاريخ الإضافة.' : 'Appears standardly in the events list sorted by date added.'}
+              </p>
+            </button>
+          </div>
+        </div>
+
+        
+
+      {adType && (
+        <>
       {/* Sub-Tab Switcher for Full Live Preview (Highly prominent card) */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-3xl bg-neutral-950/80 border-2 border-amber-500/30 shadow-2xl relative overflow-hidden backdrop-blur-md mb-8" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -554,27 +647,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         </div>
       </div>
 
-      {/* Floating Action Button (FAB) for Instant Quick Toggle on Mobile & Desktop - IMPOSSIBLE to miss! */}
-      <div className="fixed bottom-6 left-6 sm:left-12 z-50">
-        <button
-          type="button"
-          onClick={() => {
-            setCreateTab(createTab === 'form' ? 'preview' : 'form');
-            setPreviewAlert(null);
-          }}
-          className="flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-black text-xs sm:text-sm shadow-2xl transition-all hover:scale-105 active:scale-95 border-2 border-amber-400 animate-pulse cursor-pointer shadow-amber-500/40"
-        >
-          <Eye className="h-5 w-5 text-neutral-950" />
-          <span>
-            {createTab === 'form' 
-              ? (lang === 'ar' ? '👁️ معاينة الإعلان مباشرة' : '👁️ Preview Ad Now') 
-              : (lang === 'ar' ? '📝 العودة للنموذج' : '📝 Back to Form')}
-          </span>
-          <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-sans uppercase font-black animate-bounce">
-            LIVE
-          </span>
-        </button>
-      </div>
+      {/* Removed Floating Action Button per user request to move it near payment button */}
 
       {createTab === 'preview' && (
         <div className="space-y-6 animate-fadeIn text-right mb-12" dir={previewLang === 'ar' ? 'rtl' : 'ltr'}>
@@ -680,7 +753,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       styles: selectedStyles,
                       mediaType: mediaType,
                       mediaUrl: mediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
-                      thumbnailUrl: mediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                      thumbnailUrl: mediaType === 'video' ? 
+                        (mediaUrl.includes('cloudinary.com') ? mediaUrl.trim().replace(/\.[^.]+$/, '.jpg') : 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200') 
+                        : mediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
                       uploadDate: new Date().toISOString(),
                       eventDate: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
                       priceAr: priceAr.trim() || '250 ج.م',
@@ -702,7 +777,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       likesCount: 15,
                       isFeatured: false,
                       isWeeklyPromo: false,
-                      position: Number(position) || 0
+                      position: Number(position) || 0,
+                      adType
                     }}
                     index={0}
                     onOpenMap={(ev) => setPreviewAlert(
@@ -787,9 +863,37 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </p>
                 <p>
                   {lang === 'ar' 
-                    ? 'بإمكانك المراجعة والتعديل اللانهائي. إذا كانت الأبعاد والألوان والنصوص صحيحة ومضبوطة تماماً، يمكنك النقر مباشرة على زر "نموذج البيانات" أو استخدام الزر العائم للرجوع والمتابعة حتى الدفع والنشر.' 
-                    : 'Verify spacing and text fitting. If you are satisfied with both translations, click the "Form Builder" button or use the floating preview button to return and complete publication.'}
+                    ? 'بإمكانك المراجعة والتعديل اللانهائي. إذا كانت الأبعاد والألوان والنصوص صحيحة ومضبوطة تماماً، يمكنك النقر مباشرة على زر "نموذج البيانات" أو استخدام الأزرار أدناه للمتابعة حتى الدفع والنشر.' 
+                    : 'Verify spacing and text fitting. If you are satisfied with both translations, use the buttons below to return to the form or complete publication.'}
                 </p>
+              </div>
+
+              {/* Post-Preview Actions */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateTab('form');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex-1 py-3 px-6 rounded-2xl bg-neutral-900 border border-neutral-800 text-neutral-300 font-bold hover:bg-neutral-800 transition-all flex items-center justify-center gap-2"
+                >
+                  <Edit3 className="h-4 w-4" />
+                  <span>{lang === 'ar' ? 'العودة لتعديل البيانات' : 'Back to Editing'}</span>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={editingEvent ? handleFinalPublish : handleProceedToPayment}
+                  className="flex-[1.5] py-3 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-black hover:from-amber-400 hover:to-amber-500 transition-all flex items-center justify-center gap-2 shadow-lg gold-glow"
+                >
+                  <Sparkles className="h-4 w-4 fill-current" />
+                  <span>
+                    {editingEvent 
+                      ? (lang === 'ar' ? 'أعد النشر وحفظ التعديلات' : 'Re-publish and Save')
+                      : (lang === 'ar' ? `إرسال للمراجعة والدفع (${pricing.total} ج.م)` : `Review & Pay (${pricing.total} EGP)`)}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -1384,12 +1488,12 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <label className="block text-xs sm:text-sm font-bold text-white mb-1">
-                    {lang === 'ar' ? 'اختر مدة اشتراك الإعلان (بالأيام):' : 'Select Ad Duration (in Days):'}
+                    {lang === 'ar' ? `اختر مدة اشتراك الإعلان (${adType === 'vip' ? 'مميز' : 'عادي'}) (بالأيام):` : `Select Ad Duration (${adType === 'vip' ? 'VIP' : 'Standard'}) (in Days):`}
                   </label>
                   <p className="text-xs text-neutral-400">
                     {lang === 'ar'
-                      ? 'الأسبوع الأول 7 أيام بقيمة 100 ج.م، وكل يوم إضافي بزيادة 20 ج.م'
-                      : 'First 7 days for 100 EGP, each extra day is +20 EGP'}
+                      ? `الأسبوع الأول 7 أيام بقيمة ${pricing.basePrice} ج.م، وكل يوم إضافي بزيادة ${pricing.extraDayRate} ج.م`
+                      : `First 7 days for ${pricing.basePrice} EGP, each extra day is +${pricing.extraDayRate} EGP`}
                   </p>
                 </div>
 
@@ -1425,7 +1529,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
                 {pricing.extraDays > 0 && (
                   <div className="flex justify-between items-center text-neutral-300">
-                    <span>{lang === 'ar' ? `تكلفة الأيام الإضافية (${pricing.extraDays} يوم × 20 ج.م):` : `Extra Days (${pricing.extraDays} days × 20 EGP):`}</span>
+                    <span>{lang === 'ar' ? `تكلفة الأيام الإضافية (${pricing.extraDays} يوم × ${pricing.extraDayRate} ج.م):` : `Extra Days (${pricing.extraDays} days × ${pricing.extraDayRate} EGP):`}</span>
                     <span className="font-mono font-bold">+{pricing.extraPrice} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
                   </div>
                 )}
@@ -1434,7 +1538,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   <div className="flex justify-between items-center text-amber-300 py-1 border-t border-white/5">
                     <span className="flex items-center gap-1.5">
                       <Video className="h-3.5 w-3.5" />
-                      <span>{lang === 'ar' ? 'إضافة إعلان فيديو (+20% على القيمة):' : 'Video Surcharge (+20% of subtotal):'}</span>
+                      <span>{lang === 'ar' ? `إضافة إعلان فيديو (+${pricing.videoSurchargePercentage}% على القيمة):` : `Video Surcharge (+${pricing.videoSurchargePercentage}% of subtotal):`}</span>
                     </span>
                     <span className="font-mono font-bold">+{pricing.videoSurcharge} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
                   </div>
@@ -1450,24 +1554,51 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </div>
           </div>
 
-          {/* Ad Placement Number (Sequence position) - Admin Only */}
+          {/* Ad Placement Number & Ad Identifier - Admin Only */}
           {(user?.isAdmin || isAdminUnlocked) && (
-            <div className="space-y-4 border-t border-white/5 pt-6">
-              <h4 className="text-sm font-bold text-amber-400 font-mono tracking-wider uppercase">
-                {lang === 'ar' ? 'ترتيب الإعلان في الصفحة (رقم الترتيب)' : 'Ad Placement Position (Order Number)'}
-              </h4>
-              <div className="rounded-2xl bg-neutral-950 p-5 border border-neutral-800/80 space-y-2">
-                <label className="block text-xs font-semibold text-neutral-300 mb-1">
-                  {lang === 'ar' ? 'حدد رقم ترتيب الإعلان لتحديد مكان ظهوره (مثال: رقم 1 يظهر أولاً، رقم 2 يظهر ثانياً، وهكذا)' : 'Specify the position number to determine where this ad appears (e.g. 1 appears first, 2 appears second, etc.)'}
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={position || ''}
-                  onChange={e => setPosition(e.target.value ? Number(e.target.value) : 0)}
-                  placeholder={lang === 'ar' ? 'مثال: 1' : 'e.g. 1'}
-                  className="w-full sm:w-48 rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner font-mono"
-                />
+            <div className="space-y-6 border-t border-white/5 pt-6 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-amber-500" />
+                <h4 className="text-sm font-black text-amber-400 font-mono tracking-wider uppercase">
+                  {lang === 'ar' ? 'إعدادات الإدارة (خاصة بك فقط)' : 'Admin Settings (Private)'}
+                </h4>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Position Field */}
+                <div className="rounded-2xl bg-neutral-950 p-5 border border-neutral-800/80 space-y-2">
+                  <label className="block text-xs font-bold text-neutral-300 mb-1">
+                    {lang === 'ar' ? 'ترتيب الإعلان (رقم)' : 'Ad Position (Order)'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={position || ''}
+                    onChange={e => setPosition(e.target.value ? Number(e.target.value) : 0)}
+                    placeholder={lang === 'ar' ? 'مثال: 1' : 'e.g. 1'}
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-900 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner font-mono"
+                  />
+                  <p className="text-[10px] text-neutral-500 leading-tight">
+                    {lang === 'ar' ? '💡 الأرقام الصغيرة تظهر أولاً.' : '💡 Lower numbers appear first.'}
+                  </p>
+                </div>
+
+                {/* Ad Number Field */}
+                <div className="rounded-2xl bg-neutral-950 p-5 border border-neutral-800/80 space-y-2">
+                  <label className="block text-xs font-bold text-neutral-300 mb-1">
+                    {lang === 'ar' ? 'رقم الإعلان (المعرف)' : 'Ad Reference Number'}
+                  </label>
+                  <input
+                    type="text"
+                    value={adNumber}
+                    onChange={e => setAdNumber(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: DWM-2026-001' : 'e.g. DWM-2026-001'}
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-900 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner font-mono"
+                  />
+                  <p className="text-[10px] text-neutral-500 leading-tight">
+                    {lang === 'ar' ? '💡 رقم المعرف الخاص بالإعلان للمراجعة.' : '💡 Unique identifier for this ad.'}
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -1476,154 +1607,32 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           <div className="space-y-4 border-t border-white/5 pt-6">
             <h4 className="text-sm font-bold text-amber-400 font-mono tracking-wider uppercase flex items-center justify-between">
               <span>{lang === 'ar' ? '7. اتفاقية الاستخدام والشروط والأحكام الخاصة بمنصة "Dance with me"' : '7. Terms & Conditions of "Dance with me" Platform'}</span>
-              <span className="text-xs text-neutral-400 font-sans font-normal">
-                {lang === 'ar' ? 'يرجى التمرير والقراءة بعناية' : 'Please scroll & read carefully'}
-              </span>
             </h4>
 
-            {/* Scrollable Terms Container */}
-            <div className="max-h-64 overflow-y-auto p-4 sm:p-5 rounded-2xl bg-neutral-950/90 border border-neutral-800/80 text-xs sm:text-sm text-neutral-300 space-y-3.5 leading-relaxed font-sans shadow-inner">
-              {lang === 'ar' ? (
-                <div className="space-y-3">
-                  <div className="font-bold text-amber-400 border-b border-white/10 pb-2">
-                    اتفاقية الاستخدام والشروط والأحكام الخاصة بمنصة "Dance with me"
-                  </div>
-                  <div>
-                    <span className="font-bold text-white block mb-0.5">تمهيد:</span>
-                    <p className="text-neutral-300">
-                      تُعد منصة "Dance with me" وسيطاً تقنياً يهدف إلى تقديم خدمات الإعلانات في مجال الفنون. بدخولك إلى التطبيق واستخدام خدماتنا، فإنك توافق بشكل صريح على الالتزام الكامل بهذه الشروط والأحكام.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">1. الامتثال القانوني والتشريعي:</span>
-                    <p className="text-neutral-300">
-                      يقر المستخدم بأن كافة الأنشطة والخدمات المنشورة عبر المنصة تتوافق كلياً مع القوانين والتشريعات السارية في جمهورية مصر العربية، بما في ذلك قوانين مكافحة جرائم تقنية المعلومات، وقوانين حماية البيانات، وحقوق الملكية الفكرية، كما يؤكد التزامه التام بالأعراف والآداب العامة المتبعة في المجتمع المصري.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-1">2. سياسة الإعلانات والرسوم:</span>
-                    <ul className="list-disc list-inside space-y-1.5 pr-2 text-neutral-300">
-                      <li><strong className="text-white">رفض الإعلان:</strong> تلتزم المنصة بإعادة قيمة المبلغ المدفوع في حال رفضها لنشر الإعلان، وذلك دون الحاجة لإبداء أي أسباب تقتضيها سياسة المنصة للحفاظ على جودة المحتوى.</li>
-                      <li><strong className="text-white">حذف الإعلان:</strong> لا يحق لصاحب الإعلان المطالبة بأي مبالغ مالية أو تعويضات في حال قام بحذف إعلانه طواعية قبل انتهاء المدة المتفق عليها.</li>
-                      <li><strong className="text-white">تعديل الإعلان:</strong> لا يحق للمستخدم إجراء أي تعديلات على الإعلان بعد نشره إلا بعد الرجوع للمنصة والحصول على الموافقة الرسمية، ويُسمح بالتعديل لمرة واحدة فقط طوال فترة عرض الإعلان.</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">3. الأمن السيبراني والأنشطة المحظورة:</span>
-                    <p className="text-neutral-300">
-                      في حال احتواء الإعلان على أي روابط مشبوهة، أو برمجيات خبيثة، أو محاولات اختراق (تهكير)، أو أي أنشطة تثير الشبهات في هذا السياق، يحق للمنصة حذف الإعلان فوراً دون أي تعويضات لصاحب الإعلان. كما يحق للمنصة في هذه الحالة حذف حساب المعلن نهائياً وحظره من استخدام المنصة، مع احتفاظ المنصة بحقها الكامل في اتخاذ الإجراءات القانونية اللازمة ضد صاحب الحساب.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">4. ملكية المحتوى والمسؤولية:</span>
-                    <p className="text-neutral-300">
-                      يقر المستخدم بأن كافة المواد (صور، فيديوهات، نصوص) المنشورة عبر حسابه هي ملكية خاصة له أو يمتلك تصريحاً قانونياً بنشرها. كما يتحمل المستخدم المسؤولية الكاملة عن صحة ودقة البيانات المدرجة.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">5. المحتوى المحظور:</span>
-                    <p className="text-neutral-300">
-                      يُحظر نشر أي محتوى يحرض على العنف أو الكراهية، أو أي محتوى منافٍ للآداب العامة، أو إعلانات لخدمات غير مرخصة، أو القيام بأي محاولات احتيال تقني أو مالي.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">6. صلاحيات المنصة:</span>
-                    <p className="text-neutral-300">
-                      تحتفظ منصة "Dance with me" بالحق الكامل في مراجعة، تعديل، إيقاف، أو حذف أي إعلان تراه مخالفاً لهذه الشروط أو القوانين المعمول بها في جمهورية مصر العربية دون سابق إنذار.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">7. حدود المسؤولية:</span>
-                    <p className="text-neutral-300">
-                      تعمل المنصة كطرف ثالث (وسيط تقني)، ولا تتحمل أي مسؤولية قانونية أو مالية عن الاتفاقات أو المعاملات التي تتم بين المستخدمين بشكل مباشر.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">8. القانون الواجب التطبيق:</span>
-                    <p className="text-neutral-300">
-                      تخضع هذه الاتفاقية وتُفسر وفقاً للقوانين والتشريعات المعمول بها في جمهورية مصر العربية، وتختص المحاكم المصرية وحدها بالنظر في أي نزاع ينشأ عنها.
-                    </p>
-                  </div>
+            {/* Simplified Terms Summary / Trigger */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-neutral-950/90 border border-neutral-800/80 text-xs sm:text-sm text-neutral-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-inner">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <ShieldCheck className="h-5 w-5 text-amber-500" />
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="font-bold text-amber-400 border-b border-white/10 pb-2">
-                    Terms and Conditions of "Dance with me" Platform
-                  </div>
-                  <div>
-                    <span className="font-bold text-white block mb-0.5">Preamble:</span>
-                    <p className="text-neutral-300">
-                      The "Dance with me" platform acts as a technical intermediary aimed at providing advertising services in the arts sector. By entering the app and using our services, you explicitly agree to fully comply with these terms and conditions.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">1. Legal and Regulatory Compliance:</span>
-                    <p className="text-neutral-300">
-                      The user acknowledges that all activities and services published through the platform fully comply with the laws and regulations applicable in the Arab Republic of Egypt, including cybercrime laws, data protection laws, and intellectual property rights, and confirms total adherence to the customs and public morals observed in Egyptian society.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-1">2. Advertising and Fee Policy:</span>
-                    <ul className="list-disc list-inside space-y-1.5 pl-2 text-neutral-300">
-                      <li><strong className="text-white">Ad Rejection:</strong> The platform commits to refunding the amount paid in case it rejects publishing the ad, without the need to state reasons required by the platform's policy to maintain content quality.</li>
-                      <li><strong className="text-white">Ad Deletion:</strong> The ad owner has no right to claim any financial amounts or compensation if they voluntarily delete their ad before the end of the agreed period.</li>
-                      <li><strong className="text-white">Ad Modification:</strong> The user has no right to make any modifications to the ad after publication except after referring to the platform and obtaining official approval, and modification is allowed only once throughout the display period of the ad.</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">3. Cybersecurity and Prohibited Activities:</span>
-                    <p className="text-neutral-300">
-                      In case the ad contains any suspicious links, malicious software, hacking attempts, or any activities raising suspicion in this context, the platform has the right to delete the ad immediately without any compensation to the ad owner. The platform also has the right in this case to permanently delete the advertiser's account and ban them from using the platform, while reserving its full right to take necessary legal action against the account owner.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">4. Content Ownership and Responsibility:</span>
-                    <p className="text-neutral-300">
-                      The user acknowledges that all materials (images, videos, texts) published through their account are their private property or they have legal permission to publish them. The user also bears full responsibility for the validity and accuracy of the listed data.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">5. Prohibited Content:</span>
-                    <p className="text-neutral-300">
-                      It is strictly prohibited to publish any content inciting violence or hatred, or any content contrary to public morals, or ads for unlicensed services, or attempting any technical or financial fraud.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">6. Platform Powers:</span>
-                    <p className="text-neutral-300">
-                      The "Dance with me" platform reserves the full right to review, modify, suspend, or delete any ad it considers violating these terms or applicable laws in the Arab Republic of Egypt without prior notice.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">7. Limitation of Liability:</span>
-                    <p className="text-neutral-300">
-                      The platform acts as a third party (technical intermediary) and bears no legal or financial responsibility for agreements or transactions conducted directly between users.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-bold text-amber-300 block mb-0.5">8. Governing Law:</span>
-                    <p className="text-neutral-300">
-                      This agreement is governed by and interpreted in accordance with the laws and regulations applicable in the Arab Republic of Egypt, and Egyptian courts alone have jurisdiction over any dispute arising therefrom.
-                    </p>
-                  </div>
+                <div>
+                  <p className="font-bold text-white mb-0.5">
+                    {lang === 'ar' ? 'مراجعة شروط النشر' : 'Review Publishing Terms'}
+                  </p>
+                  <p className="text-[10px] text-neutral-400 font-mono">
+                    {lang === 'ar' ? 'يرجى قراءة الشروط لضمان قبول إعلانك' : 'Please read the terms to ensure ad approval'}
+                  </p>
                 </div>
-              )}
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(true)}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-amber-500/50 hover:bg-neutral-800 text-amber-400 text-xs font-bold transition-all group"
+              >
+                <span>{lang === 'ar' ? 'عرض شروط النشر كاملة' : 'View Full Publishing Terms'}</span>
+                {lang === 'ar' ? <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> : <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />}
+              </button>
             </div>
 
             {/* Checkbox */}
@@ -1653,33 +1662,59 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </label>
           </div>
 
-          {/* Proceed to Payment or Re-publish Button Section */}
-          <div className="pt-6 pb-12 sm:pb-16">
-            <motion.button
-              whileHover={agreedToTerms ? { scale: 1.01 } : {}}
-              whileTap={agreedToTerms ? { scale: 0.98 } : {}}
-              type="button"
-              onClick={editingEvent ? handleFinalPublish : handleProceedToPayment}
-              disabled={!agreedToTerms}
-              className={`w-full rounded-2xl py-4 sm:py-5 px-6 text-base sm:text-lg font-extrabold transition-all flex items-center justify-center gap-3 border ${
-                agreedToTerms
-                  ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
-                  : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
-              }`}
-            >
-              <Sparkles className={`h-6 w-6 shrink-0 ${agreedToTerms ? 'fill-current animate-spin-slow text-neutral-950' : 'text-neutral-600'}`} />
-              <span>
-                {editingEvent ? (
-                  lang === 'ar' 
-                    ? 'أعد النشر وحفظ التعديلات' 
-                    : 'Re-publish and Save Changes'
-                ) : (
-                  lang === 'ar' 
-                    ? `الانتقال إلى صفحة الدفع (${pricing.total} ج.م)` 
-                    : `Proceed to Payment (${pricing.total} EGP)`
+          {/* Actions Button Section */}
+          <div className="pt-6 pb-12 sm:pb-16 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <AnimatePresence>
+                {agreedToTerms && (
+                  <motion.button
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    type="button"
+                    onClick={() => {
+                      setCreateTab(createTab === 'form' ? 'preview' : 'form');
+                      setPreviewAlert(null);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="flex-1 rounded-2xl py-2.5 px-6 text-sm font-bold bg-neutral-900 text-amber-400 border border-amber-500/30 hover:bg-neutral-800 transition-all flex items-center justify-center gap-2.5 shadow-xl"
+                  >
+                    <Eye className="h-5 w-5" />
+                    <span>
+                      {createTab === 'form' 
+                        ? (lang === 'ar' ? 'معاينة الإعلان مباشرة' : 'Preview Ad Now') 
+                        : (lang === 'ar' ? 'العودة لتعديل البيانات' : 'Back to Editing')}
+                    </span>
+                  </motion.button>
                 )}
-              </span>
-            </motion.button>
+              </AnimatePresence>
+
+              <motion.button
+                whileHover={agreedToTerms ? { scale: 1.01 } : {}}
+                whileTap={agreedToTerms ? { scale: 0.98 } : {}}
+                type="button"
+                onClick={editingEvent ? handleFinalPublish : handleProceedToPayment}
+                disabled={!agreedToTerms}
+                className={`flex-[2] rounded-2xl py-2.5 px-6 text-sm font-extrabold transition-all flex items-center justify-center gap-3 border ${
+                  agreedToTerms
+                    ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
+                    : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <Sparkles className={`h-5 w-5 shrink-0 ${agreedToTerms ? 'fill-current animate-spin-slow text-neutral-950' : 'text-neutral-600'}`} />
+                <span>
+                  {editingEvent ? (
+                    lang === 'ar' 
+                      ? 'أعد النشر وحفظ التعديلات' 
+                      : 'Re-publish and Save Changes'
+                  ) : (
+                    lang === 'ar' 
+                      ? `دفع ونشر (${pricing.total} ج.م)` 
+                      : `Pay & Publish (${pricing.total} EGP)`
+                  )}
+                </span>
+              </motion.button>
+            </div>
             
             {!agreedToTerms && (
               <p className="mt-3 text-center text-xs text-amber-400/80 font-medium">
@@ -1692,6 +1727,157 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         </form>
       </motion.div>
       )}
+        </>
+      )}
+
+      {/* Full Terms Modal */}
+      <AnimatePresence>
+        {showTermsModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-neutral-950/90 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-neutral-900 rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col max-h-[85vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                    <ShieldCheck className="h-6 w-6 text-amber-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">
+                      {lang === 'ar' ? 'شروط وأحكام النشر' : 'Publishing Terms'}
+                    </h3>
+                    <p className="text-xs text-neutral-400 font-mono">
+                      {lang === 'ar' ? 'اتفاقية منصة Dance with me' : 'Dance with me Platform Agreement'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowTermsModal(false)}
+                  className="h-10 w-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 leading-relaxed text-sm text-neutral-300 custom-scrollbar">
+                {lang === 'ar' ? (
+                  <div className="space-y-5">
+                    <div className="font-bold text-amber-400 text-base border-b border-white/5 pb-3">
+                      اتفاقية الاستخدام والشروط والأحكام الخاصة بمنصة "Dance with me"
+                    </div>
+                    
+                    <div>
+                      <span className="font-bold text-white block mb-2 text-base">تمهيد:</span>
+                      <p className="text-neutral-300">
+                        تُعد منصة "Dance with me" وسيطاً تقنياً يهدف إلى تقديم خدمات الإعلانات في مجال الفنون. بدخولك إلى التطبيق واستخدام خدماتنا، فإنك توافق بشكل صريح على الالتزام الكامل بهذه الشروط والأحكام.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">1. الامتثال القانوني والتشريعي:</span>
+                        <p className="text-xs sm:text-sm">
+                          يقر المستخدم بأن كافة الأنشطة والخدمات المنشورة عبر المنصة تتوافق كلياً مع القوانين والتشريعات السارية في جمهورية مصر العربية، بما في ذلك قوانين مكافحة جرائم تقنية المعلومات، وقوانين حماية البيانات، وحقوق الملكية الفكرية، كما يؤكد التزامه التام بالأعراف والآداب العامة المتبعة في المجتمع المصري.
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">2. سياسة الإعلانات والرسوم:</span>
+                        <ul className="list-disc list-inside space-y-2 text-xs sm:text-sm">
+                          <li><strong className="text-white">رفض الإعلان:</strong> تلتزم المنصة بإعادة قيمة المبلغ المدفوع في حال رفضها لنشر الإعلان، وذلك دون الحاجة لإبداء أي أسباب تقتضيها سياسة المنصة للحفاظ على جودة المحتوى.</li>
+                          <li><strong className="text-white">حذف الإعلان:</strong> لا يحق لصاحب الإعلان المطالبة بأي مبالغ مالية أو تعويضات في حال قام بحذف إعلانه طواعية قبل انتهاء المدة المتفق عليها.</li>
+                          <li><strong className="text-white">تعديل الإعلان:</strong> لا يحق للمستخدم إجراء أي تعديلات على الإعلان بعد نشره إلا بعد الرجوع للمنصة والحصول على الموافقة الرسمية، ويُسمح بالتعديل لمرة واحدة فقط طوال فترة عرض الإعلان.</li>
+                        </ul>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">3. الأمن السيبراني والأنشطة المحظورة:</span>
+                        <p className="text-xs sm:text-sm">
+                          في حال احتواء الإعلان على أي روابط مشبوهة، أو برمجيات خبيثة، أو محاولات اختراق (تهكير)، أو أي أنشطة تثير الشبهات في هذا السياق، يحق للمنصة حذف الإعلان فوراً دون أي تعويضات لصاحب الإعلان. كما يحق للمنصة في هذه الحالة حذف حساب المعلن نهائياً وحظره من استخدام المنصة.
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">4. ملكية المحتوى والمسؤولية:</span>
+                        <p className="text-xs sm:text-sm">
+                          يقر المستخدم بأن كافة المواد (صور، فيديوهات، نصوص) المنشورة عبر حسابه هي ملكية خاصة له أو يمتلك تصريحاً قانونياً بنشرها. كما يتحمل المستخدم المسؤولية الكاملة عن صحة ودقة البيانات المدرجة.
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">5. المحتوى المحظور:</span>
+                        <p className="text-xs sm:text-sm">
+                          يُحظر نشر أي محتوى يحرض على العنف أو الكراهية، أو أي محتوى منافٍ للآداب العامة، أو إعلانات لخدمات غير مرخصة، أو القيام بأي محاولات احتيال تقني أو مالي.
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">6. حدود المسؤولية والقانون:</span>
+                        <p className="text-xs sm:text-sm">
+                          تعمل المنصة كطرف ثالث (وسيط تقني)، ولا تتحمل أي مسؤولية قانونية أو مالية عن الاتفاقات التي تتم بين المستخدمين بشكل مباشر. تخضع هذه الاتفاقية للقوانين المصرية وتختص المحاكم المصرية وحدها بالنظر في أي نزاع.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    <div className="font-bold text-amber-400 text-base border-b border-white/5 pb-3">
+                      Terms and Conditions of "Dance with me" Platform
+                    </div>
+                    
+                    <div>
+                      <span className="font-bold text-white block mb-2 text-base">Preamble:</span>
+                      <p className="text-neutral-300">
+                        The "Dance with me" platform acts as a technical intermediary aimed at providing advertising services in the arts sector. By entering the app and using our services, you agree to comply with these terms.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">1. Legal Compliance:</span>
+                        <p className="text-xs sm:text-sm">
+                          User acknowledges that all activities comply with Egyptian laws, including cybercrime, data protection, and intellectual property laws, adhering to public morals.
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">2. Ads and Fees:</span>
+                        <ul className="list-disc list-inside space-y-2 text-xs sm:text-sm">
+                          <li><strong>Rejection:</strong> Fees are refunded if an ad is rejected.</li>
+                          <li><strong>Deletion:</strong> No refunds for voluntary deletion by the user.</li>
+                          <li><strong>Modification:</strong> Allowed once with platform approval.</li>
+                        </ul>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5">
+                        <span className="font-bold text-amber-300 block mb-2">3. Prohibited Content:</span>
+                        <p className="text-xs sm:text-sm">
+                          Violence, hatred, immoral content, unlicensed services, and fraud are strictly prohibited.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-white/5 bg-neutral-950/50 rounded-b-[2.5rem]">
+                <button
+                  onClick={() => setShowTermsModal(false)}
+                  className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold shadow-xl gold-glow transition-all active:scale-[0.98]"
+                >
+                  {lang === 'ar' ? 'فهمت وأوافق على هذه الشروط' : 'I Understand & Agree to These Terms'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

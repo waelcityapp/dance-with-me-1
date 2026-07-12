@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Bell, Globe, Sparkles, ShieldAlert, CheckCircle2, Sun, Moon, Monitor, Share2, Smartphone, Crown, Mail } from 'lucide-react';
+import { Bell, Globe, Sparkles, ShieldAlert, CheckCircle, Sun, Moon, Monitor, Share2, Smartphone, Crown, Mail } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface HeaderProps {
@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
               className="flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 px-2 py-1.5 sm:px-2.5 text-[11px] sm:text-xs font-bold text-amber-400 transition-all shadow-sm h-8 sm:h-9 whitespace-nowrap cursor-pointer"
               title={lang === 'ar' ? 'مشاركة رابط التطبيق' : 'Share App Link'}
             >
-              {copied ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-400 shrink-0" /> : <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />}
+              {copied ? <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-400 shrink-0" /> : <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />}
               <span>{copied ? (lang === 'ar' ? 'تم النسخ!' : 'Copied!') : (lang === 'ar' ? 'مشاركة التطبيق' : 'Share App')}</span>
             </motion.button>
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, PlusCircle, Heart, Ticket, ShieldAlert, Sparkles, Clock, Trash2, LogOut, CheckCircle2, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare } from 'lucide-react';
+import { User, PlusCircle, Heart, Ticket, ShieldAlert, Sparkles, Clock, Trash2, LogOut, CheckCircle, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare, Camera, Loader2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventCard } from '../events/EventCard';
 import { DanceEvent, AdSubmission, DanceStyle, ALL_DANCE_STYLES } from '../../types';
 import { subscribeToAdSubmissions, saveAdSubmissionToFirestore, saveNotificationToFirestore } from '../../lib/firebase';
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
+import { compressImage, uploadToCloudinary } from '../../utils/cloudinary';
 
 interface ProfileViewProps {
   onOpenCreateModal: () => void;
@@ -34,7 +35,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     supportMessages,
     openSupportModal,
     cleanUpDuplicateAds,
-    isAdminUnlocked
+    isAdminUnlocked,
+    bookings,
+    deleteBooking,
+    deleteAllBookings
   } = useApp();
 
   const [adSubmissions, setAdSubmissions] = useState<AdSubmission[]>([]);
@@ -76,6 +80,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editStyles, setEditStyles] = useState<DanceStyle[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deleteBkgLoading, setDeleteBkgLoading] = useState(false);
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    setDeleteBkgLoading(true);
+    try {
+      await deleteBooking(bookingId);
+      setBookingToDelete(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeleteBkgLoading(false);
+    }
+  };
+
+  const handleDeleteAllBookings = async () => {
+    setDeleteBkgLoading(true);
+    try {
+      await deleteAllBookings();
+      setConfirmDeleteAll(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeleteBkgLoading(false);
+    }
+  };
 
   const handleOpenEditProfile = () => {
     if (user) {
@@ -86,18 +119,38 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  const handleProfilePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        if (result && user) {
-          updateUserAvatar(result);
-          setShowAvatarPicker(false);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file || !user) return;
+
+    setUploadingImage(true);
+    try {
+      // 1. Compress Image
+      const compressed = await compressImage(file);
+      
+      // 2. Upload to Cloudinary
+      const imageUrl = await uploadToCloudinary(compressed);
+      
+      if (imageUrl) {
+        // 3. Update User Profile
+        await updateUserProfile({ avatar: imageUrl });
+        setShowAvatarPicker(false);
+      } else {
+        alert(lang === 'ar' ? 'فشل رفع الصورة. يرجى التأكد من إعدادات Cloudinary' : 'Upload failed. Please check Cloudinary config');
+      }
+    } catch (err: any) {
+      if (err.message === 'CONFIG_MISSING') {
+        alert(lang === 'ar' 
+          ? 'إعدادات Cloudinary غير مكتملة. يرجى إضافة VITE_CLOUDINARY_CLOUD_NAME و VITE_CLOUDINARY_UPLOAD_PRESET إلى ملف .env' 
+          : 'Cloudinary config missing. Please add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET to .env');
+      } else {
+        console.error('Upload error:', err);
+        alert(lang === 'ar' ? 'حدث خطأ أثناء عملية الرفع' : 'Error occurred during upload process');
+      }
+    } finally {
+      setUploadingImage(false);
+      // Reset input
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -233,6 +286,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const likedEvents = events.filter(ev => user.likedEventIds.includes(ev.id));
   const bookedEvents = events.filter(ev => user.bookedEventIds.includes(ev.id));
   const mySupportMessages = supportMessages.filter(m => user && m.userId === user.id);
+  const myBookings = bookings.filter(b => user && b.userId === user.id);
 
   return (
     <div className="space-y-8 pb-12">
@@ -256,8 +310,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="flex-1">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
               <h2 className="text-2xl font-extrabold text-white">{user.name}</h2>
-              <span className="rounded-full bg-amber-500/20 px-3 py-0.5 text-xs font-mono font-bold text-amber-300 border border-amber-500/30">
-                {lang === 'ar' ? 'عضو النادي (VIP)' : 'VIP CLUB MEMBER'}
+              <span className={`rounded-full px-3 py-0.5 text-[10px] font-mono font-bold border ${user.isAdmin ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}`}>
+                {user.isAdmin ? (lang === 'ar' ? 'إدارة المنصة (Admin)' : 'PLATFORM ADMIN') : (lang === 'ar' ? 'عضوية النادي (VIP)' : 'VIP CLUB MEMBER')}
               </span>
             </div>
             <p className="text-xs font-mono text-neutral-400 mb-4">{user.email} • {user.phone}</p>
@@ -341,22 +395,41 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
 
               {/* Upload Photo from Device inside Profile View */}
-              <div className="w-full mt-2 flex items-center justify-between bg-neutral-950 p-3 rounded-2xl border border-white/10">
-                <div className="flex items-center gap-2">
-                  <Upload className="h-4 w-4 text-amber-400" />
-                  <span className="text-xs text-neutral-300 font-mono">
-                    {lang === 'ar' ? 'أو قم برفع صورة شخصية من جهازك:' : 'Or upload a custom photo from your device:'}
-                  </span>
+              <div className="w-full mt-2 flex flex-col gap-2">
+                <div className="w-full flex items-center justify-between bg-neutral-950 p-3 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-2">
+                    {uploadingImage ? (
+                      <Loader2 className="h-4 w-4 text-amber-400 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4 text-amber-400" />
+                    )}
+                    <span className="text-xs text-neutral-300 font-mono">
+                      {uploadingImage 
+                        ? (lang === 'ar' ? 'جاري الضغط والرفع...' : 'Compressing & Uploading...')
+                        : (lang === 'ar' ? 'أو ارفع صورة من الجهاز/الكاميرا:' : 'Or upload from device/camera:')}
+                    </span>
+                  </div>
+                  <label className={`cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${uploadingImage ? 'bg-neutral-800 text-neutral-500 border-neutral-700 pointer-events-none' : 'bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40'}`}>
+                    <span>{lang === 'ar' ? 'اختر ملف / تصوير' : 'Choose File / Capture'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfilePhotoUpload}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                  </label>
                 </div>
-                <label className="cursor-pointer rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 px-3.5 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 transition-all flex items-center gap-1.5">
-                  <span>{lang === 'ar' ? 'اختر صورة من جهازك' : 'Choose Photo'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProfilePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
+                {uploadingImage && (
+                  <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-amber-500"
+                      initial={{ width: "0%" }}
+                      animate={{ width: "90%" }}
+                      transition={{ duration: 2, ease: "easeInOut" }}
+                    />
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -868,7 +941,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/40">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <CheckCircle className="h-3.5 w-3.5" />
                         {lang === 'ar' ? 'تم الرد الرسمي' : 'Replied'}
                       </span>
                     )}
@@ -894,7 +967,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   >
                     <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
                       <span className="flex items-center gap-1.5 font-mono">
-                        <CheckCircle2 className="h-4 w-4" />
+                        <CheckCircle className="h-4 w-4" />
                         {lang === 'ar' ? 'رد الإدارة (إشعار رسمي):' : 'Admin Official Reply:'}
                       </span>
                       {msg.repliedAt && (
@@ -927,24 +1000,203 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Booked Tickets Section */}
       {activeSection === 'booked' && (
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-            <Ticket className="h-4 w-4" />
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+              <Ticket className="h-4 w-4" />
+            </div>
+            <h3 className="text-lg font-bold text-white font-sans">
+              {lang === 'ar' ? `تذاكر وحجوزات الحفلات (${myBookings.length})` : `My Bookings & Event Tickets (${myBookings.length})`}
+            </h3>
           </div>
-          <h3 className="text-lg font-bold text-white">
-            {lang === 'ar' ? `حجوزاتي المؤكدة (${bookedEvents.length})` : `My Confirmed Bookings (${bookedEvents.length})`}
-          </h3>
+          {myBookings.length > 0 && (
+            <button
+              onClick={() => setConfirmDeleteAll(true)}
+              className="px-3 py-1.5 rounded-xl border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/15 text-xs font-bold text-red-400 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>{lang === 'ar' ? 'حذف الكل' : 'Delete All'}</span>
+            </button>
+          )}
         </div>
 
-        {bookedEvents.length === 0 ? (
-          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 p-8 text-center text-neutral-500 text-sm">
-            {lang === 'ar' ? 'لم تقم بحجز تذاكر لأي فعالية بعد.' : 'No booked events yet. Explore salsa nights and book!'}
+        {myBookings.length === 0 ? (
+          <div className="rounded-3xl border border-white/5 bg-neutral-900/50 p-12 text-center text-neutral-400 max-w-lg mx-auto">
+            <Ticket className="w-12 h-12 text-zinc-600 mx-auto mb-4 stroke-[1.5]" />
+            <p className="text-sm font-semibold mb-2 text-zinc-300">
+              {lang === 'ar' ? 'لا توجد حجوزات نشطة حالياً' : 'No bookings found'}
+            </p>
+            <p className="text-xs text-neutral-500 max-w-xs mx-auto leading-relaxed">
+              {lang === 'ar' 
+                ? 'استكشف فعاليات الرقص والورش التدريبية الرائعة المتاحة الآن، واحجز تذكرتك بلمحة بصر!' 
+                : 'Explore available events, workshops and parties, and book your ticket in seconds!'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {bookedEvents.map((ev, idx) => (
-              <EventCard key={ev.id} event={ev} index={idx} onOpenMap={onOpenMap} onOpenShare={onOpenShare} />
-            ))}
+            {myBookings.map((b) => {
+              const isArabic = lang === 'ar';
+              return (
+                <div 
+                  key={b.id} 
+                  className="bg-neutral-900 border border-zinc-800 rounded-3xl overflow-hidden relative shadow-lg flex flex-col justify-between min-h-[320px]"
+                  dir={isArabic ? 'rtl' : 'ltr'}
+                >
+                  {/* Vertical Red Accent - signature visual style! */}
+                  <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-red-600"></div>
+                  
+                  {/* Ticket Top details */}
+                  <div className="p-5 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                          {isArabic ? 'الرقم المرجعي للحجز' : 'REF NUMBER'}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-amber-500">
+                          {b.refNumber}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {b.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20">
+                            <Clock className="w-3 h-3" />
+                            {isArabic ? 'قيد المراجعة' : 'Pending Review'}
+                          </span>
+                        ) : b.status === 'approved' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                            <CheckCircle className="w-3 h-3" />
+                            {isArabic ? 'مؤكد ومقبول' : 'Confirmed'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/25 text-red-400 text-[10px] font-bold border border-red-500/20">
+                            <X className="w-3 h-3" />
+                            {isArabic ? 'مرفوض' : 'Rejected'}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => setBookingToDelete(b.id)}
+                          className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-red-500/15 hover:text-red-400 text-zinc-400 border border-zinc-750 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                          title={isArabic ? 'حذف هذا الحجز' : 'Delete this booking'}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                        {isArabic ? 'الفعالية / الحفلة' : 'EVENT'}
+                      </span>
+                      <h4 className="text-sm font-bold text-zinc-100 line-clamp-1">
+                        {isArabic ? b.eventTitleAr : b.eventTitleEn}
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t border-zinc-800/60">
+                      <div>
+                        <span className="text-[10px] text-zinc-500 block">
+                          {isArabic ? 'اسم الحاجز' : 'Name'}
+                        </span>
+                        <span className="font-semibold text-zinc-300 font-sans truncate block">
+                          {b.userName}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-zinc-500 block">
+                          {isArabic ? 'رقم الهاتف' : 'Phone'}
+                        </span>
+                        <span className="font-mono text-zinc-300 block truncate">
+                          {b.userPhone}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-[10px] text-zinc-500 block">
+                          {isArabic ? 'عدد الأفراد' : 'Guests'}
+                        </span>
+                        <span className="font-semibold text-zinc-300 font-sans">
+                          {b.numberOfIndividuals} {isArabic ? 'أفراد' : 'people'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-zinc-500 block">
+                          {isArabic ? 'المبلغ الإجمالي' : 'Total Price'}
+                        </span>
+                        <span className="font-mono font-bold text-amber-500">
+                          {b.totalAmount} {isArabic ? 'ج.م' : 'EGP'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dotted separator with ticket cuts on sides */}
+                  <div className="relative flex items-center justify-center px-4 my-1">
+                    <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-neutral-950 border-r border-zinc-800"></div>
+                    <div className="w-full border-t border-dashed border-zinc-800"></div>
+                    <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-neutral-950 border-l border-zinc-800"></div>
+                  </div>
+
+                  {/* Ticket Bottom interactive or review area */}
+                  <div className="p-5 bg-zinc-950/40 rounded-b-3xl">
+                    {b.status === 'pending' ? (
+                      <div className="space-y-2.5">
+                        <div className="text-xs text-amber-400 bg-amber-500/5 p-2.5 rounded-xl border border-amber-500/10 flex gap-2">
+                          <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                          <p className="leading-relaxed">
+                            {isArabic 
+                              ? 'جاري مراجعة إيصال التحويل المرفق للتفعيل وإصدار الباركود وكود الدخول الخاص بك.' 
+                              : 'We are verifying your payment screenshot. Your entry code and QR will show up here.'}
+                          </p>
+                        </div>
+                        {b.receiptImage && (
+                          <div className="flex items-center gap-3 bg-zinc-900/60 p-2 rounded-xl border border-zinc-800/80">
+                            <img src={b.receiptImage} className="w-10 h-10 object-cover rounded-lg border border-zinc-700" alt="Receipt" />
+                            <span className="text-[10px] text-zinc-400 font-sans">
+                              {isArabic ? 'إيصال التحويل المرفق' : 'Attached payment receipt'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : b.status === 'approved' ? (
+                      <div className="flex flex-col sm:flex-row gap-4 items-center bg-zinc-950/85 p-3 rounded-2xl border border-zinc-800">
+                        {/* Live QR generator for the entry card */}
+                        <div className="w-20 h-20 bg-white p-1 rounded-lg shrink-0 border border-zinc-800">
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&color=245-158-11&data=${encodeURIComponent(b.accessCode || b.refNumber)}`} 
+                            className="w-full h-full object-contain" 
+                            alt="Entry QR" 
+                          />
+                        </div>
+                        <div className="space-y-1 flex-1 text-center sm:text-right">
+                          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">
+                            {isArabic ? 'كود الدخول والتحقق الرقمي' : 'DIGITAL ENTRY PASSCODE'}
+                          </span>
+                          <span className="text-sm font-mono font-black text-emerald-400 tracking-widest block">
+                            {b.accessCode || 'DWM-ACTIVE'}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block font-sans leading-relaxed">
+                            {isArabic 
+                              ? '✅ أظهر هذا الباركود للمسؤول عند بوابة الحضور للدخول مباشرة!' 
+                              : '✅ Present this barcode at the entry gate to gain access!'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl space-y-1">
+                        <span className="text-[10px] font-bold text-red-400 block uppercase tracking-wider">
+                          {isArabic ? 'سبب الرفض' : 'REJECTION REASON'}
+                        </span>
+                        <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                          {b.notes || (isArabic ? 'التحويل غير مكتمل أو لم يتم استلامه على الرقم 01010764256.' : 'The transfer was incomplete or not received on our payment system.')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -977,6 +1229,113 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
         </div>
       )}
+
+      {/* Booking Deletion Confirmation Modals */}
+      <AnimatePresence>
+        {bookingToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setBookingToDelete(null)}
+              className="absolute inset-0 bg-neutral-950/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-red-500/20 bg-neutral-900 p-6 shadow-2xl text-center font-sans"
+              dir={lang === 'ar' ? 'rtl' : 'ltr'}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 mx-auto mb-4 border border-red-500/20">
+                <AlertTriangle className="h-6 w-6 stroke-[2]" />
+              </div>
+              <h3 className="text-lg font-black text-white mb-2">
+                {lang === 'ar' ? 'تأكيد الحذف والإنتباه!' : 'Confirm Deletion!'}
+              </h3>
+              <p className="text-sm text-neutral-400 leading-relaxed mb-6">
+                {lang === 'ar' 
+                  ? 'هل انت متاكد انك تريد حذف هذا الحجز؟ هذا الإجراء لا يمكن التراجع عنه وسيتم إزالة بيانات التذكرة بالكامل.'
+                  : 'Are you sure you want to delete this booking? This action cannot be undone and your ticket data will be completely removed.'}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  disabled={deleteBkgLoading}
+                  onClick={() => setBookingToDelete(null)}
+                  className="flex-1 px-4 py-3 rounded-2xl bg-neutral-800 hover:bg-neutral-750 text-neutral-300 font-bold text-xs transition-all cursor-pointer border border-neutral-700/60"
+                >
+                  {lang === 'ar' ? 'تراجع وإلغاء' : 'Cancel'}
+                </button>
+                <button
+                  disabled={deleteBkgLoading}
+                  onClick={() => handleDeleteBooking(bookingToDelete)}
+                  className="flex-1 px-4 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-neutral-950 font-black text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-red-500/10"
+                >
+                  {deleteBkgLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  <span>{lang === 'ar' ? 'نعم، احذف الحجز' : 'Yes, Delete'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {confirmDeleteAll && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmDeleteAll(false)}
+              className="absolute inset-0 bg-neutral-950/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-red-500/20 bg-neutral-900 p-6 shadow-2xl text-center font-sans"
+              dir={lang === 'ar' ? 'rtl' : 'ltr'}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 mx-auto mb-4 border border-red-500/20">
+                <AlertTriangle className="h-6 w-6 stroke-[2]" />
+              </div>
+              <h3 className="text-lg font-black text-white mb-2">
+                {lang === 'ar' ? 'انتباه! حذف جميع الحجوزات' : 'Warning! Delete All Bookings'}
+              </h3>
+              <p className="text-sm text-neutral-400 leading-relaxed mb-6">
+                {lang === 'ar' 
+                  ? 'هل انت متاكد انك تريد حذف جميع الحجوزات الخاصة بك؟ سيتم مسح كافة التذاكر والطلبات قيد المراجعة أو المقبولة نهائياً.'
+                  : 'Are you sure you want to delete all of your bookings? All of your pending or approved tickets will be permanently deleted.'}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  disabled={deleteBkgLoading}
+                  onClick={() => setConfirmDeleteAll(false)}
+                  className="flex-1 px-4 py-3 rounded-2xl bg-neutral-800 hover:bg-neutral-750 text-neutral-300 font-bold text-xs transition-all cursor-pointer border border-neutral-700/60"
+                >
+                  {lang === 'ar' ? 'تراجع وإلغاء' : 'Cancel'}
+                </button>
+                <button
+                  disabled={deleteBkgLoading}
+                  onClick={handleDeleteAllBookings}
+                  className="flex-1 px-4 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-neutral-950 font-black text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-red-500/10"
+                >
+                  {deleteBkgLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  <span>{lang === 'ar' ? 'نعم، احذف الكل' : 'Yes, Delete All'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Edit Profile Modal */}
       <AnimatePresence>

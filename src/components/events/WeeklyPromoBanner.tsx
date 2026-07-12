@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2 } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Crown } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -27,10 +27,38 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-video');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (videoRef.current) {
+            if (entry.isIntersecting) {
+              videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+            } else {
+              videoRef.current.pause();
+              setIsPlaying(false);
+            }
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    if (videoRef.current) {
+      observer.observe(videoRef.current);
+    }
+
+    return () => {
+      if (videoRef.current) {
+        observer.unobserve(videoRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setAspectRatioClass('aspect-video');
@@ -80,22 +108,36 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const expiryInfo = getDaysRemainingBeforeExpiry(promoEvent.eventDate);
 
   return (
-    <div className="relative mb-8 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900 shadow-2xl gold-glow-lg transition-all">
-      {/* Top Badge */}
-      <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-full bg-red-600 px-4 py-1 text-xs font-bold text-white shadow-lg backdrop-blur-md animate-pulse">
-            <Sparkles className="h-3.5 w-3.5 fill-current" />
+    <div className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 shadow-[0_25px_55px_rgba(0,0,0,0.8)] hover:border-white/20 hover:shadow-[0_35px_70px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 gold-glow-lg transition-all duration-300">
+      {/* Absolute Vertical Red Accent Line */}
+      <div className="absolute left-0 top-0 bottom-0 w-[5px] z-30 bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.6)]" />
+
+      {/* Top Header Labeling to mark beginning of the ad container */}
+      <div className="px-4 py-2.5 flex items-center justify-between text-[11px] font-black tracking-wide uppercase border-b bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20 text-amber-400 select-none shrink-0" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="flex items-center gap-1.5">
+          <Crown className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+          <span>{lang === 'ar' ? 'فيديو الأسبوع الحصري المميز VIP' : 'EXCLUSIVE WEEKLY VIP FEATURED VIDEO'}</span>
+        </div>
+        <div className="text-[10px] font-mono opacity-60">
+          {lang === 'ar' ? 'إعلان خاص' : 'SPECIAL AD'}
+        </div>
+      </div>
+
+      {/* Top Badge floating exactly at the image/video boundary */}
+      <div className="absolute top-[40px] -translate-y-1/2 inset-x-2.5 z-30 flex items-center justify-between pointer-events-none">
+        <div className="flex items-center gap-1.5 pointer-events-auto">
+          <div className="flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-lg backdrop-blur-md animate-pulse border border-red-500">
+            <Sparkles className="h-2.5 w-2.5 fill-current" />
             <span>{lang === 'ar' ? 'فيديو الأسبوع الحصري' : 'Weekly Featured Video'}</span>
           </div>
           {user?.isAdmin && (
-            <span className="flex h-7 px-2.5 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[11px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" title={lang === 'ar' ? 'رقم الترتيب' : 'Placement Position'}>
+            <span className="flex h-6 px-2 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[10px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" title={lang === 'ar' ? 'رقم الترتيب' : 'Placement Position'}>
               #{promoEvent.position !== undefined ? promoEvent.position : '-'}
             </span>
           )}
         </div>
 
-        <div className="rounded-full bg-neutral-950/80 px-3 py-1 text-[11px] font-mono font-bold text-amber-400 border border-neutral-800 backdrop-blur-md">
+        <div className="rounded-full bg-neutral-950/80 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-400 border border-neutral-800 backdrop-blur-md pointer-events-auto shadow-lg">
           ⏳ {lang === 'ar' ? `متبقي على العرض: ${expiryInfo.days > 0 ? `${expiryInfo.days} يوم` : `${expiryInfo.hours} ساعة`}` : `Promo Ends in: ${expiryInfo.days > 0 ? `${expiryInfo.days}d` : `${expiryInfo.hours}h`}`}
         </div>
       </div>
@@ -228,7 +270,6 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               ref={videoRef}
               src={getSafePlayableVideoUrl(promoEvent.mediaUrl)}
               poster={promoEvent.thumbnailUrl || undefined}
-              autoPlay
               preload="auto"
               muted={isMuted}
               playsInline
@@ -266,7 +307,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             {/* Fullscreen Button */}
             <button
               onClick={openFullscreenVideo}
-              className="absolute top-4 left-4 z-20 flex h-10 px-3 items-center justify-center gap-1.5 rounded-full bg-neutral-950/80 text-white border border-neutral-800 hover:bg-amber-500 hover:text-neutral-950 transition-all shadow-lg backdrop-blur-md text-xs font-semibold"
+              className="absolute top-12 left-4 z-20 flex h-10 px-3 items-center justify-center gap-1.5 rounded-full bg-neutral-950/80 text-white border border-neutral-800 hover:bg-amber-500 hover:text-neutral-950 transition-all shadow-lg backdrop-blur-md text-xs font-semibold"
               title={lang === 'ar' ? 'عرض بملء الشاشة' : 'View Full Screen'}
             >
               <Maximize2 className="h-4 w-4" />

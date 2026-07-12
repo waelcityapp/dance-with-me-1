@@ -36,8 +36,12 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
         return 'طريقة تسجيل الدخول بالبريد الإلكتروني وكلمة المرور غير مفعّلة في مشروع Firebase الخاص بك. يرجى تفعيلها من لوحة تحكم Firebase Console في قسم Authentication.';
       case 'auth/network-request-failed':
         return 'فشل الاتصال بالشبكة. يرجى التحقق من جودة اتصال الإنترنت الخاص بك ثم المحاولة مجدداً.';
+      case 'auth/unauthorized-domain':
+        return 'هذا النطاق (Domain) غير معتمد في إعدادات Firebase الخاصة بك. إذا كنت قمت برفع التطبيق على Vercel أو استضافة أخرى، يرجى إضافة رابط الموقع إلى قائمة "Authorized Domains" في لوحة تحكم Firebase (Authentication -> Settings).';
+      case 'auth/popup-blocked':
+        return 'تم حظر النافذة المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة لهذا الموقع للمتابعة.';
       default:
-        return 'فشل التحقق من البيانات والمصادقة. يرجى التأكد من كتابة البريد وكلمة المرور (6 أحرف فأكثر) بشكل صحيح والمحاولة مرة أخرى.';
+        return `فشل التحقق من البيانات: ${code}. يرجى التأكد من البيانات والمحاولة مرة أخرى.`;
     }
   } else {
     switch (code) {
@@ -55,8 +59,12 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
         return 'Email/Password sign-in provider is not enabled in your Firebase project. Please enable it in the Firebase Console (Authentication -> Sign-in method -> Email/Password).';
       case 'auth/network-request-failed':
         return 'Network request failed. Please check your internet connection and try again.';
+      case 'auth/unauthorized-domain':
+        return 'This domain is not authorized in your Firebase project settings. If you deployed to Vercel or another host, please add your domain to the "Authorized Domains" list in Firebase Console (Authentication -> Settings).';
+      case 'auth/popup-blocked':
+        return 'Popup blocked by browser. Please allow popups for this site to continue.';
       default:
-        return 'Authentication failed. Please verify your credentials and try again.';
+        return `Authentication failed: ${code}. Please verify your credentials and try again.`;
     }
   }
 };
@@ -190,7 +198,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           }
 
           const existing = await getUserByEmailFromFirestore(cleanEmail);
-          const userName = existing?.name || name.trim() || (lang === 'ar' ? 'عضو النادي (VIP)' : 'VIP Club Member');
+          const userName = existing?.name || name.trim() || (lang === 'ar' ? 'عضو زائر' : 'Guest Member');
           const userAvatar = existing?.avatar || selectedAvatar;
           await loginUser(userName, cleanEmail, userAvatar, firebaseUser.uid, password);
         }
@@ -217,17 +225,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const confirmGoogleAuth = async () => {
     setLoadingAuth(true);
     setErrorMsg(null);
+    setAuthErrorCode(null);
     try {
       const googleUser = await loginWithFirebaseGoogle();
-      // If googleUser is null, it means redirect was initiated (page will reload)
-      if (googleUser === null) {
-        // Redirect was initiated, page will reload automatically
-        setErrorMsg(lang === 'ar' 
-          ? 'جاري التحويل إلى صفحة Google... سيتم إعادة توجيهك بعد تسجيل الدخول 🔄' 
-          : 'Redirecting to Google sign-in... You will be redirected back after login 🔄'
-        );
-        return;
-      }
       if (googleUser && googleUser.email) {
         setGoogleUid(googleUser.id);
         const existing = await getUserByEmailFromFirestore(googleUser.email);
@@ -241,16 +241,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setEmail(googleUser.email);
         if (googleUser.avatar) setSelectedAvatar(googleUser.avatar);
         setActiveTab('google_onboarding');
-      } else {
-        throw new Error('Google popup blocked or cancelled');
       }
     } catch (err: any) {
       console.error('Google login error:', err);
-      setErrorMsg(
-        lang === 'ar'
-          ? 'فشل تسجيل الدخول بـ Google. ✅ تم حل المشكلة: حاول مرة أخرى الآن، فقد تم تحديث نظام التحقق ليعمل بشكل أفضل داخل واجهات الويب. إذا استمرت المشكلة، استخدم البريد الإلكتروني وكلمة المرور هنا بدلاً من ذلك.'
-          : 'Google sign-in encountered an issue. ✅ This has been fixed: Try again now! The system now supports better authentication in web interfaces. If the issue persists, you can sign in with Email & Password instead.'
-      );
+      const errorCode = err.code || 'unknown';
+      setAuthErrorCode(errorCode);
+      
+      if (errorCode === 'auth/popup-blocked' || errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request') {
+        setErrorMsg(
+          lang === 'ar'
+            ? 'فشل تسجيل الدخول بـ Google. يحدث هذا عادةً داخل نافذة المعاينة (iframe) أو بسبب إغلاق النافذة. يرجى فتح التطبيق في نافذة مستقلة ↗️ أو المتابعة بالبريد الإلكتروني.'
+            : 'Google sign-in failed or was blocked/cancelled. This is common inside frames. Please open the app in a new tab ↗️ or use Email & Password.'
+        );
+      } else {
+        setErrorMsg(getAuthErrorMessage(errorCode, lang));
+      }
+      
       setActiveTab('login');
     } finally {
       setLoadingAuth(false);
@@ -327,7 +333,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <img src={user.avatar} alt={user.name} className="h-20 w-20 rounded-2xl object-cover border-2 border-amber-500 shadow-xl gold-glow" />
                 <div>
                   <h4 className="text-lg font-bold text-white">{user.name}</h4>
-                  <p className="text-xs font-mono text-amber-400 mt-0.5">VIP Club Member | عضوية النادي الفاخرة</p>
+                  <p className={`text-[10px] font-mono font-bold mt-0.5 px-2 py-0.5 rounded-full inline-block border ${user.isAdmin ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                    {user.isAdmin ? (lang === 'ar' ? 'مسؤول المنصة' : 'Platform Admin') : (lang === 'ar' ? 'عضوية النادي الفاخرة' : 'VIP Club Member')}
+                  </p>
                 </div>
               </div>
 

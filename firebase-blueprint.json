@@ -77,6 +77,30 @@
         "submittedAt": { "type": "string" }
       },
       "required": ["invoiceNumber", "phone", "status"]
+    },
+    {
+      "title": "EventBooking",
+      "description": "User event ticket bookings with payment receipt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "eventId": { "type": "string" },
+        "eventTitleAr": { "type": "string" },
+        "eventTitleEn": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "numberOfIndividuals": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "receiptImage": { "type": "string" },
+        "status": { "type": "string" },
+        "refNumber": { "type": "string" },
+        "submittedAt": { "type": "string" },
+        "barcodeUrl": { "type": "string" },
+        "accessCode": { "type": "string" },
+        "discountAmount": { "type": "number" }
+      },
+      "required": ["id", "eventId", "userId", "userName", "userPhone", "numberOfIndividuals", "totalAmount", "receiptImage", "status", "refNumber", "submittedAt"]
     }
   ],
   "relations": [],

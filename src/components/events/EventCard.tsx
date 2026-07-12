@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle2, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2 } from 'lucide-react';
+import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Crown, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -13,9 +13,10 @@ interface EventCardProps {
   index?: number;
   onOpenMap: (event: DanceEvent) => void;
   onOpenShare: (event: DanceEvent) => void;
+  overrideAdType?: 'vip' | 'standard';
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType }) => {
   const { 
     lang, 
     toggleLikeEvent, 
@@ -27,12 +28,43 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
     setEditingEvent,
     setActiveTab
   } = useApp();
+
+  const displayAdType = overrideAdType || event.adType;
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-[16/10]');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (videoRef.current) {
+            if (entry.isIntersecting) {
+              videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+            } else {
+              videoRef.current.pause();
+              setIsPlaying(false);
+            }
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    if (videoRef.current) {
+      observer.observe(videoRef.current);
+    }
+
+    return () => {
+      if (videoRef.current) {
+        observer.unobserve(videoRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setAspectRatioClass('aspect-[16/10]');
@@ -97,12 +129,81 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.3 }}
-      className={`group relative flex flex-col overflow-hidden rounded-3xl border transition-all duration-300 shadow-xl ${
+      className={`group relative flex flex-col overflow-hidden rounded-3xl border transition-all duration-300 hover:-translate-y-1.5 ${
         isExpired
-          ? 'border-neutral-800 bg-neutral-900/60 opacity-80'
-          : 'border-neutral-800 bg-neutral-900 hover:border-neutral-700 hover:shadow-2xl'
+          ? 'border-white/5 bg-neutral-900/60 opacity-80 shadow-[0_15px_35px_rgba(0,0,0,0.5)]'
+          : displayAdType === 'vip'
+            ? 'border-amber-500/40 bg-neutral-900 shadow-[0_22px_48px_rgba(245,158,11,0.12)] hover:border-amber-400/80 hover:shadow-[0_32px_64px_rgba(245,158,11,0.25)]'
+            : 'border-white/10 bg-neutral-900 shadow-[0_22px_48px_rgba(0,0,0,0.7)] hover:border-white/25 hover:shadow-[0_32px_64px_rgba(0,0,0,0.9)]'
       }`}
     >
+      {/* Absolute Vertical Red Accent Line */}
+      <div className={`absolute left-0 top-0 bottom-0 w-[5px] z-30 ${
+        isExpired ? 'bg-red-800' : 'bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.6)]'
+      }`} />
+
+      {/* Topmost accent border line */}
+      <div className={`h-1 w-full shrink-0 bg-gradient-to-r ${
+        displayAdType === 'vip' 
+          ? 'from-amber-600 via-amber-400 to-amber-500 animate-pulse' 
+          : 'from-neutral-700 via-neutral-500 to-neutral-600'
+      }`} />
+
+      {/* Top Header Labeling to mark beginning of the ad container */}
+      <div className={`px-4 py-2.5 flex items-center justify-between text-[11px] font-black tracking-wide uppercase border-b select-none shrink-0 ${
+        displayAdType === 'vip'
+          ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20 text-amber-400'
+          : 'bg-neutral-950/40 border-white/5 text-neutral-400'
+      }`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="flex items-center gap-1.5">
+          {displayAdType === 'vip' ? (
+            <>
+              <Crown className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+              <span>{lang === 'ar' ? 'إعلان مميز VIP' : 'VIP FEATURED AD'}</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-3.5 w-3.5 text-neutral-400" />
+              <span>{lang === 'ar' ? 'إعلان عادي' : 'STANDARD AD'}</span>
+            </>
+          )}
+        </div>
+        <div className="text-[10px] font-mono opacity-60">
+          {event.adNumber ? `${lang === 'ar' ? 'رقم الإعلان' : 'AD'} #${event.adNumber}` : ''}
+        </div>
+      </div>
+
+      {/* Floating Top Badges at the Media boundary (centered vertically on the line) */}
+      <div className="absolute top-[40px] -translate-y-1/2 inset-x-2.5 z-30 flex items-center justify-between pointer-events-none">
+        <div className="flex items-center gap-1.5 pointer-events-auto">
+          <span className={`rounded-lg px-2.5 py-0.5 text-[10px] font-bold border backdrop-blur-md shadow-md ${currentCat.color}`}>
+            {lang === 'ar' ? currentCat.ar : currentCat.en}
+          </span>
+          {user?.isAdmin && (
+            <span 
+              className="flex h-6 px-2 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[10px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" 
+              title={lang === 'ar' ? 'الترتيب في الصفحة' : 'Page order'}
+            >
+              #{index !== undefined ? (index + 1) : ''}
+              {event.position !== undefined && event.position !== 0 && (
+                <span className="text-[9px] text-neutral-400 font-bold ml-1">
+                  ({event.position})
+                </span>
+              )}
+              {index === undefined && (event.position === undefined || event.position === 0) && '-'}
+            </span>
+          )}
+        </div>
+
+        {/* Expiry Timer Badge */}
+        {!isExpired && (
+          <span className="flex items-center gap-1 rounded-lg bg-neutral-950/80 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-400 border border-neutral-800 backdrop-blur-md pointer-events-auto shadow-md">
+            <Clock className="h-2.5 w-2.5 text-amber-400" />
+            <span>{lang === 'ar' ? `ينتهي بعد: ${expiryInfo.days > 0 ? `${expiryInfo.days} يوم` : `${expiryInfo.hours} ساعة`}` : `${expiryInfo.days > 0 ? `${expiryInfo.days}d` : `${expiryInfo.hours}h`} left`}</span>
+          </span>
+        )}
+      </div>
+
       {/* Expired Ribbon Warning if expired */}
       {isExpired && (
         <div className="absolute top-0 inset-x-0 z-30 bg-red-600 py-1 px-4 text-center text-xs font-bold text-white shadow-md backdrop-blur-sm flex items-center justify-center gap-1.5">
@@ -123,8 +224,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               ref={videoRef}
               src={getSafePlayableVideoUrl(event.mediaUrl)}
               poster={event.thumbnailUrl || undefined}
-              autoPlay
-              loop
               preload="auto"
               muted={isMuted}
               playsInline
@@ -162,7 +261,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             {/* Fullscreen Button */}
             <button
               onClick={openFullscreenVideo}
-              className="absolute top-3 left-3 z-20 flex h-8 px-2.5 items-center justify-center gap-1 rounded-full bg-neutral-950/80 text-white border border-neutral-800 hover:bg-amber-500 hover:text-neutral-950 transition-all shadow-lg backdrop-blur-md text-[10px] font-semibold"
+              className="absolute top-12 left-3 z-20 flex h-8 px-2.5 items-center justify-center gap-1 rounded-full bg-neutral-950/80 text-white border border-neutral-800 hover:bg-amber-500 hover:text-neutral-950 transition-all shadow-lg backdrop-blur-md text-[10px] font-semibold"
               title={lang === 'ar' ? 'عرض بملء الشاشة' : 'View Full Screen'}
             >
               <Maximize2 className="h-3.5 w-3.5" />
@@ -236,36 +335,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         )}
 
-        {/* Top Badges */}
-        <div className={`absolute ${isExpired ? 'top-8' : 'top-3'} inset-x-3 z-20 flex items-center justify-between`}>
-          <div className="flex items-center gap-1.5">
-            <span className={`rounded-lg px-2.5 py-1 text-xs font-bold border backdrop-blur-md shadow-sm ${currentCat.color}`}>
-              {lang === 'ar' ? currentCat.ar : currentCat.en}
-            </span>
-            {user?.isAdmin && (
-              <span 
-                className="flex h-7 px-2.5 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[11px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" 
-                title={lang === 'ar' ? 'الترتيب في الصفحة' : 'Page order'}
-              >
-                #{index !== undefined ? (index + 1) : ''}
-                {event.position !== undefined && event.position !== 0 && (
-                  <span className="text-[10px] text-neutral-400 font-bold ml-1">
-                    ({event.position})
-                  </span>
-                )}
-                {index === undefined && (event.position === undefined || event.position === 0) && '-'}
-              </span>
-            )}
-          </div>
 
-          {/* Expiry Timer Badge */}
-          {!isExpired && (
-            <span className="flex items-center gap-1 rounded-lg bg-neutral-950/80 px-2 py-1 text-[11px] font-mono font-bold text-amber-400 border border-neutral-800 backdrop-blur-md">
-              <Clock className="h-3 w-3 text-amber-400" />
-              <span>{lang === 'ar' ? `ينتهي بعد: ${expiryInfo.days > 0 ? `${expiryInfo.days} يوم` : `${expiryInfo.hours} ساعة`}` : `${expiryInfo.days > 0 ? `${expiryInfo.days}d` : `${expiryInfo.hours}h`} left`}</span>
-            </span>
-          )}
-        </div>
 
         {/* Paused Overlay with 'X' mark */}
         {event.isPaused && (
@@ -471,7 +541,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               whileTap={{ scale: 0.97 }}
               onClick={() => bookTicket(event.id)}
               disabled={isBooked}
-              className={`flex h-10 items-center justify-center rounded-xl px-4 text-xs font-bold transition-all ${
+              className={`flex h-10 items-center justify-center rounded-xl px-6 sm:px-8 min-w-[120px] sm:min-w-[140px] text-xs font-bold transition-all ${
                 isBooked
                   ? 'bg-emerald-600 text-white cursor-default border border-emerald-500'
                   : 'bg-amber-500 text-neutral-950 hover:bg-amber-400 shadow-lg'
@@ -479,7 +549,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             >
               {isBooked ? (
                 <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <CheckCircle className="h-3.5 w-3.5" />
                   <span>{lang === 'ar' ? 'تم الحجز' : 'Booked'}</span>
                 </span>
               ) : (

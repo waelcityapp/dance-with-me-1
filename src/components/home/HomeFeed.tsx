@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceEvent, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
 import { EventCard } from '../events/EventCard';
 import { WeeklyPromoBanner } from '../events/WeeklyPromoBanner';
-import { Sparkles, Music, GraduationCap, Palmtree, PlusCircle, Filter, Search, Clock, CheckCircle2, ArrowUp, ChevronDown } from 'lucide-react';
+import { Sparkles, Music, GraduationCap, Palmtree, PlusCircle, Filter, Search, Clock, CheckCircle, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, X, Crown, Gift, Star, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { logAnalyticsEvent } from '../../lib/firebase';
 
@@ -20,6 +20,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const [selectedStyleFilter, setSelectedStyleFilter] = useState<string>('all');
   const [visibleCount, setVisibleCount] = useState(6);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [showWhyBookModal, setShowWhyBookModal] = useState(false);
 
   // Reset pagination when category, search, or style filter changes
   useEffect(() => {
@@ -29,7 +30,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   // Back to Top scroll listener
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 400) {
+      // Show back to top roughly after scrolling past 4-5 events (~2500px)
+      if (window.scrollY > 2500) {
         setShowBackToTop(true);
       } else {
         setShowBackToTop(false);
@@ -195,6 +197,42 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         })}
       </div>
 
+      {/* Why Book Banner */}
+      <motion.div
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setShowWhyBookModal(true)}
+        className="relative mb-8 rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-xl shadow-red-900/10"
+      >
+        {/* Continuous spinning gradient effect */}
+        <div className="absolute inset-[-100%] animate-[spin_4s_linear_infinite] opacity-80 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]"
+             style={{
+               background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #8b5cf6, #ec4899, #ef4444)'
+             }} 
+        />
+        
+        {/* Inner Content */}
+        <div className="relative flex items-center justify-between bg-neutral-950/95 backdrop-blur-md rounded-[14px] px-5 py-4 w-full h-full">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-red-500 animate-pulse" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-500 to-red-500 font-black text-sm sm:text-base tracking-wide drop-shadow-md bg-[length:200%_auto] animate-[pulse_3s_ease-in-out_infinite]">
+              {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
+            </span>
+          </div>
+          
+          <motion.div 
+            animate={{ x: lang === 'ar' ? [-5, 0, -5] : [5, 0, 5] }}
+            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+            className="flex items-center gap-1.5 bg-red-500/10 rounded-full px-3 py-1.5 border border-red-500/30"
+          >
+            <span className="text-[10px] font-bold text-red-400 hidden sm:block uppercase tracking-wider">
+              {lang === 'ar' ? 'اكتشف' : 'Discover'}
+            </span>
+            {lang === 'ar' ? <ArrowLeft className="h-4 w-4 text-red-400" /> : <ArrowRight className="h-4 w-4 text-red-400" />}
+          </motion.div>
+        </div>
+      </motion.div>
+
       {/* Weekly Featured Video Promo (Show on Explore tab when no filter is applied or when all is selected) */}
       {weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all' && (
         <WeeklyPromoBanner
@@ -246,6 +284,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                   key={ev.id}
                   event={ev}
                   index={idx}
+                  overrideAdType={idx < 6 ? 'vip' : 'standard'}
                   onOpenMap={onOpenMap}
                   onOpenShare={onOpenShare}
                 />
@@ -280,11 +319,94 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={scrollToTop}
-            className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-neutral-950 shadow-2xl border border-amber-400 hover:bg-amber-400 transition-all cursor-pointer focus:outline-none"
+            className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-pink-600 to-indigo-500 text-white shadow-2xl shadow-pink-500/30 border border-pink-400/50 hover:opacity-90 transition-all cursor-pointer focus:outline-none"
             title={lang === 'ar' ? 'العودة إلى الأعلى' : 'Back to Top'}
           >
             <ArrowUp className="h-5 w-5 stroke-[2.5]" />
           </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Why Book Modal */}
+      <AnimatePresence>
+        {showWhyBookModal && (
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-end sm:justify-center p-0 sm:p-6 text-neutral-100">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWhyBookModal(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              className="relative w-full sm:max-w-md bg-neutral-900 border border-neutral-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-pink-500 via-indigo-500 to-amber-500" />
+              
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/30">
+                      <Sparkles className="h-5 w-5 text-red-500" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white">
+                      {lang === 'ar' ? 'مميزات الحجز' : 'Booking Benefits'}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setShowWhyBookModal(false)}
+                    className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-full text-neutral-400 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4 bg-neutral-950/50 p-4 rounded-2xl border border-neutral-800/50">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 mt-1">
+                      <Gift className="h-5 w-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-emerald-400 mb-1">
+                        {lang === 'ar' ? 'خصومات خاصة' : 'Special Discounts'}
+                      </h4>
+                      <p className="text-sm text-neutral-300 leading-relaxed">
+                        {lang === 'ar' 
+                          ? 'الاستفادة من خصومات خاصة عن الأسعار الرسمية.'
+                          : 'Enjoy special discounts off the official prices.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 bg-neutral-950/50 p-4 rounded-2xl border border-neutral-800/50">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30 mt-1">
+                      <Crown className="h-5 w-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-amber-400 mb-1">
+                        {lang === 'ar' ? 'دعوات لحفلات VIP' : 'VIP Event Invites'}
+                      </h4>
+                      <p className="text-sm text-neutral-300 leading-relaxed">
+                        {lang === 'ar'
+                          ? 'عند ملاحظة تفاعلك مع التطبيق والحجز من خلاله ومشاركة الإعلانات تتلقى دعوات لحضور بعض الحفلات بخصومات قد تصل الى 100% وامتيازات تكون فى فئة المستخدمين المميزين جدا أو الـ VIP.'
+                          : 'By engaging with the app, booking, and sharing, you may receive invitations to parties with up to 100% discounts and exclusive VIP privileges.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowWhyBookModal(false)}
+                  className="mt-6 w-full py-3.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all"
+                >
+                  {lang === 'ar' ? 'فهمت، شكراً' : 'Got it, Thanks'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

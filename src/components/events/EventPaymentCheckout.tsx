@@ -17,7 +17,7 @@ import {
   Sparkles, 
   Clock, 
   Lock, 
-  CheckCircle2, 
+  CheckCircle, 
   Copy, 
   Check,
   X,
@@ -46,6 +46,8 @@ export interface EventPaymentCheckoutProps {
   category?: 'party' | 'course' | 'trip';
   styles?: any[];
   mediaUrl?: string;
+  pendingFile?: File | null;
+  cloudinaryConfig?: { cloudName: string; uploadPreset: string };
   eventData?: any;
   onBack: () => void;
   onSuccessComplete: () => void;
@@ -63,6 +65,8 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   category = 'party',
   styles = ['Salsa'],
   mediaUrl = '',
+  pendingFile = null,
+  cloudinaryConfig,
   eventData,
   onBack,
   onSuccessComplete
@@ -74,6 +78,33 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+
+  const performMediaUpload = async (file: File): Promise<string> => {
+    if (!cloudinaryConfig) throw new Error('Cloudinary config missing');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', cloudinaryConfig.uploadPreset);
+    const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+    
+    return await new Promise<string>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/${resourceType}/upload`, true);
+      xhr.upload.onprogress = (p) => {
+        if (p.lengthComputable) setUploadProgress(Math.round((p.loaded / p.total) * 100));
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const resp = JSON.parse(xhr.responseText);
+          if (resp.secure_url) resolve(resp.secure_url);
+          else reject(new Error('No URL returned'));
+        } else reject(new Error(`Upload failed ${xhr.status}`));
+      };
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(formData);
+    });
+  };
 
   useEffect(() => {
     // Generate unique reference invoice number
@@ -135,6 +166,31 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
     if (!isFormValid) return;
     setIsSubmitting(true);
     
+    let finalMediaUrl = mediaUrl;
+    if (pendingFile) {
+      try {
+        finalMediaUrl = await performMediaUpload(pendingFile);
+      } catch (err: any) {
+        alert(lang === 'ar' ? `❌ فشل رفع الوسائط: ${err.message}` : `❌ Media upload failed: ${err.message}`);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    if (!finalMediaUrl) {
+      finalMediaUrl = mediaType === 'video' 
+        ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+        : 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
+    }
+
+    // Handle thumbnail for video
+    let finalThumbnailUrl = finalMediaUrl;
+    if (mediaType === 'video' && finalMediaUrl.includes('cloudinary.com')) {
+      finalThumbnailUrl = finalMediaUrl.replace(/\.[^.]+$/, '.jpg');
+    } else if (mediaType === 'video') {
+      finalThumbnailUrl = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
+    }
+
     const advName = user?.name || (lang === 'ar' ? 'معلن DWM VIP' : 'DWM VIP Advertiser');
     const submissionId = `sub_${Date.now()}`;
     const invNum = invoiceNumber || `DWM-INV-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -150,7 +206,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       category: category as any,
       styles: styles as any,
       mediaType,
-      mediaUrl: mediaUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
+      mediaUrl: finalMediaUrl,
       pricing: {
         days: pricing.days,
         subtotal: pricing.subtotal,
@@ -160,7 +216,11 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       receiptImage: receiptImage || undefined,
       status: 'pending',
       submittedAt: new Date().toISOString(),
-      eventData
+      eventData: {
+        ...eventData,
+        mediaUrl: finalMediaUrl,
+        thumbnailUrl: finalThumbnailUrl
+      }
     };
 
     // 1. Save immediately to LocalStorage for 0ms instant display in Admin Panel
@@ -219,7 +279,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
               <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
               <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-amber-300 text-neutral-950 shadow-xl gold-glow">
-                <CheckCircle2 className="h-10 w-10 stroke-[2.5]" />
+                <CheckCircle className="h-10 w-10 stroke-[2.5]" />
               </div>
 
               <h3 className="text-xl sm:text-2xl font-extrabold text-white mb-3 tracking-tight">
@@ -536,7 +596,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
             <div className="rounded-2xl border border-amber-500/40 bg-neutral-950 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold">
-                  <CheckCircle2 className="h-4 w-4 stroke-[2.5]" />
+                  <CheckCircle className="h-4 w-4 stroke-[2.5]" />
                   <span>{lang === 'ar' ? 'تم إرفاق صورة إيصال الدفع بنجاح' : 'Payment receipt attached successfully'}</span>
                 </div>
                 <button
@@ -571,9 +631,19 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
             }`}
           >
             {isSubmitting ? (
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 border-2 border-neutral-950 border-t-transparent rounded-full animate-spin" />
-                <span>{lang === 'ar' ? 'جاري إرسال الإعلان وإيصال الدفع...' : 'Submitting Ad & Receipt...'}</span>
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-neutral-950 border-t-transparent rounded-full animate-spin" />
+                  <span>{lang === 'ar' ? 'جاري إرسال الإعلان وإيصال الدفع...' : 'Submitting Ad & Receipt...'}</span>
+                </div>
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="w-full max-w-xs h-1.5 bg-black/20 rounded-full mt-2 overflow-hidden">
+                    <div 
+                      className="h-full bg-neutral-950 transition-all duration-300" 
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <>

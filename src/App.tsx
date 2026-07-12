@@ -17,6 +17,7 @@ import { PwaInstallModal } from './components/modals/PwaInstallModal';
 import { GuestAlertModal } from './components/modals/GuestAlertModal';
 import { SupportModal } from './components/modals/SupportModal';
 import { AdminLockModal } from './components/modals/AdminLockModal';
+import { BookingModal } from './components/modals/BookingModal';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { DanceEvent } from './types';
 
@@ -124,6 +125,7 @@ const AppContent: React.FC = () => {
       />
 
       <AdminLockModal />
+      <BookingModal />
     </div>
   );
 };

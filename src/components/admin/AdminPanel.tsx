@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Crown, 
-  CheckCircle2, 
+  CheckCircle, 
   XCircle, 
   Trash2, 
   Phone, 
   Eye, 
+  Pencil,
   Sparkles, 
   Clock, 
   DollarSign, 
@@ -26,6 +27,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Image as ImageIcon,
+  PlayCircle,
   Database,
   Server,
   Plus,
@@ -69,7 +71,25 @@ import {
 } from '../../lib/firebase';
 
 export const AdminPanel: React.FC = () => {
-  const { lang, setActiveTab, user, addNewEvent, events, deleteEvent, notifications, supportMessages, replyToSupportMessage, cleanUpDuplicateAds, appAssets, updateBrandingAssets } = useApp();
+  const { 
+    lang, 
+    setActiveTab, 
+    user, 
+    addNewEvent, 
+    events, 
+    deleteEvent, 
+    notifications, 
+    supportMessages, 
+    replyToSupportMessage, 
+    cleanUpDuplicateAds, 
+    appAssets, 
+    updateBrandingAssets, 
+    pricingConfig, 
+    updatePricingConfig,
+    bookings,
+    approveBooking,
+    rejectBooking
+  } = useApp();
   const [submissions, setSubmissions] = useState<AdSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [manualRefreshing, setManualRefreshing] = useState(false);
@@ -79,7 +99,11 @@ export const AdminPanel: React.FC = () => {
   const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'replied'>('pending');
   const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | 'analytics' | 'create_ad_admin' | null>(null);
+  const [bookingsFilter, setBookingsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [bookingsSearch, setBookingsSearch] = useState('');
+  const [rejectionReasonMap, setRejectionReasonMap] = useState<Record<string, string>>({});
+  const [selectedBookingReceipt, setSelectedBookingReceipt] = useState<string | null>(null);
+  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | 'pricing' | 'analytics' | 'create_ad_admin' | 'bookings' | null>(null);
   const [dbSubTab, setDbSubTab] = useState<'events' | 'submissions' | 'notifications' | 'schema'>('events');
   const [selectedJsonDoc, setSelectedJsonDoc] = useState<{ id: string; title: string; data: any } | null>(null);
   
@@ -111,6 +135,9 @@ export const AdminPanel: React.FC = () => {
   const [formWhatsappSupport, setFormWhatsappSupport] = useState('');
   const [formInstagramUrl, setFormInstagramUrl] = useState('');
   const [savingBranding, setSavingBranding] = useState(false);
+  const [localPricingConfig, setLocalPricingConfig] = useState(pricingConfig);
+  const [savingPricing, setSavingPricing] = useState(false);
+  useEffect(() => { setLocalPricingConfig(pricingConfig); }, [pricingConfig]);
 
   // Analytics States
   const [analyticsCounters, setAnalyticsCounters] = useState<any>({});
@@ -140,11 +167,16 @@ export const AdminPanel: React.FC = () => {
   const [adminIsWeeklyPromo, setAdminIsWeeklyPromo] = useState(false);
   const [adminIsFeatured, setAdminIsFeatured] = useState(true);
   
+  // Quick Edit States
+  const [adminEditingField, setAdminEditingField] = useState<string | null>(null);
+  const [adminEditValue, setAdminEditValue] = useState('');
+
   // Media Upload States for Admin Create Ad
   const [adminUploadedFileName, setAdminUploadedFileName] = useState<string | null>(null);
   const [adminIsUploadingMedia, setAdminIsUploadingMedia] = useState(false);
   const [adminUploadProgress, setAdminUploadProgress] = useState<number>(0);
   const [adminUploadError, setAdminUploadError] = useState<string | null>(null);
+  const [adminPendingFile, setAdminPendingFile] = useState<File | null>(null);
   const [adminSaveStatus, setAdminSaveStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [adminCreateTab, setAdminCreateTab] = useState<'form' | 'preview'>('form');
   const [previewAlert, setPreviewAlert] = useState<string | null>(null);
@@ -233,75 +265,109 @@ export const AdminPanel: React.FC = () => {
     });
   };
 
-  const handleAdminFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAdminFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    setAdminUploadError(null);
-    setAdminUploadProgress(0);
     if (file) {
-      setAdminIsUploadingMedia(true);
-      setAdminUploadedFileName(file.name);
-      
-      try {
-        let fileToUpload = file;
-        if (file.type.startsWith('image/')) {
-          try {
-            fileToUpload = await compressAdminImage(file);
-          } catch (compressErr) {
-            console.error('Image compression failed', compressErr);
+      if (file.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(video.src);
+          if (video.duration > 120) {
+            alert(lang === 'ar' 
+              ? '❌ عذراً، لا يمكن رفع فيديو أطول من دقيقتين. يرجى اختيار فيديو أقصر.' 
+              : '❌ Sorry, videos longer than 2 minutes are not allowed. Please choose a shorter video.');
+            e.target.value = ''; // clear input
+            return;
           }
-        }
-
-        const formData = new FormData();
-        formData.append('file', fileToUpload);
-        formData.append('upload_preset', cloudinaryUploadPreset);
-
-        const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+          // Video is valid duration
+          setAdminPendingFile(file);
+          setAdminUploadedFileName(file.name);
+          setAdminMediaType('video');
+          const previewUrl = URL.createObjectURL(file);
+          setAdminMediaUrl(previewUrl);
+        };
+        video.onerror = () => {
+          window.URL.revokeObjectURL(video.src);
+          alert(lang === 'ar' ? '❌ فشل تحميل بيانات الفيديو. يرجى تجربة ملف آخر.' : '❌ Failed to load video metadata. Please try another file.');
+        };
+        video.src = URL.createObjectURL(file);
+      } else {
+        // Handle images normally
+        setAdminPendingFile(file);
+        setAdminUploadedFileName(file.name);
+        setAdminMediaType('image');
         
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/${resourceType}/upload`, true);
-          
-          xhr.upload.onprogress = (progressEvent) => {
-            if (progressEvent.lengthComputable) {
-              const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-              setAdminUploadProgress(percent);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.secure_url) {
-                  setAdminMediaUrl(response.secure_url);
-                  setAdminMediaType(resourceType);
-                  resolve();
-                } else {
-                  reject(new Error('No secure URL returned'));
-                }
-              } catch (parseErr) {
-                reject(new Error('Failed to parse response'));
-              }
-            } else {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
-            }
-          };
-
-          xhr.onerror = () => {
-            reject(new Error(lang === 'ar' ? 'فشل الاتصال بالخادم السحابي' : 'Network connection error'));
-          };
-
-          xhr.send(formData);
-        });
-
-      } catch (err: any) {
-        console.error('Cloudinary upload error:', err);
-        setAdminUploadError(err.message || 'Upload failed');
-        setAdminUploadedFileName(null);
-      } finally {
-        setAdminIsUploadingMedia(false);
-        setAdminUploadProgress(0);
+        // Create local preview URL
+        const previewUrl = URL.createObjectURL(file);
+        setAdminMediaUrl(previewUrl);
       }
+    }
+  };
+
+  const performAdminMediaUpload = async (file: File): Promise<string> => {
+    setAdminIsUploadingMedia(true);
+    setAdminUploadProgress(0);
+    setAdminUploadError(null);
+    
+    try {
+      let fileToUpload = file;
+      if (file.type.startsWith('image/')) {
+        try {
+          fileToUpload = await compressAdminImage(file);
+        } catch (compressErr) {
+          console.error('Image compression failed', compressErr);
+        }
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+      formData.append('upload_preset', cloudinaryUploadPreset);
+
+      const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+      
+      return await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/${resourceType}/upload`, true);
+        
+        xhr.upload.onprogress = (progressEvent) => {
+          if (progressEvent.lengthComputable) {
+            const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+            setAdminUploadProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.secure_url) {
+                resolve(response.secure_url);
+              } else {
+                reject(new Error('No secure URL returned'));
+              }
+            } catch (parseErr) {
+              reject(new Error('Failed to parse response'));
+            }
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error(lang === 'ar' ? 'فشل الاتصال بالخادم السحابي' : 'Network connection error'));
+        };
+
+        xhr.send(formData);
+      });
+
+    } catch (err: any) {
+      console.error('Cloudinary upload error:', err);
+      setAdminUploadError(err.message || 'Upload failed');
+      throw err;
+    } finally {
+      setAdminIsUploadingMedia(false);
+      setAdminUploadProgress(0);
     }
   };
 
@@ -348,10 +414,39 @@ export const AdminPanel: React.FC = () => {
 
     setAdminSaveStatus('loading');
     try {
+      let finalMediaUrl = adminMediaUrl.trim();
+      
+      // Perform actual upload only now if there is a pending file
+      if (adminPendingFile) {
+        try {
+          finalMediaUrl = await performAdminMediaUpload(adminPendingFile);
+          setAdminMediaUrl(finalMediaUrl);
+          setAdminPendingFile(null); // Clear pending file after successful upload
+        } catch (uploadErr: any) {
+          console.error('Failed to upload media during publish:', uploadErr);
+          setAdminSaveStatus('error');
+          alert(lang === 'ar' ? `❌ فشل رفع الوسائط: ${uploadErr.message}` : `❌ Media upload failed: ${uploadErr.message}`);
+          return;
+        }
+      }
+
+      if (!finalMediaUrl) {
+        finalMediaUrl = 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200';
+      }
+
+      // Generate a proper thumbnailUrl for videos from Cloudinary
+      let finalThumbnailUrl = finalMediaUrl;
+      if (adminMediaType === 'video' && finalMediaUrl.includes('cloudinary.com')) {
+        // Cloudinary trick: change .mp4/etc to .jpg to get a thumbnail
+        finalThumbnailUrl = finalMediaUrl.replace(/\.[^.]+$/, '.jpg');
+      } else if (adminMediaType === 'video') {
+        // Fallback for non-cloudinary videos (though we mostly use cloudinary)
+        finalThumbnailUrl = 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200';
+      }
+
       const coords = parseAdminCoordinates(adminGoogleMapsUrl);
       
       const newEventId = `ev-adm-${Date.now()}`;
-      const finalMediaUrl = adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200'; // high-res fallback
 
       const createdEvent: DanceEvent = {
         id: newEventId,
@@ -363,7 +458,7 @@ export const AdminPanel: React.FC = () => {
         styles: adminSelectedStyles,
         mediaType: adminMediaType,
         mediaUrl: finalMediaUrl,
-        thumbnailUrl: finalMediaUrl,
+        thumbnailUrl: finalThumbnailUrl,
         uploadDate: new Date().toISOString(),
         eventDate: new Date(adminEventDate).toISOString(),
         priceAr: adminPriceAr.trim() || '250 ج.م',
@@ -416,6 +511,7 @@ export const AdminPanel: React.FC = () => {
       setAdminDescEn('');
       setAdminMediaUrl('');
       setAdminUploadedFileName(null);
+      setAdminPendingFile(null);
       setAdminPosition(1);
       
       // Navigate to DB inspect
@@ -640,6 +736,18 @@ export const AdminPanel: React.FC = () => {
         };
 
         // Add to state and save to Firestore
+        addNewEvent(newEv);
+        await saveEventToFirestore(newEv);
+      } else if (sub.eventData) {
+        const newEv: DanceEvent = {
+          ...sub.eventData,
+          id: `ad_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          uploadDate: new Date().toISOString(),
+          likesCount: 15,
+          isFeatured: sub.adType === 'vip' || sub.eventData?.adType === 'vip',
+          isWeeklyPromo: sub.adType === 'vip' || sub.eventData?.adType === 'vip',
+          adType: sub.adType || sub.eventData?.adType || 'standard'
+        } as DanceEvent;
         addNewEvent(newEv);
         await saveEventToFirestore(newEv);
       }
@@ -878,6 +986,7 @@ export const AdminPanel: React.FC = () => {
               adminSection === 'support' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
               adminSection === 'security' ? 'bg-red-500/10 border border-red-500/30 text-red-400' :
               adminSection === 'branding' ? 'bg-pink-500/10 border border-pink-500/30 text-pink-400' :
+              adminSection === 'pricing' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
               adminSection === 'analytics' ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400' :
               adminSection === 'create_ad_admin' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400' :
               'bg-purple-500/10 border border-purple-500/30 text-purple-400'
@@ -888,6 +997,7 @@ export const AdminPanel: React.FC = () => {
               {adminSection === 'users' && <Users className="h-6 w-6" />}
               {adminSection === 'security' && <ShieldAlert className="h-6 w-6" />}
               {adminSection === 'branding' && <Sparkles className="h-6 w-6 animate-pulse" />}
+              {adminSection === 'pricing' && <DollarSign className="h-6 w-6" />}
               {adminSection === 'analytics' && <BarChart3 className="h-6 w-6" />}
               {adminSection === 'create_ad_admin' && <FilePlus className="h-6 w-6 animate-pulse" />}
             </div>
@@ -899,8 +1009,129 @@ export const AdminPanel: React.FC = () => {
                 {adminSection === 'users' && (lang === 'ar' ? '👥 إدارة ومراقبة مستخدمي التطبيق' : '👥 App Users Management')}
                 {adminSection === 'security' && (lang === 'ar' ? '🔒 إدارة الأمان وجدار الحماية وسجلات الاختراق' : '🔒 Security Firewall & Violation Logs')}
                 {adminSection === 'branding' && (lang === 'ar' ? '🎨 هوية التطبيق وتطوير المظهر والشعارات' : '🎨 App Identity & Visual Branding')}
-                {adminSection === 'analytics' && (lang === 'ar' ? '📊 إحصائيات زوار الموقع الحقيقيين واهتمام الجمهور' : '📊 Real-time Analytics & Audience Interest')}
+                {adminSection === 'pricing' && (lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices')}
+                
+      {adminSection === 'pricing' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="rounded-3xl border border-emerald-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl relative overflow-hidden">
+            <h3 className="text-lg sm:text-xl font-extrabold text-white mb-2 flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-emerald-400 animate-pulse" />
+              <span>{lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}</span>
+            </h3>
+            
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* VIP Pricing Form */}
+              <div className="bg-neutral-950 p-5 rounded-2xl border border-amber-500/30">
+                <h4 className="text-amber-400 font-bold flex items-center gap-2 mb-4">
+                  <Crown className="h-4 w-4" />
+                  {lang === 'ar' ? 'أسعار الإعلان المميز (VIP)' : 'VIP Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.basePrice || 100}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.extraDayPrice || 20}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.videoSurchargePercentage || 20}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Standard Pricing Form */}
+              <div className="bg-neutral-950 p-5 rounded-2xl border border-neutral-700">
+                <h4 className="text-white font-bold flex items-center gap-2 mb-4">
+                  <FileText className="h-4 w-4" />
+                  {lang === 'ar' ? 'أسعار الإعلان العادي (Standard)' : 'Standard Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.basePrice || 50}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.extraDayPrice || 10}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.videoSurchargePercentage || 10}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={async () => {
+                  setSavingPricing(true);
+                  await updatePricingConfig(localPricingConfig as any);
+                  setSavingPricing(false);
+                }}
+                disabled={savingPricing}
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-neutral-950 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+              >
+                {savingPricing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                {lang === 'ar' ? 'حفظ الأسعار في قاعدة البيانات' : 'Save Prices to Database'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+{adminSection === 'analytics' && (lang === 'ar' ? '📊 إحصائيات زوار الموقع الحقيقيين واهتمام الجمهور' : '📊 Real-time Analytics & Audience Interest')}
                 {adminSection === 'create_ad_admin' && (lang === 'ar' ? '➕ إنشاء إعلان / حفلة جديدة فوراً بواسطة الإدارة' : '➕ Create & Publish Event Immediately (Admin)')}
+                {adminSection === 'bookings' && (lang === 'ar' ? '🎟️ مراجعة وتأكيد حجوزات التذاكر والحفلات' : '🎟️ Review & Confirm Ticket Bookings')}
               </h2>
               <p className="text-xs text-neutral-400 mt-1">
                 {adminSection === 'submissions' && (lang === 'ar' ? 'مراجعة وتفعيل الإعلانات الفاخرة وتتبع إيصالات التحويل البنكي.' : 'Manage premium ad campaigns, analyze bank receipts, and activate VIP slots.')}
@@ -909,8 +1140,10 @@ export const AdminPanel: React.FC = () => {
                 {adminSection === 'users' && (lang === 'ar' ? 'البحث عن الحسابات بالأرقام السرية أو الإيميل، تجميد أو حذف الأعضاء.' : 'Audit member profiles, passwords, registration dates, suspend or delete records.')}
                 {adminSection === 'security' && (lang === 'ar' ? 'تغيير العبارة السرية، مراقبة محاولات الاختراق، عناوين الـ IP للمهاجمين، وإعداد بلاغات أمنية.' : 'Update VIP secret code, monitor unauthorized access logs, block IPs, and prepare security reports.')}
                 {adminSection === 'branding' && (lang === 'ar' ? 'تعديل وتخصيص أسماء التطبيق وشعاراته وأيقوناته وروابط الاتصال بقاعدة البيانات في الوقت الفعلي.' : 'Modify app names, icons, brand logos, support contact phone, and other static assets.')}
+                {adminSection === 'pricing' && (lang === 'ar' ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم، مع تحديد نسبة الزيادة الخاصة بإعلانات الفيديو.' : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge percentage.')}
                 {adminSection === 'analytics' && (lang === 'ar' ? 'تحليل حركة المرور الحية، واهتمامات الراقصين بالأنماط المختلفة، ونسب استخدام أزرار التواصل والخريطة.' : 'Live traffic insights, style-specific popularity heatmaps, and call-to-action click rates.')}
                 {adminSection === 'create_ad_admin' && (lang === 'ar' ? 'نموذج لوحة الإدارة المتكامل لإنشاء ونشر الفعاليات وتثبيتها وتحديد ترتيب ظهورها مباشرة دون انتظار أو دفع.' : 'Admin panel integrated form to compose, publish, pin, and prioritize events directly in real-time.')}
+                {adminSection === 'bookings' && (lang === 'ar' ? 'لوحة المسؤولين للتحقق من إيصالات تحويل فودافون كاش ومطابقة المبالغ وإصدار أكواد الدخول والباركود للحضور.' : 'Verify transfer receipts, match paid amounts, and activate barcodes/entry keys for guests.')}
               </p>
             </div>
           </div>
@@ -1224,7 +1457,34 @@ export const AdminPanel: React.FC = () => {
               </div>
             </motion.div>
 
-            {/* Card 7: Live App Analytics & Traffic */}
+                        {/* Card X: Pricing Config */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              onClick={() => {
+                setAdminSection('pricing');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+            >
+              <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <DollarSign className="h-6 w-6 stroke-[2]" />
+                  </div>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                  {lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}
+                </h3>
+                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم، مع تحديد نسبة الزيادة الخاصة بإعلانات الفيديو.'
+                    : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge percentage.'}
+                </p>
+              </div>
+            </motion.div>
+
+{/* Card 7: Live App Analytics & Traffic */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
@@ -1289,9 +1549,428 @@ export const AdminPanel: React.FC = () => {
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
+
+            {/* Card 9: Bookings Management (Ticket reservations) */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              onClick={() => {
+                setAdminSection('bookings');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+            >
+              <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <FileText className="h-6 w-6 stroke-[2]" />
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black font-mono">
+                    {bookings.filter(b => b.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                  {lang === 'ar' ? '🎟️ إدارة وحجوزات التذاكر' : '🎟️ Ticket Bookings Panel'}
+                </h3>
+                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'التحقق من تحويلات فودافون كاش ومطابقة الإيصالات، وتأكيد حجز التذاكر وإصدار الباركود وكود الدخول للحضور.'
+                    : 'Match Instapay/Vodafone Cash receipts, activate attendee tickets, and issue check-in gate barcodes.'}
+                </p>
+              </div>
+              <div className="flex items-center justify-end text-xs font-black text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
+              </div>
+            </motion.div>
           </div>
         </div>
       )}
+
+      {adminSection === 'bookings' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Section Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Bookings'}
+              </span>
+              <span className="text-xl font-black text-amber-400 mt-1 block font-mono">
+                {bookings ? bookings.length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '🎟️ تذاكر قيد المراجعة' : '🎟️ Pending Review'}
+              </span>
+              <span className="text-xl font-black text-yellow-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => b.status === 'pending').length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '✅ الحجوزات المقبولة' : '✅ Approved Bookings'}
+              </span>
+              <span className="text-xl font-black text-emerald-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => b.status === 'approved').length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '❌ طلبات مرفوضة' : '❌ Rejected Bookings'}
+              </span>
+              <span className="text-xl font-black text-red-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => b.status === 'rejected').length : 0}
+              </span>
+            </div>
+          </div>
+
+          {/* Filters and Search Bar */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-4 sm:p-6 space-y-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              {/* Tab Filters */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setBookingsFilter(tab)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      bookingsFilter === tab
+                        ? 'bg-emerald-500 text-neutral-950 shadow-lg shadow-emerald-500/15'
+                        : 'bg-neutral-800 hover:bg-neutral-750 text-neutral-300 border border-neutral-700/60'
+                    }`}
+                  >
+                    {tab === 'all' && (lang === 'ar' ? '📋 الكل' : '📋 All')}
+                    {tab === 'pending' && (lang === 'ar' ? '⏳ معلق' : '⏳ Pending')}
+                    {tab === 'approved' && (lang === 'ar' ? '✅ مقبول' : '✅ Approved')}
+                    {tab === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : '❌ Rejected')}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Field */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder={
+                    lang === 'ar' 
+                      ? 'البحث برقم الحجز، اسم العميل، الموبايل...' 
+                      : 'Search by booking ID, customer name, mobile...'
+                  }
+                  value={bookingsSearch}
+                  onChange={(e) => setBookingsSearch(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500 transition-all font-medium"
+                />
+                {bookingsSearch && (
+                  <button
+                    onClick={() => setBookingsSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bookings List */}
+          <div className="space-y-4">
+            {(() => {
+              const list = bookings || [];
+              const filtered = list.filter((b) => {
+                // Status Filter
+                if (bookingsFilter !== 'all' && b.status !== bookingsFilter) return false;
+
+                // Search Filter
+                if (bookingsSearch.trim()) {
+                  const query = bookingsSearch.toLowerCase();
+                  const refNum = b.refNumber.toLowerCase();
+                  const name = b.userName.toLowerCase();
+                  const phone = b.userPhone.toLowerCase();
+                  const titleAr = (b.eventTitleAr || '').toLowerCase();
+                  const titleEn = (b.eventTitleEn || '').toLowerCase();
+
+                  return (
+                    refNum.includes(query) ||
+                    name.includes(query) ||
+                    phone.includes(query) ||
+                    titleAr.includes(query) ||
+                    titleEn.includes(query)
+                  );
+                }
+
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 p-12 text-center">
+                    <p className="text-neutral-400 text-sm">
+                      {lang === 'ar' 
+                        ? '🚫 لا توجد طلبات حجز مطابقة للخيارات الحالية.' 
+                        : '🚫 No bookings match your selected filters.'}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {filtered.map((b) => {
+                    return (
+                      <motion.div
+                        key={b.id}
+                        layout
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-3xl border border-neutral-800 bg-neutral-900 p-5 sm:p-6 shadow-xl relative overflow-hidden flex flex-col justify-between"
+                      >
+                        {/* Status bar top */}
+                        <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500" />
+                        <div className="flex items-start justify-between gap-4 border-b border-neutral-800 pb-4 mb-4">
+                          <div>
+                            <span className="text-[10px] font-mono tracking-wider text-neutral-400 uppercase">
+                              {lang === 'ar' ? 'رقم حجز مرجعي' : 'REFERENCE NUMBER'}
+                            </span>
+                            <h4 className="text-base font-black text-emerald-400 tracking-wider mt-0.5 select-all font-mono">
+                              {b.refNumber}
+                            </h4>
+                          </div>
+
+                          <span className={`px-3 py-1 rounded-full text-[11px] font-black ${
+                            b.status === 'approved' 
+                              ? 'bg-emerald-500/20 text-emerald-300' 
+                              : b.status === 'rejected'
+                              ? 'bg-red-500/20 text-red-300'
+                              : 'bg-amber-500/20 text-amber-300 animate-pulse'
+                          }`}>
+                            {b.status === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
+                            {b.status === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : 'Rejected')}
+                            {b.status === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending Review')}
+                          </span>
+                        </div>
+
+                        {/* Booking Details */}
+                        <div className="space-y-4 flex-1">
+                          {/* Attendee details */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold">
+                                {lang === 'ar' ? '👤 اسم العميل (كامل بالبطاقة)' : '👤 Full Customer Name'}
+                              </span>
+                              <span className="text-sm font-extrabold text-white mt-1 block">
+                                {b.userName}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold">
+                                {lang === 'ar' ? '📞 رقم الموبايل للتواصل' : '📞 Contact Phone'}
+                              </span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs font-mono font-bold text-white select-all">
+                                  {b.userPhone}
+                                </span>
+                                <a
+                                  href={`tel:${b.userPhone}`}
+                                  className="h-6 w-6 rounded-md bg-neutral-800 hover:bg-neutral-750 flex items-center justify-center text-neutral-300 hover:text-white transition-all"
+                                  title="اتصال مباشر"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                </a>
+                                <a
+                                  href={`https://wa.me/${b.userPhone.replace('+', '').replace(/^0/, '20')}`}
+                                  target="_blank"
+                                  referrerPolicy="no-referrer"
+                                  className="h-6 w-6 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 flex items-center justify-center text-emerald-400 transition-all"
+                                  title="مراسلة واتساب"
+                                >
+                                  <MessageCircle className="h-3 w-3" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Event details */}
+                          <div className="rounded-2xl bg-neutral-950 p-3.5 space-y-2 border border-neutral-800/50">
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold">
+                                {lang === 'ar' ? '🎟️ الفعالية المطلوبة' : '🎟️ Reserved Event'}
+                              </span>
+                              <span className="text-xs font-extrabold text-neutral-200 mt-1 block line-clamp-1">
+                                {lang === 'ar' ? b.eventTitleAr : b.eventTitleEn}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-900 text-center">
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'عدد الأفراد' : 'Guests'}
+                                </span>
+                                <span className="text-xs font-extrabold text-amber-400 mt-0.5 block">
+                                  {b.numberOfIndividuals} {lang === 'ar' ? 'أفراد' : 'people'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'سعر الفرد' : 'Price / Individual'}
+                                </span>
+                                <span className="text-xs font-extrabold text-neutral-300 mt-0.5 block font-mono">
+                                  {b.eventPrice} ج.م
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'الإجمالي المطلوب' : 'Grand Total'}
+                                </span>
+                                <span className="text-xs font-black text-emerald-400 mt-0.5 block font-mono">
+                                  {b.totalAmount} ج.م
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Receipt Image */}
+                          {b.receiptImage && (
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold mb-1.5">
+                                {lang === 'ar' ? '📄 إيصال تحويل فودافون كاش / انستاباي' : '📄 Payment Receipt Screenshot'}
+                              </span>
+                              <div 
+                                onClick={() => setSelectedBookingReceipt(b.receiptImage)}
+                                className="relative rounded-2xl overflow-hidden border border-neutral-800 h-28 bg-neutral-950 hover:border-emerald-500/50 transition-all cursor-zoom-in group"
+                              >
+                                <img
+                                  src={b.receiptImage}
+                                  alt="Payment Receipt"
+                                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-center p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                                    <Eye className="h-3 w-3" />
+                                    {lang === 'ar' ? 'تكبير وعرض الإيصال' : 'View full size'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Status timestamps / codes */}
+                          <div className="text-[10px] text-neutral-400 space-y-1 pt-1">
+                            <div className="flex justify-between">
+                              <span>{lang === 'ar' ? 'تاريخ تقديم الحجز:' : 'Submitted At:'}</span>
+                              <span className="font-mono text-neutral-300">
+                                {new Date(b.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                              </span>
+                            </div>
+                            {b.status === 'approved' && b.accessCode && (
+                              <div className="flex justify-between bg-emerald-500/5 px-2 py-1 rounded-md border border-emerald-500/10">
+                                <span className="text-emerald-300 font-bold">{lang === 'ar' ? 'كود الدخول المعتمد:' : 'Access Code Issued:'}</span>
+                                <span className="font-mono font-black text-emerald-400 select-all tracking-wider">{b.accessCode}</span>
+                              </div>
+                            )}
+                            {b.status === 'rejected' && b.adminNotes && (
+                              <div className="bg-red-500/5 px-2 py-1 rounded-md border border-red-500/10 text-red-300">
+                                <span className="font-bold">{lang === 'ar' ? 'سبب الرفض:' : 'Rejection Note:'} </span>
+                                <span>{b.adminNotes}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        {b.status === 'pending' && (
+                          <div className="border-t border-neutral-800 pt-4 mt-4 space-y-3">
+                            {/* Rejection input toggle */}
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder={lang === 'ar' ? 'أضف ملاحظات أو سبب الرفض هنا...' : 'Enter rejection notes here...'}
+                                value={rejectionReasonMap[b.id] || ''}
+                                onChange={(e) => {
+                                  setRejectionReasonMap(prev => ({
+                                    ...prev,
+                                    [b.id]: e.target.value
+                                  }));
+                                }}
+                                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500 transition-all"
+                              />
+                            </div>
+
+                            <div className="flex gap-3">
+                              <button
+                                onClick={async () => {
+                                  if (actionLoading) return;
+                                  setActionLoading(b.id);
+                                  // Rejection reason
+                                  const reason = rejectionReasonMap[b.id] || (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.');
+                                  await rejectBooking(b.id, reason);
+                                  setActionLoading(null);
+                                }}
+                                disabled={actionLoading !== null}
+                                className="flex-1 bg-neutral-800 hover:bg-red-500/20 hover:text-red-300 text-neutral-300 border border-neutral-700/60 hover:border-red-500/40 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <XCircle className="h-4 w-4 shrink-0" />
+                                <span>{lang === 'ar' ? 'رفض الحجز' : 'Decline Booking'}</span>
+                              </button>
+
+                              <button
+                                onClick={async () => {
+                                  if (actionLoading) return;
+                                  setActionLoading(b.id);
+                                  const code = `DWM-${b.refNumber.replace('#', '')}`;
+                                  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(code)}`;
+                                  await approveBooking(b.id, qr, code, 0, rejectionReasonMap[b.id] || '');
+                                  setActionLoading(null);
+                                }}
+                                disabled={actionLoading !== null}
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-neutral-950 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <CheckCircle className="h-4 w-4 shrink-0" />
+                                <span>{lang === 'ar' ? 'تأكيد الحجز وإصدار التذكرة' : 'Confirm & Issue Ticket'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Booking Receipt Lightbox Modal Overlay */}
+      <AnimatePresence>
+        {selectedBookingReceipt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedBookingReceipt(null)}
+            className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <button
+              onClick={() => setSelectedBookingReceipt(null)}
+              className="absolute top-4 right-4 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full p-2"
+            >
+              <XCircle className="h-6 w-6" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              src={selectedBookingReceipt}
+              alt="Expanded Payment Receipt Screenshot"
+              className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-neutral-800"
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {adminSection === 'database' && (
         <div className="space-y-6 animate-fadeIn">
@@ -1609,7 +2288,7 @@ export const AdminPanel: React.FC = () => {
                   filter === 'approved' ? 'bg-emerald-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                <CheckCircle2 className="h-3.5 w-3.5" />
+                <CheckCircle className="h-3.5 w-3.5" />
                 <span>{lang === 'ar' ? 'المفعلة (مقبول)' : 'Approved'}</span>
                 <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
                   {submissions.filter(s => s.status === 'approved').length}
@@ -1753,14 +2432,23 @@ export const AdminPanel: React.FC = () => {
                 <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
                   <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
                     <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                    <span>{lang === 'ar' ? 'عنوان الإعلان الفاخر:' : 'Ad Title:'}</span>
+                    <span>{lang === 'ar' ? 'عنوان ونوع الإعلان:' : 'Ad Title & Type:'}</span>
                   </span>
                   <span className="text-sm font-bold text-white block truncate">
                     {lang === 'ar' ? sub.titleAr : sub.titleEn}
                   </span>
-                  <span className="text-xs text-amber-300 font-medium block">
-                    {sub.pricing?.days || 3} {lang === 'ar' ? 'أيام ترويج VIP' : 'Days VIP Promo'}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      sub.adType === 'vip' 
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
+                        : 'bg-neutral-800 text-neutral-300 border-neutral-600'
+                    }`}>
+                      {sub.adType === 'vip' ? (lang === 'ar' ? 'VIP مميز' : 'VIP Ad') : (lang === 'ar' ? 'عادي' : 'Standard')}
+                    </span>
+                    <span className="text-xs text-amber-300 font-medium block">
+                      {sub.pricing?.days || 3} {lang === 'ar' ? 'أيام ترويج' : 'Days Promo'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
@@ -2004,7 +2692,7 @@ export const AdminPanel: React.FC = () => {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/40">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <CheckCircle className="h-3.5 w-3.5" />
                             {lang === 'ar' ? 'تم الرد الرسمي' : 'Replied Official'}
                           </span>
                         )}
@@ -2025,7 +2713,7 @@ export const AdminPanel: React.FC = () => {
                     {msg.status === 'replied' && msg.replyText && (
                       <div className="py-2 space-y-2">
                         <span className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <CheckCircle className="h-3.5 w-3.5" />
                           {lang === 'ar' ? `📢 رد الإدارة المُرسل للإشعارات (${msg.repliedAt ? new Date(msg.repliedAt).toLocaleDateString() : ''}):` : '📢 Sent Admin Reply:'}
                         </span>
                         <p className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 text-sm text-emerald-300 leading-relaxed font-medium">
@@ -3267,8 +3955,11 @@ export const AdminPanel: React.FC = () => {
               <div className="flex rounded-2xl bg-neutral-900 p-1 border border-neutral-800 w-full sm:w-auto shrink-0 relative z-10">
                 <button
                   type="button"
-                  onClick={() => setAdminCreateTab('form')}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  onClick={() => {
+                    setAdminCreateTab('form');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     adminCreateTab === 'form'
                       ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
                       : 'text-neutral-400 hover:text-neutral-200'
@@ -3282,8 +3973,9 @@ export const AdminPanel: React.FC = () => {
                   onClick={() => {
                     setAdminCreateTab('preview');
                     setPreviewAlert(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     adminCreateTab === 'preview'
                       ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
                       : 'text-neutral-400 hover:text-neutral-200'
@@ -3295,27 +3987,7 @@ export const AdminPanel: React.FC = () => {
               </div>
             </div>
 
-            {/* Floating Action Button (FAB) for Instant Quick Toggle on Mobile & Desktop - IMPOSSIBLE to miss! */}
-            <div className="fixed bottom-6 left-6 sm:left-12 z-50">
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminCreateTab(adminCreateTab === 'form' ? 'preview' : 'form');
-                  setPreviewAlert(null);
-                }}
-                className="flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-black text-xs sm:text-sm shadow-2xl transition-all hover:scale-105 active:scale-95 border-2 border-indigo-400 animate-pulse cursor-pointer shadow-indigo-500/40"
-              >
-                <Eye className="h-5 w-5 text-indigo-200" />
-                <span>
-                  {adminCreateTab === 'form' 
-                    ? (lang === 'ar' ? '👁️ معاينة الإعلان مباشرة' : '👁️ Preview Ad Now') 
-                    : (lang === 'ar' ? '📝 العودة للنموذج' : '📝 Back to Form')}
-                </span>
-                <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-sans uppercase font-black animate-bounce">
-                  LIVE
-                </span>
-              </button>
-            </div>
+            {/* Removed Floating Action Button per user request to move it near action buttons */}
 
             {adminCreateTab === 'form' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
@@ -3649,6 +4321,34 @@ export const AdminPanel: React.FC = () => {
                     <span>{lang === 'ar' ? '🖼️ صورة أو فيديو الإعلان' : '🖼️ Event Flyer / Video'}</span>
                   </h4>
 
+                  {/* Media type toggle (Image/Video) like the user form */}
+                  <div className="flex bg-neutral-950 p-1 rounded-2xl border border-neutral-800">
+                    <button
+                      type="button"
+                      onClick={() => setAdminMediaType('image')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all ${
+                        adminMediaType === 'image'
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                          : 'text-neutral-500 hover:text-neutral-300'
+                      }`}
+                    >
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      <span>{lang === 'ar' ? 'صورة إعلان' : 'Image Ad'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdminMediaType('video')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all ${
+                        adminMediaType === 'video'
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                          : 'text-neutral-500 hover:text-neutral-300'
+                      }`}
+                    >
+                      <PlayCircle className="h-3.5 w-3.5" />
+                      <span>{lang === 'ar' ? 'فيديو إعلان' : 'Video Ad'}</span>
+                    </button>
+                  </div>
+
                   {/* Media upload area */}
                   <div className="space-y-4">
                     <div className="rounded-2xl border-2 border-dashed border-neutral-800 hover:border-indigo-500/50 bg-neutral-950 p-4 transition-all text-center relative overflow-hidden group">
@@ -3679,6 +4379,7 @@ export const AdminPanel: React.FC = () => {
                               onClick={() => {
                                 setAdminMediaUrl('');
                                 setAdminUploadedFileName(null);
+                                setAdminPendingFile(null);
                               }}
                               className="text-xs text-red-400 hover:text-red-300 font-bold transition-colors cursor-pointer"
                             >
@@ -3707,8 +4408,8 @@ export const AdminPanel: React.FC = () => {
                       <input
                         type="file"
                         ref={adminFileInputRef}
-                        onChange={handleAdminFileUpload}
-                        accept="image/*,video/*"
+                        onChange={handleAdminFileSelect}
+                        accept={adminMediaType === 'video' ? 'video/*' : 'image/*'}
                         className="hidden"
                       />
                     </div>
@@ -3899,7 +4600,20 @@ export const AdminPanel: React.FC = () => {
                         <div className="h-1 w-8 rounded bg-neutral-800" />
                       </div>
                       
-                      <div className="pt-4">
+                    <div className="pt-4 relative group/media">
+                        {/* Quick Media Edit Button */}
+                        <div className={`absolute top-10 z-50 ${lang === 'ar' ? 'right-10' : 'left-10'} animate-pulse`}>
+                          <label className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-indigo-600 text-white text-sm font-black cursor-pointer hover:bg-indigo-500 transition-all shadow-[0_0_30px_rgba(79,70,229,0.8)] backdrop-blur-md border-2 border-white/20">
+                            <Pencil className="h-5 w-5" />
+                            <span>{lang === 'ar' ? 'تعديل الصورة' : 'Edit Image'}</span>
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept={adminMediaType === 'video' ? 'video/*' : 'image/*'}
+                              onChange={handleAdminFileSelect}
+                            />
+                          </label>
+                        </div>
                         <EventCard
                           event={{
                             id: 'preview-id',
@@ -3911,7 +4625,9 @@ export const AdminPanel: React.FC = () => {
                             styles: adminSelectedStyles,
                             mediaType: adminMediaType,
                             mediaUrl: adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
-                            thumbnailUrl: adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                            thumbnailUrl: adminMediaType === 'video' ? 
+                              (adminMediaUrl.includes('cloudinary.com') ? adminMediaUrl.trim().replace(/\.[^.]+$/, '.jpg') : 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200')
+                              : adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
                             uploadDate: new Date().toISOString(),
                             eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
                             priceAr: adminPriceAr.trim() || '250 ج.م',
@@ -3963,69 +4679,613 @@ export const AdminPanel: React.FC = () => {
 
                       <div className="space-y-3.5 text-xs text-neutral-300">
                         {/* Rendered Language title */}
-                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
-                          <span className="text-neutral-400">{lang === 'ar' ? 'الاسم المعروض بالعربية:' : 'Arabic Display Title:'}</span>
-                          <span className="font-extrabold text-white truncate max-w-[220px]">{adminTitleAr || '⚠️ غير مكتمل / Empty'}</span>
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className={`flex items-center gap-3 ${lang === 'ar' ? 'flex-row' : 'flex-row'}`}>
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('titleAr'); setAdminEditValue(adminTitleAr); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الاسم (عربي):' : 'Title (Ar):'}</span>
+                          </div>
+                          {adminEditingField === 'titleAr' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminTitleAr(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminTitleAr(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-white truncate max-w-[220px]">{adminTitleAr || '⚠️ غير مكتمل / Empty'}</span>
+                          )}
                         </div>
 
-                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
-                          <span className="text-neutral-400">{lang === 'ar' ? 'الاسم المعروض بالإنجليزية:' : 'English Display Title:'}</span>
-                          <span className="font-extrabold text-white truncate max-w-[220px]">{adminTitleEn || '⚠️ غير مكتمل / Empty'}</span>
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('titleEn'); setAdminEditValue(adminTitleEn); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الاسم (إنجليزي):' : 'Title (En):'}</span>
+                          </div>
+                          {adminEditingField === 'titleEn' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminTitleEn(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminTitleEn(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-white truncate max-w-[220px]">{adminTitleEn || '⚠️ غير مكتمل / Empty'}</span>
+                          )}
                         </div>
 
                         {/* Venue details */}
-                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
-                          <span className="text-neutral-400">{lang === 'ar' ? 'الموقع المقترح:' : 'Venue Name:'}</span>
-                          <span className="font-extrabold text-indigo-300">
-                            {previewLang === 'ar' ? adminLocationNameAr : adminLocationNameEn}
-                          </span>
-                        </div>
-
-                        {/* Price rendering */}
-                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
-                          <span className="text-neutral-400">{lang === 'ar' ? 'السعر المدخل للراقصين:' : 'Ticket / Price Tag:'}</span>
-                          <span className="font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
-                            {previewLang === 'ar' ? adminPriceAr : adminPriceEn}
-                          </span>
-                        </div>
-
-                        {/* Event Date */}
-                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
-                          <span className="text-neutral-400">{lang === 'ar' ? 'تاريخ الحفلة أو الكورس:' : 'Scheduled Date:'}</span>
-                          <span className="font-mono font-black text-white">{adminEventDate || '⚠️ لم يحدد بعد / Missing'}</span>
-                        </div>
-
-                        {/* Location map coordinates status */}
-                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
-                          <span className="text-neutral-400">{lang === 'ar' ? 'تثبيت إحداثيات الخريطة (GPS):' : 'GPS Map Coordinates:'}</span>
-                          {adminGoogleMapsUrl ? (
-                            <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded">
-                              DETECTED OK ✔
-                            </span>
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { 
+                                setAdminEditingField('location'); 
+                                setAdminEditValue(previewLang === 'ar' ? adminLocationNameAr : adminLocationNameEn); 
+                              }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الموقع:' : 'Venue:'}</span>
+                          </div>
+                          {adminEditingField === 'location' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (previewLang === 'ar') setAdminLocationNameAr(adminEditValue);
+                                    else setAdminLocationNameEn(adminEditValue);
+                                    setAdminEditingField(null);
+                                  }
+                                }}
+                              />
+                              <button type="button" onClick={() => { 
+                                if (previewLang === 'ar') setAdminLocationNameAr(adminEditValue);
+                                else setAdminLocationNameEn(adminEditValue);
+                                setAdminEditingField(null);
+                              }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
                           ) : (
-                            <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded">
-                              DEFAULTED CAIRO
+                            <span className="font-extrabold text-indigo-300">
+                              {previewLang === 'ar' ? adminLocationNameAr : adminLocationNameEn}
                             </span>
                           )}
                         </div>
 
+                        {/* Price rendering */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { 
+                                setAdminEditingField('price'); 
+                                setAdminEditValue(previewLang === 'ar' ? adminPriceAr : adminPriceEn); 
+                              }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'السعر:' : 'Price:'}</span>
+                          </div>
+                          {adminEditingField === 'price' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-24 px-1"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (previewLang === 'ar') setAdminPriceAr(adminEditValue);
+                                    else setAdminPriceEn(adminEditValue);
+                                    setAdminEditingField(null);
+                                  }
+                                }}
+                              />
+                              <button type="button" onClick={() => { 
+                                if (previewLang === 'ar') setAdminPriceAr(adminEditValue);
+                                else setAdminPriceEn(adminEditValue);
+                                setAdminEditingField(null);
+                              }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+                              {previewLang === 'ar' ? adminPriceAr : adminPriceEn}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Scheduled Date */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('date'); setAdminEditValue(adminEventDate); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'التاريخ:' : 'Date:'}</span>
+                          </div>
+                          {adminEditingField === 'date' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="date" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[10px] outline-none px-1"
+                                autoFocus
+                              />
+                              <button type="button" onClick={() => { setAdminEventDate(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-mono font-black text-white">{adminEventDate || '⚠️ لم يحدد بعد / Missing'}</span>
+                          )}
+                        </div>
+
+                        {/* Description Ar */}
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('descAr'); setAdminEditValue(adminDescAr); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الوصف (عربي):' : 'Desc (Ar):'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'descAr' ? (
+                            <div className="flex flex-col gap-2 bg-neutral-900 border border-indigo-500/50 p-2 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200 w-full">
+                              <textarea 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[11px] outline-none w-full min-h-[80px] resize-none"
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2 border-t border-neutral-800 pt-2">
+                                <button type="button" onClick={() => setAdminEditingField(null)} className="text-xs text-neutral-500 hover:text-white px-2 py-1">
+                                  {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => { setAdminDescAr(adminEditValue); setAdminEditingField(null); }} 
+                                  className="text-xs bg-indigo-500 text-white px-3 py-1 rounded-md font-bold"
+                                >
+                                  {lang === 'ar' ? 'حفظ' : 'Save'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-neutral-400 leading-relaxed text-right line-clamp-2">
+                              {adminDescAr || '⚠️ غير مكتمل / Empty'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Description En */}
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('descEn'); setAdminEditValue(adminDescEn); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الوصف (إنجليزي):' : 'Desc (En):'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'descEn' ? (
+                            <div className="flex flex-col gap-2 bg-neutral-900 border border-indigo-500/50 p-2 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200 w-full">
+                              <textarea 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[11px] outline-none w-full min-h-[80px] resize-none"
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2 border-t border-neutral-800 pt-2">
+                                <button type="button" onClick={() => setAdminEditingField(null)} className="text-xs text-neutral-500 hover:text-white px-2 py-1">
+                                  {lang === 'ar' ? 'Cancel' : 'إلغاء'}
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => { setAdminDescEn(adminEditValue); setAdminEditingField(null); }} 
+                                  className="text-xs bg-indigo-500 text-white px-3 py-1 rounded-md font-bold"
+                                >
+                                  {lang === 'ar' ? 'Save' : 'حفظ'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-neutral-400 leading-relaxed line-clamp-2">
+                              {adminDescEn || '⚠️ Empty / غير مكتمل'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Category */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('category'); setAdminEditValue(adminCategory); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'النوع:' : 'Category:'}</span>
+                          </div>
+                          {adminEditingField === 'category' ? (
+                            <div className="flex items-center gap-1 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl">
+                              {(['party', 'course', 'trip'] as DanceCategory[]).map((cat) => (
+                                <button
+                                  type="button"
+                                  key={cat}
+                                  onClick={() => { setAdminCategory(cat); setAdminEditingField(null); }}
+                                  className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                                    adminCategory === cat ? 'bg-indigo-500 text-white' : 'text-neutral-400 hover:bg-neutral-800'
+                                  }`}
+                                >
+                                  {cat === 'party' ? '🎉' : cat === 'course' ? '🎓' : '✈️'}
+                                </button>
+                              ))}
+                              <button type="button" onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white ml-1">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 uppercase">
+                              {adminCategory}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Styles */}
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('styles'); setAdminEditValue(adminSelectedStyles.join(', ')); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الأنماط:' : 'Styles:'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'styles' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl w-full">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                placeholder="Salsa, Bachata, ..."
+                                className="bg-transparent text-white text-[10px] outline-none w-full px-1"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const styles = adminEditValue.split(',').map(s => s.trim()) as DanceStyle[];
+                                    setAdminSelectedStyles(styles.filter(s => s.length > 0));
+                                    setAdminEditingField(null);
+                                  }
+                                }}
+                              />
+                              <button type="button" onClick={() => { 
+                                const styles = adminEditValue.split(',').map(s => s.trim()) as DanceStyle[];
+                                setAdminSelectedStyles(styles.filter(s => s.length > 0));
+                                setAdminEditingField(null);
+                              }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {adminSelectedStyles.map(s => (
+                                <span key={s} className="text-[9px] px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Organizer Name */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('organizer'); setAdminEditValue(adminOrganizerName); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'المنظم:' : 'Organizer:'}</span>
+                          </div>
+                          {adminEditingField === 'organizer' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminOrganizerName(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminOrganizerName(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-white truncate max-w-[150px]">{adminOrganizerName}</span>
+                          )}
+                        </div>
+
+                        {/* Phone */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('phone'); setAdminEditValue(adminPhone); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الهاتف:' : 'Phone:'}</span>
+                          </div>
+                          {adminEditingField === 'phone' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="tel" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1 font-mono"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminPhone(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminPhone(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-mono text-white">{adminPhone}</span>
+                          )}
+                        </div>
+
+                        {/* WhatsApp */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('whatsapp'); setAdminEditValue(adminWhatsapp); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'واتساب:' : 'WhatsApp:'}</span>
+                          </div>
+                          {adminEditingField === 'whatsapp' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1 font-mono"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminWhatsapp(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminWhatsapp(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-mono text-white">{adminWhatsapp}</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('addressAr'); setAdminEditValue(adminAddressAr); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'العنوان (عربي):' : 'Address (Ar):'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'addressAr' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl w-full">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[10px] outline-none w-full px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminAddressAr(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminAddressAr(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-neutral-400 text-right">{adminAddressAr || '⚠️ غير مكتمل'}</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group text-left hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('addressEn'); setAdminEditValue(adminAddressEn); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'العنوان (إنجليزي):' : 'Address (En):'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'addressEn' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl w-full">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[10px] outline-none w-full px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminAddressEn(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminAddressEn(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-neutral-400">{adminAddressEn || '⚠️ Empty'}</span>
+                          )}
+                        </div>
+
+                        {/* Location map coordinates status */}
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('mapsUrl'); setAdminEditValue(adminGoogleMapsUrl); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الخريطة:' : 'Map:'}</span>
+                            </div>
+                            {adminGoogleMapsUrl ? (
+                              <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                                OK ✔
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                                MISSING
+                              </span>
+                            )}
+                          </div>
+                          {adminEditingField === 'mapsUrl' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl w-full">
+                              <input 
+                                type="url" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[10px] outline-none w-full px-1 font-mono"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminGoogleMapsUrl(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminGoogleMapsUrl(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[9px] text-neutral-500 truncate font-mono">{adminGoogleMapsUrl || 'No Link Provided'}</span>
+                          )}
+                        </div>
+
                         {/* Featured Toggles details */}
-                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60">
-                          <span className="text-neutral-400">{lang === 'ar' ? 'المظهر الإداري الخاص (VIP):' : 'VIP featured options:'}</span>
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60 group">
+                          <div className="flex items-center gap-2">
+                            <span className="text-neutral-400">{lang === 'ar' ? 'المظهر الإداري الخاص (VIP):' : 'VIP featured options:'}</span>
+                          </div>
                           <div className="flex gap-1">
-                            {adminIsFeatured && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                                Featured VIP card
-                              </span>
-                            )}
-                            {adminIsWeeklyPromo && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
-                                Slide banner (top)
-                              </span>
-                            )}
-                            {!adminIsFeatured && !adminIsWeeklyPromo && (
-                              <span className="text-[10px] text-neutral-500">Standard Feed Post</span>
-                            )}
+                            <button 
+                              onClick={() => setAdminIsFeatured(!adminIsFeatured)}
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded border transition-all cursor-pointer ${
+                                adminIsFeatured ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-neutral-900 text-neutral-600 border-neutral-800'
+                              }`}
+                            >
+                              Featured VIP
+                            </button>
+                            <button 
+                              onClick={() => setAdminIsWeeklyPromo(!adminIsWeeklyPromo)}
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded border transition-all cursor-pointer ${
+                                adminIsWeeklyPromo ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40' : 'bg-neutral-900 text-neutral-600 border-neutral-800'
+                              }`}
+                            >
+                              Slide Banner
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -4049,35 +5309,64 @@ export const AdminPanel: React.FC = () => {
             )}
 
             {/* Bottom Action Footer Bar */}
-            <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-5 shadow-xl flex flex-col sm:flex-row items-center gap-4">
               <button
                 type="button"
                 onClick={() => {
                   setAdminSection(null);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-sm font-extrabold transition-all cursor-pointer text-center"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs sm:text-sm font-extrabold transition-all cursor-pointer text-center"
               >
-                {lang === 'ar' ? '❌ إلغاء والعودة للوحة الإدارة' : '❌ Cancel & Return'}
+                {lang === 'ar' ? '❌ إلغاء' : '❌ Cancel'}
               </button>
 
-              <button
-                type="submit"
-                disabled={adminSaveStatus === 'loading' || adminIsUploadingMedia}
-                className="w-full sm:w-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-500 text-white font-black text-sm shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {adminSaveStatus === 'loading' ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>{lang === 'ar' ? 'جاري الحفظ والنشر...' : 'Publishing to Firestore...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    <span>{lang === 'ar' ? '🚀 نشر الإعلان فوراً وبث التنبيهات' : '🚀 Publish Event & Broadcast Now'}</span>
-                  </>
-                )}
-              </button>
+              <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminCreateTab(adminCreateTab === 'form' ? 'preview' : 'form');
+                    setPreviewAlert(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex-1 rounded-2xl py-2.5 px-6 text-xs sm:text-sm font-bold bg-neutral-950 text-indigo-400 border border-indigo-500/30 hover:bg-neutral-800 transition-all flex items-center justify-center gap-2.5 shadow-xl"
+                >
+                  <Eye className="h-4.5 w-4.5" />
+                  <span>
+                    {adminCreateTab === 'form' 
+                      ? (lang === 'ar' ? 'معاينة الإعلان (Live)' : 'Live Preview Ad') 
+                      : (lang === 'ar' ? 'العودة للتعديل' : 'Back to Editing')}
+                  </span>
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={adminSaveStatus === 'loading' || adminIsUploadingMedia}
+                  className="flex-[2] px-10 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {adminSaveStatus === 'loading' ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>{lang === 'ar' ? 'جاري الحفظ...' : 'Saving...'}</span>
+                      </div>
+                      {adminUploadProgress > 0 && adminUploadProgress < 100 && (
+                        <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-white transition-all duration-300" 
+                            style={{ width: `${adminUploadProgress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      <span>{lang === 'ar' ? '🚀 نشر الإعلان فوراً' : '🚀 Publish Now'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
           </form>

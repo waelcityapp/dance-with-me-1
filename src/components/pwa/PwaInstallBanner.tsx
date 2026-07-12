@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Sparkles, Download, CheckCircle2, ShieldCheck, X, Smartphone, BookOpen } from 'lucide-react';
+import { Sparkles, Download, CheckCircle, ShieldCheck, X, Smartphone, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PwaInstallBannerProps {

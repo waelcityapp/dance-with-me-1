@@ -67,5 +67,37 @@ service cloud.firestore {
       // Only the admin can read or manage violations
       allow read, update, delete: if isAdmin();
     }
+
+    // 8. App Config Collection
+    match /app_config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 9. App Assets Collection
+    match /app_assets/{assetId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 10. Bookings Collection
+    match /bookings/{bookingId} {
+      // Anyone can create a booking
+      allow create: if true;
+      // Admin can manage everything, and users can read or update their own bookings
+      allow read, update: if isAdmin() || (isSignedIn() && (resource == null || resource.data.userId == request.auth.uid));
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // 11. Analytics Collections
+    match /analytics/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /analytics_daily/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }

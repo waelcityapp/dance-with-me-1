@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, MessageSquare, Send, CheckCircle2, ShieldCheck, Sparkles, User } from 'lucide-react';
+import { X, MessageSquare, Send, CheckCircle, ShieldCheck, Sparkles, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SupportModalProps {
@@ -90,7 +90,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
                 className="text-center space-y-6 py-4"
               >
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 mx-auto border border-emerald-500/30 shadow-lg gold-glow">
-                  <CheckCircle2 className="h-10 w-10" />
+                  <CheckCircle className="h-10 w-10" />
                 </div>
 
                 <div className="space-y-2">

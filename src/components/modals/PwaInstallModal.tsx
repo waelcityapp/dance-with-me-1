@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, Smartphone, Share, PlusSquare, MoreVertical, Download, CheckCircle2, ShieldCheck, Apple, Chrome } from 'lucide-react';
+import { X, Smartphone, Share, PlusSquare, MoreVertical, Download, CheckCircle, ShieldCheck, Apple, Chrome } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 
