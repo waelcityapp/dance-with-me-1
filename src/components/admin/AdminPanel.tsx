@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   Image as ImageIcon,
   PlayCircle,
+  Ticket,
   Database,
   Server,
   Plus,
@@ -49,7 +50,7 @@ import {
   TrendingUp,
   MousePointerClick,
   Bell
-} from 'lucide-react';
+, Maximize2, Minimize2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle } from '../../types';
 import { EventCard } from '../events/EventCard';
@@ -69,8 +70,10 @@ import {
   resolvedFirebaseConfig,
   databaseId,
   subscribeToAnalyticsCounters,
-  subscribeToDailyAnalytics
+  subscribeToDailyAnalytics, reorderAdsStartingFrom20
 } from '../../lib/firebase';
+
+import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
 
 export const AdminPanel: React.FC = () => {
   const { 
@@ -90,7 +93,9 @@ export const AdminPanel: React.FC = () => {
     updatePricingConfig,
     bookings,
     approveBooking,
-    rejectBooking
+    rejectBooking,
+    deleteBooking,
+    triggerConfirm
   } = useApp();
   const [submissions, setSubmissions] = useState<AdSubmission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +113,9 @@ export const AdminPanel: React.FC = () => {
   const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | 'pricing' | 'analytics' | 'create_ad_admin' | 'bookings' | null>(null);
   const [dbSubTab, setDbSubTab] = useState<'events' | 'submissions' | 'notifications' | 'schema'>('events');
   const [selectedJsonDoc, setSelectedJsonDoc] = useState<{ id: string; title: string; data: any } | null>(null);
+  const [viewingAttendeesEvent, setViewingAttendeesEvent] = useState<DanceEvent | null>(null);
+  
+  const [submissionPositions, setSubmissionPositions] = useState<Record<string, number | ''>>({});
   
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [usersSubTab, setUsersSubTab] = useState<'search' | 'all'>('all');
@@ -145,10 +153,23 @@ export const AdminPanel: React.FC = () => {
   const [formAppLogoUrl, setFormAppLogoUrl] = useState('');
   const [formWhatsappSupport, setFormWhatsappSupport] = useState('');
   const [formInstagramUrl, setFormInstagramUrl] = useState('');
+  const [formPromoTitleAr, setFormPromoTitleAr] = useState('');
+  const [formPromoTitleEn, setFormPromoTitleEn] = useState('');
+  const [formPromoSubtitleAr, setFormPromoSubtitleAr] = useState('');
+  const [formPromoSubtitleEn, setFormPromoSubtitleEn] = useState('');
+  const [formPromoBadgeAr, setFormPromoBadgeAr] = useState('');
+  const [formPromoBadgeEn, setFormPromoBadgeEn] = useState('');
   const [savingBranding, setSavingBranding] = useState(false);
+  const [isUploadingIcon, setIsUploadingIcon] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [localPricingConfig, setLocalPricingConfig] = useState(pricingConfig);
   const [savingPricing, setSavingPricing] = useState(false);
   useEffect(() => { setLocalPricingConfig(pricingConfig); }, [pricingConfig]);
+
+  // Booked Ads Review & Cancellations State
+  const [viewingBookedAds, setViewingBookedAds] = useState(false);
+  const [selectedBookedAdId, setSelectedBookedAdId] = useState<string | null>(null);
+  const [viewingCancellationRequests, setViewingCancellationRequests] = useState(false);
 
   // Analytics States
   const [analyticsCounters, setAnalyticsCounters] = useState<any>({});
@@ -174,13 +195,32 @@ export const AdminPanel: React.FC = () => {
   const [adminAddressEn, setAdminAddressEn] = useState('Cairo, Egypt');
   const [adminGoogleMapsUrl, setAdminGoogleMapsUrl] = useState('https://maps.google.com/?q=30.0444,31.2357');
   const [adminSelectedStyles, setAdminSelectedStyles] = useState<DanceStyle[]>(['Salsa', 'Bachata']);
-  const [adminPosition, setAdminPosition] = useState<number>(1);
+  const [adminPosition, setAdminPosition] = useState<string>('');
+  const [adminPositionWarningShown, setAdminPositionWarningShown] = useState<boolean>(false);
+  const [submissionPositionWarnings, setSubmissionPositionWarnings] = useState<Record<string, boolean>>({});
+  const [hasAutoSetPosition, setHasAutoSetPosition] = useState(false);
+
+  useEffect(() => {
+    if (!hasAutoSetPosition && events.length > 0) {
+      const maxPos = events.reduce((max, ev) => {
+        const p = ev.position;
+        if (typeof p === 'number' && p !== 999999) {
+          return p > max ? p : max;
+        }
+        return max;
+      }, 0);
+      setAdminPosition(String(Math.max(20, maxPos + 1)));
+      setHasAutoSetPosition(true);
+    }
+  }, [events, hasAutoSetPosition]);
   const [adminIsWeeklyPromo, setAdminIsWeeklyPromo] = useState(false);
   const [adminIsFeatured, setAdminIsFeatured] = useState(true);
+  const [adminEventsFilter, setAdminEventsFilter] = useState<'all' | 'empty' | 'paused' | 'active' | 'available'>('all');
   
   // Quick Edit States
   const [adminEditingField, setAdminEditingField] = useState<string | null>(null);
   const [adminEditValue, setAdminEditValue] = useState('');
+  const [isFullscreenEvents, setIsFullscreenEvents] = useState(false);
 
   // Media Upload States for Admin Create Ad
   const [adminUploadedFileName, setAdminUploadedFileName] = useState<string | null>(null);
@@ -207,6 +247,12 @@ export const AdminPanel: React.FC = () => {
       setFormAppLogoUrl(appAssets.app_logo_url || '');
       setFormWhatsappSupport(appAssets.whatsappSupport || '');
       setFormInstagramUrl(appAssets.instagramUrl || '');
+      setFormPromoTitleAr(appAssets.promoTitleAr || '');
+      setFormPromoTitleEn(appAssets.promoTitleEn || '');
+      setFormPromoSubtitleAr(appAssets.promoSubtitleAr || '');
+      setFormPromoSubtitleEn(appAssets.promoSubtitleEn || '');
+      setFormPromoBadgeAr(appAssets.promoBadgeAr || '');
+      setFormPromoBadgeEn(appAssets.promoBadgeEn || '');
     }
   }, [appAssets]);
 
@@ -276,9 +322,24 @@ export const AdminPanel: React.FC = () => {
     });
   };
 
-  const handleAdminFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAdminFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const processUpload = async (fileToUpload: File, type: 'video' | 'image') => {
+        setAdminUploadedFileName(fileToUpload.name);
+        setAdminMediaType(type);
+        setAdminMediaUrl(URL.createObjectURL(fileToUpload));
+        try {
+          const finalUrl = await performAdminMediaUpload(fileToUpload);
+          setAdminMediaUrl(finalUrl);
+          setAdminPendingFile(null);
+        } catch (err: any) {
+          alert(lang === 'ar' ? `❌ فشل رفع الوسائط: ${err.message}` : `❌ Media upload failed: ${err.message}`);
+          setAdminMediaUrl('');
+          setAdminPendingFile(null);
+        }
+      };
+
       if (file.type.startsWith('video/')) {
         const video = document.createElement('video');
         video.preload = 'metadata';
@@ -292,11 +353,7 @@ export const AdminPanel: React.FC = () => {
             return;
           }
           // Video is valid duration
-          setAdminPendingFile(file);
-          setAdminUploadedFileName(file.name);
-          setAdminMediaType('video');
-          const previewUrl = URL.createObjectURL(file);
-          setAdminMediaUrl(previewUrl);
+          processUpload(file, 'video');
         };
         video.onerror = () => {
           window.URL.revokeObjectURL(video.src);
@@ -305,13 +362,7 @@ export const AdminPanel: React.FC = () => {
         video.src = URL.createObjectURL(file);
       } else {
         // Handle images normally
-        setAdminPendingFile(file);
-        setAdminUploadedFileName(file.name);
-        setAdminMediaType('image');
-        
-        // Create local preview URL
-        const previewUrl = URL.createObjectURL(file);
-        setAdminMediaUrl(previewUrl);
+        processUpload(file, 'image');
       }
     }
   };
@@ -322,6 +373,10 @@ export const AdminPanel: React.FC = () => {
     setAdminUploadError(null);
     
     try {
+      if (!cloudinaryCloudName || !cloudinaryUploadPreset) {
+        throw new Error('Cloudinary configuration missing (VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET). Please use the manual URL input below.');
+      }
+      
       let fileToUpload = file;
       if (file.type.startsWith('image/')) {
         try {
@@ -410,6 +465,11 @@ export const AdminPanel: React.FC = () => {
 
   const handleAdminPublish = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!adminPosition && !adminPositionWarningShown) {
+      alert(lang === 'ar' ? '⚠️ الرجاء إدخال الرقم التسلسلي (الترتيب). إذا كنت متأكداً من النشر بدون ترتيب، اضغط على نشر مرة أخرى.' : '⚠️ Please enter a Position number. If you are sure you want to publish without a position, click publish again.');
+      setAdminPositionWarningShown(true);
+      return;
+    }
     if (!adminTitleAr.trim() || !adminTitleEn.trim()) {
       alert(lang === 'ar' ? 'الرجاء إدخال اسم الفعالية بالعربية والإنجليزية' : 'Please input both Arabic and English Titles.');
       return;
@@ -427,22 +487,8 @@ export const AdminPanel: React.FC = () => {
     try {
       let finalMediaUrl = adminMediaUrl.trim();
       
-      // Perform actual upload only now if there is a pending file
-      if (adminPendingFile) {
-        try {
-          finalMediaUrl = await performAdminMediaUpload(adminPendingFile);
-          setAdminMediaUrl(finalMediaUrl);
-          setAdminPendingFile(null); // Clear pending file after successful upload
-        } catch (uploadErr: any) {
-          console.error('Failed to upload media during publish:', uploadErr);
-          setAdminSaveStatus('error');
-          alert(lang === 'ar' ? `❌ فشل رفع الوسائط: ${uploadErr.message}` : `❌ Media upload failed: ${uploadErr.message}`);
-          return;
-        }
-      }
-
       if (!finalMediaUrl) {
-        finalMediaUrl = 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200';
+        finalMediaUrl = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
       }
 
       // Generate a proper thumbnailUrl for videos from Cloudinary
@@ -452,7 +498,7 @@ export const AdminPanel: React.FC = () => {
         finalThumbnailUrl = finalMediaUrl.replace(/\.[^.]+$/, '.jpg');
       } else if (adminMediaType === 'video') {
         // Fallback for non-cloudinary videos (though we mostly use cloudinary)
-        finalThumbnailUrl = 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200';
+        finalThumbnailUrl = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
       }
 
       const coords = parseAdminCoordinates(adminGoogleMapsUrl);
@@ -491,7 +537,7 @@ export const AdminPanel: React.FC = () => {
         likesCount: 15,
         isFeatured: adminIsFeatured,
         isWeeklyPromo: adminIsWeeklyPromo,
-        position: Number(adminPosition) || 999999
+        position: adminPosition ? Number(adminPosition) : 999999
       };
 
       // Save to Firestore
@@ -523,7 +569,7 @@ export const AdminPanel: React.FC = () => {
       setAdminMediaUrl('');
       setAdminUploadedFileName(null);
       setAdminPendingFile(null);
-      setAdminPosition(1);
+      setHasAutoSetPosition(false);
       
       // Navigate to DB inspect
       setAdminSection('database');
@@ -537,6 +583,51 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleUploadBrandingImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'icon' | 'logo') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert(lang === 'ar' ? 'الرجاء اختيار صورة.' : 'Please select an image.');
+      return;
+    }
+
+    if (type === 'icon') {
+      setIsUploadingIcon(true);
+    } else {
+      setIsUploadingLogo(true);
+    }
+
+    try {
+      const compressedFile = await compressImage(file);
+      const url = await uploadToCloudinary(compressedFile);
+
+      if (url) {
+        if (type === 'icon') {
+          // Delete old icon if it's on Cloudinary
+          if (formAppIconUrl && formAppIconUrl.includes('cloudinary.com') && formAppIconUrl !== appAssets?.app_icon_url) {
+             deleteFromCloudinary(formAppIconUrl, 'image').catch(console.error);
+          }
+          setFormAppIconUrl(url);
+        } else {
+          // Delete old logo if it's on Cloudinary
+          if (formAppLogoUrl && formAppLogoUrl.includes('cloudinary.com') && formAppLogoUrl !== appAssets?.app_logo_url) {
+             deleteFromCloudinary(formAppLogoUrl, 'image').catch(console.error);
+          }
+          setFormAppLogoUrl(url);
+        }
+      } else {
+        alert(lang === 'ar' ? 'فشل رفع الصورة.' : 'Failed to upload image.');
+      }
+    } catch (err) {
+      console.error('Error uploading branding image:', err);
+      alert(lang === 'ar' ? 'حدث خطأ أثناء رفع الصورة.' : 'An error occurred during upload.');
+    } finally {
+      setIsUploadingIcon(false);
+      setIsUploadingLogo(false);
+    }
+  };
+
   const handleSaveBranding = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingBranding(true);
@@ -546,7 +637,13 @@ export const AdminPanel: React.FC = () => {
       app_icon_url: formAppIconUrl.trim(),
       app_logo_url: formAppLogoUrl.trim(),
       whatsappSupport: formWhatsappSupport.trim(),
-      instagramUrl: formInstagramUrl.trim()
+      instagramUrl: formInstagramUrl.trim(),
+      promoTitleAr: formPromoTitleAr.trim(),
+      promoTitleEn: formPromoTitleEn.trim(),
+      promoSubtitleAr: formPromoSubtitleAr.trim(),
+      promoSubtitleEn: formPromoSubtitleEn.trim(),
+      promoBadgeAr: formPromoBadgeAr.trim(),
+      promoBadgeEn: formPromoBadgeEn.trim()
     };
     const ok = await updateBrandingAssets(updated);
     setSavingBranding(false);
@@ -601,6 +698,18 @@ export const AdminPanel: React.FC = () => {
       console.error(e);
     } finally {
       setCleaningUp(false);
+    }
+  };
+
+  const handleReorderAds = async () => {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من إعادة ترتيب كل الإعلانات لتبدأ من 20 (مع الاحتفاظ بالبانر رقم 1)؟' : 'Are you sure you want to reorder all ads to start from 20 (keeping banner #1)?');
+    if (!confirmed) return;
+    try {
+      await reorderAdsStartingFrom20();
+      alert(lang === 'ar' ? 'تمت إعادة ترتيب الإعلانات بنجاح. قد تحتاج لتحديث الصفحة لرؤية التغييرات.' : 'Ads reordered successfully. You may need to refresh the page to see changes.');
+    } catch (error) {
+      console.error(error);
+      alert('Error reordering ads.');
     }
   };
 
@@ -707,60 +816,35 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleApprove = async (sub: AdSubmission) => {
+    if ((submissionPositions[sub.id] === undefined || submissionPositions[sub.id] === '') && !submissionPositionWarnings[sub.id]) {
+      alert(lang === 'ar' ? '⚠️ الرجاء إدخال الرقم التسلسلي (الترتيب). إذا كنت متأكداً من النشر بدون ترتيب، اضغط على "قبول ونشر" مرة أخرى.' : '⚠️ Please enter a Position number. If you are sure you want to publish without a position, click approve again.');
+      setSubmissionPositionWarnings(prev => ({ ...prev, [sub.id]: true }));
+      return;
+    }
+
     setActionLoading(sub.id);
     try {
+      const positionValue = submissionPositions[sub.id] !== undefined && submissionPositions[sub.id] !== '' ? Number(submissionPositions[sub.id]) : (sub.eventData?.position || Number(adminPosition) || 999999);
+
       // 1. Create or save the actual event if eventData exists
+      let eventId = '';
       if (sub.eventData) {
-        const eventId = `ev_vip_${Date.now()}`;
+        eventId = sub.eventData.id || `ev_${sub.adType || 'vip'}_${Date.now()}`;
         const newEv: DanceEvent = {
+          ...sub.eventData,
           id: eventId,
           titleAr: sub.eventData.titleAr || sub.titleAr,
           titleEn: sub.eventData.titleEn || sub.titleEn,
-          descriptionAr: sub.eventData.descriptionAr || 'سهرة سالسا وباتشاتا ملكية مميزة تحت إشراف أفضل المدربين.',
-          descriptionEn: sub.eventData.descriptionEn || 'Royal Latin Salsa & Bachata social night with top instructors.',
-          category: (sub.eventData.category || sub.category || 'party') as any,
-          styles: sub.eventData.styles || sub.styles || ['Salsa', 'Bachata'],
-          mediaType: sub.eventData.mediaType || sub.mediaType || 'image',
-          mediaUrl: sub.eventData.mediaUrl || sub.mediaUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
-          thumbnailUrl: sub.eventData.thumbnailUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
-          uploadDate: new Date().toISOString(),
-          eventDate: sub.eventData.eventDate || new Date(Date.now() + 86400000 * 3).toISOString(),
-          priceAr: sub.eventData.priceAr || '250 جنيه',
-          priceEn: sub.eventData.priceEn || '250 EGP',
-          location: sub.eventData.location || {
-            nameAr: 'نادي القاهرة اللاتيني VIP',
-            nameEn: 'Cairo Latin Club VIP',
-            addressAr: 'القاهرة، مصر',
-            addressEn: 'Cairo, Egypt',
-            googleMapsUrl: 'https://maps.google.com/?q=30.0444,31.2357',
-            lat: 30.0444,
-            lng: 31.2357
-          },
-          contact: sub.eventData.contact || {
-            phone: sub.phone,
-            whatsapp: sub.phone,
-            organizerName: sub.advertiserName
-          },
-          likesCount: 15,
-          isFeatured: true,
-          isWeeklyPromo: true
-        };
-
-        // Add to state and save to Firestore
-        addNewEvent(newEv);
-        await saveEventToFirestore(newEv);
-      } else if (sub.eventData) {
-        const newEv: DanceEvent = {
-          ...sub.eventData,
-          id: `ad_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           uploadDate: new Date().toISOString(),
           likesCount: 15,
           isFeatured: sub.adType === 'vip' || sub.eventData?.adType === 'vip',
-          isWeeklyPromo: sub.adType === 'vip' || sub.eventData?.adType === 'vip',
+          isWeeklyPromo: positionValue === 1, // dynamically set weekly promo based on position
+          position: positionValue,
           adType: sub.adType || sub.eventData?.adType || 'standard'
         } as DanceEvent;
+
+        // Add to state (this also saves to Firestore internally)
         addNewEvent(newEv);
-        await saveEventToFirestore(newEv);
       }
 
       // 2. Update submission status in Firestore with expiration timestamp
@@ -773,9 +857,9 @@ export const AdminPanel: React.FC = () => {
         reviewedAt: new Date().toISOString(),
         expiresAt: expiresAtDate
       };
-      updateLocalStorageItem(updated);
+      
+      if (eventId && updated.eventData) { updated.eventData.id = eventId; } updateLocalStorageItem(updated);
       await saveAdSubmissionToFirestore(updated);
-
     } catch (err) {
       console.error('Error approving ad:', err);
     } finally {
@@ -791,7 +875,7 @@ export const AdminPanel: React.FC = () => {
         status: 'archived',
         archivedAt: new Date().toISOString()
       };
-      updateLocalStorageItem(updated);
+      
       await saveAdSubmissionToFirestore(updated);
 
     } finally {
@@ -825,7 +909,7 @@ export const AdminPanel: React.FC = () => {
         userRead: false,
         reviewedAt: new Date().toISOString()
       };
-      updateLocalStorageItem(updated);
+      
       await saveAdSubmissionToFirestore(updated);
 
     } finally {
@@ -834,7 +918,8 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm(lang === 'ar' ? 'هل أنت متأكد من حذف هذا السجل؟' : 'Are you sure you want to delete this record?')) {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من حذف هذا السجل؟' : 'Are you sure you want to delete this record?');
+    if (confirmed) {
       updateLocalStorageItem(null, id);
       await deleteAdSubmissionFromFirestore(id);
     }
@@ -911,7 +996,8 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteAllNotifications = async () => {
-    if (window.confirm(lang === 'ar' ? 'هل أنت متأكد من حذف جميع الإشعارات السابقة من قاعدة البيانات؟ لا يمكن التراجع عن هذه العملية.' : 'Are you sure you want to delete all previous notifications from the database? This cannot be undone.')) {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من حذف جميع الإشعارات السابقة من قاعدة البيانات؟ لا يمكن التراجع عن هذه العملية.' : 'Are you sure you want to delete all previous notifications from the database? This cannot be undone.');
+    if (confirmed) {
       setNotifSending(true);
       try {
         await deleteAllNotificationsFromFirestore();
@@ -928,6 +1014,132 @@ export const AdminPanel: React.FC = () => {
     <div className="w-full max-w-5xl mx-auto pt-2 pb-36 sm:pb-44" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       {/* Receipt & JSON Preview Modals */}
       <AnimatePresence>
+        {viewingAttendeesEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="relative max-w-4xl w-full max-h-[85vh] rounded-3xl overflow-hidden bg-neutral-900 border border-indigo-500/40 p-5 shadow-2xl flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Ticket className="h-5 w-5 text-indigo-400" />
+                  <span className="font-extrabold text-white text-base">
+                    {lang === 'ar' ? '🎟️ سجل حضور وحجوزات الفعالية:' : '🎟️ Event Guest & Attendance Sheet:'} <strong className="text-amber-400">{lang === 'ar' ? viewingAttendeesEvent.titleAr : viewingAttendeesEvent.titleEn}</strong>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setViewingAttendeesEvent(null)}
+                  className="p-1.5 rounded-full bg-neutral-800 text-white hover:bg-red-500 transition-colors cursor-pointer"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Stats Bar */}
+              {(() => {
+                const eventBookings = bookings?.filter(b => b.eventId === viewingAttendeesEvent.id) || [];
+                const totalBookedCount = eventBookings.reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                const actualAttendedCount = eventBookings
+                  .filter(b => b.status === 'approved' && b.attended === true)
+                  .reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                const totalRevenue = eventBookings
+                  .filter(b => b.status === 'approved' && b.attended === true)
+                  .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
+                return (
+                  <div className="grid grid-cols-3 gap-3 my-4">
+                    <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                      <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Registered'}</span>
+                      <span className="text-white text-lg font-black">{totalBookedCount}</span>
+                    </div>
+                    <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                      <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'الحضور الفعلي' : 'Actual Check-in'}</span>
+                      <span className="text-emerald-400 text-lg font-black">{actualAttendedCount}</span>
+                    </div>
+                    <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                      <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'المستحقات المحسوبة' : 'Revenue Collected'}</span>
+                      <span className="text-indigo-400 text-lg font-black font-mono">{totalRevenue} EGP</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Table / List */}
+              <div className="flex-1 overflow-auto bg-neutral-950 rounded-2xl p-4 border border-white/5">
+                {(() => {
+                  const eventBookings = bookings?.filter(b => b.eventId === viewingAttendeesEvent.id) || [];
+                  if (eventBookings.length === 0) {
+                    return (
+                      <div className="text-center py-10 text-neutral-500 text-xs font-bold">
+                        {lang === 'ar' ? 'لا توجد حجوزات مسجلة لهذه الفعالية بعد.' : 'No reservations registered for this event yet.'}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <table className="w-full text-start text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-neutral-800 text-neutral-500 text-[10px] uppercase font-bold text-start">
+                          <th className="pb-2.5 text-start">{lang === 'ar' ? 'الاسم' : 'Name'}</th>
+                          <th className="pb-2.5 text-start">{lang === 'ar' ? 'الهاتف' : 'Phone'}</th>
+                          <th className="pb-2.5 text-center">{lang === 'ar' ? 'الأفراد' : 'Guests'}</th>
+                          <th className="pb-2.5 text-end">{lang === 'ar' ? 'المبلغ' : 'Amount'}</th>
+                          <th className="pb-2.5 text-center">{lang === 'ar' ? 'الحالة' : 'Status'}</th>
+                          <th className="pb-2.5 text-end">{lang === 'ar' ? 'تأكيد الحضور البوابة' : 'Check-In Gate'}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-900">
+                        {eventBookings.map((b) => (
+                          <tr key={b.id} className="text-neutral-300 hover:bg-neutral-900/50">
+                            <td className="py-3 font-semibold text-white">{b.userName}</td>
+                            <td className="py-3 font-mono">{b.userPhone}</td>
+                            <td className="py-3 text-center font-bold text-neutral-100">{b.numberOfIndividuals}</td>
+                            <td className="py-3 text-end font-mono font-bold text-amber-500">{b.totalAmount} ج.م</td>
+                            <td className="py-3 text-center">
+                              <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                                b.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                b.status === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              }`}>
+                                {lang === 'ar' ? 
+                                  (b.status === 'approved' ? 'مقبول' : b.status === 'rejected' ? 'مرفوض' : 'معلق') :
+                                  b.status
+                                }
+                              </span>
+                            </td>
+                            <td className="py-3 text-end">
+                              {b.attended ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="text-emerald-400 font-extrabold text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    {lang === 'ar' ? 'حضر' : 'Attended'}
+                                  </span>
+                                  {b.attendedAt && (
+                                    <span className="text-[9px] text-neutral-500 font-mono mt-0.5">
+                                      {new Date(b.attendedAt).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-neutral-500 text-[10px]">
+                                  {lang === 'ar' ? 'لم يحضر بعد' : 'Not arrived yet'}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {selectedJsonDoc && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
             <motion.div
@@ -1677,8 +1889,516 @@ export const AdminPanel: React.FC = () => {
             </div>
           </div>
 
-          {/* Filters and Search Bar */}
-          <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-4 sm:p-6 space-y-4">
+          {/* Purge reminder info card for Admins */}
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex gap-3 items-start">
+            <span className="text-lg text-amber-500 shrink-0 mt-0.5">⚠️</span>
+            <div className="space-y-1">
+              <h5 className="text-xs font-black text-amber-400">
+                {lang === 'ar' ? 'سياسة توفير المساحة التلقائية وتأمين البيانات' : 'Automated Storage Optimization Policy'}
+              </h5>
+              <p className="text-[11px] text-neutral-300 leading-relaxed font-sans">
+                {lang === 'ar' 
+                  ? 'برجاء العلم أنه بعد مرور 24 ساعة من تاريخ الاحتفال/الحدث، يتم مسح صور إيصالات الدفع والتحويلات تلقائياً من خوادم قاعدة البيانات لتوفير مساحة الاستضافة وحماية خصوصية العملاء. تأكد من مطابقة ومراجعة الإيصالات وتفعيل الحجوزات قبل انتهاء الحدث.' 
+                  : 'Please note: 24 hours after an event date has passed, all associated receipt screenshots are automatically deleted to optimize database storage and preserve client privacy. Ensure all bookings are verified and approved before the event begins.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Actions for Admins */}
+          {!viewingBookedAds && !viewingCancellationRequests && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => setViewingBookedAds(true)}
+                className="flex items-center justify-between gap-4 p-5 rounded-3xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all text-left cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-neutral-950 shadow-md shrink-0">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-extrabold text-white text-sm">
+                      {lang === 'ar' ? '📊 مراجعة الإعلانات المحجوزة' : '📊 Review Booked Ads'}
+                    </h4>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' ? 'عرض الفعاليات النشطة وإجمالي الحجوزات والحضور والتفاصيل.' : 'View active events, total bookings, attendance rates and attendee details.'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-amber-500 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">➔</span>
+              </button>
+
+              <button
+                onClick={() => setViewingCancellationRequests(true)}
+                className="flex items-center justify-between gap-4 p-5 rounded-3xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/10 transition-all text-left cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500 text-neutral-950 shadow-md shrink-0">
+                    <XCircle className="h-6 w-6" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-extrabold text-white text-sm">
+                      {lang === 'ar' ? '🚨 طلبات إلغاء الحجز' : '🚨 Cancellation Requests'}
+                    </h4>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' ? 'عرض المستخدمين الراغبين في إلغاء الحجز للتواصل معهم.' : 'View users requesting cancellation and their contact details.'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-red-500 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">➔</span>
+              </button>
+            </div>
+          )}
+
+          {viewingBookedAds ? (
+            // --- BOOKED ADS REVIEW SUBVIEW ---
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (selectedBookedAdId) {
+                        setSelectedBookedAdId(null);
+                      } else {
+                        setViewingBookedAds(false);
+                      }
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 transition-all cursor-pointer shrink-0"
+                  >
+                    <ArrowLeft className={`h-5 w-5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <div className="text-left">
+                    <h3 className="text-lg font-black text-white">
+                      {selectedBookedAdId 
+                        ? (lang === 'ar' ? '👥 تفاصيل الحضور والحجوزات للفعالية' : '👥 Event Booking & Attendance Details')
+                        : (lang === 'ar' ? '📊 مراجعة الإعلانات التي تم عليها الحجز' : '📊 Booked Ads Review')}
+                    </h3>
+                    <p className="text-xs text-neutral-400">
+                      {selectedBookedAdId
+                        ? (lang === 'ar' ? 'عرض قائمة المشتركين المسجلين وحالة حضورهم لكل تذكرة.' : 'List of registered members and their check-in status per ticket.')
+                        : (lang === 'ar' ? 'عرض جميع الفعاليات التي تم عليها حجز تذاكر مع إحصائيات الحضور.' : 'All events with registered tickets and attendance rates.')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedBookedAdId ? (
+                // --- ATTENDEE LIST FOR SELECTED EVENT ---
+                (() => {
+                  const eventBookings = bookings.filter(b => b.eventId === selectedBookedAdId && b.status !== 'rejected');
+                  const currentEvent = events.find(e => e.id === selectedBookedAdId);
+                  const eventTitle = currentEvent 
+                    ? (lang === 'ar' ? currentEvent.titleAr : currentEvent.titleEn)
+                    : (eventBookings[0] ? (lang === 'ar' ? eventBookings[0].eventTitleAr : eventBookings[0].eventTitleEn) : '');
+
+                  const eventRevenue = eventBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+                  const eventIndividuals = eventBookings.reduce((sum, b) => sum + (Number(b.numberOfIndividuals) || 1), 0);
+                  const eventIndividualsAttended = eventBookings.filter(b => b.attended).reduce((sum, b) => sum + (Number(b.numberOfIndividuals) || 1), 0);
+
+                  return (
+                    <div className="space-y-6 animate-fadeIn">
+                      <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4 text-left">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                          <div className="text-left">
+                            <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase font-black">
+                              {lang === 'ar' ? 'الفعالية المحددة' : 'SELECTED EVENT'}
+                            </span>
+                            <h4 className="text-base font-black text-white mt-0.5">{eventTitle}</h4>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 w-full lg:w-auto shrink-0">
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Booked'}</span>
+                              <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                {eventBookings.length} <span className="text-[10px] text-neutral-400 font-normal font-sans">({eventIndividuals} {lang === 'ar' ? 'فرد' : 'pax'})</span>
+                              </span>
+                            </div>
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'حضروا بالفعل' : 'Checked In'}</span>
+                              <span className="text-sm font-black text-emerald-400 font-mono mt-0.5 block">
+                                {eventBookings.filter(b => b.attended).length} <span className="text-[10px] text-emerald-500/70 font-normal font-sans">({eventIndividualsAttended} {lang === 'ar' ? 'فرد' : 'pax'})</span>
+                              </span>
+                            </div>
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'المبلغ المستحق' : 'Total Price'}</span>
+                              <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                {eventRevenue.toLocaleString()} <span className="text-[9px] font-normal text-neutral-400 font-sans">{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {eventBookings.length === 0 ? (
+                          <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20">
+                            <p className="text-neutral-400 text-sm">
+                              {lang === 'ar' ? '🚫 لا توجد حجوزات نشطة لهذه الفعالية حالياً.' : '🚫 No active bookings for this event yet.'}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {eventBookings.map((b) => (
+                              <div
+                                key={b.id}
+                                className="p-5 rounded-3xl border border-neutral-800 bg-neutral-900 flex flex-col justify-between space-y-4 shadow-lg hover:border-neutral-700 transition-all text-left"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="text-left">
+                                    <h5 className="text-sm font-extrabold text-white">{b.userName}</h5>
+                                    <p className="text-xs text-neutral-400 mt-0.5 font-mono">Ref: {b.refNumber}</p>
+                                  </div>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                                    b.status === 'approved' 
+                                      ? 'bg-emerald-500/20 text-emerald-300' 
+                                      : b.status === 'pending'
+                                      ? 'bg-amber-500/20 text-amber-300 animate-pulse'
+                                      : 'bg-red-500/20 text-red-300'
+                                  }`}>
+                                    {b.status === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
+                                    {b.status === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending')}
+                                    {b.status === 'cancelled' && (lang === 'ar' ? '⚠️ ملغي' : 'Cancelled')}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 text-xs">
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '📞 رقم التواصل' : '📞 Phone'}</span>
+                                    <span className="text-white font-bold font-mono">{b.userPhone}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '👥 عدد الأفراد' : '👥 Pax'}</span>
+                                    <span className="text-white font-bold font-mono">{b.numberOfIndividuals} {lang === 'ar' ? 'أفراد' : 'person(s)'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '💰 قيمة الحجز' : '💰 Booking Price'}</span>
+                                    <span className="text-white font-bold font-mono">{b.totalAmount} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '🚪 حالة الحضور' : '🚪 Attendance'}</span>
+                                    <span className={`font-bold ${b.attended ? 'text-emerald-400' : 'text-neutral-400'}`}>
+                                      {b.attended 
+                                        ? (lang === 'ar' ? '✅ حضر' : 'Checked In') 
+                                        : (lang === 'ar' ? '❌ لم يحضر بعد' : 'Not Checked In')}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2 pt-2 border-t border-neutral-850">
+                                  <a
+                                    href={`tel:${b.userPhone}`}
+                                    className="flex-1 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-center text-[11px] font-bold text-white flex items-center justify-center gap-1 transition-all"
+                                  >
+                                    <Phone className="h-3.5 w-3.5 text-neutral-400" />
+                                    <span>{lang === 'ar' ? 'اتصال هاتف' : 'Call'}</span>
+                                  </a>
+                                  <a
+                                    href={`https://wa.me/${b.userPhone.startsWith('0') ? '2' + b.userPhone : b.userPhone}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex-1 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-center text-[11px] font-bold text-emerald-400 flex items-center justify-center gap-1 transition-all"
+                                  >
+                                    <span className="text-xs">💬</span>
+                                    <span>واتساب</span>
+                                  </a>
+                                  <button
+                                    onClick={async () => {
+                                      if (actionLoading) return;
+                                      const confirmed = await triggerConfirm(
+                                        lang === 'ar' 
+                                          ? '⚠️ هل أنت متأكد تماماً من حذف هذا الحجز نهائياً من قاعدة البيانات؟ لا يمكن استعادته لاحقاً!' 
+                                          : '⚠️ Are you absolutely sure you want to permanently delete this booking? This action cannot be undone!'
+                                      );
+                                      if (confirmed) {
+                                        setActionLoading(b.id);
+                                        await deleteBooking(b.id);
+                                        setActionLoading(null);
+                                      }
+                                    }}
+                                    disabled={actionLoading !== null}
+                                    className="flex-1 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-center text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <span>{lang === 'ar' ? 'حذف الحجز' : 'Delete'}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                // --- LIST OF EVENTS THAT HAVE BOOKINGS ---
+                (() => {
+                  const groups: Record<string, { 
+                    eventId: string; 
+                    titleAr: string; 
+                    titleEn: string; 
+                    totalBookings: number; 
+                    totalAttendance: number; 
+                    totalRevenue: number;
+                    totalIndividuals: number;
+                    totalIndividualsAttended: number;
+                    bookings: any[] 
+                  }> = {};
+                  bookings.forEach(b => {
+                    if (b.status === 'rejected') return;
+                    if (!groups[b.eventId]) {
+                      groups[b.eventId] = {
+                        eventId: b.eventId,
+                        titleAr: b.eventTitleAr || 'فعالية غير معروفة',
+                        titleEn: b.eventTitleEn || 'Unknown Event',
+                        totalBookings: 0,
+                        totalAttendance: 0,
+                        totalRevenue: 0,
+                        totalIndividuals: 0,
+                        totalIndividualsAttended: 0,
+                        bookings: []
+                      };
+                    }
+                    groups[b.eventId].bookings.push(b);
+                    groups[b.eventId].totalBookings += 1;
+                    groups[b.eventId].totalRevenue += Number(b.totalAmount) || 0;
+                    const pCount = Number(b.numberOfIndividuals) || 1;
+                    groups[b.eventId].totalIndividuals += pCount;
+                    if (b.attended) {
+                      groups[b.eventId].totalAttendance += 1;
+                      groups[b.eventId].totalIndividualsAttended += pCount;
+                    }
+                  });
+
+                  const list = Object.values(groups);
+
+                  const overallBookingsCount = list.reduce((sum, g) => sum + g.totalBookings, 0);
+                  const overallAttendanceCount = list.reduce((sum, g) => sum + g.totalAttendance, 0);
+                  const overallRevenue = list.reduce((sum, g) => sum + g.totalRevenue, 0);
+                  const overallIndividuals = list.reduce((sum, g) => sum + g.totalIndividuals, 0);
+                  const overallIndividualsAttended = list.reduce((sum, g) => sum + g.totalIndividualsAttended, 0);
+
+                  if (list.length === 0) {
+                    return (
+                      <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 animate-fadeIn">
+                        <p className="text-neutral-400 text-sm">
+                          {lang === 'ar' ? '🚫 لا توجد فعاليات مسجلة بها حجوزات حالياً.' : '🚫 No events with registered bookings found.'}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-6 animate-fadeIn text-left text-neutral-100">
+                      {/* Overall stats summary widget */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 rounded-3xl bg-neutral-900 border border-neutral-800">
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-neutral-400 block font-bold">
+                            {lang === 'ar' ? '🎟️ إجمالي التذاكر المحجوزة' : '🎟️ Total Booked Tickets'}
+                          </span>
+                          <span className="text-xl font-black text-white font-mono mt-1 block">
+                            {overallBookingsCount} {lang === 'ar' ? 'حجز' : 'booking(s)'} <span className="text-xs text-neutral-400 font-normal font-sans">({overallIndividuals} {lang === 'ar' ? 'أفراد' : 'pax'})</span>
+                          </span>
+                        </div>
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-emerald-400 block font-bold">
+                            {lang === 'ar' ? '🚪 حضروا بالفعل' : '🚪 Checked In / Attended'}
+                          </span>
+                          <span className="text-xl font-black text-emerald-400 font-mono mt-1 block">
+                            {overallAttendanceCount} {lang === 'ar' ? 'حجز' : 'booking(s)'} <span className="text-xs text-emerald-500/70 font-normal font-sans">({overallIndividualsAttended} {lang === 'ar' ? 'أفراد' : 'pax'})</span>
+                          </span>
+                        </div>
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-amber-400 block font-bold">
+                            {lang === 'ar' ? '💰 إجمالي المبالغ المستحقة' : '💰 Total Revenue Due'}
+                          </span>
+                          <span className="text-xl font-black text-amber-400 font-mono mt-1 block">
+                            {overallRevenue.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {list.map((group) => (
+                          <div
+                            key={group.eventId}
+                            onClick={() => setSelectedBookedAdId(group.eventId)}
+                            className="p-5 sm:p-6 rounded-3xl border border-neutral-800 bg-neutral-900 hover:border-amber-500/40 hover:bg-neutral-850/50 transition-all cursor-pointer group flex flex-col justify-between space-y-4 shadow-xl"
+                          >
+                            <div>
+                              <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase font-black">
+                                {lang === 'ar' ? 'الفعالية / الإعلان' : 'EVENT / AD'}
+                              </span>
+                              <h4 className="text-base font-black text-white group-hover:text-amber-400 transition-colors mt-0.5 line-clamp-1">
+                                {lang === 'ar' ? group.titleAr : group.titleEn}
+                              </h4>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 bg-neutral-950/60 p-3 rounded-2xl border border-neutral-800/40 text-left">
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '🎟️ إجمالي الحجوزات' : '🎟️ Bookings'}
+                                </span>
+                                <span className="text-sm font-black text-white font-mono mt-0.5 block">
+                                  {group.totalBookings} <span className="text-[10px] text-neutral-400 font-normal font-sans">({group.totalIndividuals})</span>
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '🚪 حضروا بالفعل' : '🚪 Attended'}
+                                </span>
+                                <span className="text-sm font-black text-emerald-400 font-mono mt-0.5 block">
+                                  {group.totalAttendance} <span className="text-[10px] text-emerald-500/70 font-normal font-sans">({group.totalIndividualsAttended})</span>
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '💰 إجمالي المبالغ' : '💰 Total Price'}
+                                </span>
+                                <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                  {group.totalRevenue.toLocaleString()} <span className="text-[9px] font-normal text-neutral-400 font-sans">{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs font-bold text-amber-400 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1 pt-1">
+                              <span>{lang === 'ar' ? 'عرض تفاصيل الحضور والمشتركين ➔' : 'View attendance & subscribers list ➔'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          ) : viewingCancellationRequests ? (
+            // --- CANCELLATION REQUESTS SUBVIEW ---
+            <div className="space-y-6 animate-fadeIn text-left">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setViewingCancellationRequests(false)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 transition-all cursor-pointer shrink-0"
+                  >
+                    <ArrowLeft className={`h-5 w-5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <div>
+                    <h3 className="text-lg font-black text-white">
+                      {lang === 'ar' ? '🚨 طلبات إلغاء الحجز والـ Refund' : '🚨 Booking Cancellation Requests'}
+                    </h3>
+                    <p className="text-xs text-neutral-400">
+                      {lang === 'ar' ? 'قائمة بجميع المستخدمين الذين طلبوا إلغاء حجزهم مع تفاصيل المبالغ والاتصال.' : 'All users who submitted cancellation requests with booking value and contact info.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {(() => {
+                const cancelRequests = bookings.filter(b => b.status === 'cancelled');
+
+                if (cancelRequests.length === 0) {
+                  return (
+                    <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 animate-fadeIn">
+                      <p className="text-neutral-400 text-sm">
+                        {lang === 'ar' ? '🎉 لا توجد طلبات إلغاء حجز حالياً.' : '🎉 No cancellation requests found.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+                    {cancelRequests.map((b) => (
+                      <div
+                        key={b.id}
+                        className="p-5 sm:p-6 rounded-3xl border border-red-500/20 bg-neutral-900 hover:border-red-500/40 transition-all shadow-xl space-y-4 relative overflow-hidden flex flex-col justify-between text-left"
+                      >
+                        <div className="absolute top-0 right-0 h-1 bg-red-500 w-full" />
+                        
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <span className="text-[10px] font-mono tracking-wider text-red-400 font-black block">
+                              {lang === 'ar' ? 'طلب إلغاء حجز' : 'CANCELLATION REQUEST'}
+                            </span>
+                            <h4 className="text-sm font-black text-white mt-0.5">{b.userName}</h4>
+                            <p className="text-xs text-neutral-400 font-mono mt-0.5">Ref: {b.refNumber}</p>
+                          </div>
+                          {b.cancelledAt && (
+                            <span className="text-[10px] text-neutral-400 font-bold bg-neutral-950 px-2 py-1 rounded-lg shrink-0">
+                              🕒 {new Date(b.cancelledAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 border-y border-neutral-800 py-3 text-xs">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-neutral-400 shrink-0">{lang === 'ar' ? 'اسم الفعالية:' : 'Event Name:'}</span>
+                            <span className="text-white font-extrabold text-right line-clamp-1 max-w-[200px]">
+                              {lang === 'ar' ? b.eventTitleAr : b.eventTitleEn}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-400">{lang === 'ar' ? 'قيمة الحجز المدفوعة:' : 'Paid Amount:'}</span>
+                            <span className="text-white font-bold font-mono">
+                              {b.totalAmount} {lang === 'ar' ? 'ج.م' : 'EGP'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-400">{lang === 'ar' ? 'رقم موبايل للتواصل:' : 'Contact Phone:'}</span>
+                            <span className="text-amber-400 font-bold font-mono select-all">
+                              {b.userPhone}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                          <a
+                            href={`tel:${b.userPhone}`}
+                            className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-center text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <Phone className="h-4 w-4 text-neutral-400" />
+                            <span>{lang === 'ar' ? 'اتصال بالهاتف' : 'Call'}</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/${b.userPhone.startsWith('0') ? '2' + b.userPhone : b.userPhone}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-center text-xs font-bold text-emerald-400 flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <span className="text-sm">💬</span>
+                            <span>واتساب العميل</span>
+                          </a>
+                          <button
+                            onClick={async () => {
+                              if (actionLoading) return;
+                              const confirmed = await triggerConfirm(
+                                lang === 'ar' 
+                                  ? '⚠️ هل أنت متأكد من حذف هذا الحجز وحذف طلب الإلغاء نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء!' 
+                                  : '⚠️ Are you sure you want to permanently delete this booking and cancellation request from the database? This action cannot be undone!'
+                              );
+                              if (confirmed) {
+                                setActionLoading(b.id);
+                                await deleteBooking(b.id);
+                                setActionLoading(null);
+                              }
+                            }}
+                            disabled={actionLoading !== null}
+                            className="flex-1 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-center text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4 shrink-0" />
+                            <span>{lang === 'ar' ? 'حذف نهائياً' : 'Delete'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            // --- DEFAULT BOOKINGS SECTION CONTENT ---
+            <>
+              {/* Filters and Search Bar */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-4 sm:p-6 space-y-4">
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
               {/* Tab Filters */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
@@ -1788,6 +2508,14 @@ export const AdminPanel: React.FC = () => {
                             <h4 className="text-base font-black text-emerald-400 tracking-wider mt-0.5 select-all font-mono">
                               {b.refNumber}
                             </h4>
+                            {b.submittedAt && (
+                              <div className="text-[10px] text-neutral-400 font-bold mt-1 flex items-center gap-1">
+                                <span>📅</span>
+                                <span>
+                                  {lang === 'ar' ? 'تقديم الحجز:' : 'Submitted:'} {new Date(b.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           <span className={`px-3 py-1 rounded-full text-[11px] font-black ${
@@ -1846,13 +2574,30 @@ export const AdminPanel: React.FC = () => {
 
                           {/* Event details */}
                           <div className="rounded-2xl bg-neutral-950 p-3.5 space-y-2 border border-neutral-800/50">
-                            <div>
-                              <span className="text-[10px] text-neutral-400 block font-bold">
-                                {lang === 'ar' ? '🎟️ الفعالية المطلوبة' : '🎟️ Reserved Event'}
-                              </span>
-                              <span className="text-xs font-extrabold text-neutral-200 mt-1 block line-clamp-1">
-                                {lang === 'ar' ? b.eventTitleAr : b.eventTitleEn}
-                              </span>
+                            <div className="flex justify-between items-start gap-4">
+                              <div>
+                                <span className="text-[10px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? '🎟️ الفعالية المطلوبة' : '🎟️ Reserved Event'}
+                                </span>
+                                <span className="text-xs font-extrabold text-neutral-200 mt-1 block line-clamp-1">
+                                  {lang === 'ar' ? b.eventTitleAr : b.eventTitleEn}
+                                </span>
+                              </div>
+                              {(() => {
+                                const matchedEvent = events.find(e => e.id === b.eventId);
+                                const evDate = b.eventDate || matchedEvent?.eventDate;
+                                if (!evDate) return null;
+                                return (
+                                  <div className="text-right shrink-0">
+                                    <span className="text-[10px] text-amber-500 block font-black">
+                                      {lang === 'ar' ? '📅 تاريخ الفعالية' : '📅 Event Date'}
+                                    </span>
+                                    <span className="text-xs font-extrabold text-neutral-200 mt-1 block font-mono">
+                                      {new Date(evDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                             </div>
 
                             <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-900 text-center">
@@ -1932,6 +2677,32 @@ export const AdminPanel: React.FC = () => {
                           </div>
                         </div>
 
+                        {/* Delete Button for all statuses */}
+                        <div className="border-t border-neutral-850 pt-3.5 mt-3.5 flex items-center justify-between gap-3">
+                          <span className="text-[10px] text-neutral-500 font-mono">
+                            {lang === 'ar' ? 'إجراءات المشرف' : 'Admin Action'}
+                          </span>
+                          <button
+                            onClick={async () => {
+                              const confirmed = await triggerConfirm(
+                                lang === 'ar' 
+                                  ? '⚠️ هل أنت متأكد تماماً من حذف هذا الحجز نهائياً من قاعدة البيانات؟ لا يمكن استعادة هذا الحجز بعد حذفه!' 
+                                  : '⚠️ Are you absolutely sure you want to permanently delete this booking from the database? This action cannot be undone!'
+                              );
+                              if (confirmed) {
+                                setActionLoading(b.id);
+                                await deleteBooking(b.id);
+                                setActionLoading(null);
+                              }
+                            }}
+                            disabled={actionLoading !== null}
+                            className="bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-neutral-950 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border border-red-500/20 hover:border-red-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>{lang === 'ar' ? 'حذف الحجز نهائياً' : 'Delete Booking'}</span>
+                          </button>
+                        </div>
+
                         {/* Action buttons */}
                         {b.status === 'pending' && (
                           <div className="border-t border-neutral-800 pt-4 mt-4 space-y-3">
@@ -1939,7 +2710,7 @@ export const AdminPanel: React.FC = () => {
                             <div className="flex gap-2">
                               <input
                                 type="text"
-                                placeholder={lang === 'ar' ? 'أضف ملاحظات أو سبب الرفض هنا...' : 'Enter rejection notes here...'}
+                                placeholder={lang === 'ar' ? 'أدخل سبب الرفض أو كود الحجز المخصص هنا...' : 'Enter rejection reason or custom booking code here...'}
                                 value={rejectionReasonMap[b.id] || ''}
                                 onChange={(e) => {
                                   setRejectionReasonMap(prev => ({
@@ -1957,7 +2728,7 @@ export const AdminPanel: React.FC = () => {
                                   if (actionLoading) return;
                                   setActionLoading(b.id);
                                   // Rejection reason
-                                  const reason = rejectionReasonMap[b.id] || (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.');
+                                  const reason = rejectionReasonMap[b.id]?.trim() || (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.');
                                   await rejectBooking(b.id, reason);
                                   setActionLoading(null);
                                 }}
@@ -1972,9 +2743,13 @@ export const AdminPanel: React.FC = () => {
                                 onClick={async () => {
                                   if (actionLoading) return;
                                   setActionLoading(b.id);
-                                  const code = `DWM-${b.refNumber.replace('#', '')}`;
-                                  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(code)}`;
-                                  await approveBooking(b.id, qr, code, 0, rejectionReasonMap[b.id] || '');
+                                  const typedVal = rejectionReasonMap[b.id]?.trim() || '';
+                                  const code = typedVal || `DWM-${b.refNumber.replace('#', '')}`;
+                                  const qrUrl = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
+                                    ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                                    : window.location.origin) + '/?verify=' + b.id;
+                                  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+                                  await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
                                   setActionLoading(null);
                                 }}
                                 disabled={actionLoading !== null}
@@ -1993,8 +2768,10 @@ export const AdminPanel: React.FC = () => {
               );
             })()}
           </div>
-        </div>
+        </>
       )}
+    </div>
+  )}
 
       {/* Booking Receipt Lightbox Modal Overlay */}
       <AnimatePresence>
@@ -2144,27 +2921,170 @@ export const AdminPanel: React.FC = () => {
           {/* Tab 1: events/ */}
           {dbSubTab === 'events' && (
             <div className="space-y-3">
+              {/* Force Clear Cache Banner */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <RefreshCw className="h-5 w-5 text-amber-400 mt-0.5 animate-spin-slow shrink-0" />
+                  <div>
+                    <h5 className="font-bold text-amber-300 text-sm">
+                      {lang === 'ar' ? 'حل نهائي لمشكلة الكاش وتحديث الإعلانات القديمة' : 'Permanent Fix for Stale Ad Cache'}
+                    </h5>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' 
+                        ? 'إذا كان المتصفح يحتفظ بالإعلان القديم أو لم يتم تحديث التعديلات بسبب الحظر في بيئة الـ iframe، اضغط هنا لتنظيف ذاكرة التخزين المحلية بالكامل ومزامنة الفعاليات مباشرة من سيرفر Firestore.' 
+                        : 'If your browser is caching stale ads or updates fail due to iframe cookie blocks, click this button to completely wipe local cache and hard-sync everything directly with the live server.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.clear();
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500 text-neutral-950 font-bold text-xs hover:bg-amber-400 active:scale-95 transition-all shadow-md flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 font-bold" />
+                  <span>{lang === 'ar' ? 'تنظيف الكاش والتحميل النهائي' : 'Force Clear & Reload'}</span>
+                </button>
+              </div>
+
+                            <div className="flex justify-end px-2 mb-2 gap-2">
+                <button
+                  onClick={() => setIsFullscreenEvents(true)}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Maximize2 className="h-3 w-3" />
+                  {lang === 'ar' ? 'تكبير القائمة' : 'Expand List'}
+                </button>
+              </div>
               <div className="flex items-center justify-between text-xs font-bold text-neutral-400 px-2">
                 <span>{lang === 'ar' ? `مجموعة الفعاليات والحفلات المخزنة (${events.length} وثيقة في Firestore)` : `Stored Events Collection (${events.length} docs in Firestore)`}</span>
                 <span className="font-mono text-[11px] text-blue-400 select-all">/databases/(default)/documents/events</span>
               </div>
-              <div className="grid grid-cols-1 gap-3">
-                {events.map((ev) => (
-                  <div key={ev.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border border-white/10 hover:border-blue-500/40 transition-all shadow-md">
+              
+              {/* Event Stats */}
+              {(() => {
+                const usedPos = new Set<number>(events.filter(e => !e.isEmpty && typeof e.position === 'number' && e.position !== 999999).map(e => e.position as number));
+                const maxPos = usedPos.size > 0 ? Math.max(...Array.from(usedPos)) : 0;
+                const availablePos: number[] = [];
+                for (let i = 2; i <= maxPos; i++) {
+                  if (!usedPos.has(i)) {
+                    availablePos.push(i);
+                  }
+                }
+                
+                return (
+                  <>
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-2">
+                      <button onClick={() => setAdminEventsFilter('all')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'all' ? 'border-blue-500 bg-blue-500/10' : 'border-neutral-800'} hover:border-blue-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-blue-400">{events.length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'إجمالي الإعلانات' : 'Total Ads'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('empty')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'empty' ? 'border-red-500 bg-red-500/10' : 'border-neutral-800'} hover:border-red-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-red-400">{events.filter(e => e.isEmpty).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'إعلانات مفرغة (محذوفة)' : 'Empty Ads'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('paused')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'paused' ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-800'} hover:border-amber-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-amber-400">{events.filter(e => e.isPaused).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'موقوفة (مخفية)' : 'Paused (Hidden)'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('active')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'active' ? 'border-emerald-500 bg-emerald-500/10' : 'border-neutral-800'} hover:border-emerald-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-emerald-400">{events.filter(e => !e.isEmpty && !e.isPaused).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'نشطة (متاحة للعرض)' : 'Active (Visible)'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('available')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'available' ? 'border-purple-500 bg-purple-500/10' : 'border-neutral-800'} hover:border-purple-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-purple-400">{availablePos.length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'مساحات متاحة (فارغة)' : 'Available Slots'}</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {adminEventsFilter === 'available' ? (
+                        availablePos.length === 0 ? (
+                          <div className="p-8 text-center text-neutral-500 text-sm font-bold bg-neutral-900/50 rounded-2xl border border-neutral-800">
+                            {lang === 'ar' ? 'لا توجد مساحات فارغة بين الإعلانات حالياً.' : 'No available slots found between ads.'}
+                          </div>
+                        ) : (
+                          availablePos.map(pos => (
+                            <div key={`avail-${pos}`} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900 border ${pos <= 19 ? 'border-amber-500/30' : 'border-purple-500/30'} shadow-md`}>
+                              <div className="flex items-center gap-3.5">
+                                <div className={`h-14 w-14 rounded-xl bg-neutral-800 border ${pos <= 19 ? 'border-amber-500/20' : 'border-purple-500/20'} flex items-center justify-center shrink-0 shadow`}>
+                                   <span className={`text-[10px] font-bold ${pos <= 19 ? 'text-amber-400' : 'text-purple-400'}`}>{lang === 'ar' ? 'متاح' : 'Available'}</span>
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2.5 py-1 rounded-md text-sm font-black ${pos <= 19 ? 'bg-amber-600 border-amber-400' : 'bg-purple-600 border-purple-400'} text-white border font-mono shadow-md`}>
+                                      #{pos}
+                                    </span>
+                                    {pos <= 19 && (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>
+                                    )}
+                                  </div>
+                                  <h4 className="font-bold text-white text-sm mt-1">
+                                    {lang === 'ar' ? (pos <= 19 ? 'مساحة إعلانية VIP متاحة' : 'مساحة إعلانية عادية متاحة') : (pos <= 19 ? 'Available VIP Ad Slot' : 'Available Normal Ad Slot')}
+                                  </h4>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )
+                      ) : (
+                        (adminEventsFilter === 'all' ? events : events.filter(e => {
+                           if (adminEventsFilter === 'empty') return e.isEmpty;
+                           if (adminEventsFilter === 'paused') return e.isPaused;
+                           if (adminEventsFilter === 'active') return !e.isEmpty && !e.isPaused;
+                           return true;
+                        })).map((ev) => (
+                  <div key={ev.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border ${ev.isEmpty ? 'border-red-500/40 opacity-70' : 'border-white/10 hover:border-blue-500/40'} transition-all shadow-md`}>
                     <div className="flex items-center gap-3.5 overflow-hidden">
-                      <img src={ev.thumbnailUrl || ev.mediaUrl} alt="" className="h-14 w-14 rounded-xl object-cover border border-white/10 shrink-0 shadow" />
+                      {ev.isEmpty ? (
+                        <div className="h-14 w-14 rounded-xl bg-neutral-800 border border-red-500/20 flex items-center justify-center shrink-0 shadow">
+                           <span className="text-[10px] font-bold text-red-400">فارغ</span>
+                        </div>
+                      ) : (
+                        <img src={ev.thumbnailUrl || ev.mediaUrl} alt="" className="h-14 w-14 rounded-xl object-cover border border-white/10 shrink-0 shadow" />
+                      )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs text-blue-400 font-bold select-all">{ev.id}</span>
+                          <span className="px-2.5 py-1 rounded-md text-sm font-black bg-indigo-600 text-white border border-indigo-400 font-mono shadow-md" title={lang === 'ar' ? 'الرقم التسلسلي' : 'Serial Number'}>
+                             #{ev.position && ev.position !== 999999 ? ev.position : '-'}
+                          </span>
+                          <span className="font-mono text-[10px] text-neutral-500 font-bold select-all">{ev.id}</span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-neutral-800 text-neutral-300 uppercase">{ev.category}</span>
-                          {ev.isFeatured && <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>}
+                          {((ev.isFeatured || (typeof ev.position === 'number' && ev.position <= 19))) && !ev.isEmpty && <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>}
                         </div>
-                        <h4 className="font-bold text-white text-sm mt-1 truncate">{lang === 'ar' ? ev.titleAr : ev.titleEn}</h4>
-                        <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-                          <span>💰 <strong className="text-white">{lang === 'ar' ? ev.priceAr : ev.priceEn}</strong></span>
-                          <span>❤️ <strong className="text-white">{ev.likesCount}</strong> {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
-                          <span>📍 {lang === 'ar' ? ev.location?.nameAr : ev.location?.nameEn}</span>
-                        </div>
+                        <h4 className="font-bold text-white text-sm mt-1 truncate">{ev.isEmpty ? (lang === 'ar' ? 'مساحة إعلان فارغة (تم المسح)' : 'Empty Ad Slot (Deleted)') : (lang === 'ar' ? ev.titleAr : ev.titleEn)}</h4>
+                        {!ev.isEmpty && (
+                          <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                            <span>💰 <strong className="text-white">{lang === 'ar' ? ev.priceAr : ev.priceEn}</strong></span>
+                            <span>❤️ <strong className="text-white">{ev.likesCount}</strong> {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
+                            <span>📍 {lang === 'ar' ? ev.location?.nameAr : ev.location?.nameEn}</span>
+                            {ev.eventRef && <span>🔢 {lang === 'ar' ? 'المرجع:' : 'Ref:'} <strong className="text-amber-400 font-mono">#{ev.eventRef}</strong></span>}
+                          </div>
+                        )}
+                        {!ev.isEmpty && (
+                          (() => {
+                            const eventBookings = bookings?.filter(b => b.eventId === ev.id) || [];
+                            const totalBookedCount = eventBookings.reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                            const actualAttendedCount = eventBookings
+                              .filter(b => b.status === 'approved' && b.attended === true)
+                              .reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                            
+                            return (
+                              <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 bg-neutral-950/40 p-2 rounded-lg border border-neutral-800/40">
+                                <span className="text-indigo-400 font-bold">{lang === 'ar' ? '🎟️ إجمالي الحجوزات:' : '🎟️ Bookings:'} <strong className="text-white font-sans">{totalBookedCount}</strong></span>
+                                <span className="text-emerald-400 font-bold">{lang === 'ar' ? '✅ الحاضرين فعلياً:' : '✅ Attended:'} <strong className="text-white font-sans">{actualAttendedCount}</strong></span>
+                                {eventBookings.length > 0 && (
+                                  <button
+                                    onClick={() => setViewingAttendeesEvent(ev)}
+                                    className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 font-bold text-[10px] transition-colors cursor-pointer border border-blue-500/20"
+                                  >
+                                    {lang === 'ar' ? '🔍 تفاصيل الحاضرين' : '🔍 Guest List'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
@@ -2176,8 +3096,9 @@ export const AdminPanel: React.FC = () => {
                         <span>{lang === 'ar' ? 'عرض وثيقة JSON' : 'Inspect Doc'}</span>
                       </button>
                       <button
-                        onClick={() => {
-                          if (window.confirm(lang === 'ar' ? 'هل أنت متأكد من حذف هذه الفعالية من قاعدة البيانات؟' : 'Are you sure you want to delete this event from DB?')) {
+                        onClick={async () => {
+                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من حذف هذه الفعالية من قاعدة البيانات؟' : 'Are you sure you want to delete this event from DB?');
+                          if (confirmed) {
                             deleteEvent(ev.id);
                           }
                         }}
@@ -2188,8 +3109,12 @@ export const AdminPanel: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                ))}
+                ))
+              )}
               </div>
+            </>
+          );
+        })()}
             </div>
           )}
 
@@ -2582,6 +3507,17 @@ export const AdminPanel: React.FC = () => {
                 <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto justify-end">
                   {sub.status === 'pending' && (
                     <>
+                      <div className="flex items-center gap-2 mr-2">
+                        <label className="text-xs font-bold text-neutral-400">{lang === 'ar' ? 'رقم الإعلان:' : 'Position:'}</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder={String(adminPosition)}
+                          value={submissionPositions[sub.id] !== undefined ? submissionPositions[sub.id] : (sub.eventData?.position || '')}
+                          onChange={(e) => setSubmissionPositions({ ...submissionPositions, [sub.id]: e.target.value === '' ? '' : Number(e.target.value) })}
+                          className="w-16 rounded-lg bg-neutral-900 border border-neutral-700 py-2 px-2 text-xs text-white text-center focus:border-amber-500 outline-none"
+                        />
+                      </div>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -3023,7 +3959,8 @@ export const AdminPanel: React.FC = () => {
                                     ? (lang === 'ar' ? `هل أنت متأكد من تفعيل حساب (${u.name})؟` : `Are you sure you want to activate (${u.name})'s account?`)
                                     : (lang === 'ar' ? `هل أنت متأكد من إيقاف حساب (${u.name}) مؤقتاً؟` : `Are you sure you want to temporarily suspend (${u.name})'s account?`);
                                   
-                                  if (window.confirm(confirmMsg)) {
+                                  const confirmed = await triggerConfirm(confirmMsg);
+                                  if (confirmed) {
                                     const success = await toggleUserSuspensionInFirestore(u.id, !u.isSuspended);
                                     if (success) {
                                       alert(lang === 'ar' ? '✅ تم تحديث حالة المستخدم بنجاح!' : '✅ User status updated successfully!');
@@ -3047,7 +3984,8 @@ export const AdminPanel: React.FC = () => {
                                     alert(lang === 'ar' ? '❌ لا يمكنك حذف حسابك الأساسي!' : '❌ You cannot delete your own main account!');
                                     return;
                                   }
-                                  if (window.confirm(lang === 'ar' ? `⚠️ تحذير: هل أنت متأكد تماماً من حذف حساب (${u.name}) نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء!` : `⚠️ Warning: Are you absolutely sure you want to permanently delete (${u.name})'s account from the database? This action cannot be undone!`)) {
+                                  const confirmed = await triggerConfirm(lang === 'ar' ? `⚠️ تحذير: هل أنت متأكد تماماً من حذف حساب (${u.name}) نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء!` : `⚠️ Warning: Are you absolutely sure you want to permanently delete (${u.name})'s account from the database? This action cannot be undone!`);
+                                  if (confirmed) {
                                     const success = await deleteUserFromFirestore(u.id);
                                     if (success) {
                                       alert(lang === 'ar' ? '✅ تم حذف الحساب بنجاح!' : '✅ User deleted successfully!');
@@ -3387,6 +4325,20 @@ export const AdminPanel: React.FC = () => {
                       placeholder="https://.../icon.svg"
                       dir="ltr"
                     />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingIcon ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع' : 'Upload'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'icon')}
+                        disabled={isUploadingIcon}
+                      />
+                    </label>
                     <div className="h-12 w-12 rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
                       <img
                         src={formAppIconUrl || "/icon.svg"}
@@ -3416,6 +4368,20 @@ export const AdminPanel: React.FC = () => {
                       placeholder="https://.../logo.svg"
                       dir="ltr"
                     />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingLogo ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع' : 'Upload'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'logo')}
+                        disabled={isUploadingLogo}
+                      />
+                    </label>
                     <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
                       <img
                         src={formAppLogoUrl || "/logo.svg"}
@@ -3466,6 +4432,91 @@ export const AdminPanel: React.FC = () => {
                     {lang === 'ar' ? '💡 رابط حساب إنستجرام الرسمي لتثبيت المتابعين والوصول إليه.' : '💡 Instagram account URL for official social integration.'}
                   </p>
                 </div>
+
+                <div className="border-t border-white/5 pt-6 mt-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="col-span-1 md:col-span-2">
+                    <h4 className="text-sm font-bold text-amber-400 mb-2 flex items-center gap-2">
+                      <Crown className="h-4 w-4" />
+                      {lang === 'ar' ? 'إعدادات نصوص الإعلان الفاخر (فيديو الأسبوع الحصري)' : 'Weekly Promo Ad Settings'}
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الرئيسي (بالعربية):' : 'Main Title (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoTitleAr}
+                      onChange={(e) => setFormPromoTitleAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="فيديو الأسبوع الحصري المميز VIP"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الرئيسي (بالإنجليزية):' : 'Main Title (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoTitleEn}
+                      onChange={(e) => setFormPromoTitleEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="EXCLUSIVE WEEKLY VIP FEATURED VIDEO"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الفرعي (بالعربية):' : 'Subtitle (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoSubtitleAr}
+                      onChange={(e) => setFormPromoSubtitleAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="إعلان خاص"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الفرعي (بالإنجليزية):' : 'Subtitle (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoSubtitleEn}
+                      onChange={(e) => setFormPromoSubtitleEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="SPECIAL AD"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'نص الشارة العائمة (بالعربية):' : 'Floating Badge (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoBadgeAr}
+                      onChange={(e) => setFormPromoBadgeAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="فيديو الأسبوع الحصري"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'نص الشارة العائمة (بالإنجليزية):' : 'Floating Badge (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoBadgeEn}
+                      onChange={(e) => setFormPromoBadgeEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="Weekly Featured Video"
+                    />
+                  </div>
+                </div>
+
               </div>
 
               {/* Submit Buttons */}
@@ -4493,13 +5544,13 @@ export const AdminPanel: React.FC = () => {
                   <div className="space-y-3">
                     <div className="space-y-1.5 text-right">
                       <label className="text-xs font-black text-neutral-300">
-                        {lang === 'ar' ? 'رقم الترتيب في الصفحة الرئيسية' : 'Homepage Display Sort Order'}
+                        {lang === 'ar' ? 'الرقم التسلسلي للإعلان' : 'Homepage Display Sort Order'}
                       </label>
                       <input
                         type="number"
                         min={1}
                         value={adminPosition}
-                        onChange={(e) => setAdminPosition(Math.max(1, parseInt(e.target.value) || 1))}
+                        onChange={(e) => setAdminPosition(e.target.value)}
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm font-mono font-bold text-indigo-400 focus:outline-none focus:border-indigo-500 transition-colors text-right"
                       />
                     </div>
@@ -4677,10 +5728,10 @@ export const AdminPanel: React.FC = () => {
                             category: adminCategory,
                             styles: adminSelectedStyles,
                             mediaType: adminMediaType,
-                            mediaUrl: adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                            mediaUrl: adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                             thumbnailUrl: adminMediaType === 'video' ? 
-                              (adminMediaUrl.includes('cloudinary.com') ? adminMediaUrl.trim().replace(/\.[^.]+$/, '.jpg') : 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200')
-                              : adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                              (adminMediaUrl.includes('cloudinary.com') ? adminMediaUrl.trim().replace(/\.[^.]+$/, '.jpg') : 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200')
+                              : adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                             uploadDate: new Date().toISOString(),
                             eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
                             priceAr: adminPriceAr.trim() || '250 ج.م',
@@ -4702,7 +5753,7 @@ export const AdminPanel: React.FC = () => {
                             likesCount: 15,
                             isFeatured: adminIsFeatured,
                             isWeeklyPromo: adminIsWeeklyPromo,
-                            position: Number(adminPosition) || 1
+                            position: Number(adminPosition) || 999999
                           }}
                           index={0}
                           onOpenMap={(ev) => setPreviewAlert(
@@ -5533,6 +6584,111 @@ export const AdminPanel: React.FC = () => {
         </div>
       )}
 
+
+      {/* Fullscreen Events List Overlay */}
+      {isFullscreenEvents && (
+        <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col">
+          <div className="p-4 bg-neutral-900 border-b border-white/10 flex items-center justify-between shadow-md shrink-0">
+             <div className="flex items-center gap-4">
+               <h2 className="text-xl font-black text-amber-500">
+                 {lang === 'ar' ? 'إدارة الإعلانات (عرض مكبر)' : 'Ads Management (Expanded)'}
+               </h2>
+               <div className="flex gap-3">
+                 <div className="bg-neutral-800 rounded-lg px-3 py-1 flex items-center gap-2">
+                   <span className="text-blue-400 font-bold">{events.length}</span>
+                   <span className="text-xs text-neutral-400">{lang === 'ar' ? 'إجمالي' : 'Total'}</span>
+                 </div>
+                 <div className="bg-neutral-800 rounded-lg px-3 py-1 flex items-center gap-2">
+                   <span className="text-red-400 font-bold">{events.filter(e => e.isEmpty).length}</span>
+                   <span className="text-xs text-neutral-400">{lang === 'ar' ? 'مفرغ' : 'Empty'}</span>
+                 </div>
+               </div>
+             </div>
+             <button
+               onClick={() => setIsFullscreenEvents(false)}
+               className="p-2 rounded-xl bg-neutral-800 text-neutral-300 hover:text-white hover:bg-red-500/80 transition-all"
+             >
+               <Minimize2 className="h-6 w-6" />
+             </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {events.map((ev) => (
+                  <div key={ev.id} className={`flex flex-col gap-4 p-5 sm:p-6 rounded-3xl bg-neutral-900/90 border ${ev.isEmpty ? 'border-red-500/40 opacity-70' : 'border-white/10 hover:border-blue-500/40'} transition-all shadow-xl`}>
+                    <div className="flex items-start gap-4">
+                      {ev.isEmpty ? (
+                        <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-neutral-800 border-2 border-red-500/20 flex flex-col items-center justify-center shrink-0 shadow-lg">
+                           <span className="text-xs font-bold text-red-400 mb-1">فارغ</span>
+                           <span className="text-[10px] text-neutral-500">Deleted</span>
+                        </div>
+                      ) : (
+                        <img src={ev.thumbnailUrl || ev.mediaUrl} alt="" className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl object-cover border border-white/10 shrink-0 shadow-lg" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className="px-3 py-1.5 rounded-lg text-sm sm:text-base font-black bg-indigo-600 text-white border border-indigo-400 font-mono shadow-md" title={lang === 'ar' ? 'الرقم التسلسلي' : 'Serial Number'}>
+                             #{ev.position && ev.position !== 999999 ? ev.position : '-'}
+                          </span>
+                          <span className="font-mono text-[10px] sm:text-xs text-neutral-500 font-bold select-all">{ev.id}</span>
+                        </div>
+                        <h4 className="font-bold text-white text-base sm:text-lg leading-tight line-clamp-2">
+                           {ev.isEmpty ? (lang === 'ar' ? 'مساحة إعلان فارغة (تم المسح)' : 'Empty Ad Slot (Deleted)') : (lang === 'ar' ? ev.titleAr : ev.titleEn)}
+                        </h4>
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                           <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-neutral-800 text-neutral-300 uppercase tracking-wider">{ev.category}</span>
+                           {((ev.isFeatured || (typeof ev.position === 'number' && ev.position <= 19))) && !ev.isEmpty && <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {!ev.isEmpty && (
+                      <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm text-neutral-400 bg-neutral-950/50 p-3 rounded-xl border border-white/5">
+                        <div className="flex flex-col">
+                           <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'السعر' : 'Price'}</span>
+                           <span className="font-bold text-emerald-400 truncate">{lang === 'ar' ? ev.priceAr : ev.priceEn}</span>
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'المكان' : 'Location'}</span>
+                           <span className="text-white truncate">{lang === 'ar' ? ev.location?.nameAr : ev.location?.nameEn}</span>
+                        </div>
+                        <div className="flex flex-col mt-1">
+                           <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'التفاعل' : 'Engagement'}</span>
+                           <span className="text-pink-400 font-bold">❤️ {ev.likesCount} {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
+                        </div>
+                        <div className="flex flex-col mt-1">
+                           <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'التاريخ' : 'Date'}</span>
+                           <span className="text-blue-300 truncate">{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : '-'}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-white/5">
+                      <button
+                        onClick={() => setSelectedJsonDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn, data: ev })}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs sm:text-sm transition-all cursor-pointer border border-blue-500/30 shadow-sm"
+                      >
+                        <Code className="h-4 w-4" />
+                        <span>{lang === 'ar' ? 'عرض وثيقة JSON' : 'Inspect Doc'}</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من مسح هذه الفعالية وتفريغ الخانة؟' : 'Are you sure you want to delete this event and empty the slot?');
+                          if (confirmed) {
+                            deleteEvent(ev.id);
+                          }
+                        }}
+                        className="p-2.5 sm:p-3 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-sm"
+                        title={lang === 'ar' ? 'حذف من القاعدة' : 'Delete Document'}
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

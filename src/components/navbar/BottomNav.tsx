@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Sparkles, Music, GraduationCap, Palmtree, User, Bell, FilePlus, Ticket, MessageSquare } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Sparkles, Music, GraduationCap, Palmtree, User, Bell } from 'lucide-react';
+import { motion } from 'motion/react';
 import { TabType } from '../../types';
 import { DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
-import { markAdSubmissionsAsRead, markBookingsAsRead, markSupportMessagesAsRead } from '../../lib/firebase';
-import { PersonalNotificationsModal } from '../modals/PersonalNotificationsModal';
 
-export const BottomNav: React.FC = () => {
+interface BottomNavProps {
+  onOpenPersonalNotifications?: () => void;
+}
+
+export const BottomNav: React.FC<BottomNavProps> = ({ onOpenPersonalNotifications }) => {
   const { activeTab, setActiveTab, lang, setSelectedCategory, user, userAdSubmissions, bookings, supportMessages } = useApp();
   
-  const [showNotifMenu, setShowNotifMenu] = useState(false);
-
   // Calculate unread counts
   const unreadAdsCount = userAdSubmissions?.filter(s => (s.status === 'approved' || s.status === 'rejected') && s.userRead === false).length || 0;
   const unreadBookingsCount = bookings?.filter(b => (b.status === 'approved' || b.status === 'rejected') && b.userRead === false).length || 0;
@@ -38,37 +38,10 @@ export const BottomNav: React.FC = () => {
     }
   };
 
-  const handleNotifClick = async (type: 'ads' | 'bookings' | 'messages') => {
-    setShowNotifMenu(false);
-    setActiveTab('profile');
-    if (!user) return;
-    
-    // The profile section navigation can be handled by triggering custom events or we can rely on ProfileView remembering it.
-    // Actually, marking as read is enough, ProfileView will just show the content when they navigate.
-    
-    if (type === 'ads') {
-      await markAdSubmissionsAsRead(user.id);
-      // Optional: dispatch custom event to switch profile tab
-      window.dispatchEvent(new CustomEvent('NAVIGATE_PROFILE_SECTION', { detail: 'ads' }));
-    } else if (type === 'bookings') {
-      await markBookingsAsRead(user.id);
-      window.dispatchEvent(new CustomEvent('NAVIGATE_PROFILE_SECTION', { detail: 'booked' }));
-    } else if (type === 'messages') {
-      await markSupportMessagesAsRead(user.id);
-      window.dispatchEvent(new CustomEvent('NAVIGATE_PROFILE_SECTION', { detail: 'support' }));
-    }
-  };
-
   return (
     <nav className="fixed bottom-0 inset-x-0 flex justify-center z-[100] pointer-events-none">
       <div className="w-full sm:max-w-[520px] h-16 rounded-t-2xl border-t border-x sm:border border-neutral-800/80 bg-neutral-950/95 backdrop-blur-xl flex items-center justify-around px-2 sm:px-4 shadow-2xl pointer-events-auto relative">
         
-        {/* Notification Popup Menu */}
-        <PersonalNotificationsModal 
-          isOpen={showNotifMenu && totalUnreadCount > 0} 
-          onClose={() => setShowNotifMenu(false)} 
-        />
-
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -129,7 +102,9 @@ export const BottomNav: React.FC = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowNotifMenu(!showNotifMenu);
+                    if (onOpenPersonalNotifications) {
+                      onOpenPersonalNotifications();
+                    }
                   }}
                   className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white shadow-lg shadow-red-500/20 cursor-pointer z-50 hover:scale-110 transition-transform"
                 >

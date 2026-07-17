@@ -36,7 +36,7 @@ export async function uploadToCloudinary(file: File): Promise<string | null> {
 
   try {
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
       {
         method: 'POST',
         body: formData,
@@ -54,5 +54,30 @@ export async function uploadToCloudinary(file: File): Promise<string | null> {
   } catch (error) {
     console.error('Cloudinary upload error:', error);
     return null;
+  }
+}
+
+/**
+ * Deletes a file from Cloudinary via our backend
+ */
+export async function deleteFromCloudinary(url: string, resourceType: 'image' | 'video' = 'image'): Promise<boolean> {
+  try {
+    const response = await fetch('/api/delete-media', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url, resourceType }),
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to delete media from Cloudinary');
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting media:', error);
+    return false;
   }
 }

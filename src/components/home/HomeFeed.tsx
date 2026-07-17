@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceEvent, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
 import { EventCard } from '../events/EventCard';
@@ -18,13 +18,13 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const { lang, activeTab, selectedCategory, setSelectedCategory, activeEvents, user } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStyleFilter, setSelectedStyleFilter] = useState<string>('all');
-  const [visibleCount, setVisibleCount] = useState(6);
+  const [visibleCount, setVisibleCount] = useState(5);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [showWhyBookModal, setShowWhyBookModal] = useState(false);
 
   // Reset pagination when category, search, or style filter changes
   useEffect(() => {
-    setVisibleCount(6);
+    setVisibleCount(5);
   }, [selectedCategory, searchQuery, selectedStyleFilter]);
 
   // Back to Top scroll listener
@@ -45,14 +45,25 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Find weekly featured promo event
-  const weeklyPromoEvent = activeEvents.find(ev => ev.isWeeklyPromo);
+  // Find weekly featured promo event (newest uploaded first to ensure the latest VIP ad is featured)
+  const weeklyPromoEvent = useMemo(() => {
+    // Unify: If an event has position === 1, it is the weekly promo
+    const pos1 = activeEvents.find(ev => ev.position === 1);
+    if (pos1) return pos1;
+    
+    // Fallback to legacy isWeeklyPromo flag
+    const promos = activeEvents.filter(ev => ev.isWeeklyPromo);
+    if (promos.length === 0) return undefined;
+    return [...promos].sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime())[0];
+  }, [activeEvents]);
+
+  // Determine if banner is visible
+  const promoBannerIsVisible = !!(weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all');
 
   // Filter events
   const filteredEvents = activeEvents.filter(ev => {
     // Exclude the weekly promo event if it is already displayed in the main banner at the top
-    const isPromoBannerVisible = weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all';
-    if (isPromoBannerVisible && ev.id === weeklyPromoEvent.id) {
+    if (promoBannerIsVisible && ev.id === weeklyPromoEvent.id) {
       return false;
     }
 
@@ -215,7 +226,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         <div className="relative flex items-center justify-between bg-neutral-950/95 backdrop-blur-md rounded-[14px] px-5 py-4 w-full h-full">
           <div className="flex items-center gap-3">
             <Sparkles className="h-5 w-5 text-red-500 animate-pulse" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-500 to-red-500 font-black text-sm sm:text-base tracking-wide drop-shadow-md bg-[length:200%_auto] animate-[pulse_3s_ease-in-out_infinite]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-500 to-red-500 font-black text-lg sm:text-xl tracking-wide drop-shadow-md bg-[length:200%_auto]">
               {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
             </span>
           </div>
@@ -247,7 +258,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         <div className="flex items-center gap-3">
           <h3 className="text-lg sm:text-xl font-bold text-amber-400">
             {selectedCategory === 'all'
-              ? (lang === 'ar' ? 'أحدث الإعلانات والفعاليات اللاتينية' : 'Latest Latin Announcements')
+              ? (lang === 'ar' ? 'احدث الاعلانات و الفاعليات' : 'Latest Announcements')
               : categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}
           </h3>
           <span className="rounded-full bg-neutral-800 px-3 py-0.5 text-xs font-mono font-bold text-amber-400 border border-neutral-700">
@@ -283,8 +294,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                 <EventCard
                   key={ev.id}
                   event={ev}
-                  index={idx}
-                  overrideAdType={idx < 6 ? 'vip' : 'standard'}
+                  index={idx + (promoBannerIsVisible ? 1 : 0)}
+                  overrideAdType={ev.adType || (ev.isFeatured || (typeof ev.position === 'number' && ev.position <= 19) ? 'vip' : 'standard')}
                   onOpenMap={onOpenMap}
                   onOpenShare={onOpenShare}
                 />
@@ -293,16 +304,31 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           </div>
 
           {/* Load More Button */}
-          {filteredEvents.length > visibleCount && (
+          {filteredEvents.length >= 5 && (
             <div className="flex justify-center pt-4">
               <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setVisibleCount(prev => prev + 6)}
-                className="flex items-center gap-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:text-amber-400 px-6 py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-md cursor-pointer"
+                whileHover={filteredEvents.length > visibleCount ? { scale: 1.03 } : {}}
+                whileTap={filteredEvents.length > visibleCount ? { scale: 0.97 } : {}}
+                onClick={() => {
+                  if (filteredEvents.length > visibleCount) {
+                    setVisibleCount(prev => prev + 5);
+                  }
+                }}
+                disabled={filteredEvents.length <= visibleCount}
+                className={`flex items-center gap-2 rounded-xl border px-6 py-3 text-xs sm:text-sm font-bold transition-all shadow-md ${
+                  filteredEvents.length > visibleCount
+                    ? 'bg-neutral-900 border-neutral-800 hover:border-neutral-700 hover:text-amber-400 text-white cursor-pointer'
+                    : 'bg-neutral-900/50 border-neutral-800/50 text-neutral-500 cursor-not-allowed'
+                }`}
               >
-                <ChevronDown className="h-4 w-4 text-amber-500 animate-bounce" />
-                <span>{lang === 'ar' ? 'المزيد من الإعلانات' : 'Load More Ads'}</span>
+                {filteredEvents.length > visibleCount && (
+                  <ChevronDown className="h-4 w-4 text-amber-500 animate-bounce" />
+                )}
+                <span>
+                  {filteredEvents.length > visibleCount
+                    ? (lang === 'ar' ? 'المزيد من الإعلانات' : 'Load More Ads')
+                    : (lang === 'ar' ? 'لا توجد إعلانات أخرى' : 'No more ads')}
+                </span>
               </motion.button>
             </div>
           )}

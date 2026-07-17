@@ -81,7 +81,9 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   const performMediaUpload = async (file: File): Promise<string> => {
-    if (!cloudinaryConfig) throw new Error('Cloudinary config missing');
+    if (!cloudinaryConfig || !cloudinaryConfig.cloudName || !cloudinaryConfig.uploadPreset) {
+      throw new Error('Cloudinary config missing (VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET). Please use the manual URL input.');
+    }
     
     const formData = new FormData();
     formData.append('file', file);
@@ -593,36 +595,51 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
           </label>
 
           {!receiptImage ? (
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 bg-neutral-950/60 hover:bg-neutral-950 ${
-                isDragging 
-                  ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
-                  : 'border-neutral-700 hover:border-amber-500/60'
-              }`}
-            >
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-                id="receipt-upload-input"
-              />
-              <label htmlFor="receipt-upload-input" className="cursor-pointer flex flex-col items-center gap-3 w-full">
-                <div className="h-16 w-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg group-hover:scale-110 transition-transform">
-                  <Upload className="h-8 w-8 animate-bounce" />
-                </div>
-                <div>
-                  <span className="text-sm sm:text-base font-bold text-white block">
-                    {lang === 'ar' ? 'اضغط لاختيار صورة الإيصال أو اسحب الملف هنا' : 'Click to upload receipt image or drag file here'}
-                  </span>
-                  <span className="text-xs text-neutral-400 mt-1 block font-mono">
-                    {lang === 'ar' ? 'يدعم صور PNG, JPG, JPEG (صورة واضحة لعملية التحويل)' : 'Supports PNG, JPG, JPEG (Clear screenshot of transfer)'}
-                  </span>
-                </div>
-              </label>
+            <div className="space-y-4">
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 bg-neutral-950/60 hover:bg-neutral-950 ${
+                  isDragging 
+                    ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                    : 'border-neutral-700 hover:border-amber-500/60'
+                }`}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="receipt-upload-input"
+                />
+                <label htmlFor="receipt-upload-input" className="cursor-pointer flex flex-col items-center gap-3 w-full">
+                  <div className="h-16 w-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg group-hover:scale-110 transition-transform">
+                    <Upload className="h-8 w-8 animate-bounce" />
+                  </div>
+                  <div>
+                    <span className="text-sm sm:text-base font-bold text-white block">
+                      {lang === 'ar' ? 'اضغط لاختيار صورة الإيصال أو اسحب الملف هنا' : 'Click to upload receipt image or drag file here'}
+                    </span>
+                    <span className="text-xs text-neutral-400 mt-1 block font-mono">
+                      {lang === 'ar' ? 'يدعم صور PNG, JPG, JPEG (صورة واضحة لعملية التحويل)' : 'Supports PNG, JPG, JPEG (Clear screenshot of transfer)'}
+                    </span>
+                  </div>
+                </label>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black text-neutral-400">
+                  {lang === 'ar' ? 'أو أدخل رابط الإيصال مباشرة (URL):' : 'Or enter receipt URL directly:'}
+                </label>
+                <input
+                  type="url"
+                  value={receiptImage || ''}
+                  onChange={(e) => setReceiptImage(e.target.value)}
+                  placeholder="https://example.com/receipt.jpg"
+                  className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono"
+                  dir="ltr"
+                />
+              </div>
             </div>
           ) : (
             <div className="rounded-2xl border border-amber-500/40 bg-neutral-950 p-4 space-y-3">

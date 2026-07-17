@@ -11,7 +11,8 @@ export const BookingModal: React.FC = () => {
     selectedBookingEvent, 
     setSelectedBookingEvent, 
     lang, 
-    submitBooking 
+    submitBooking,
+    triggerConfirm
   } = useApp();
 
   const [name, setName] = useState('');
@@ -130,6 +131,16 @@ export const BookingModal: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!isFormValid) return;
+
+    const confirmMessage = isArabic 
+      ? `⚠️ تنبيه هام لسياسة الإلغاء والاسترجاع:\n\n1. يحق لك إلغاء الحجز في أي وقت واسترداد المبلغ مع خصم 5% فقط كرسوم إدارية وتحويلية.\n2. لا يحق لك إلغاء الحجز نهائياً إذا كان الوقت المتبقي على بدء الفعالية هو 48 ساعة أو أقل.\n\nهل أنت موافق وتود تأكيد الحجز وإرسال الطلب الآن؟`
+      : `⚠️ Important Cancellation & Refund Policy Alert:\n\n1. You can cancel at any time and get a refund minus a 5% administrative fee.\n2. You are NOT allowed to cancel or request a refund if there are 48 hours or less remaining until the event starts.\n\nDo you agree to these terms and wish to proceed with the booking?`;
+
+    const confirmed = await triggerConfirm(confirmMessage);
+    if (!confirmed) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -142,7 +153,8 @@ export const BookingModal: React.FC = () => {
         userPhone: phone.trim(),
         numberOfIndividuals: individuals,
         totalAmount: totalAmount,
-        receiptImage: receiptImage!
+        receiptImage: receiptImage!,
+        eventDate: selectedBookingEvent.eventDate
       });
 
       if (result) {
@@ -226,6 +238,30 @@ export const BookingModal: React.FC = () => {
                       <DollarSign className="w-3.5 h-3.5 text-zinc-500" />
                       {isArabic ? selectedBookingEvent.priceAr : selectedBookingEvent.priceEn}
                     </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cancellation & Refund Policy Alert */}
+              <div className="p-4 bg-red-950/20 border border-red-500/30 rounded-xl space-y-2">
+                <div className="flex gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <h5 className="text-sm font-bold text-red-400">
+                      {isArabic ? '📜 سياسة الإلغاء والاسترجاع الهامة:' : '📜 Important Cancellation & Refund Policy:'}
+                    </h5>
+                    <ul className="text-xs text-zinc-300 mt-2 space-y-1.5 list-disc list-inside">
+                      <li>
+                        {isArabic 
+                          ? 'يحق للمستخدم إلغاء الحجز في أي وقت قبل بدء الحدث واسترداد المبلغ، مع خصم 5% فقط من إجمالي قيمة الحجز كرسوم تحويل وإدارية.' 
+                          : 'You can cancel the booking at any time before the event, but a 5% transaction fee will be deducted from the total refund amount.'}
+                      </li>
+                      <li className="font-bold text-red-400/90">
+                        {isArabic 
+                          ? 'لا يحق للمستخدم إلغاء الحجز نهائياً إذا كان الوقت المتبقي على بدء الفعالية هو 48 ساعة أو أقل.' 
+                          : 'You have NO right to cancel the booking if the remaining time until the event is 48 hours or less.'}
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -341,6 +377,14 @@ export const BookingModal: React.FC = () => {
                         ? 'برجاء تحويل المبلغ المطلوب عبر فودافون كاش أو انستاباي على الرقم التالي، ثم أرفق لقطة شاشة لإيصال التحويل بالأسفل لتفعيل الحجز فوراً:' 
                         : 'Please transfer the total amount via Vodafone Cash or Instapay to the following number, then attach the receipt screenshot below:'}
                     </p>
+                    <div className="mt-2.5 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-400 leading-relaxed flex gap-1.5 items-start">
+                      <span>⚠️</span>
+                      <span>
+                        {isArabic
+                          ? 'تنبيه هام: لخصوصيتك وتوفير مساحة على قاعدة البيانات، سيتم حذف صورة إيصال التحويل نهائياً بعد 24 ساعة من تاريخ الحفلة. يرجى حفظ لقطة شاشة (Screenshot) للتذكرة وكود الدخول الخاص بك.'
+                          : 'Important: To ensure privacy and save space, the transfer receipt will be permanently deleted 24 hours after the event. Please keep a screenshot of your digital ticket and entry code.'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -554,7 +598,11 @@ export const BookingModal: React.FC = () => {
                   <div className="w-32 h-32 bg-white p-1.5 rounded-xl border border-zinc-800">
                     {/* Generates a live QR representing this specific booking reference code! */}
                     <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=245-158-11&data=${encodeURIComponent(bookingResult.refNumber)}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=245-158-11&data=${encodeURIComponent(
+                        (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
+                          ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                          : window.location.origin) + '/?verify=' + bookingResult.id
+                      )}`}
                       alt="Booking Access QR" 
                       className="w-full h-full object-contain"
                     />
@@ -575,13 +623,13 @@ export const BookingModal: React.FC = () => {
                 </p>
               </div>
 
-              {/* Back to Explore button */}
+              {/* Back to Home button */}
               <button
                 type="button"
                 onClick={() => setSelectedBookingEvent(null)}
                 className="py-2.5 px-6 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white rounded-xl text-sm transition font-sans font-medium"
               >
-                {isArabic ? 'العودة للاستكشاف' : 'Close & Go Back'}
+                {isArabic ? 'العودة للصفحة الرئيسية' : 'Return to Home Page'}
               </button>
             </div>
           )}

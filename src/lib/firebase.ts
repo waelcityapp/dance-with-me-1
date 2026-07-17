@@ -134,33 +134,25 @@ export async function cleanUpImagelessAndDuplicateAds(): Promise<number> {
   try {
     const eventsRef = collection(db, COLLECTIONS.EVENTS);
     const evSnap = await getDocs(eventsRef);
-    const seenEv = new Set<string>();
     for (const docSnap of evSnap.docs) {
       const ev = docSnap.data() as DanceEvent;
       const hasImage = isValidMediaUrl(ev.mediaUrl) || isValidMediaUrl(ev.thumbnailUrl);
-      const key = `${ev.titleAr?.trim()}_${ev.descriptionAr?.trim()}_${ev.eventDate}`;
-      if (!hasImage || seenEv.has(key)) {
-        console.warn('Deleting imageless or duplicate event from DB:', ev.id, ev.titleAr);
+      if (!hasImage) {
+        console.warn('Deleting imageless event from DB:', ev.id, ev.titleAr);
         await deleteDoc(docSnap.ref).catch(() => {});
         deletedCount++;
-      } else {
-        seenEv.add(key);
       }
     }
 
     const subRef = collection(db, COLLECTIONS.AD_SUBMISSIONS);
     const subSnap = await getDocs(subRef);
-    const seenSub = new Set<string>();
     for (const docSnap of subSnap.docs) {
       const sub = docSnap.data() as AdSubmission;
       const hasImage = isValidMediaUrl(sub.mediaUrl) || (sub.eventData && (isValidMediaUrl(sub.eventData.mediaUrl) || isValidMediaUrl(sub.eventData.thumbnailUrl)));
-      const key = `${sub.titleAr?.trim()}_${sub.phone?.trim()}_${sub.pricing?.total}_${sub.advertiserName?.trim()}`;
-      if (!hasImage || seenSub.has(key)) {
-        console.warn('Deleting imageless or duplicate ad submission from DB:', sub.id, sub.titleAr);
+      if (!hasImage) {
+        console.warn('Deleting imageless ad submission from DB:', sub.id, sub.titleAr);
         await deleteDoc(docSnap.ref).catch(() => {});
         deletedCount++;
-      } else {
-        seenSub.add(key);
       }
     }
   } catch (err) {
@@ -185,19 +177,14 @@ export function subscribeToEvents(
         const seenTitles = new Set<string>();
         snapshot.forEach((docSnap) => {
           const ev = docSnap.data() as DanceEvent;
+          // We no longer skip events without images at the DB level, 
+          // because we need empty ads (deleted slots) to maintain position numbers in the admin panel.
+          // The frontend (AppContext activeEvents) will filter out incomplete events for normal users.
           const hasImage = isValidMediaUrl(ev.mediaUrl) || isValidMediaUrl(ev.thumbnailUrl);
-          if (!hasImage) {
-            console.warn('Auto-deleting event without image from DB:', ev.id, ev.titleAr);
-            deleteDoc(docSnap.ref).catch(() => {});
-            return;
+          if (!hasImage && !ev.isEmpty) {
+            console.warn('Event has no image and is not empty:', ev.id, ev.titleAr);
+            // Optionally we could still skip, but it's better to let AdminPanel see it and let activeEvents filter it out.
           }
-          const titleKey = `${ev.titleAr?.trim()}_${ev.descriptionAr?.trim()}_${ev.eventDate}`;
-          if (seenTitles.has(titleKey)) {
-            console.warn('Auto-deleting duplicate event from DB:', ev.id, ev.titleAr);
-            deleteDoc(docSnap.ref).catch(() => {});
-            return;
-          }
-          seenTitles.add(titleKey);
           eventsList.push(ev);
         });
         // Sort by position ascending, fallback to uploadDate descending
@@ -1014,5 +1001,37 @@ export async function deleteAllNotificationsFromFirestore(): Promise<boolean> {
   } catch (error) {
     console.error('Error deleting all notifications from Firestore:', error);
     return false;
+  }
+}
+
+export async function reorderAdsStartingFrom20(): Promise<void> {
+  try {
+    const eventsRef = collection(db, COLLECTIONS.EVENTS);
+    const evSnap = await getDocs(eventsRef);
+    let startPos = 20;
+    
+    // First, let's sort them by current position, then upload date
+    const sortedDocs = evSnap.docs.map(doc => ({ id: doc.id, data: doc.data() as DanceEvent }))
+      .sort((a, b) => {
+        const posA = a.data.position || 999999;
+        const posB = b.data.position || 999999;
+        if (posA !== posB) return posA - posB;
+        return new Date(b.data.uploadDate).getTime() - new Date(a.data.uploadDate).getTime();
+      });
+
+    for (const item of sortedDocs) {
+      if (item.data.position === 1) {
+        // Keep banner as 1
+        continue;
+      }
+      
+      await updateDoc(doc(db, COLLECTIONS.EVENTS, item.id), {
+        position: startPos
+      });
+      startPos++;
+    }
+    console.log('Ads reordered successfully starting from 20');
+  } catch (error) {
+    console.error('Error reordering ads:', error);
   }
 }

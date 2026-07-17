@@ -4,9 +4,9 @@ import { User, PlusCircle, Heart, Ticket, ShieldAlert, Sparkles, Clock, Trash2, 
 import { motion, AnimatePresence } from 'motion/react';
 import { EventCard } from '../events/EventCard';
 import { DanceEvent, AdSubmission, DanceStyle, ALL_DANCE_STYLES } from '../../types';
-import { subscribeToAdSubmissions, saveAdSubmissionToFirestore, saveNotificationToFirestore } from '../../lib/firebase';
+import { subscribeToAdSubmissions, saveAdSubmissionToFirestore, saveNotificationToFirestore, deleteAdSubmissionFromFirestore, deleteSupportMessageFromFirestore, saveEventToFirestore } from '../../lib/firebase';
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
-import { compressImage, uploadToCloudinary } from '../../utils/cloudinary';
+import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
 
 interface ProfileViewProps {
   onOpenCreateModal: () => void;
@@ -38,7 +38,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     isAdminUnlocked,
     bookings,
     deleteBooking,
-    deleteAllBookings
+    cancelBooking,
+    deleteAllBookings,
+    clearAllLikedEvents,
+    triggerConfirm
   } = useApp();
 
   const [adSubmissions, setAdSubmissions] = useState<AdSubmission[]>([]);
@@ -69,9 +72,72 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setCleaningUp(false);
     }
   };
+
+  const handleDeleteAdSubmission = async (submissionId: string) => {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف هذا الإعلان بشكل نهائي؟' : 'Are you sure you want to permanently delete this ad?');
+    if (!confirmed) return;
+    try {
+      await deleteAdSubmissionFromFirestore(submissionId);
+      setAdSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
+      try {
+        const local: AdSubmission[] = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
+        const filtered = local.filter(item => item.id !== submissionId);
+        localStorage.setItem('dwm_ad_submissions', JSON.stringify(filtered));
+      } catch (e) {}
+    } catch (err) {
+      console.error('Error deleting ad:', err);
+    }
+  };
+
+  const handleDeleteAllAdSubmissions = async () => {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف جميع إعلاناتك وفواتيرك بشكل نهائي؟' : 'Are you sure you want to permanently delete all your ads and invoices?');
+    if (!confirmed) return;
+    try {
+      const promises = adSubmissions.map(sub => deleteAdSubmissionFromFirestore(sub.id));
+      await Promise.all(promises);
+      setAdSubmissions([]);
+      localStorage.setItem('dwm_ad_submissions', '[]');
+    } catch (err) {
+      console.error('Error deleting all ads:', err);
+    }
+  };
+
+  const handleDeleteSupportMessage = async (messageId: string) => {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف هذه الرسالة؟' : 'Are you sure you want to delete this message?');
+    if (!confirmed) return;
+    try {
+      await deleteSupportMessageFromFirestore(messageId);
+    } catch (err) {
+      console.error('Error deleting support message:', err);
+    }
+  };
+
+  const handleDeleteAllSupportMessages = async () => {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف جميع رسائل الدعم بشكل نهائي؟' : 'Are you sure you want to permanently delete all support messages?');
+    if (!confirmed) return;
+    try {
+      const promises = mySupportMessages.map(msg => deleteSupportMessageFromFirestore(msg.id));
+      await Promise.all(promises);
+    } catch (err) {
+      console.error('Error deleting all support messages:', err);
+    }
+  };
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
   const [editTitleAr, setEditTitleAr] = useState('');
   const [editTitleEn, setEditTitleEn] = useState('');
+  const [editDescAr, setEditDescAr] = useState('');
+  const [editDescEn, setEditDescEn] = useState('');
+  const [editPriceAr, setEditPriceAr] = useState('');
+  const [editPriceEn, setEditPriceEn] = useState('');
+  const [editEventDate, setEditEventDate] = useState('');
+  const [editLocationAr, setEditLocationAr] = useState('');
+  const [editLocationEn, setEditLocationEn] = useState('');
+  const [editContactPhone, setEditContactPhone] = useState('');
+  const [editContactWhatsapp, setEditContactWhatsapp] = useState('');
+  const [editMediaUrl, setEditMediaUrl] = useState('');
+  const [editMediaType, setEditMediaType] = useState<'image' | 'video'>('image');
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [mediaUploadProgress, setMediaUploadProgress] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [activeSection, setActiveSection] = useState<'overview' | 'ads' | 'support' | 'booked' | 'liked' | 'archive'>('overview');
@@ -132,6 +198,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const imageUrl = await uploadToCloudinary(compressed);
       
       if (imageUrl) {
+        // Try to delete old avatar if it was on Cloudinary
+        if (user.avatar && user.avatar.includes('cloudinary.com') && user.avatar !== imageUrl) {
+          try {
+             await fetch('/api/delete-media', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ url: user.avatar, resourceType: 'image' })
+             });
+          } catch (delErr) {
+             console.error('Failed to delete old avatar:', delErr);
+          }
+        }
+        
         // 3. Update User Profile
         await updateUserProfile({ avatar: imageUrl });
         setShowAvatarPicker(false);
@@ -205,7 +284,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         submittedAt: new Date().toISOString()
       };
       updateLocalAndState(updated);
-      await saveAdSubmissionToFirestore(updated);
+      await saveAdSubmissionToFirestore(updated); if (updated.status === "approved" && updated.eventData && updated.eventData.id) { await saveEventToFirestore(updated.eventData as DanceEvent); }
 
       await saveNotificationToFirestore({
         id: `notif_renew_${Date.now()}`,
@@ -229,30 +308,113 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setEditingSubId(sub.id);
     setEditTitleAr(sub.titleAr);
     setEditTitleEn(sub.titleEn);
+    setEditDescAr(sub.eventData?.descriptionAr || '');
+    setEditDescEn(sub.eventData?.descriptionEn || '');
+    setEditPriceAr(sub.eventData?.priceAr || '');
+    setEditPriceEn(sub.eventData?.priceEn || '');
+    setEditEventDate(sub.eventData?.eventDate ? sub.eventData.eventDate.split('T')[0] : '');
+    setEditLocationAr(sub.eventData?.location?.nameAr || '');
+    setEditLocationEn(sub.eventData?.location?.nameEn || '');
+    setEditContactPhone(sub.eventData?.contact?.phone || sub.phone || '');
+    setEditContactWhatsapp(sub.eventData?.contact?.whatsapp || sub.phone || '');
+    setEditMediaUrl(sub.eventData?.mediaUrl || sub.mediaUrl || '');
+    setEditMediaType(sub.eventData?.mediaType || sub.mediaType || 'image');
+  };
+
+  const handleMediaFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isVideo = file.type.startsWith('video/');
+    if (editMediaType === 'image' && isVideo) {
+      alert(lang === 'ar' ? 'الرجاء اختيار صورة.' : 'Please select an image.');
+      return;
+    }
+    if (editMediaType === 'video' && !isVideo) {
+      alert(lang === 'ar' ? 'الرجاء اختيار فيديو.' : 'Please select a video.');
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    setMediaUploadProgress(10);
+    
+    try {
+      let fileToUpload = file;
+      if (editMediaType === 'image') {
+        setMediaUploadProgress(30);
+        fileToUpload = await compressImage(file);
+      }
+      
+      setMediaUploadProgress(60);
+      const url = await uploadToCloudinary(fileToUpload);
+      
+      if (url) {
+        setEditMediaUrl(url);
+        setMediaUploadProgress(100);
+      } else {
+        alert(lang === 'ar' ? 'فشل الرفع، يرجى المحاولة مرة أخرى.' : 'Upload failed, please try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert(lang === 'ar' ? 'حدث خطأ أثناء الرفع.' : 'An error occurred during upload.');
+    } finally {
+      setTimeout(() => {
+        setIsUploadingMedia(false);
+        setMediaUploadProgress(0);
+      }, 500);
+    }
   };
 
   const handleSaveEdit = async (sub: AdSubmission) => {
     setActionLoading(sub.id);
     try {
+      const oldMediaUrl = sub.eventData?.mediaUrl || sub.mediaUrl;
+      const mediaChanged = editMediaUrl && editMediaUrl !== oldMediaUrl;
+      
       const updated: AdSubmission = {
         ...sub,
         titleAr: editTitleAr || sub.titleAr,
         titleEn: editTitleEn || sub.titleEn,
+        mediaUrl: mediaChanged ? editMediaUrl : sub.mediaUrl,
+        mediaType: editMediaType,
         eventData: sub.eventData ? {
           ...sub.eventData,
           titleAr: editTitleAr || sub.eventData.titleAr || sub.titleAr,
-          titleEn: editTitleEn || sub.eventData.titleEn || sub.titleEn
+          titleEn: editTitleEn || sub.eventData.titleEn || sub.titleEn,
+          descriptionAr: editDescAr || sub.eventData.descriptionAr,
+          descriptionEn: editDescEn || sub.eventData.descriptionEn,
+          priceAr: editPriceAr || sub.eventData.priceAr,
+          priceEn: editPriceEn || sub.eventData.priceEn,
+          eventDate: editEventDate ? new Date(editEventDate).toISOString() : sub.eventData.eventDate,
+          location: {
+            ...sub.eventData.location,
+            nameAr: editLocationAr || sub.eventData.location?.nameAr,
+            nameEn: editLocationEn || sub.eventData.location?.nameEn
+          },
+          contact: {
+            ...sub.eventData.contact,
+            phone: editContactPhone || sub.eventData.contact?.phone,
+            whatsapp: editContactWhatsapp || sub.eventData.contact?.whatsapp
+          },
+          mediaUrl: mediaChanged ? editMediaUrl : sub.eventData.mediaUrl,
+          mediaType: editMediaType
         } : undefined
       };
+
       updateLocalAndState(updated);
-      await saveAdSubmissionToFirestore(updated);
+      await saveAdSubmissionToFirestore(updated); if (updated.status === "approved" && updated.eventData && updated.eventData.id) { await saveEventToFirestore(updated.eventData as DanceEvent); }
+      
+      // Delete old media if changed and it was on Cloudinary
+      if (mediaChanged && oldMediaUrl && oldMediaUrl.includes('cloudinary.com')) {
+        await deleteFromCloudinary(oldMediaUrl, sub.mediaType);
+      }
 
       await saveNotificationToFirestore({
         id: `notif_edit_${Date.now()}`,
         titleAr: '✏️ تم تعديل بيانات الإعلان رقم ' + sub.invoiceNumber,
         titleEn: '✏️ Ad data edited for invoice ' + sub.invoiceNumber,
-        messageAr: `قام المعلن ${sub.advertiserName} بتعديل عنوان الإعلان إلى: ${updated.titleAr}`,
-        messageEn: `Advertiser ${sub.advertiserName} edited ad title to: ${updated.titleEn}`,
+        messageAr: `قام المعلن ${sub.advertiserName} بتعديل بيانات الإعلان`,
+        messageEn: `Advertiser ${sub.advertiserName} edited ad data`,
         date: new Date().toISOString(),
         read: false,
         type: 'system'
@@ -720,6 +882,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span>{cleaningUp ? (lang === 'ar' ? 'جاري التنظيف...' : 'Cleaning...') : (lang === 'ar' ? '🧹 تنظيف الزحمة والمكرر' : '🧹 Clean Clutter')}</span>
             </button>
 
+            {adSubmissions.length > 0 && (
+              <button
+                onClick={handleDeleteAllAdSubmissions}
+                className="flex items-center gap-2 rounded-xl bg-red-600/10 border border-red-500/30 px-3 py-2.5 text-xs font-bold text-red-400 hover:bg-red-600 hover:text-white transition-all cursor-pointer shadow-md"
+                title={lang === 'ar' ? 'حذف جميع الإعلانات والفواتير بشكل نهائي' : 'Delete all ads and invoices permanently'}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>{lang === 'ar' ? 'حذف الكل' : 'Delete All'}</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenCreateModal}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 text-xs font-extrabold text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-md gold-glow transition-all shrink-0 cursor-pointer"
@@ -739,6 +912,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {adSubmissions.map((sub) => {
               const isArchived = sub.status === 'archived' || (sub.expiresAt && new Date(sub.expiresAt).getTime() <= Date.now());
               const isEditing = editingSubId === sub.id;
+              const associatedEvent = events.find(e => e.id === sub.eventData?.id || e.id === sub.id);
 
               return (
                 <motion.div
@@ -760,6 +934,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <span className="px-3 py-1 rounded-xl bg-neutral-800 text-amber-400 font-mono text-xs font-bold border border-white/10">
                         {sub.invoiceNumber}
                       </span>
+                      {associatedEvent?.eventRef && (
+                        <span className="px-3 py-1 rounded-xl bg-indigo-950/80 text-indigo-400 font-mono text-xs font-black border border-indigo-500/20">
+                          {lang === 'ar' ? `الرقم المرجعي: ${associatedEvent.eventRef}` : `Ref No: ${associatedEvent.eventRef}`}
+                        </span>
+                      )}
                       <span className={`text-xs px-3 py-1 rounded-full font-extrabold uppercase ${
                         isArchived ? 'bg-amber-500 text-neutral-950 shadow-md animate-pulse' :
                         sub.status === 'approved' ? 'bg-emerald-500 text-neutral-950' :
@@ -809,6 +988,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'عنوان الإعلان (بالعربية)' : 'Title (Arabic)'}</label>
                         <input
                           type="text"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck={false}
                           value={editTitleAr}
                           onChange={e => setEditTitleAr(e.target.value)}
                           className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
@@ -818,11 +1000,185 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'عنوان الإعلان (بالإنجليزية)' : 'Title (English)'}</label>
                         <input
                           type="text"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck={false}
                           value={editTitleEn}
                           onChange={e => setEditTitleEn(e.target.value)}
                           className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
                         />
                       </div>
+                      
+                      {/* Description */}
+                      <div>
+                        <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'الوصف (بالعربية)' : 'Description (Arabic)'}</label>
+                        <textarea
+                          value={editDescAr}
+                          onChange={e => setEditDescAr(e.target.value)}
+                          rows={3}
+                          className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'الوصف (بالإنجليزية)' : 'Description (English)'}</label>
+                        <textarea
+                          value={editDescEn}
+                          onChange={e => setEditDescEn(e.target.value)}
+                          rows={3}
+                          className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none resize-none text-left"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      {/* Price */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'السعر (بالعربية)' : 'Price (Arabic)'}</label>
+                          <input
+                            type="text"
+                            value={editPriceAr}
+                            onChange={e => setEditPriceAr(e.target.value)}
+                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                            placeholder="مثال: ١٠٠ درهم"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'السعر (بالإنجليزية)' : 'Price (English)'}</label>
+                          <input
+                            type="text"
+                            value={editPriceEn}
+                            onChange={e => setEditPriceEn(e.target.value)}
+                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
+                            dir="ltr"
+                            placeholder="e.g. 100 AED"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Event Date */}
+                      <div>
+                        <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'تاريخ الحدث' : 'Event Date'}</label>
+                        <input
+                          type="date"
+                          value={editEventDate}
+                          onChange={e => setEditEventDate(e.target.value)}
+                          className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      {/* Location */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'الموقع (بالعربية)' : 'Location (Arabic)'}</label>
+                          <input
+                            type="text"
+                            value={editLocationAr}
+                            onChange={e => setEditLocationAr(e.target.value)}
+                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                            placeholder="مثال: دبي مارينا"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'الموقع (بالإنجليزية)' : 'Location (English)'}</label>
+                          <input
+                            type="text"
+                            value={editLocationEn}
+                            onChange={e => setEditLocationEn(e.target.value)}
+                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
+                            dir="ltr"
+                            placeholder="e.g. Dubai Marina"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Contact */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'هاتف الاتصال' : 'Contact Phone'}</label>
+                          <input
+                            type="tel"
+                            value={editContactPhone}
+                            onChange={e => setEditContactPhone(e.target.value)}
+                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
+                            dir="ltr"
+                            placeholder="971..."
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'رقم واتساب' : 'WhatsApp Number'}</label>
+                          <input
+                            type="tel"
+                            value={editContactWhatsapp}
+                            onChange={e => setEditContactWhatsapp(e.target.value)}
+                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
+                            dir="ltr"
+                            placeholder="971..."
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Media Edit */}
+                      <div className="space-y-2 pt-2 border-t border-white/5">
+                        <label className="text-xs text-neutral-400 block mb-1">
+                          {lang === 'ar' ? 'تعديل الصورة / الفيديو' : 'Edit Media (Image / Video)'}
+                        </label>
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditMediaType('image')}
+                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${editMediaType === 'image' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 text-neutral-400'}`}
+                          >
+                            Image
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditMediaType('video')}
+                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${editMediaType === 'video' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 text-neutral-400'}`}
+                          >
+                            Video
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="url"
+                            value={editMediaUrl}
+                            onChange={(e) => setEditMediaUrl(e.target.value)}
+                            placeholder="https://..."
+                            className="flex-1 rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                          />
+                          <label className="flex items-center justify-center px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white cursor-pointer transition-all border border-neutral-700 disabled:opacity-50">
+                            {isUploadingMedia ? (
+                              <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                            ) : (
+                              <span className="text-xs font-bold">{lang === 'ar' ? 'رفع' : 'Upload'}</span>
+                            )}
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept={editMediaType === 'image' ? 'image/*' : 'video/*'}
+                              onChange={handleMediaFileChange}
+                              disabled={isUploadingMedia}
+                            />
+                          </label>
+                        </div>
+                        {isUploadingMedia && (
+                          <div className="mt-1 w-full bg-neutral-800 rounded-full h-1 overflow-hidden">
+                            <div className="bg-amber-500 h-full transition-all duration-300" style={{ width: `${mediaUploadProgress}%` }} />
+                          </div>
+                        )}
+                        {editMediaUrl && (
+                          <div className="mt-2 relative rounded-lg overflow-hidden border border-neutral-800 w-full max-w-[200px]">
+                            {editMediaType === 'video' ? (
+                               <video src={editMediaUrl} className="w-full object-cover rounded-lg" controls />
+                            ) : (
+                               <img src={editMediaUrl} alt="Preview" className="w-full object-cover rounded-lg" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex items-center gap-2 pt-2">
                         <button
                           disabled={actionLoading === sub.id}
@@ -862,7 +1218,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                   )}
 
-                  {/* Advertiser Actions: Renew & Edit */}
+                  {sub.status === 'approved' && (
+                    (() => {
+                      const eventId = sub.eventData?.id || sub.id;
+                      const eventBookings = bookings?.filter(b => b.eventId === eventId) || [];
+                      const actualAttendeesCount = eventBookings
+                        .filter(b => b.status === 'approved' && b.attended === true)
+                        .reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+
+                      return (
+                        <div className="mt-4 p-4 rounded-2xl bg-indigo-950/20 border border-indigo-500/20 text-xs space-y-3 mb-4">
+                          <h5 className="font-bold text-indigo-400 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            <span>{lang === 'ar' ? '📊 إحصائيات الحضور الفعلية' : '📊 Real Attendance Stats'}</span>
+                          </h5>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                            <div>
+                              <span className="text-neutral-500 block">{lang === 'ar' ? 'الذين حضروا بالفعل' : 'Actual Attendees'}</span>
+                              <span className="text-white font-extrabold text-base font-sans">{actualAttendeesCount} {lang === 'ar' ? 'أفراد' : 'people'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  )}
+
+                  {/* Advertiser Actions: Renew, Edit & Delete */}
                   {!isEditing && (
                     <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-white/10">
                       {(isArchived || sub.status === 'approved') && (
@@ -885,6 +1266,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <Edit3 className="h-4 w-4 text-amber-400" />
                         <span>{lang === 'ar' ? '✏️ تعديل البيانات' : '✏️ Edit Details'}</span>
                       </button>
+
+                      <button
+                        onClick={() => handleDeleteAdSubmission(sub.id)}
+                        className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/15 text-red-400 hover:text-red-300 font-bold text-xs transition-all cursor-pointer"
+                        title={lang === 'ar' ? 'حذف هذا الإعلان' : 'Delete this ad'}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                        <span>{lang === 'ar' ? 'حذف' : 'Delete'}</span>
+                      </button>
                     </div>
                   )}
                 </motion.div>
@@ -898,7 +1288,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Support Messages & Replies Section */}
       {activeSection === 'support' && (
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
               <MessageSquare className="h-4 w-4" />
@@ -907,13 +1297,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {lang === 'ar' ? `رسائلي وإشعارات الدعم الفني (${mySupportMessages.length})` : `My Support Inquiries & Replies (${mySupportMessages.length})`}
             </h3>
           </div>
-          <button
-            onClick={openSupportModal}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-black hover:from-amber-400 hover:to-amber-500 transition-all shadow-md cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4" />
-            <span>{lang === 'ar' ? 'إرسال استفسار أو مقترح جديد' : 'New Inquiry'}</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {mySupportMessages.length > 0 && (
+              <button
+                onClick={handleDeleteAllSupportMessages}
+                className="flex items-center gap-1.5 rounded-xl border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/15 px-3 py-2 text-xs font-bold text-red-400 transition-all cursor-pointer"
+                title={lang === 'ar' ? 'حذف جميع رسائل الدعم بشكل نهائي' : 'Delete all support messages permanently'}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'حذف الكل' : 'Delete All'}</span>
+              </button>
+            )}
+            <button
+              onClick={openSupportModal}
+              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-black hover:from-amber-400 hover:to-amber-500 transition-all shadow-md cursor-pointer"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>{lang === 'ar' ? 'إرسال استفسار أو مقترح جديد' : 'New Inquiry'}</span>
+            </button>
+          </div>
         </div>
 
         {mySupportMessages.length === 0 ? (
@@ -941,7 +1343,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </span>
                   </div>
 
-                  <div>
+                  <div className="flex items-center gap-2">
                     {msg.status === 'pending' ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/30">
                         <Clock className="h-3.5 w-3.5" />
@@ -953,6 +1355,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         {lang === 'ar' ? 'تم الرد الرسمي' : 'Replied'}
                       </span>
                     )}
+
+                    <button
+                      onClick={() => handleDeleteSupportMessage(msg.id)}
+                      className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-red-500/15 hover:text-red-400 text-zinc-400 border border-zinc-750 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                      title={lang === 'ar' ? 'حذف هذه الرسالة' : 'Delete this message'}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
 
@@ -1063,6 +1473,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <span className="text-xs font-mono font-bold text-amber-500">
                           {b.refNumber}
                         </span>
+                        {b.submittedAt && (
+                          <span className="text-[10px] text-zinc-400 font-sans block mt-1">
+                            📅 {new Date(b.submittedAt).toLocaleString(isArabic ? 'ar-EG' : 'en-US')}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         {b.status === 'pending' ? (
@@ -1074,6 +1489,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
                             <CheckCircle className="w-3 h-3" />
                             {isArabic ? 'مؤكد ومقبول' : 'Confirmed'}
+                          </span>
+                        ) : b.status === 'cancelled' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-neutral-800 text-neutral-400 text-[10px] font-bold border border-zinc-700">
+                            <X className="w-3 h-3" />
+                            {isArabic ? 'ملغي ومسترجع' : 'Cancelled & Refunded'}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/25 text-red-400 text-[10px] font-bold border border-red-500/20">
@@ -1098,6 +1518,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <h4 className="text-sm font-bold text-zinc-100 line-clamp-1">
                         {isArabic ? b.eventTitleAr : b.eventTitleEn}
                       </h4>
+                      {(() => {
+                        const matchedEvent = events.find(e => e.id === b.eventId);
+                        const evDate = b.eventDate || matchedEvent?.eventDate;
+                        if (!evDate) return null;
+                        return (
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-500 mt-1">
+                            <span>📅 {isArabic ? 'تاريخ الحفلة:' : 'Event Date:'}</span>
+                            <span className="font-mono text-zinc-200">
+                              {new Date(evDate).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t border-zinc-800/60">
@@ -1137,6 +1570,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {/* Purge Notice Warning */}
+                    <div className="text-[10px] text-zinc-400 bg-zinc-900/30 p-2.5 rounded-xl border border-zinc-800/80 flex gap-1.5 leading-relaxed">
+                      <span className="text-amber-500 mt-0.5 shrink-0">⚠️</span>
+                      <div>
+                        {isArabic ? (
+                          <span>
+                            <strong>تنبيه هام جداً:</strong> لخصوصيتك وتوفير مساحة بقاعدة البيانات، <span className="text-amber-400 font-semibold">سيتم حذف صورة الإيصال تلقائياً بعد مرور 24 ساعة من تاريخ الحفلة.</span> يرجى أخذ لقطة شاشة (Screenshot) للتذكرة وبيانات الدخول للتحفظ بها.
+                          </span>
+                        ) : (
+                          <span>
+                            <strong>Important Notice:</strong> For privacy and database performance, <span className="text-amber-400 font-semibold">your uploaded receipt image will be deleted 24 hours after the event date.</span> Please take a screenshot of this ticket to keep a permanent backup.
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Dotted separator with ticket cuts on sides */}
@@ -1168,39 +1617,164 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         )}
                       </div>
                     ) : b.status === 'approved' ? (
-                      <div className="flex flex-col sm:flex-row gap-4 items-center bg-zinc-950/85 p-3 rounded-2xl border border-zinc-800">
-                        {/* Live QR generator for the entry card */}
-                        <div className="w-20 h-20 bg-white p-1 rounded-lg shrink-0 border border-zinc-800">
-                          <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&color=245-158-11&data=${encodeURIComponent(b.accessCode || b.refNumber)}`} 
-                            className="w-full h-full object-contain" 
-                            alt="Entry QR" 
-                          />
+                      b.attended ? (
+                        <div className="flex flex-col items-center justify-center text-center bg-emerald-500/10 p-5 rounded-2xl border border-emerald-500/20 space-y-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-zinc-950 font-black text-xl">
+                            ✓
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider block">
+                              {isArabic ? '🟢 تم تأكيد الحضور بنجاح' : '🟢 ATTENDANCE CONFIRMED SUCCESSFULLY'}
+                            </span>
+                            <span className="text-xs text-zinc-300 block font-mono">
+                              {b.attendedAt ? new Date(b.attendedAt).toLocaleString(isArabic ? 'ar-EG' : 'en-US', {
+                                dateStyle: 'medium',
+                                timeStyle: 'short'
+                              }) : new Date().toLocaleString(isArabic ? 'ar-EG' : 'en-US', {
+                                dateStyle: 'medium',
+                                timeStyle: 'short'
+                              })}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-sans leading-relaxed">
+                              {isArabic 
+                                ? 'لقد تم تسجيل دخولك لهذه الفعالية بواسطة موظف الأمن.' 
+                                : 'Your check-in has been registered for this event by the security officer.'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="space-y-1 flex-1 text-center sm:text-right">
-                          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">
-                            {isArabic ? 'كود الدخول والتحقق الرقمي' : 'DIGITAL ENTRY PASSCODE'}
-                          </span>
-                          <span className="text-sm font-mono font-black text-emerald-400 tracking-widest block">
-                            {b.accessCode || 'DWM-ACTIVE'}
-                          </span>
-                          <span className="text-[10px] text-zinc-400 block font-sans leading-relaxed">
-                            {isArabic 
-                              ? '✅ أظهر هذا الباركود للمسؤول عند بوابة الحضور للدخول مباشرة!' 
-                              : '✅ Present this barcode at the entry gate to gain access!'}
-                          </span>
-                        </div>
-                      </div>
+                      ) : (
+                        (() => {
+                          const matchedEvent = events.find(e => e.id === b.eventId);
+                          const evDate = b.eventDate || matchedEvent?.eventDate;
+                          let isEventPassed = false;
+                          if (evDate) {
+                            const eventTime = new Date(evDate).getTime();
+                            const nowTime = new Date().getTime();
+                            isEventPassed = nowTime > eventTime + (24 * 60 * 60 * 1000); // 24 hours after event
+                          }
+
+                          if (isEventPassed) {
+                            return (
+                              <div className="flex flex-col items-center justify-center text-center bg-zinc-900/50 p-5 rounded-2xl border border-zinc-800 space-y-3">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 text-zinc-500 font-black text-xl">
+                                  ⌛
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="text-[11px] font-black text-zinc-400 uppercase tracking-wider block">
+                                    {isArabic ? 'انتهت الفعالية' : 'EVENT ENDED'}
+                                  </span>
+                                  <span className="text-[10px] text-zinc-500 block font-sans leading-relaxed">
+                                    {isArabic ? 'تم انتهاء وقت هذه الفعالية ولم يعد الباركود متاحاً.' : 'This event has ended and the QR code is no longer available.'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="flex flex-col sm:flex-row gap-4 items-center bg-zinc-950/85 p-3 rounded-2xl border border-zinc-800">
+                              {/* Live QR generator for the entry card */}
+                              <div className="w-20 h-20 bg-white p-1 rounded-lg shrink-0 border border-zinc-800">
+                                <img 
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&color=245-158-11&data=${encodeURIComponent(
+                                    (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
+                                      ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                                      : window.location.origin) + '/?verify=' + b.id
+                                  )}`} 
+                                  className="w-full h-full object-contain" 
+                                  alt="Entry QR" 
+                                />
+                              </div>
+                              <div className="space-y-1 flex-1 text-center sm:text-right">
+                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">
+                                  {isArabic ? 'كود الدخول والتحقق الرقمي' : 'DIGITAL ENTRY PASSCODE'}
+                                </span>
+                                <span className="text-sm font-mono font-black text-emerald-400 tracking-widest block">
+                                  {b.accessCode || 'DWM-ACTIVE'}
+                                </span>
+                                <span className="text-[10px] text-zinc-400 block font-sans leading-relaxed">
+                                  {isArabic 
+                                    ? '✅ أظهر هذا الباركود للمسؤول عند بوابة الحضور للدخول مباشرة!' 
+                                    : '✅ Present this barcode at the entry gate to gain access!'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()
+                      )
                     ) : (
                       <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl space-y-1">
                         <span className="text-[10px] font-bold text-red-400 block uppercase tracking-wider">
                           {isArabic ? 'سبب الرفض' : 'REJECTION REASON'}
                         </span>
                         <p className="text-xs text-zinc-300 font-sans leading-relaxed">
-                          {b.notes || (isArabic ? 'التحويل غير مكتمل أو لم يتم استلامه على الرقم 01010764256.' : 'The transfer was incomplete or not received on our payment system.')}
+                          {b.adminNotes || b.notes || (isArabic ? 'التحويل غير مكتمل أو لم يتم استلامه على الرقم 01010764256.' : 'The transfer was incomplete or not received on our payment system.')}
                         </p>
                       </div>
                     )}
+
+                    {/* User Cancellation & Withdrawal Section */}
+                    {((b.status === 'pending' || b.status === 'approved') && !b.attended) && (() => {
+                      const matchedEvent = events.find(e => e.id === b.eventId);
+                      const evDate = b.eventDate || matchedEvent?.eventDate;
+                      
+                      let isCancelable = false;
+                      let remainingHoursText = '';
+                      let isEventPassed = false;
+                      
+                      if (evDate) {
+                        const eventTime = new Date(evDate).getTime();
+                        const nowTime = new Date().getTime();
+                        const diffMs = eventTime - nowTime;
+                        const diffHours = diffMs / (1000 * 60 * 60);
+                        isCancelable = diffHours > 48;
+                        isEventPassed = nowTime > eventTime + (24 * 60 * 60 * 1000);
+                        
+                        if (!isCancelable) {
+                          remainingHoursText = isArabic 
+                            ? 'لا يمكنك الآن الإلغاء (المتبقي أقل من 48 ساعة على الفعالية)' 
+                            : 'You cannot cancel now (less than 48 hours remaining until event)';
+                        }
+                      } else {
+                        // Default to cancelable if no date metadata is found
+                        isCancelable = true;
+                      }
+
+                      if (isEventPassed) return null;
+
+                      return (
+                        <div className="mt-4 pt-3 border-t border-zinc-800/80 flex flex-col gap-2">
+                          {isCancelable ? (
+                            <button
+                              onClick={async () => {
+                                const confirmMsg = isArabic
+                                  ? `⚠️ هل أنت متأكد من رغبتك في إلغاء الحجز والتراجع عنه؟\n\nشروط سياسة الاسترجاع:\nسوف يتم خصم 5% كرسوم إدارية وتحويل وبنك من إجمالي مبلغ الحجز (${b.totalAmount} ج.م) والباقي يسترجع لك.\n\nهل تود تأكيد طلب الإلغاء؟`
+                                  : `⚠️ Are you sure you want to cancel and withdraw your booking?\n\nRefund Policy:\nA 5% fee will be deducted from your total booking amount (${b.totalAmount} EGP) for transfer & administrative fees.\n\nDo you want to confirm cancellation?`;
+                                
+                                const confirmed = await triggerConfirm(confirmMsg);
+                                if (confirmed) {
+                                  const success = await cancelBooking(b.id);
+                                  if (success) {
+                                    alert(isArabic ? 'تم إلغاء الحجز بنجاح!' : 'Booking was cancelled successfully!');
+                                  } else {
+                                    alert(isArabic ? 'حدث خطأ أثناء محاولة إلغاء الحجز.' : 'An error occurred while cancelling the booking.');
+                                  }
+                                }
+                              }}
+                              className="w-full py-2 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/30 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <span>{isArabic ? 'إلغاء أو تراجع ↩️' : 'Cancel or Withdraw ↩️'}</span>
+                            </button>
+                          ) : (
+                            <div className="text-center py-2 px-3 bg-red-950/25 border border-red-500/30 rounded-xl">
+                              <span className="text-[11px] text-red-400 font-extrabold block">
+                                {remainingHoursText || (isArabic ? 'لا يمكنك الآن الإلغاء ⚠️' : 'You cannot cancel now ⚠️')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -1213,13 +1787,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Liked Events Section */}
       {activeSection === 'liked' && (
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-400">
-            <Heart className="h-4 w-4 fill-current" />
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-400">
+              <Heart className="h-4 w-4 fill-current" />
+            </div>
+            <h3 className="text-lg font-bold text-white">
+              {lang === 'ar' ? `الفعاليات المفضلة (${likedEvents.length})` : `My Liked Events (${likedEvents.length})`}
+            </h3>
           </div>
-          <h3 className="text-lg font-bold text-white">
-            {lang === 'ar' ? `الفعاليات المفضلة (${likedEvents.length})` : `My Liked Events (${likedEvents.length})`}
-          </h3>
+          {likedEvents.length > 0 && (
+            <button
+              onClick={async () => {
+                const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في إزالة جميع الفعاليات من المفضلة؟' : 'Are you sure you want to remove all events from your favorites?');
+                if (confirmed) {
+                  clearAllLikedEvents();
+                }
+              }}
+              className="px-3 py-1.5 rounded-xl border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/15 text-xs font-bold text-red-400 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>{lang === 'ar' ? 'حذف الكل' : 'Delete All'}</span>
+            </button>
+          )}
         </div>
 
         {likedEvents.length === 0 ? (
@@ -1228,9 +1818,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {likedEvents.map((ev, idx) => (
-              <EventCard key={ev.id} event={ev} index={idx} onOpenMap={onOpenMap} onOpenShare={onOpenShare} />
-            ))}
+            <AnimatePresence mode="popLayout">
+              {likedEvents.map((ev, idx) => (
+                <EventCard 
+                  key={ev.id} 
+                  event={ev} 
+                  index={idx} 
+                  onOpenMap={onOpenMap} 
+                  onOpenShare={onOpenShare} 
+                  isFavoritesTab={true}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -1387,6 +1986,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </label>
                   <input
                     type="text"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     className="w-full rounded-2xl border border-white/10 bg-neutral-950 py-3 px-4 text-sm font-semibold text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all text-right"
@@ -1400,6 +2002,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </label>
                   <input
                     type="text"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
                     dir="ltr"

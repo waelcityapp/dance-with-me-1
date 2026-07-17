@@ -23,7 +23,8 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
     deleteEvent,
     togglePauseEvent,
     setEditingEvent,
-    setActiveTab
+    setActiveTab,
+    appAssets
   } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
@@ -104,7 +105,6 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   };
 
   const isLiked = user?.likedEventIds.includes(promoEvent.id);
-  const isBooked = user?.bookedEventIds.includes(promoEvent.id);
   const expiryInfo = getDaysRemainingBeforeExpiry(promoEvent.eventDate);
 
   return (
@@ -116,10 +116,10 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
       <div className="px-4 py-2.5 flex items-center justify-between text-[11px] font-black tracking-wide uppercase border-b bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20 text-amber-400 select-none shrink-0" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         <div className="flex items-center gap-1.5">
           <Crown className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
-          <span>{lang === 'ar' ? 'فيديو الأسبوع الحصري المميز VIP' : 'EXCLUSIVE WEEKLY VIP FEATURED VIDEO'}</span>
+          <span>{lang === 'ar' ? (appAssets?.promoTitleAr || 'فيديو الأسبوع الحصري المميز VIP') : (appAssets?.promoTitleEn || 'EXCLUSIVE WEEKLY VIP FEATURED VIDEO')}</span>
         </div>
         <div className="text-[10px] font-mono opacity-60">
-          {lang === 'ar' ? 'إعلان خاص' : 'SPECIAL AD'}
+          {lang === 'ar' ? (appAssets?.promoSubtitleAr || 'إعلان خاص') : (appAssets?.promoSubtitleEn || 'SPECIAL AD')}
         </div>
       </div>
 
@@ -128,12 +128,10 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         <div className="flex items-center gap-1.5 pointer-events-auto">
           <div className="flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-lg backdrop-blur-md animate-pulse border border-red-500">
             <Sparkles className="h-2.5 w-2.5 fill-current" />
-            <span>{lang === 'ar' ? 'فيديو الأسبوع الحصري' : 'Weekly Featured Video'}</span>
+            <span>{lang === 'ar' ? (appAssets?.promoBadgeAr || 'فيديو الأسبوع الحصري') : (appAssets?.promoBadgeEn || 'Weekly Featured Video')}</span>
           </div>
           {user?.isAdmin && (
-            <span className="flex h-6 px-2 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[10px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" title={lang === 'ar' ? 'رقم الترتيب' : 'Placement Position'}>
-              #{promoEvent.position !== undefined ? promoEvent.position : '-'}
-            </span>
+            <span className="flex h-6 px-2 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[10px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" title={lang === 'ar' ? 'رقم الترتيب' : 'Placement Position'}>              #{promoEvent.position && promoEvent.position !== 999999 ? promoEvent.position : 1}            </span>
           )}
         </div>
 
@@ -189,9 +187,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           <div 
             className="flex h-9 items-center justify-center rounded-xl bg-neutral-950/95 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-xl px-2 select-all"
             title={lang === 'ar' ? 'الموضع والترتيب' : 'Placement position'}
-          >
-            #{promoEvent.position !== undefined ? promoEvent.position : '-'}
-          </div>
+          >            #{promoEvent.position && promoEvent.position !== 999999 ? promoEvent.position : 1}          </div>
 
           {/* Delete button */}
           <button
@@ -232,7 +228,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               e.stopPropagation();
               e.preventDefault();
               setEditingEvent(promoEvent);
-              setActiveTab('create_ad');
+              setActiveTab('edit_ad_admin');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-xl transition-all border border-blue-500/30 hover:scale-105 active:scale-95 cursor-pointer"
@@ -338,6 +334,14 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
           />
         )}
+
+        {/* Price Tag Overlay */}
+        {(promoEvent.priceAr || promoEvent.priceEn) && (
+          <div className="absolute bottom-3 left-3 z-20 rounded-xl bg-amber-500 px-3 py-1 text-xs font-bold text-neutral-950 shadow-lg font-mono">
+            {lang === 'ar' ? (promoEvent.priceAr || promoEvent.priceEn) : (promoEvent.priceEn || promoEvent.priceAr)}
+          </div>
+        )}
+
         <div className="absolute inset-0 card-gradient pointer-events-none" />
       </div>
 
@@ -381,14 +385,20 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0">
               <MapPin className="h-4.5 w-4.5" />
             </div>
-            <div className="overflow-hidden">
-              <p className="text-[10px] font-mono text-neutral-500 flex items-center gap-1 leading-none">
-                {lang === 'ar' ? 'الموقع على جوجل ماب' : 'Google Map Location'}
-                <span className="text-amber-500 hover:underline text-[9px] font-bold">({lang === 'ar' ? 'عرض' : 'View'})</span>
-              </p>
-              <p className="text-xs font-bold text-white truncate group-hover:text-amber-400 mt-1">
-                {lang === 'ar' ? promoEvent.location.nameAr : promoEvent.location.nameEn}
-              </p>
+            <div className="overflow-hidden w-full flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-mono text-neutral-500 flex items-center gap-1 leading-none">
+                  {lang === 'ar' ? 'الموقع' : 'Location'}
+                </p>
+                <p className="text-xs font-bold text-white truncate group-hover:text-amber-400 mt-1">
+                  {lang === 'ar' ? promoEvent.location.nameAr : promoEvent.location.nameEn}
+                </p>
+              </div>
+              {promoEvent.location?.googleMapsUrl && promoEvent.location.googleMapsUrl.trim().length > 0 && (
+                <span className="text-[10px] text-amber-400 font-black shrink-0 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans ml-2 rtl:mr-2">
+                  {lang === 'ar' ? 'استخدم الخريطة 🗺️' : 'Use Map 🗺️'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -460,14 +470,9 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => bookTicket(promoEvent.id)}
-            disabled={isBooked}
-            className={`flex h-10 flex-1 items-center justify-center gap-1 rounded-xl px-3 sm:px-4 text-xs font-bold transition-colors shrink-0 ${
-              isBooked
-                ? 'bg-emerald-600 text-white cursor-default border border-emerald-500'
-                : 'bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg'
-            }`}
+            className="flex h-10 flex-1 items-center justify-center gap-1 rounded-xl px-3 sm:px-4 text-xs font-bold transition-colors shrink-0 bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg"
           >
-            <span className="text-[11px] sm:text-xs">{isBooked ? (lang === 'ar' ? '✓ تم' : '✓ Booked') : (lang === 'ar' ? 'احجز' : 'Book')}</span>
+            <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'احجز' : 'Book'}</span>
           </motion.button>
         </div>
       </div>

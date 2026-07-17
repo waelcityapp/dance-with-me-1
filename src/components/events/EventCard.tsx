@@ -14,9 +14,10 @@ interface EventCardProps {
   onOpenMap: (event: DanceEvent) => void;
   onOpenShare: (event: DanceEvent) => void;
   overrideAdType?: 'vip' | 'standard';
+  isFavoritesTab?: boolean;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType, isFavoritesTab }) => {
   const { 
     lang, 
     toggleLikeEvent, 
@@ -110,7 +111,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   };
 
   const isLiked = user?.likedEventIds.includes(event.id);
-  const isBooked = user?.bookedEventIds.includes(event.id);
   const expiryInfo = getDaysRemainingBeforeExpiry(event.eventDate);
   const isExpired = event.isExpiredBy15DaysRule || expiryInfo.isExpired;
 
@@ -183,15 +183,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             <span 
               className="flex h-6 px-2 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[10px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" 
               title={lang === 'ar' ? 'الترتيب في الصفحة' : 'Page order'}
-            >
-              #{index !== undefined ? (index + 1) : ''}
-              {event.position !== undefined && event.position !== 0 && (
-                <span className="text-[9px] text-neutral-400 font-bold ml-1">
+            >              #{index !== undefined ? index + 1 : ''}
+              {event.position !== undefined && event.position !== 999999 && event.position !== 0 && (
+                <span className="text-[10px] text-neutral-400 font-bold ml-1">
                   ({event.position})
                 </span>
               )}
-              {index === undefined && (event.position === undefined || event.position === 0) && '-'}
-            </span>
+              {index === undefined && (event.position === undefined || event.position === 999999 || event.position === 0) && '-'}            </span>
           )}
         </div>
 
@@ -356,14 +354,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             <div 
               className="flex h-9 items-center justify-center rounded-xl bg-neutral-950/95 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-xl px-2 select-all"
               title={lang === 'ar' ? 'الترتيب في الصفحة والموضع' : 'Page order & position'}
-            >
-              #{index !== undefined ? (index + 1) : ''}
-              {event.position !== undefined && event.position !== 0 && (
+            >              #{index !== undefined ? index + 1 : ''}
+              {event.position !== undefined && event.position !== 999999 && event.position !== 0 && (
                 <span className="text-[10px] text-neutral-400 font-bold ml-1">
                   ({event.position})
                 </span>
               )}
-            </div>
+              {index === undefined && (event.position === undefined || event.position === 999999 || event.position === 0) && '-'}            </div>
 
             {/* Delete button (triggers local confirm) */}
             <button
@@ -404,7 +401,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 e.stopPropagation();
                 e.preventDefault();
                 setEditingEvent(event);
-                setActiveTab('create_ad');
+                setActiveTab('edit_ad_admin');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-xl transition-all border border-blue-500/30 hover:scale-105 active:scale-95 cursor-pointer"
@@ -416,9 +413,11 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         )}
 
         {/* Price Tag Overlay */}
-        <div className="absolute bottom-3 left-3 z-20 rounded-xl bg-amber-500 px-3 py-1 text-xs font-bold text-neutral-950 shadow-lg font-mono">
-          {lang === 'ar' ? event.priceAr : event.priceEn}
-        </div>
+        {(event.priceAr || event.priceEn) && (
+          <div className="absolute bottom-3 left-3 z-20 rounded-xl bg-amber-500 px-3 py-1 text-xs font-bold text-neutral-950 shadow-lg font-mono">
+            {lang === 'ar' ? (event.priceAr || event.priceEn) : (event.priceEn || event.priceAr)}
+          </div>
+        )}
       </div>
 
       {/* Event Node Content (النود الموجودة تحت بانر الاعلان) */}
@@ -468,6 +467,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             )}
           </div>
         </div>
+
+        {/* Admin Event Reference Number Badge */}
+        {user?.isAdmin && event.eventRef && (
+          <div className="mb-3 px-3 py-1.5 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-indigo-400 font-mono text-xs flex items-center justify-between">
+            <span className="font-semibold">{lang === 'ar' ? 'الرقم المرجعي (أدمن فقط):' : 'Reference Number (Admin Only):'}</span>
+            <span className="font-bold bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/30">{event.eventRef}</span>
+          </div>
+        )}
 
         {/* Action Buttons Bar: Phone, WhatsApp, Share, Like, Book */}
         <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-800 mt-auto">
@@ -520,41 +527,46 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               <Share2 className="h-4 w-4" />
             </motion.button>
 
-            {/* Like */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={(e) => toggleLikeEvent(event.id, e.currentTarget)}
-              className={`flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border transition-all ${
-                isLiked
-                  ? 'bg-red-600 text-white border-red-500 shadow-md'
-                  : 'bg-neutral-900 text-red-600 hover:bg-red-600 hover:text-white border-neutral-700'
-              }`}
-            >
-              <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="font-mono">{event.likesCount}</span>
-            </motion.button>
+            {/* Like / Remove from Favorites */}
+            {isFavoritesTab ? (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  toggleLikeEvent(event.id);
+                }}
+                className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border border-red-500/30 bg-red-600/10 text-red-400 hover:bg-red-600 hover:text-white transition-all cursor-pointer"
+                title={lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from Favorites'}
+              >
+                <Trash2 className="h-4 w-4 text-red-500 group-hover:text-white" />
+                <span>{lang === 'ar' ? 'إزالة' : 'Remove'}</span>
+              </motion.button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => toggleLikeEvent(event.id, e.currentTarget)}
+                className={`flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border transition-all ${
+                  isLiked
+                    ? 'bg-red-600 text-white border-red-500 shadow-md'
+                    : 'bg-neutral-900 text-red-600 hover:bg-red-600 hover:text-white border-neutral-700'
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                <span className="font-mono">{event.likesCount}</span>
+              </motion.button>
+            )}
 
             {/* Book Now */}
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => bookTicket(event.id)}
-              disabled={isBooked}
-              className={`flex h-10 items-center justify-center rounded-xl px-6 sm:px-8 min-w-[120px] sm:min-w-[140px] text-xs font-bold transition-all ${
-                isBooked
-                  ? 'bg-emerald-600 text-white cursor-default border border-emerald-500'
-                  : 'bg-amber-500 text-neutral-950 hover:bg-amber-400 shadow-lg'
-              }`}
+              className="flex h-10 items-center justify-center rounded-xl px-6 sm:px-8 min-w-[120px] sm:min-w-[140px] text-xs font-bold transition-all bg-amber-500 text-neutral-950 hover:bg-amber-400 shadow-lg"
             >
-              {isBooked ? (
-                <span className="flex items-center gap-1">
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  <span>{lang === 'ar' ? 'تم الحجز' : 'Booked'}</span>
-                </span>
-              ) : (
-                <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
-              )}
+              <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
             </motion.button>
           </div>
         </div>

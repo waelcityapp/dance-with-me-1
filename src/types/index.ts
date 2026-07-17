@@ -85,10 +85,12 @@ export interface DanceEvent {
   isFeatured?: boolean;
   isWeeklyPromo?: boolean;
   isExpiredBy15DaysRule?: boolean; // Calculated or manually overridden
+  isEmpty?: boolean;
   isPaused?: boolean;
   position?: number;
   adNumber?: string;
   adType?: 'vip' | 'standard';
+  eventRef?: number;
 }
 
 export interface UserProfile {
@@ -177,7 +179,7 @@ export interface EventBooking {
   numberOfIndividuals: number;
   totalAmount: number;
   receiptImage: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   userRead?: boolean;
   refNumber: string;
   submittedAt: string;
@@ -186,8 +188,12 @@ export interface EventBooking {
   accessCode?: string;
   discountAmount?: number;
   adminNotes?: string;
+  eventDate?: string;
+  attended?: boolean;
+  attendedAt?: string;
+  cancelledAt?: string;
 }
 
 export type Language = 'ar' | 'en';
 export type ThemeMode = 'light' | 'dark' | 'system';
-export type TabType = 'explore' | 'parties' | 'courses' | 'trips' | 'profile' | 'create_ad' | 'admin';
+export type TabType = 'explore' | 'parties' | 'courses' | 'trips' | 'profile' | 'create_ad' | 'admin' | 'edit_ad_admin';

@@ -37,11 +37,13 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
+import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AdSubmission, DanceEvent } from '../../types';
 import { EventPaymentCheckout } from './EventPaymentCheckout';
 import { convertCloudStorageUrl, isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
 import { EventCard } from './EventCard';
+import { doc, getDoc } from 'firebase/firestore';
+import { db, saveAdSubmissionToFirestore } from '../../lib/firebase';
 
 // Helper to parse coordinates from any Google Maps URL structure
 const parseCoordinates = (url: string): { lat: number; lng: number } => {
@@ -199,6 +201,35 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     setUploadError(null);
     setUploadProgress(0);
     if (file) {
+      const processUpload = async (fileToUpload: File, type: 'video' | 'image') => {
+        setUploadedFileName(fileToUpload.name);
+        setMediaType(type);
+        setMediaUrl(URL.createObjectURL(fileToUpload)); // temporary preview
+        try {
+          const finalUrl = await performUpload(fileToUpload);
+          
+          // If editing an event and there's an old media URL on Cloudinary, delete it
+          if (editingEvent && editingEvent.mediaUrl && editingEvent.mediaUrl.includes('cloudinary.com') && editingEvent.mediaUrl !== finalUrl) {
+             try {
+               await fetch('/api/delete-media', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ url: editingEvent.mediaUrl, resourceType: editingEvent.mediaType })
+               });
+             } catch (err) {
+               console.error('Failed to delete old media:', err);
+             }
+          }
+          
+          setMediaUrl(finalUrl);
+          setPendingFile(null);
+        } catch (err: any) {
+          alert(lang === 'ar' ? `❌ فشل رفع الوسائط: ${err.message}` : `❌ Media upload failed: ${err.message}`);
+          setMediaUrl(editingEvent ? editingEvent.mediaUrl : '');
+          setPendingFile(null);
+        }
+      };
+
       if (file.type.startsWith('video/')) {
         const video = document.createElement('video');
         video.preload = 'metadata';
@@ -211,11 +242,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             e.target.value = '';
             return;
           }
-          // Valid video
-          setPendingFile(file);
-          setUploadedFileName(file.name);
-          setMediaType('video');
-          setMediaUrl(URL.createObjectURL(file));
+          processUpload(file, 'video');
         };
         video.onerror = () => {
           window.URL.revokeObjectURL(video.src);
@@ -223,11 +250,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         };
         video.src = URL.createObjectURL(file);
       } else {
-        // Image
-        setPendingFile(file);
-        setUploadedFileName(file.name);
-        setMediaType('image');
-        setMediaUrl(URL.createObjectURL(file));
+        processUpload(file, 'image');
       }
     }
   };
@@ -238,6 +261,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     setUploadError(null);
     
     try {
+      if (!cloudinaryCloudName || !cloudinaryUploadPreset) {
+        throw new Error('Cloudinary configuration missing (VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET). Please use the manual URL input below.');
+      }
+      
       let fileToUpload = file;
       if (file.type.startsWith('image/')) {
         try {
@@ -276,7 +303,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   // Subscription Plan & Terms State
   const [subscriptionDays, setSubscriptionDays] = useState<number>(7);
-  const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
+  const [agreedToTerms, setAgreedToTerms] = useState<boolean>(!!editingEvent);
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<'instapay' | 'wallet' | 'card'>('instapay');
 
@@ -317,6 +344,21 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingEvent) {
+      if (agreedToTerms && !isUploadingMedia) {
+        handleFinalPublish();
+      }
+      return;
+    }
+    if (agreedToTerms) {
+      setCreateTab('preview');
+      setPreviewAlert(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const defaultImg = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
   const defaultVid = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
   
@@ -325,19 +367,34 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     (generatedMediaUrl.includes('cloudinary.com') ? generatedMediaUrl.replace(/\.[^.]+$/, '.jpg') : defaultImg) 
     : generatedMediaUrl;
 
-  const handleFinalPublish = () => {
+  const handleFinalPublish = async () => {
+    setIsUploadingMedia(true);
+    let finalMediaUrl = mediaUrl;
+    
+    if (!finalMediaUrl || finalMediaUrl.startsWith('blob:')) {
+      finalMediaUrl = mediaType === 'video' ? defaultVid : defaultImg;
+    }
+
+    // Generate a proper thumbnailUrl for videos
+    let finalThumbnailUrl = finalMediaUrl;
+    if (mediaType === 'video' && finalMediaUrl.includes('cloudinary.com')) {
+      finalThumbnailUrl = finalMediaUrl.replace(/\.[^.]+$/, '.jpg');
+    } else if (mediaType === 'video') {
+      finalThumbnailUrl = defaultImg;
+    }
+
     if (editingEvent) {
-      updateEvent({
+      const updatedEv: DanceEvent = {
         ...editingEvent,
-        titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
-        titleEn: titleEn || 'Royal Salsa & Bachata Night',
-        descriptionAr: descAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
-        descriptionEn: descEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
+        titleAr: titleAr || editingEvent.titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
+        titleEn: titleEn || editingEvent.titleEn || 'Royal Salsa & Bachata Night',
+        descriptionAr: descAr || editingEvent.descriptionAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
+        descriptionEn: descEn || editingEvent.descriptionEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
         category: (category === 'all' ? 'party' : category) as any,
         styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
         mediaType,
-        mediaUrl: mediaUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
+        mediaUrl: finalMediaUrl,
+        thumbnailUrl: finalThumbnailUrl,
         eventDate: new Date(eventDate).toISOString(),
         priceAr,
         priceEn,
@@ -358,7 +415,32 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         },
         position: position !== undefined ? Number(position) : (editingEvent.position || 0),
         adNumber: adNumber || editingEvent.adNumber
-      });
+      };
+
+      updateEvent(updatedEv);
+
+      // Also update the original submission in `ad_submissions` if it exists!
+      try {
+        const subId = editingEvent.id.startsWith('ad_') || editingEvent.id.startsWith('sub_') ? editingEvent.id : null;
+        if (subId) {
+          const adDocRef = doc(db, 'ad_submissions', subId);
+          const adDocSnap = await getDoc(adDocRef);
+          if (adDocSnap.exists()) {
+            const subData = adDocSnap.data() as AdSubmission;
+            const updatedSub: AdSubmission = {
+              ...subData,
+              titleAr: updatedEv.titleAr,
+              titleEn: updatedEv.titleEn,
+              mediaUrl: updatedEv.mediaUrl,
+              eventData: updatedEv
+            };
+            await saveAdSubmissionToFirestore(updatedSub);
+          }
+        }
+      } catch (subErr) {
+        console.warn('Could not update matching ad submission in Firestore:', subErr);
+      }
+
       setEditingEvent(null);
     } else {
       // Regular users should NOT call addNewEvent. Their ads must go through the Admin approval flow.
@@ -372,8 +454,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           category: (category === 'all' ? 'party' : category) as any,
           styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
           mediaType,
-          mediaUrl: generatedMediaUrl,
-          thumbnailUrl: generatedThumbnailUrl,
+          mediaUrl: finalMediaUrl,
+          thumbnailUrl: finalThumbnailUrl,
           eventDate: new Date(eventDate).toISOString(),
           priceAr,
           priceEn,
@@ -400,6 +482,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       }
     }
 
+    setIsUploadingMedia(false);
     onComplete();
   };
 
@@ -752,10 +835,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       category: category,
                       styles: selectedStyles,
                       mediaType: mediaType,
-                      mediaUrl: mediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                      mediaUrl: mediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                       thumbnailUrl: mediaType === 'video' ? 
-                        (mediaUrl.includes('cloudinary.com') ? mediaUrl.trim().replace(/\.[^.]+$/, '.jpg') : 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200') 
-                        : mediaUrl.trim() || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200',
+                        (mediaUrl.includes('cloudinary.com') ? mediaUrl.trim().replace(/\.[^.]+$/, '.jpg') : 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200') 
+                        : mediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                       uploadDate: new Date().toISOString(),
                       eventDate: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
                       priceAr: priceAr.trim() || '250 ج.م',
@@ -885,13 +968,16 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 <button
                   type="button"
                   onClick={editingEvent ? handleFinalPublish : handleProceedToPayment}
-                  className="flex-[1.5] py-3 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-black hover:from-amber-400 hover:to-amber-500 transition-all flex items-center justify-center gap-2 shadow-lg gold-glow"
+                  disabled={isUploadingMedia}
+                  className="flex-[1.5] py-3 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-black hover:from-amber-400 hover:to-amber-500 transition-all flex items-center justify-center gap-2 shadow-lg gold-glow disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Sparkles className="h-4 w-4 fill-current" />
+                  <Sparkles className="h-4 w-4 fill-current animate-pulse-slow" />
                   <span>
-                    {editingEvent 
-                      ? (lang === 'ar' ? 'أعد النشر وحفظ التعديلات' : 'Re-publish and Save')
-                      : (lang === 'ar' ? `إرسال للمراجعة والدفع (${pricing.total} ج.م)` : `Review & Pay (${pricing.total} EGP)`)}
+                    {isUploadingMedia
+                      ? (lang === 'ar' ? 'جاري الحفظ والرفع...' : 'Saving & Uploading...')
+                      : (editingEvent 
+                        ? (lang === 'ar' ? 'أعد النشر وحفظ التعديلات' : 'Re-publish and Save')
+                        : (lang === 'ar' ? `إرسال للمراجعة والدفع (${pricing.total} ج.م)` : `Review & Pay (${pricing.total} EGP)`))}
                   </span>
                 </button>
               </div>
@@ -940,7 +1026,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
         </div>
 
-        <form onSubmit={handleProceedToPayment} className="space-y-6">
+        <form onSubmit={handleFormSubmit} className="space-y-6">
           {/* Title AR / EN */}
           <div className="space-y-4">
             <h4 className="text-sm font-bold text-amber-400 font-mono tracking-wider uppercase">
@@ -1098,6 +1184,29 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       </span>
                     </div>
                   </button>
+                </div>
+
+                {/* Direct Text URL Link Input */}
+                <div className="space-y-1.5 mt-4">
+                  <label className="text-[11px] font-black text-neutral-400">
+                    {lang === 'ar' ? 'أو أدخل رابط ميديا خارجي مباشرة (URL):' : 'Or enter custom Media URL link:'}
+                  </label>
+                  <input
+                    type="url"
+                    value={mediaUrl}
+                    onChange={(e) => {
+                      setMediaUrl(e.target.value);
+                      setPendingFile(null); // Clear pending file if they type a URL
+                    }}
+                    placeholder={lang === 'ar' ? 'https://example.com/image.jpg' : 'https://example.com/image.jpg'}
+                    className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono"
+                    dir="ltr"
+                  />
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' 
+                      ? 'إذا كانت هناك مشكلة في الرفع، يمكنك رفع الصورة/الفيديو على موقع خارجي ولصق الرابط هنا.' 
+                      : 'If upload fails, you can host your media externally and paste the link here.'}
+                  </p>
                 </div>
 
                 {/* Hidden File Inputs */}
@@ -1564,25 +1673,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </h4>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Position Field */}
-                <div className="rounded-2xl bg-neutral-950 p-5 border border-neutral-800/80 space-y-2">
-                  <label className="block text-xs font-bold text-neutral-300 mb-1">
-                    {lang === 'ar' ? 'ترتيب الإعلان (رقم)' : 'Ad Position (Order)'}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={position || ''}
-                    onChange={e => setPosition(e.target.value ? Number(e.target.value) : 0)}
-                    placeholder={lang === 'ar' ? 'مثال: 1' : 'e.g. 1'}
-                    className="w-full rounded-xl border border-neutral-800 bg-neutral-900 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner font-mono"
-                  />
-                  <p className="text-[10px] text-neutral-500 leading-tight">
-                    {lang === 'ar' ? '💡 الأرقام الصغيرة تظهر أولاً.' : '💡 Lower numbers appear first.'}
-                  </p>
-                </div>
-
+              <div className="grid grid-cols-1 gap-4">
                 {/* Ad Number Field */}
                 <div className="rounded-2xl bg-neutral-950 p-5 border border-neutral-800/80 space-y-2">
                   <label className="block text-xs font-bold text-neutral-300 mb-1">
@@ -1664,63 +1755,63 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
           {/* Actions Button Section */}
           <div className="pt-6 pb-12 sm:pb-16 flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <AnimatePresence>
-                {agreedToTerms && (
-                  <motion.button
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    type="button"
-                    onClick={() => {
-                      setCreateTab(createTab === 'form' ? 'preview' : 'form');
-                      setPreviewAlert(null);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="flex-1 rounded-2xl py-2.5 px-6 text-sm font-bold bg-neutral-900 text-amber-400 border border-amber-500/30 hover:bg-neutral-800 transition-all flex items-center justify-center gap-2.5 shadow-xl"
-                  >
-                    <Eye className="h-5 w-5" />
-                    <span>
-                      {createTab === 'form' 
-                        ? (lang === 'ar' ? 'معاينة الإعلان مباشرة' : 'Preview Ad Now') 
-                        : (lang === 'ar' ? 'العودة لتعديل البيانات' : 'Back to Editing')}
-                    </span>
-                  </motion.button>
-                )}
-              </AnimatePresence>
-
-              <motion.button
-                whileHover={agreedToTerms ? { scale: 1.01 } : {}}
-                whileTap={agreedToTerms ? { scale: 0.98 } : {}}
-                type="button"
-                onClick={editingEvent ? handleFinalPublish : handleProceedToPayment}
-                disabled={!agreedToTerms}
-                className={`flex-[2] rounded-2xl py-2.5 px-6 text-sm font-extrabold transition-all flex items-center justify-center gap-3 border ${
-                  agreedToTerms
-                    ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
-                    : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
-                }`}
-              >
-                <Sparkles className={`h-5 w-5 shrink-0 ${agreedToTerms ? 'fill-current animate-spin-slow text-neutral-950' : 'text-neutral-600'}`} />
-                <span>
-                  {editingEvent ? (
-                    lang === 'ar' 
-                      ? 'أعد النشر وحفظ التعديلات' 
-                      : 'Re-publish and Save Changes'
-                  ) : (
-                    lang === 'ar' 
-                      ? `دفع ونشر (${pricing.total} ج.م)` 
-                      : `Pay & Publish (${pricing.total} EGP)`
-                  )}
-                </span>
-              </motion.button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {editingEvent ? (
+                <motion.button
+                  whileHover={agreedToTerms && !isUploadingMedia ? { scale: 1.01 } : {}}
+                  whileTap={agreedToTerms && !isUploadingMedia ? { scale: 0.98 } : {}}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!agreedToTerms || isUploadingMedia) return;
+                    handleFinalPublish();
+                  }}
+                  disabled={!agreedToTerms || isUploadingMedia}
+                  className={`w-full sm:w-auto min-w-[280px] rounded-2xl py-3 px-8 text-sm font-extrabold transition-all flex items-center justify-center gap-3 border ${
+                    agreedToTerms && !isUploadingMedia
+                      ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
+                      : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <Sparkles className={`h-5 w-5 shrink-0 ${agreedToTerms && !isUploadingMedia ? 'fill-current animate-pulse-slow text-neutral-950' : 'text-neutral-600'}`} />
+                  <span>
+                    {isUploadingMedia
+                      ? (lang === 'ar' ? 'جاري الحفظ والرفع...' : 'Saving & Uploading...')
+                      : (lang === 'ar' ? 'أعد النشر وحفظ التعديلات' : 'Re-publish and Save')}
+                  </span>
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileHover={agreedToTerms ? { scale: 1.01 } : {}}
+                  whileTap={agreedToTerms ? { scale: 0.98 } : {}}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!agreedToTerms) return;
+                    setCreateTab('preview');
+                    setPreviewAlert(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  disabled={!agreedToTerms}
+                  className={`w-full sm:w-auto min-w-[280px] rounded-2xl py-3 px-8 text-sm font-extrabold transition-all flex items-center justify-center gap-3 border ${
+                    agreedToTerms
+                      ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
+                      : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <Eye className={`h-5 w-5 shrink-0 ${agreedToTerms ? 'text-neutral-950' : 'text-neutral-600'}`} />
+                  <span>
+                    {lang === 'ar' ? 'معاينة الإعلان وتدقيق البيانات' : 'Preview Ad & Verify Details'}
+                  </span>
+                </motion.button>
+              )}
             </div>
             
             {!agreedToTerms && (
               <p className="mt-3 text-center text-xs text-amber-400/80 font-medium">
                 {lang === 'ar' 
-                  ? '⚠️ يرجى الموافقة على الشروط والأحكام أعلاه لتفعيل زر الحفظ والنشر'
-                  : '⚠️ Please agree to the publishing terms and conditions above to unlock save step'}
+                  ? '⚠️ يرجى الموافقة على الشروط والأحكام أعلاه لتفعيل زر معاينة الإعلان'
+                  : '⚠️ Please agree to the publishing terms and conditions above to unlock the next step'}
               </p>
             )}
           </div>

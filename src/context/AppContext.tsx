@@ -57,6 +57,7 @@ interface AppContextType {
   updateUserAvatar: (avatar: string) => void;
   updateUserProfile: (name: string, phone: string, favoriteStyles: DanceStyle[]) => void;
   toggleLikeEvent: (eventId: string, eventElement?: HTMLElement) => void;
+  clearAllLikedEvents: () => void;
   bookTicket: (eventId: string) => void;
   addNewEvent: (newEv: Omit<DanceEvent, 'id' | 'likesCount' | 'uploadDate'>) => void;
   updateEvent: (updatedEv: DanceEvent) => void;
@@ -101,13 +102,28 @@ interface AppContextType {
     numberOfIndividuals: number;
     totalAmount: number;
     receiptImage: string;
+    eventDate?: string;
   }) => Promise<EventBooking | null>;
   approveBooking: (bookingId: string, barcodeUrl: string, accessCode: string, discountAmount: number, adminNotes?: string) => Promise<boolean>;
   rejectBooking: (bookingId: string, adminNotes?: string) => Promise<boolean>;
   deleteBooking: (bookingId: string) => Promise<boolean>;
+  cancelBooking: (bookingId: string) => Promise<boolean>;
   deleteAllBookings: () => Promise<boolean>;
   selectedBookingEvent: DanceEvent | null;
   setSelectedBookingEvent: (event: DanceEvent | null) => void;
+  customAlert: {
+    isOpen: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  };
+  triggerAlert: (msg: string) => void;
+  closeCustomAlert: () => void;
+  customConfirm: {
+    isOpen: boolean;
+    message: string;
+    resolve: ((val: boolean) => void) | null;
+  };
+  triggerConfirm: (msg: string) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -170,18 +186,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setGuestAlertState(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Events in state
-  const [events, setEvents] = useState<DanceEvent[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.EVENTS);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.warn('Failed to load events from storage');
-    }
-    return [];
+  const [customAlert, setCustomAlert] = useState<{
+    isOpen: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({
+    isOpen: false,
+    message: '',
+    type: 'info'
   });
+
+  const [customConfirm, setCustomConfirm] = useState<{
+    isOpen: boolean;
+    message: string;
+    resolve: ((val: boolean) => void) | null;
+  }>({
+    isOpen: false,
+    message: '',
+    resolve: null
+  });
+
+  const triggerConfirm = (msg: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setCustomConfirm({
+        isOpen: true,
+        message: msg,
+        resolve: (val: boolean) => {
+          resolve(val);
+          setCustomConfirm({
+            isOpen: false,
+            message: '',
+            resolve: null
+          });
+        }
+      });
+    });
+  };
+
+  const triggerAlert = (msg: string) => {
+    let type: 'success' | 'error' | 'info' = 'info';
+    const lowerMsg = msg.toLowerCase();
+    if (
+      msg.includes('✅') || 
+      msg.includes('🎉') || 
+      msg.includes('نجاح') || 
+      msg.includes('بنجاح') || 
+      msg.includes('تم ') || 
+      lowerMsg.includes('success') || 
+      lowerMsg.includes('done') || 
+      lowerMsg.includes('saved') || 
+      lowerMsg.includes('published')
+    ) {
+      type = 'success';
+    } else if (
+      msg.includes('❌') || 
+      msg.includes('⚠️') || 
+      msg.includes('فشل') || 
+      msg.includes('خطأ') || 
+      msg.includes('عذراً') || 
+      lowerMsg.includes('fail') || 
+      lowerMsg.includes('error') || 
+      lowerMsg.includes('warn') || 
+      lowerMsg.includes('invalid')
+    ) {
+      type = 'error';
+    }
+    setCustomAlert({
+      isOpen: true,
+      message: msg,
+      type
+    });
+  };
+
+  const closeCustomAlert = () => {
+    setCustomAlert(prev => ({ ...prev, isOpen: false }));
+  };
+
+  useEffect(() => {
+    const originalAlert = window.alert;
+    window.alert = (msg: any) => {
+      triggerAlert(String(msg));
+    };
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
+
+  // Events in state
+  const [events, setEvents] = useState<DanceEvent[]>([]);
 
   const [editingEvent, setEditingEvent] = useState<DanceEvent | null>(null);
 
@@ -235,7 +327,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       appNameAr: 'Dance With Me',
       appNameEn: 'Dance With Me',
       whatsappSupport: '201012345678',
-      instagramUrl: 'https://instagram.com/dancewithme_luxury'
+      instagramUrl: 'https://instagram.com/dancewithme_luxury',
+      promoTitleAr: 'فيديو الأسبوع الحصري المميز VIP',
+      promoTitleEn: 'EXCLUSIVE WEEKLY VIP FEATURED VIDEO',
+      promoSubtitleAr: 'إعلان خاص',
+      promoSubtitleEn: 'SPECIAL AD',
+      promoBadgeAr: 'فيديو الأسبوع الحصري',
+      promoBadgeEn: 'Weekly Featured Video'
     };
   });
 
@@ -265,12 +363,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return success;
   };
 
-  // Save to localStorage whenever state changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
-    } catch (e) {}
-  }, [events]);
+  // Save other state to localStorage whenever state changes
 
   useEffect(() => {
     try {
@@ -295,6 +388,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Log app loads / page views
     logAnalyticsEvent('total_page_views');
 
+    // Clean up stale events cache
+    try {
+      localStorage.removeItem(STORAGE_KEYS.EVENTS);
+    } catch (e) {}
+
     // Track unique sessions per day using localStorage
     try {
       const todayStr = new Date().toISOString().split('T')[0];
@@ -315,6 +413,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. Subscribe to live events collection
     const unsubEvents = subscribeToEvents((liveEvents) => {
       setEvents(liveEvents || []);
+      
+      // Auto assign reference numbers starting from 1001 for any events that do not have one
+      if (liveEvents && liveEvents.length > 0) {
+        const missing = liveEvents.filter(e => !e.eventRef && !e.isEmpty);
+        if (missing.length > 0) {
+          const assignedRefs = liveEvents.map(e => e.eventRef).filter((r): r is number => typeof r === 'number');
+          let maxRef = assignedRefs.length > 0 ? Math.max(...assignedRefs) : 1000;
+          if (maxRef < 1000) maxRef = 1000;
+          
+          // Sort missing by uploadDate (oldest first)
+          const sortedMissing = [...missing].sort((a, b) => new Date(a.uploadDate || 0).getTime() - new Date(b.uploadDate || 0).getTime());
+          
+          sortedMissing.forEach(async (ev) => {
+            maxRef += 1;
+            const updatedEv = { ...ev, eventRef: maxRef };
+            await saveEventToFirestore(updatedEv);
+          });
+        }
+      }
     });
 
     // 2b. Subscribe to live app assets collection
@@ -442,12 +559,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setBookings([]);
       return;
     }
+    const isOrganizer = userAdSubmissions && userAdSubmissions.length > 0;
     const unsubBookings = subscribeToBookings(
       (liveBookings) => {
         setBookings(liveBookings || []);
       },
       user.id,
-      user.isAdmin
+      user.isAdmin || isOrganizer
     );
     const unsubAds = subscribeToAdSubmissions((ads) => setUserAdSubmissions(ads || []), user.id, false);
     return () => {
@@ -455,7 +573,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubAds();
     };
 
-  }, [user]);
+  }, [user, userAdSubmissions?.length]);
 
   const setLang = (newLang: Language) => {
     setLangState(newLang);
@@ -626,28 +744,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       openGuestAlert('favorite');
       return;
     }
-    // Fire celebratory confetti!
-    if (eventElement) {
-      const rect = eventElement.getBoundingClientRect();
-      const x = (rect.left + rect.width / 2) / window.innerWidth;
-      const y = (rect.top + rect.height / 2) / window.innerHeight;
-      try {
-        confetti({
-          particleCount: 35,
-          spread: 60,
-          origin: { x, y },
-          colors: ['#f59e0b', '#fbbf24', '#ef4444', '#ffffff']
-        });
-      } catch (e) {}
-    } else {
-      try {
-        confetti({
-          particleCount: 40,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#f59e0b', '#fbbf24', '#ef4444']
-        });
-      } catch (e) {}
+    const isAlreadyLiked = user.likedEventIds.includes(eventId);
+    
+    // Fire celebratory confetti only if adding to favorites
+    if (!isAlreadyLiked) {
+      if (eventElement) {
+        const rect = eventElement.getBoundingClientRect();
+        const x = (rect.left + rect.width / 2) / window.innerWidth;
+        const y = (rect.top + rect.height / 2) / window.innerHeight;
+        try {
+          confetti({
+            particleCount: 35,
+            spread: 60,
+            origin: { x, y },
+            colors: ['#f59e0b', '#fbbf24', '#ef4444', '#ffffff']
+          });
+        } catch (e) {}
+      } else {
+        try {
+          confetti({
+            particleCount: 40,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#f59e0b', '#fbbf24', '#ef4444']
+          });
+        } catch (e) {}
+      }
     }
 
     setEvents(prev => prev.map(ev => {
@@ -674,6 +796,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const clearAllLikedEvents = () => {
+    if (!user || !user.likedEventIds || user.likedEventIds.length === 0) return;
+    
+    // Decrement likesCount for all currently liked events
+    setEvents(prev => prev.map(ev => {
+      if (user.likedEventIds.includes(ev.id)) {
+        const updatedEv = {
+          ...ev,
+          likesCount: Math.max(0, (ev.likesCount || 0) - 1)
+        };
+        saveEventToFirestore(updatedEv);
+        return updatedEv;
+      }
+      return ev;
+    }));
+
+    const updatedUser = { ...user, likedEventIds: [] };
+    setUser(updatedUser);
+    saveUserToFirestore(updatedUser);
+  };
+
   const bookTicket = (eventId: string) => {
     if (!user) {
       openGuestAlert('book');
@@ -695,6 +838,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     numberOfIndividuals: number;
     totalAmount: number;
     receiptImage: string;
+    eventDate?: string;
   }): Promise<EventBooking | null> => {
     if (!user) {
       openGuestAlert('book');
@@ -718,7 +862,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       receiptImage: bookingData.receiptImage,
       status: 'pending',
       refNumber,
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
+      eventDate: bookingData.eventDate
     };
 
     const success = await saveBookingToFirestore(newBooking);
@@ -847,6 +992,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
+  const cancelBooking = async (bookingId: string): Promise<boolean> => {
+    if (!user) return false;
+    const bkg = bookings.find(b => b.id === bookingId);
+    if (!bkg) return false;
+
+    const updatedBooking: EventBooking = {
+      ...bkg,
+      status: 'cancelled',
+      userRead: false,
+      cancelledAt: new Date().toISOString()
+    };
+
+    const success = await saveBookingToFirestore(updatedBooking);
+    if (success) {
+      setBookings(prev => prev.map(b => b.id === bookingId ? updatedBooking : b));
+      return true;
+    }
+    return false;
+  };
+
   const deleteAllBookings = async (): Promise<boolean> => {
     if (!user) return false;
     const myBookings = bookings.filter(b => b.userId === user.id);
@@ -903,9 +1068,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveNotificationToFirestore(newNotif);
   };
 
-  const deleteEvent = (eventId: string) => {
-    setEvents(prev => prev.filter(e => e.id !== eventId));
-    deleteEventFromFirestore(eventId);
+  const deleteEvent = async (eventId: string) => {
+    const evToDelete = events.find(e => e.id === eventId);
+    if (evToDelete && evToDelete.mediaUrl && evToDelete.mediaUrl.includes('cloudinary.com')) {
+       try {
+         await fetch('/api/delete-media', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ url: evToDelete.mediaUrl, resourceType: evToDelete.mediaType })
+         });
+       } catch (err) {
+         console.error('Failed to delete media for deleted event:', err);
+       }
+    }
+    // Instead of deleting the event document entirely, we clear its data and mark it as empty
+    // to preserve its `position` (serial number).
+    if (evToDelete) {
+      const emptyEv = {
+        ...evToDelete,
+        titleAr: '',
+        titleEn: '',
+        descriptionAr: '',
+        descriptionEn: '',
+        mediaUrl: '',
+        thumbnailUrl: '',
+        isEmpty: true,
+      };
+      saveEventToFirestore(emptyEv);
+      setEvents(prev => prev.map(e => e.id === eventId ? emptyEv : e));
+    } else {
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+      deleteEventFromFirestore(eventId);
+    }
   };
 
   const togglePauseEvent = (eventId: string) => {
@@ -1032,6 +1226,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateUserAvatar,
       updateUserProfile,
       toggleLikeEvent,
+      clearAllLikedEvents,
       bookTicket,
       addNewEvent,
       updateEvent,
@@ -1070,9 +1265,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       approveBooking,
       rejectBooking,
       deleteBooking,
+      cancelBooking,
       deleteAllBookings,
       selectedBookingEvent,
-      setSelectedBookingEvent
+      setSelectedBookingEvent,
+      customAlert,
+      triggerAlert,
+      closeCustomAlert,
+      customConfirm,
+      triggerConfirm
     }}>
       {children}
     </AppContext.Provider>
