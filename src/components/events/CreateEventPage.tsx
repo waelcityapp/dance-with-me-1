@@ -34,7 +34,9 @@ import {
   Activity,
   ChevronRight,
   ChevronLeft,
-  ChevronUp
+  ChevronUp,
+  Languages,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AdSubmission, DanceEvent } from '../../types';
@@ -90,6 +92,28 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [titleEn, setTitleEn] = useState(editingEvent ? editingEvent.titleEn : '');
   const [descAr, setDescAr] = useState(editingEvent ? editingEvent.descriptionAr : '');
   const [descEn, setDescEn] = useState(editingEvent ? editingEvent.descriptionEn : '');
+  const [isTranslating, setIsTranslating] = useState<string | null>(null);
+
+  const handleTranslate = async (text: string, targetLang: 'ar' | 'en', setter: (val: string) => void, fieldName: string) => {
+    if (!text.trim()) return;
+    setIsTranslating(fieldName);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLang })
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        setter(data.translatedText);
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+    } finally {
+      setIsTranslating(null);
+    }
+  };
+
   const [category, setCategory] = useState<DanceCategory>(editingEvent ? editingEvent.category : 'party');
   const [mediaType, setMediaType] = useState<'video' | 'image'>(editingEvent ? editingEvent.mediaType : 'image');
   const [mediaUrl, setMediaUrl] = useState(editingEvent ? editingEvent.mediaUrl : '');
@@ -123,6 +147,28 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [createTab, setCreateTab] = useState<'form' | 'preview'>('form');
   const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
   const [previewAlert, setPreviewAlert] = useState<string | null>(null);
+
+
+  // Link violation detection
+  const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|net|org|io|me|co|eg|sa|ae|app|link)(?:\/[^\s]*)?)/i;
+  const [hasUrlViolation, setHasUrlViolation] = useState(false);
+  const [mapsUrlError, setMapsUrlError] = useState(false);
+  
+  React.useEffect(() => {
+    // Only block URLs in text fields, not in the mediaUrl or googleMapsUrl
+    const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|net|org|io|me|co|eg|sa|ae|app|link)(?:\/[^\s]*)?)/i;
+    const hasViolation = [titleAr, titleEn, descAr, descEn].some(text => urlRegex.test(text));
+    setHasUrlViolation(hasViolation);
+  }, [titleAr, titleEn, descAr, descEn]);
+
+  React.useEffect(() => {
+    if (googleMapsUrl && googleMapsUrl.trim() !== '') {
+      const mapsRegex = /(https?:\/\/)?(www\.)?(google\.com\/maps|maps\.google\.com|goo\.gl\/maps|maps\.app\.goo\.gl)/i;
+      setMapsUrlError(!mapsRegex.test(googleMapsUrl));
+    } else {
+      setMapsUrlError(false);
+    }
+  }, [googleMapsUrl]);
   
   // Cloudinary configuration credentials from environment variables (safe and secure for git)
   const cloudinaryCloudName = (import.meta as any).env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -201,6 +247,29 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     setUploadError(null);
     setUploadProgress(0);
     if (file) {
+      // Security check: Validate file type and extension to prevent malicious uploads
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      const validImageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+      const validVideoExts = ['mp4', 'webm', 'mov'];
+      
+      const isImage = validImageTypes.includes(file.type) && validImageExts.includes(ext || '');
+      const isVideo = validVideoTypes.includes(file.type) && validVideoExts.includes(ext || '');
+
+      if (!isImage && !isVideo) {
+        alert(lang === 'ar' ? '⚠️ تحذير أمني: نوع الملف غير مدعوم أو قد يكون خبيثاً. يرجى رفع صورة أو فيديو بصيغة صحيحة.' : '⚠️ Security Warning: Unsupported or potentially malicious file type. Please upload a valid image or video.');
+        e.target.value = '';
+        return;
+      }
+
+      // Check file size (e.g. limit to 50MB) to prevent buffer overflows/denial of service
+      if (file.size > 50 * 1024 * 1024) {
+        alert(lang === 'ar' ? '⚠️ حجم الملف كبير جداً (أكثر من 50 ميجابايت).' : '⚠️ File is too large (over 50MB).');
+        e.target.value = '';
+        return;
+      }
+
       const processUpload = async (fileToUpload: File, type: 'video' | 'image') => {
         setUploadedFileName(fileToUpload.name);
         setMediaType(type);
@@ -337,15 +406,31 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   const handleProceedToPayment = (e?: React.FormEvent | React.MouseEvent) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!agreedToTerms) return;
+    if (!agreedToTerms || hasUrlViolation || mapsUrlError) return;
     if (!titleAr) setTitleAr(lang === 'ar' ? 'سهرة سالسا وباتشاتا ملكية جديدة' : 'Royal Salsa & Bachata Night');
     if (!titleEn) setTitleEn('Royal Salsa & Bachata Night');
     setStep('payment');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const containsExternalLink = (text: string) => {
+    if (!text) return false;
+    const linkRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?)/ig;
+    return linkRegex.test(text);
+  };
+
+  const checkLinksAndWarn = () => {
+    if (containsExternalLink(titleAr) || containsExternalLink(titleEn) || containsExternalLink(descAr) || containsExternalLink(descEn)) {
+      alert(lang === 'ar' ? '⚠️ عذراً، ممنوع وضع أي روابط خارجية في العنوان أو الوصف لأسباب أمنية.' : '⚠️ Sorry, external links are not allowed in the title or description for security reasons.');
+      return true;
+    }
+    return false;
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (checkLinksAndWarn()) return;
+    
     if (editingEvent) {
       if (agreedToTerms && !isUploadingMedia) {
         handleFinalPublish();
@@ -446,7 +531,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       // Regular users should NOT call addNewEvent. Their ads must go through the Admin approval flow.
       // Only Admins (or unlocked Admins) can publish an event directly.
       if (user?.isAdmin || isAdminUnlocked) {
-        addNewEvent({
+        const createdEvent = addNewEvent({
           titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
           titleEn: titleEn || 'Royal Salsa & Bachata Night',
           descriptionAr: descAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
@@ -1027,6 +1112,22 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         </div>
 
         <form onSubmit={handleFormSubmit} className="space-y-6">
+
+          {/* Event Code (when editing) */}
+          {editingEvent?.eventRef && (
+            <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 mb-6">
+              <label className="block text-xs font-bold text-indigo-400 mb-1.5">
+                {lang === 'ar' ? 'كود الحدث (الرقم المرجعي)' : 'Event Code (Reference)'}
+              </label>
+              <input
+                disabled
+                type="text"
+                value={editingEvent.eventRef}
+                className="w-full bg-neutral-900/50 border border-indigo-500/30 rounded-xl px-4 py-2 text-indigo-300 font-mono font-bold select-all focus:outline-none opacity-80 cursor-not-allowed"
+              />
+            </div>
+          )}
+
           {/* Title AR / EN */}
           <div className="space-y-4">
             <h4 className="text-sm font-bold text-amber-400 font-mono tracking-wider uppercase">
@@ -1035,27 +1136,49 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  {lang === 'ar' ? 'عنوان الإعلان (بالعربية)' : 'Title (Arabic)'} <span className="text-amber-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-neutral-300">
+                    {lang === 'ar' ? 'عنوان الإعلان (بالعربية)' : 'Title (Arabic)'} <span className="text-amber-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleTranslate(titleEn, 'ar', setTitleAr, 'titleAr')}
+                    disabled={!titleEn || isTranslating === 'titleAr'}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isTranslating === 'titleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                    {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={titleAr}
                   onChange={e => setTitleAr(e.target.value)}
                   placeholder={lang === 'ar' ? 'مثال: سهرة سالسا وباتشاتا ملكية على السطح' : 'e.g. Royal Rooftop Salsa Social'}
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner"
+                  className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner`}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  {lang === 'ar' ? 'عنوان الإعلان (بالإنجليزية)' : 'Title (English)'} <span className="text-amber-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-neutral-300">
+                    {lang === 'ar' ? 'عنوان الإعلان (بالإنجليزية)' : 'Title (English)'} <span className="text-amber-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleTranslate(titleAr, 'en', setTitleEn, 'titleEn')}
+                    disabled={!titleAr || isTranslating === 'titleEn'}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isTranslating === 'titleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                    {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={titleEn}
                   onChange={e => setTitleEn(e.target.value)}
                   placeholder="e.g. Royal Rooftop Salsa Social"
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner"
+                  className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner`}
                 />
               </div>
             </div>
@@ -1069,27 +1192,49 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  {lang === 'ar' ? 'الوصف والمميزات (بالعربية)' : 'Description (Arabic)'}
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-neutral-300">
+                    {lang === 'ar' ? 'الوصف والمميزات (بالعربية)' : 'Description (Arabic)'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleTranslate(descEn, 'ar', setDescAr, 'descAr')}
+                    disabled={!descEn || isTranslating === 'descAr'}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isTranslating === 'descAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                    {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                  </button>
+                </div>
                 <textarea
                   rows={4}
                   value={descAr}
                   onChange={e => setDescAr(e.target.value)}
                   placeholder={lang === 'ar' ? 'تفاصيل الحفلة، أسماء المدربين، التعليمات، وقواعد اللبس (Dress Code)...' : 'Party details, instructor names, guidelines, dress code...'}
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner leading-relaxed"
+                  className={`w-full rounded-xl border ${urlRegex.test(descAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner leading-relaxed`}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  {lang === 'ar' ? 'الوصف والمميزات (بالإنجليزية)' : 'Description (English)'}
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-neutral-300">
+                    {lang === 'ar' ? 'الوصف والمميزات (بالإنجليزية)' : 'Description (English)'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleTranslate(descAr, 'en', setDescEn, 'descEn')}
+                    disabled={!descAr || isTranslating === 'descEn'}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isTranslating === 'descEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                    {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                  </button>
+                </div>
                 <textarea
                   rows={4}
                   value={descEn}
                   onChange={e => setDescEn(e.target.value)}
                   placeholder="Party details, instructor names, guidelines, dress code..."
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500 transition-colors shadow-inner leading-relaxed"
+                  className={`w-full rounded-xl border ${urlRegex.test(descEn) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner leading-relaxed`}
                 />
               </div>
             </div>
@@ -1186,29 +1331,6 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   </button>
                 </div>
 
-                {/* Direct Text URL Link Input */}
-                <div className="space-y-1.5 mt-4">
-                  <label className="text-[11px] font-black text-neutral-400">
-                    {lang === 'ar' ? 'أو أدخل رابط ميديا خارجي مباشرة (URL):' : 'Or enter custom Media URL link:'}
-                  </label>
-                  <input
-                    type="url"
-                    value={mediaUrl}
-                    onChange={(e) => {
-                      setMediaUrl(e.target.value);
-                      setPendingFile(null); // Clear pending file if they type a URL
-                    }}
-                    placeholder={lang === 'ar' ? 'https://example.com/image.jpg' : 'https://example.com/image.jpg'}
-                    className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono"
-                    dir="ltr"
-                  />
-                  <p className="text-[10px] text-neutral-500">
-                    {lang === 'ar' 
-                      ? 'إذا كانت هناك مشكلة في الرفع، يمكنك رفع الصورة/الفيديو على موقع خارجي ولصق الرابط هنا.' 
-                      : 'If upload fails, you can host your media externally and paste the link here.'}
-                  </p>
-                </div>
-
                 {/* Hidden File Inputs */}
                 <input
                   ref={cameraInputRef}
@@ -1299,50 +1421,26 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
               </div>
 
-              {/* URL fallback & Preview */}
-              <div className="pt-2 border-t border-white/5">
-                <label className="block text-xs font-mono text-neutral-400 mb-1.5">
-                  {lang === 'ar' ? 'أو أدخل رابط ميديا مباشر (اختياري):' : 'Or enter direct Media URL (optional):'}
-                </label>
-                <input
-                  type="text"
-                  value={mediaUrl}
-                  onChange={e => {
-                    const val = e.target.value.trim();
-                    setMediaUrl(val);
-                    if (uploadedFileName) setUploadedFileName(null);
-                    
-                    if (val) {
-                      const lowerVal = val.toLowerCase();
-                      const isVid = (
-                        lowerVal.endsWith('.mp4') || 
-                        lowerVal.endsWith('.mov') || 
-                        lowerVal.endsWith('.avi') || 
-                        lowerVal.endsWith('.webm') || 
-                        lowerVal.endsWith('.m3u8') ||
-                        lowerVal.includes('youtube.com/watch') ||
-                        lowerVal.includes('youtu.be/') ||
-                        lowerVal.includes('drive.google.com/file') ||
-                        (lowerVal.includes('dropbox.com') && (lowerVal.includes('.mp4') || lowerVal.includes('.mov') || lowerVal.includes('.avi') || lowerVal.includes('.webm'))) ||
-                        lowerVal.includes('/video/') ||
-                        (lowerVal.includes('res.cloudinary.com/') && lowerVal.includes('/video/'))
-                      );
-                      setMediaType(isVid ? 'video' : 'image');
-                    }
-                  }}
-                  placeholder={lang === 'ar' ? 'https://example.com/image.jpg أو رابط فيديو mp4 مباشر' : 'https://example.com/image.jpg or direct video mp4'}
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-900 py-2.5 px-3 text-xs font-mono text-white outline-none focus:border-amber-500 transition-colors"
-                />
-                {mediaUrl && (mediaUrl.includes('docs.google.com/uc') || mediaUrl.includes('raw=1') || mediaUrl.includes('dl=1')) && (
-                  <p className="mt-1.5 text-[10px] text-amber-400 font-bold flex items-center gap-1 leading-relaxed">
-                    <span>✨</span>
-                    <span>
-                      {lang === 'ar' 
-                        ? 'تم كشف وتحويل رابط التخزين السحابي (Google Drive / Dropbox) تلقائياً لرابط تشغيل مباشر متوافق!' 
-                        : 'Cloud storage link (Google Drive / Dropbox) detected and converted automatically to a direct stream URL!'}
-                    </span>
-                  </p>
-                )}
+              
+              <div className="mt-4 p-4 rounded-xl bg-red-950/20 border border-red-500/30">
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+                  <div className="text-xs text-red-400 font-bold leading-relaxed">
+                    {lang === 'ar' ? (
+                      <>
+                        <p className="text-red-500 font-black mb-1">⚠️ تحذير أمني هام:</p>
+                        <p>غير مسموح بإضافة روابط خارجية للصور أو الفيديوهات. يجب رفع الملفات مباشرة من جهازك.</p>
+                        <p className="mt-1">يقوم النظام الآلي بفحص جميع الملفات المرفوعة بدقة. يُمنع منعاً باتاً رفع أي ملفات تحتوي على فيروسات، برمجيات خبيثة، أو أكواد ضارة (باتشات). في حال اكتشاف أي مخالفة، سيتم حظر حسابك نهائياً واتخاذ الإجراءات القانونية.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-red-500 font-black mb-1">⚠️ SECURITY WARNING:</p>
+                        <p>External media links are not allowed. You must upload files directly from your device.</p>
+                        <p className="mt-1">Our automated system rigorously scans all uploaded files. It is strictly prohibited to upload any files containing viruses, malware, or malicious code (patches). Any violation will result in a permanent account ban and legal action.</p>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Visual Media Preview */}
@@ -1437,7 +1535,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   type="date"
                   value={eventDate}
                   onChange={e => setEventDate(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
+                  className={`w-full rounded-xl border ${mapsUrlError ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none transition-colors shadow-inner`}
                 />
               </div>
               <div>
@@ -1545,8 +1643,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 value={googleMapsUrl}
                 onChange={e => setGoogleMapsUrl(e.target.value)}
                 placeholder={lang === 'ar' ? 'ضع هنا رابط موقع الحدث من خرائط جوجل ماب' : 'Paste Google Maps location link here'}
-                className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
+                className={`w-full rounded-xl border ${mapsUrlError ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none transition-colors shadow-inner`}
               />
+              {mapsUrlError && (
+                <p className="mt-2 text-xs font-bold text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {lang === 'ar' ? 'هذا الرابط غير صحيح. يجب أن يكون رابطاً رسمياً من خرائط جوجل.' : 'Invalid link. Must be an official Google Maps link.'}
+                </p>
+              )}
               <p className="mt-1.5 text-[11px] text-neutral-400 leading-relaxed font-sans">
                 {lang === 'ar'
                   ? '💡 انسخ رابط الموقع الجغرافي من تطبيق Google Maps وضعه هنا، ليتيح للزوار الانتقال الفوري لمكانك بضغطة زر واحدة!'
@@ -1753,22 +1857,45 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </label>
           </div>
 
+          
+          {hasUrlViolation && (
+            <div className="mb-6 p-5 rounded-2xl bg-red-500/10 border-2 border-red-500/40 animate-pulse shadow-xl shadow-red-500/10">
+              <div className="flex flex-col items-center justify-center text-center gap-3">
+                <ShieldCheck className="h-10 w-10 text-red-500" />
+                <h3 className="text-lg font-black text-red-500">
+                  {lang === 'ar' ? '⚠️ تحذير أمني: يمنع منعاً باتاً إضافة روابط خارجية' : '⚠️ Security Warning: External Links Strictly Prohibited'}
+                </h3>
+                <p className="text-sm font-bold text-red-400 max-w-lg leading-relaxed">
+                  {lang === 'ar' 
+                    ? 'لقد اكتشف نظام الحماية وجود رابط خارجي في العنوان أو الوصف. لقد تم إيقاف وإغلاق كافة أزرار المعاينة والنشر فوراً.' 
+                    : 'The security system has detected an external link in the title or description. All preview and publish buttons have been immediately disabled.'}
+                </p>
+                <p className="text-xs font-bold text-neutral-400 mt-2 bg-neutral-950 px-4 py-2 rounded-xl border border-red-500/20">
+                  {lang === 'ar' 
+                    ? 'تنبيه: تكرار هذه المخالفة سيؤدي إلى إرسال تقرير فوري إلى إدارة التطبيق لاتخاذ الإجراءات القانونية اللازمة وحظر حسابك نهائياً.' 
+                    : 'Notice: Repeating this violation will result in an immediate report to the app administration for legal action and permanent account ban.'}
+                </p>
+              </div>
+            </div>
+          )}
           {/* Actions Button Section */}
           <div className="pt-6 pb-12 sm:pb-16 flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {editingEvent ? (
                 <motion.button
-                  whileHover={agreedToTerms && !isUploadingMedia ? { scale: 1.01 } : {}}
-                  whileTap={agreedToTerms && !isUploadingMedia ? { scale: 0.98 } : {}}
+                  whileHover={agreedToTerms && !isUploadingMedia && !hasUrlViolation ? { scale: 1.01 } : {}}
+                  whileTap={agreedToTerms && !isUploadingMedia && !hasUrlViolation ? { scale: 0.98 } : {}}
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (!agreedToTerms || isUploadingMedia) return;
+                    if (!agreedToTerms || isUploadingMedia || hasUrlViolation || mapsUrlError) return;
                     handleFinalPublish();
                   }}
-                  disabled={!agreedToTerms || isUploadingMedia}
+                  disabled={!agreedToTerms || isUploadingMedia || hasUrlViolation || mapsUrlError}
                   className={`w-full sm:w-auto min-w-[280px] rounded-2xl py-3 px-8 text-sm font-extrabold transition-all flex items-center justify-center gap-3 border ${
-                    agreedToTerms && !isUploadingMedia
+                    hasUrlViolation
+                      ? 'hidden pointer-events-none'
+                      : agreedToTerms
                       ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
                       : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
                   }`}
@@ -1782,19 +1909,21 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </motion.button>
               ) : (
                 <motion.button
-                  whileHover={agreedToTerms ? { scale: 1.01 } : {}}
-                  whileTap={agreedToTerms ? { scale: 0.98 } : {}}
+                  whileHover={agreedToTerms && !hasUrlViolation ? { scale: 1.01 } : {}}
+                  whileTap={agreedToTerms && !hasUrlViolation ? { scale: 0.98 } : {}}
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (!agreedToTerms) return;
+                    if (!agreedToTerms || hasUrlViolation || mapsUrlError) return;
                     setCreateTab('preview');
                     setPreviewAlert(null);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  disabled={!agreedToTerms}
+                  disabled={!agreedToTerms || hasUrlViolation || mapsUrlError}
                   className={`w-full sm:w-auto min-w-[280px] rounded-2xl py-3 px-8 text-sm font-extrabold transition-all flex items-center justify-center gap-3 border ${
-                    agreedToTerms
+                    hasUrlViolation
+                      ? 'hidden pointer-events-none'
+                      : agreedToTerms
                       ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
                       : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
                   }`}

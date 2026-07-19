@@ -10,7 +10,9 @@ interface NotificationsModalProps {
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose }) => {
-  const { lang, notifications, markAllNotificationsAsRead, pushEnabled, togglePushNotifications } = useApp();
+  const { lang, notifications, markAllNotificationsAsRead, pushEnabled, togglePushNotifications, user } = useApp();
+  
+  const visibleNotifications = notifications.filter(n => !n.userId || n.userId === user?.id);
 
   if (!isOpen) return null;
 
@@ -51,7 +53,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
             <div className={`flex items-center gap-3.5 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
               <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
                 <BellRing className="h-5 w-5 animate-pulse-slow text-amber-400" />
-                {notifications.some(n => !n.read) && (
+                {visibleNotifications.some(n => !n.read) && (
                   <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 rounded-full bg-amber-500 ring-4 ring-neutral-900" />
                 )}
               </div>
@@ -66,7 +68,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
             </div>
 
             <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-              {notifications.length > 0 && (
+              {visibleNotifications.length > 0 && (
                 <motion.button
                   whileHover={{ scale: 1.02, backgroundColor: '#262626' }}
                   whileTap={{ scale: 0.98 }}
@@ -121,7 +123,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
 
           {/* Notifications List */}
           <div className="overflow-y-auto p-5 space-y-3.5 flex-1 custom-scrollbar">
-            {notifications.length === 0 ? (
+            {visibleNotifications.length === 0 ? (
               <div className="py-16 text-center">
                 <div className="relative inline-block mb-4">
                   <div className="absolute inset-0 bg-amber-500/10 blur-xl rounded-full" />
@@ -137,7 +139,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
                 </p>
               </div>
             ) : (
-              notifications.map(notif => {
+              visibleNotifications.map(notif => {
                 const iconConf = typeIcons[notif.type] || typeIcons.system;
                 const Icon = iconConf.icon;
                 const isUnread = !notif.read;

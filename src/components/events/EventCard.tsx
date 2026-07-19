@@ -31,6 +31,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   } = useApp();
 
   const displayAdType = overrideAdType || event.adType;
+  console.log("EVENT CARD", event.titleAr, event.eventRef, user?.isAdmin);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);

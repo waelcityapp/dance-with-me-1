@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Check, Image as ImageIcon, Video, Calendar as CalendarIcon, 
-  MapPin, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, UploadCloud, AlertCircle
+  MapPin, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, UploadCloud, AlertCircle,
+  Languages, Loader2
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
@@ -26,6 +27,28 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
   const [titleEn, setTitleEn] = useState(editingEvent?.titleEn || '');
   const [descAr, setDescAr] = useState(editingEvent?.descriptionAr || '');
   const [descEn, setDescEn] = useState(editingEvent?.descriptionEn || '');
+  const [isTranslating, setIsTranslating] = useState<string | null>(null);
+
+  const handleTranslate = async (text: string, targetLang: 'ar' | 'en', setter: (val: string) => void, fieldName: string) => {
+    if (!text.trim()) return;
+    setIsTranslating(fieldName);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLang })
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        setter(data.translatedText);
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+    } finally {
+      setIsTranslating(null);
+    }
+  };
+
   const [category, setCategory] = useState<DanceCategory>(editingEvent?.category || 'party');
   const [mediaType, setMediaType] = useState<'video' | 'image'>(editingEvent?.mediaType || 'image');
   const [mediaUrl, setMediaUrl] = useState(editingEvent?.mediaUrl || '');
@@ -108,6 +131,29 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Security check: Validate file type and extension to prevent malicious uploads
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const validImageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    const validVideoExts = ['mp4', 'webm', 'mov'];
+    
+    const isValidImage = validImageTypes.includes(file.type) && validImageExts.includes(ext || '');
+    const isValidVideo = validVideoTypes.includes(file.type) && validVideoExts.includes(ext || '');
+
+    if (!isValidImage && !isValidVideo) {
+      alert(lang === 'ar' ? '⚠️ تحذير أمني: نوع الملف غير مدعوم أو قد يكون خبيثاً. يرجى رفع صورة أو فيديو بصيغة صحيحة.' : '⚠️ Security Warning: Unsupported or potentially malicious file type. Please upload a valid image or video.');
+      e.target.value = '';
+      return;
+    }
+
+    // Check file size (e.g. limit to 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      alert(lang === 'ar' ? '⚠️ حجم الملف كبير جداً (أكثر من 50 ميجابايت).' : '⚠️ File is too large (over 50MB).');
+      e.target.value = '';
+      return;
+    }
 
     const isVideo = file.type.startsWith('video/');
     if (mediaType === 'image' && isVideo) {
@@ -256,12 +302,37 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
             <FileText className="h-5 w-5 text-amber-500" />
             {lang === 'ar' ? 'البيانات الأساسية' : 'Core Information'}
           </h2>
+
+          {editingEvent?.eventRef && (
+            <div className="space-y-2 mb-6 p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5">
+              <label className="text-sm font-bold text-indigo-400">
+                {lang === 'ar' ? 'كود الحدث (الرقم المرجعي)' : 'Event Code (Reference)'}
+              </label>
+              <input
+                disabled
+                type="text"
+                value={editingEvent.eventRef}
+                className="w-full bg-neutral-950/50 border border-indigo-500/30 rounded-xl px-4 py-3 text-indigo-300 font-mono font-bold select-all focus:outline-none opacity-80 cursor-not-allowed"
+              />
+            </div>
+          )}
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
-                {lang === 'ar' ? 'العنوان (بالعربية)' : 'Title (Arabic)'}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-neutral-300">
+                  {lang === 'ar' ? 'العنوان (بالعربية)' : 'Title (Arabic)'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleTranslate(titleEn, 'ar', setTitleAr, 'titleAr')}
+                  disabled={!titleEn || isTranslating === 'titleAr'}
+                  className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-blue-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isTranslating === 'titleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                  {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                </button>
+              </div>
               <input
                 required
                 type="text"
@@ -271,9 +342,20 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
-                {lang === 'ar' ? 'العنوان (بالإنجليزية)' : 'Title (English)'}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-neutral-300">
+                  {lang === 'ar' ? 'العنوان (بالإنجليزية)' : 'Title (English)'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleTranslate(titleAr, 'en', setTitleEn, 'titleEn')}
+                  disabled={!titleAr || isTranslating === 'titleEn'}
+                  className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-blue-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isTranslating === 'titleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                  {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                </button>
+              </div>
               <input
                 required
                 type="text"
@@ -286,9 +368,20 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-neutral-300">
-              {lang === 'ar' ? 'الوصف (بالعربية)' : 'Description (Arabic)'}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-bold text-neutral-300">
+                {lang === 'ar' ? 'الوصف (بالعربية)' : 'Description (Arabic)'}
+              </label>
+              <button
+                type="button"
+                onClick={() => handleTranslate(descEn, 'ar', setDescAr, 'descAr')}
+                disabled={!descEn || isTranslating === 'descAr'}
+                className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-blue-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isTranslating === 'descAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+              </button>
+            </div>
             <textarea
               required
               rows={3}
@@ -298,9 +391,20 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-bold text-neutral-300">
-              {lang === 'ar' ? 'الوصف (بالإنجليزية)' : 'Description (English)'}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-bold text-neutral-300">
+                {lang === 'ar' ? 'الوصف (بالإنجليزية)' : 'Description (English)'}
+              </label>
+              <button
+                type="button"
+                onClick={() => handleTranslate(descAr, 'en', setDescEn, 'descEn')}
+                disabled={!descAr || isTranslating === 'descEn'}
+                className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-blue-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isTranslating === 'descEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+              </button>
+            </div>
             <textarea
               required
               rows={3}
@@ -427,8 +531,8 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
               <input
                 type="text"
                 value={mediaUrl}
-                onChange={e => setMediaUrl(e.target.value)}
-                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all text-sm font-mono"
+                readOnly
+                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-neutral-400 focus:outline-none transition-all text-sm font-mono cursor-not-allowed"
                 placeholder="https://"
                 dir="ltr"
               />

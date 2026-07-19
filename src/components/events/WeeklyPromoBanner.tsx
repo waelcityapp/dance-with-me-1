@@ -403,6 +403,15 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           </div>
         </div>
 
+
+        {/* Admin Event Reference Number Badge */}
+        {user?.isAdmin && promoEvent.eventRef && (
+          <div className="mb-3 px-3 py-1.5 mx-4 sm:mx-6 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-indigo-400 font-mono text-xs flex items-center justify-between mt-2">
+            <span className="font-semibold">{lang === 'ar' ? 'الرقم المرجعي (أدمن فقط):' : 'Reference Number (Admin Only):'}</span>
+            <span className="font-bold bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/30">{promoEvent.eventRef}</span>
+          </div>
+        )}
+
         {/* Action Bar: Contact, Share, Like, Book in a single row */}
         <div className="flex flex-row items-center gap-1.5 sm:gap-2 pt-3 border-t border-neutral-800 overflow-x-auto no-scrollbar w-full whitespace-nowrap">
           {/* Direct Call Button */}

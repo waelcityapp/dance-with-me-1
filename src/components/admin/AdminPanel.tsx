@@ -50,7 +50,7 @@ import {
   TrendingUp,
   MousePointerClick,
   Bell
-, Maximize2, Minimize2 } from 'lucide-react';
+, Maximize2, Minimize2, Languages, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle } from '../../types';
 import { EventCard } from '../events/EventCard';
@@ -138,12 +138,71 @@ export const AdminPanel: React.FC = () => {
   const [secretChangeStatus, setSecretChangeStatus] = useState('');
   const [updatingSecretCode, setUpdatingSecretCode] = useState(false);
   const [adminAlertPhone, setAdminAlertPhone] = useState<string>(() => {
-    return localStorage.getItem('dwm_admin_whatsapp_phone') || user?.phone || '201015112185';
+    return localStorage.getItem('dwm_admin_alert_phone') || '201201529891';
   });
+
+  const hasAutoCleanedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (submissions.length === 0 || hasAutoCleanedRef.current) return;
+    
+    const autoCleanupOldArchives = async () => {
+      hasAutoCleanedRef.current = true;
+      const now = Date.now();
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      
+      const oldArchived = submissions.filter(s => {
+        if (s.status !== 'archived') return false;
+        if (!s.archivedAt) return false;
+        const archivedTime = new Date(s.archivedAt).getTime();
+        return (now - archivedTime) > thirtyDaysMs;
+      });
+
+      if (oldArchived.length > 0) {
+        console.log(`Auto-cleaning ${oldArchived.length} old archived submissions...`);
+        for (const sub of oldArchived) {
+          try {
+            // Delete media from Cloudinary
+            if (sub.mediaUrl) await deleteFromCloudinary(sub.mediaUrl, sub.mediaType || 'image').catch(console.error);
+            if (sub.receiptUrl) await deleteFromCloudinary(sub.receiptUrl, 'image').catch(console.error);
+            
+            // Delete associated Event if exists
+            if (sub.eventData?.id) {
+               try {
+                 const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
+                 const eventId = sub.eventData.id;
+                 await deleteEventFromFirestore(eventId);
+                 
+                 // Find and delete associated bookings
+                 if (bookings) {
+                   const associatedBookings = bookings.filter(b => b.eventId === eventId);
+                   for (const bkg of associatedBookings) {
+                     if (bkg.receiptUrl) {
+                       await deleteFromCloudinary(bkg.receiptUrl, 'image').catch(console.error);
+                     }
+                     await deleteBookingFromFirestore(bkg.id);
+                   }
+                 }
+               } catch (e) {
+                 console.error('Failed to delete associated event or bookings', e);
+               }
+            }
+            
+            // Delete Ad Submission from Firestore
+            await deleteAdSubmissionFromFirestore(sub.id);
+          } catch (e) {
+            console.error('Error auto-cleaning old archived ad:', e);
+          }
+        }
+      }
+    };
+
+    autoCleanupOldArchives();
+  }, [submissions, bookings]);
 
   const handleAlertPhoneChange = (val: string) => {
     setAdminAlertPhone(val);
-    localStorage.setItem('dwm_admin_whatsapp_phone', val);
+    localStorage.setItem('dwm_admin_alert_phone', val);
   };
 
   // Branding & Assets States
@@ -180,6 +239,28 @@ export const AdminPanel: React.FC = () => {
   const [adminTitleEn, setAdminTitleEn] = useState('');
   const [adminDescAr, setAdminDescAr] = useState('');
   const [adminDescEn, setAdminDescEn] = useState('');
+  const [isTranslating, setIsTranslating] = useState<string | null>(null);
+
+  const handleTranslate = async (text: string, targetLang: 'ar' | 'en', setter: (val: string) => void, fieldName: string) => {
+    if (!text.trim()) return;
+    setIsTranslating(fieldName);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLang })
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        setter(data.translatedText);
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+    } finally {
+      setIsTranslating(null);
+    }
+  };
+
   const [adminCategory, setAdminCategory] = useState<DanceCategory>('party');
   const [adminMediaType, setAdminMediaType] = useState<'video' | 'image'>('image');
   const [adminMediaUrl, setAdminMediaUrl] = useState('');
@@ -216,6 +297,56 @@ export const AdminPanel: React.FC = () => {
   const [adminIsWeeklyPromo, setAdminIsWeeklyPromo] = useState(false);
   const [adminIsFeatured, setAdminIsFeatured] = useState(true);
   const [adminEventsFilter, setAdminEventsFilter] = useState<'all' | 'empty' | 'paused' | 'active' | 'available'>('all');
+
+  // Auto-save draft functionality
+  const DRAFT_KEY = 'dwm_admin_ad_draft';
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (draft.adminTitleAr) setAdminTitleAr(draft.adminTitleAr);
+        if (draft.adminTitleEn) setAdminTitleEn(draft.adminTitleEn);
+        if (draft.adminDescAr) setAdminDescAr(draft.adminDescAr);
+        if (draft.adminDescEn) setAdminDescEn(draft.adminDescEn);
+        if (draft.adminPriceAr) setAdminPriceAr(draft.adminPriceAr);
+        if (draft.adminPriceEn) setAdminPriceEn(draft.adminPriceEn);
+        if (draft.adminCategory) setAdminCategory(draft.adminCategory);
+        if (draft.adminSelectedStyles) setAdminSelectedStyles(draft.adminSelectedStyles);
+        if (draft.adminMediaType) setAdminMediaType(draft.adminMediaType);
+        if (draft.adminMediaUrl) setAdminMediaUrl(draft.adminMediaUrl);
+        if (draft.adminLocationNameAr) setAdminLocationNameAr(draft.adminLocationNameAr);
+        if (draft.adminLocationNameEn) setAdminLocationNameEn(draft.adminLocationNameEn);
+        if (draft.adminAddressAr) setAdminAddressAr(draft.adminAddressAr);
+        if (draft.adminAddressEn) setAdminAddressEn(draft.adminAddressEn);
+        if (draft.adminGoogleMapsUrl) setAdminGoogleMapsUrl(draft.adminGoogleMapsUrl);
+        if (draft.adminPhone) setAdminPhone(draft.adminPhone);
+        if (draft.adminWhatsapp) setAdminWhatsapp(draft.adminWhatsapp);
+        if (draft.adminOrganizerName) setAdminOrganizerName(draft.adminOrganizerName);
+        if (draft.adminEventDate) setAdminEventDate(draft.adminEventDate);
+        if (draft.adminPosition) setAdminPosition(draft.adminPosition);
+        if (typeof draft.adminIsFeatured !== 'undefined') setAdminIsFeatured(draft.adminIsFeatured);
+        if (typeof draft.adminIsWeeklyPromo !== 'undefined') setAdminIsWeeklyPromo(draft.adminIsWeeklyPromo);
+      }
+    } catch (e) { console.error('Error loading draft', e); }
+  }, []);
+
+  useEffect(() => {
+    const draft = {
+      adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
+      adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
+      adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGoogleMapsUrl,
+      adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [
+    adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
+    adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
+    adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGoogleMapsUrl,
+    adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo
+  ]);
+
   
   // Quick Edit States
   const [adminEditingField, setAdminEditingField] = useState<string | null>(null);
@@ -325,6 +456,29 @@ export const AdminPanel: React.FC = () => {
   const handleAdminFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Security check: Validate file type and extension to prevent malicious uploads
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      const validImageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+      const validVideoExts = ['mp4', 'webm', 'mov'];
+      
+      const isImage = validImageTypes.includes(file.type) && validImageExts.includes(ext || '');
+      const isVideo = validVideoTypes.includes(file.type) && validVideoExts.includes(ext || '');
+
+      if (!isImage && !isVideo) {
+        alert(lang === 'ar' ? '⚠️ تحذير أمني: نوع الملف غير مدعوم أو قد يكون خبيثاً. يرجى رفع صورة أو فيديو بصيغة صحيحة.' : '⚠️ Security Warning: Unsupported or potentially malicious file type. Please upload a valid image or video.');
+        e.target.value = '';
+        return;
+      }
+
+      // Check file size (e.g. limit to 50MB) to prevent buffer overflows/denial of service
+      if (file.size > 50 * 1024 * 1024) {
+        alert(lang === 'ar' ? '⚠️ حجم الملف كبير جداً (أكثر من 50 ميجابايت).' : '⚠️ File is too large (over 50MB).');
+        e.target.value = '';
+        return;
+      }
+
       const processUpload = async (fileToUpload: File, type: 'video' | 'image') => {
         setAdminUploadedFileName(fileToUpload.name);
         setAdminMediaType(type);
@@ -501,47 +655,69 @@ export const AdminPanel: React.FC = () => {
         finalThumbnailUrl = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
       }
 
-      const coords = parseAdminCoordinates(adminGoogleMapsUrl);
+      
+      const coords = parseAdminCoordinates(adminGoogleMapsUrl || '');
+      
+      let maxRef = 1000;
+      const assignedRefs = (events || []).map(e => e?.eventRef).filter((r): r is number => typeof r === 'number');
+      if (assignedRefs.length > 0) {
+        maxRef = Math.max(...assignedRefs);
+      }
+      const newEventRef = maxRef + 1;
       
       const newEventId = `ev-adm-${Date.now()}`;
 
+      // Safe date parsing
+      let safeDateStr = new Date().toISOString();
+      try {
+        const d = new Date(adminEventDate);
+        if (!isNaN(d.getTime())) {
+          safeDateStr = d.toISOString();
+        }
+      } catch (e) { console.error(e); }
+
       const createdEvent: DanceEvent = {
         id: newEventId,
-        titleAr: adminTitleAr.trim(),
-        titleEn: adminTitleEn.trim(),
-        descriptionAr: adminDescAr.trim(),
-        descriptionEn: adminDescEn.trim(),
-        category: adminCategory,
-        styles: adminSelectedStyles,
-        mediaType: adminMediaType,
+        titleAr: (adminTitleAr || '').trim(),
+        titleEn: (adminTitleEn || '').trim(),
+        descriptionAr: (adminDescAr || '').trim(),
+        descriptionEn: (adminDescEn || '').trim(),
+        category: adminCategory || 'party',
+        styles: adminSelectedStyles || [],
+        mediaType: adminMediaType || 'image',
         mediaUrl: finalMediaUrl,
         thumbnailUrl: finalThumbnailUrl,
         uploadDate: new Date().toISOString(),
-        eventDate: new Date(adminEventDate).toISOString(),
-        priceAr: adminPriceAr.trim() || '250 ج.م',
-        priceEn: adminPriceEn.trim() || '250 EGP',
+        eventRef: newEventRef,
+        eventDate: safeDateStr,
+        priceAr: (adminPriceAr || '').trim() || '250 ج.م',
+        priceEn: (adminPriceEn || '').trim() || '250 EGP',
         location: {
-          nameAr: adminLocationNameAr.trim() || 'أستوديو الرقص - الزمالك',
-          nameEn: adminLocationNameEn.trim() || 'Dance Studio - Zamalek',
-          addressAr: adminAddressAr.trim() || 'القاهرة، مصر',
-          addressEn: adminAddressEn.trim() || 'Cairo, Egypt',
-          googleMapsUrl: adminGoogleMapsUrl.trim(),
+          nameAr: (adminLocationNameAr || '').trim() || 'أستوديو الرقص - الزمالك',
+          nameEn: (adminLocationNameEn || '').trim() || 'Dance Studio - Zamalek',
+          addressAr: (adminAddressAr || '').trim() || 'القاهرة، مصر',
+          addressEn: (adminAddressEn || '').trim() || 'Cairo, Egypt',
+          googleMapsUrl: (adminGoogleMapsUrl || '').trim(),
           lat: coords.lat,
           lng: coords.lng
         },
         contact: {
-          phone: adminPhone.trim() || '+201011223344',
-          whatsapp: adminWhatsapp.trim() || '201011223344',
-          organizerName: adminOrganizerName.trim() || 'الإدارة / Admin'
+          phone: (adminPhone || '').trim() || '+201011223344',
+          whatsapp: (adminWhatsapp || '').trim() || '201011223344',
+          organizerName: (adminOrganizerName || '').trim() || 'الإدارة / Admin'
         },
         likesCount: 15,
-        isFeatured: adminIsFeatured,
-        isWeeklyPromo: adminIsWeeklyPromo,
+        isFeatured: !!adminIsFeatured,
+        isWeeklyPromo: !!adminIsWeeklyPromo,
         position: adminPosition ? Number(adminPosition) : 999999
       };
+      
+      // Save to Firestore and verify success
+      const saveSuccess = await saveEventToFirestore(createdEvent);
+      if (!saveSuccess) {
+        throw new Error('Failed to save to Firestore');
+      }
 
-      // Save to Firestore
-      await saveEventToFirestore(createdEvent);
 
       // Save notification to Firestore so all clients get pushed
       const newNotifId = `notif-adm-${Date.now()}`;
@@ -558,8 +734,61 @@ export const AdminPanel: React.FC = () => {
       };
       await saveNotificationToFirestore(newNotif);
 
+      // Also create an AdSubmission so the admin can see it in their Profile -> My Ads
+      if (user?.id) {
+        try {
+          const submissionId = `sub-adm-${Date.now()}`;
+          await saveAdSubmissionToFirestore({
+            id: submissionId,
+            eventRef: newEventRef,
+            invoiceNumber: `DWM-ADM-${Math.floor(100000 + Math.random() * 900000)}`,
+            advertiserId: user.id,
+            advertiserName: user.name || 'Admin',
+            phone: adminPhone.trim() || '+201011223344',
+            titleAr: adminTitleAr.trim(),
+            titleEn: adminTitleEn.trim(),
+            category: adminCategory,
+            styles: adminSelectedStyles,
+            mediaType: adminMediaType,
+            mediaUrl: finalMediaUrl,
+            pricing: { days: 30, subtotal: 0, tax: 0, total: 0 },
+            status: 'approved',
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+            userRead: false,
+            reviewedAt: new Date().toISOString(),
+            eventData: createdEvent
+          } as any);
+        } catch (e) {
+          console.error('Failed to create admin ad submission link:', e);
+        }
+      }
+
+      // Send personal notification to admin with the event code
+      if (user?.id) {
+        try {
+          const personalNotifId = `notif-adm-personal-${Date.now()}`;
+          await saveNotificationToFirestore({
+            id: personalNotifId,
+            userId: user.id,
+            titleAr: 'تم نشر إعلانك الإداري بنجاح! 🎉',
+            titleEn: 'Your Admin Ad is Published! 🎉',
+            messageAr: `تم نشر إعلانك "${createdEvent.titleAr}". كود الحدث (الرقم المرجعي) الخاص بك هو: ${newEventRef}. استخدم هذا الكود للبحث عن إعلانك أو لمشاركته مع الآخرين.`,
+            messageEn: `Your ad "${createdEvent.titleEn}" has been published. Your Event Code is: ${newEventRef}. Use this code to search or share your ad.`,
+            date: new Date().toISOString(),
+            read: false,
+            type: 'system'
+          } as any);
+        } catch (e) {
+          console.error('Failed to send personal admin notification:', e);
+        }
+      }
+
       setAdminSaveStatus('success');
-      alert(lang === 'ar' ? '🎉 تم إنشاء ونشر الإعلان فوراً وربطه بالتنبيهات العامة بنجاح!' : '🎉 Ad has been published and broadcasted via real-time alerts successfully!');
+      localStorage.removeItem(DRAFT_KEY);
+      alert(lang === 'ar' 
+        ? `🎉 تم النشر بنجاح! كود الحدث (الرقم المرجعي) الخاص بك هو: ${newEventRef}` 
+        : `🎉 Published successfully! Your Event Code is: ${newEventRef}`);
       
       // Reset Admin Form Fields
       setAdminTitleAr('');
@@ -827,6 +1056,14 @@ export const AdminPanel: React.FC = () => {
       const positionValue = submissionPositions[sub.id] !== undefined && submissionPositions[sub.id] !== '' ? Number(submissionPositions[sub.id]) : (sub.eventData?.position || Number(adminPosition) || 999999);
 
       // 1. Create or save the actual event if eventData exists
+      // Generate the unique event code (eventRef) before saving
+      let maxRef = 1000;
+      const assignedRefs = events.map(e => e.eventRef).filter((r): r is number => typeof r === 'number');
+      if (assignedRefs.length > 0) {
+        maxRef = Math.max(...assignedRefs);
+      }
+      const newEventRef = maxRef + 1;
+      
       let eventId = '';
       if (sub.eventData) {
         eventId = sub.eventData.id || `ev_${sub.adType || 'vip'}_${Date.now()}`;
@@ -838,6 +1075,7 @@ export const AdminPanel: React.FC = () => {
           uploadDate: new Date().toISOString(),
           likesCount: 15,
           isFeatured: sub.adType === 'vip' || sub.eventData?.adType === 'vip',
+          eventRef: newEventRef,
           isWeeklyPromo: positionValue === 1, // dynamically set weekly promo based on position
           position: positionValue,
           adType: sub.adType || sub.eventData?.adType || 'standard'
@@ -850,7 +1088,12 @@ export const AdminPanel: React.FC = () => {
       // 2. Update submission status in Firestore with expiration timestamp
       const promoDays = sub.pricing?.days || 3;
       const expiresAtDate = new Date(Date.now() + promoDays * 86400000).toISOString();
-      const updated: AdSubmission = {
+      if (eventId && sub.eventData) { 
+        sub.eventData.id = eventId; 
+        sub.eventData.eventRef = newEventRef;
+      }
+      
+      const updated: AdSubmission = { eventRef: newEventRef,
         ...sub,
         status: 'approved',
         userRead: false,
@@ -860,6 +1103,26 @@ export const AdminPanel: React.FC = () => {
       
       if (eventId && updated.eventData) { updated.eventData.id = eventId; } updateLocalStorageItem(updated);
       await saveAdSubmissionToFirestore(updated);
+      
+      // Send personal notification to the user with the event code
+      if (sub.advertiserId) {
+        try {
+          const { saveNotificationToFirestore } = await import('../../lib/firebase');
+          await saveNotificationToFirestore({
+            id: `notif_appr_${Date.now()}_${sub.id}`,
+            userId: sub.advertiserId,
+            type: 'system',
+            titleAr: 'تم تفعيل إعلانك بنجاح! 🎉',
+            titleEn: 'Your Ad is Approved! 🎉',
+            messageAr: `تمت الموافقة على نشر إعلانك "${sub.titleAr}". كود الحدث (الرقم المرجعي) الخاص بك هو: ${newEventRef}. استخدم هذا الكود للبحث عن إعلانك أو لمشاركته مع الآخرين.`,
+            messageEn: `Your ad "${sub.titleEn}" has been published. Your Event Code is: ${newEventRef}. Use this code to search or share your ad.`,
+            date: new Date().toISOString(),
+            read: false
+          });
+        } catch (e) {
+          console.error('Failed to send personal approval notification:', e);
+        }
+      }
     } catch (err) {
       console.error('Error approving ad:', err);
     } finally {
@@ -918,9 +1181,43 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من حذف هذا السجل؟' : 'Are you sure you want to delete this record?');
+    const sub = submissions.find(s => s.id === id);
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من حذف هذا السجل وجميع البيانات المرتبطة به نهائياً؟' : 'Are you sure you want to delete this record and all associated data permanently?');
     if (confirmed) {
       updateLocalStorageItem(null, id);
+      
+      if (sub) {
+        // Delete media from Cloudinary
+        if (sub.mediaUrl) {
+          await deleteFromCloudinary(sub.mediaUrl, sub.mediaType || 'image').catch(console.error);
+        }
+        if (sub.receiptUrl) {
+          await deleteFromCloudinary(sub.receiptUrl, 'image').catch(console.error);
+        }
+        
+        // Delete associated Event if it exists
+        if (sub.eventData?.id) {
+          try {
+            const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
+            const eventId = sub.eventData.id;
+            await deleteEventFromFirestore(eventId);
+            
+            // Delete associated bookings
+            if (bookings) {
+              const associatedBookings = bookings.filter(b => b.eventId === eventId);
+              for (const bkg of associatedBookings) {
+                if (bkg.receiptUrl) {
+                  await deleteFromCloudinary(bkg.receiptUrl, 'image').catch(console.error);
+                }
+                await deleteBookingFromFirestore(bkg.id);
+              }
+            }
+          } catch (e) {
+            console.error('Failed to delete associated event or bookings', e);
+          }
+        }
+      }
+      
       await deleteAdSubmissionFromFirestore(id);
     }
   };
@@ -5109,9 +5406,20 @@ export const AdminPanel: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Title Arabic */}
                     <div className="space-y-2 text-right">
-                      <label className="text-xs font-black text-neutral-300">
-                        {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالعربية) *' : 'Event Title (Arabic) *'}
-                      </label>
+                      <div className="flex items-center justify-between flex-row-reverse">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالعربية) *' : 'Event Title (Arabic) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminTitleEn, 'ar', setAdminTitleAr, 'adminTitleAr')}
+                          disabled={!adminTitleEn || isTranslating === 'adminTitleAr'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminTitleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                        </button>
+                      </div>
                       <input
                         type="text"
                         required
@@ -5124,9 +5432,20 @@ export const AdminPanel: React.FC = () => {
 
                     {/* Title English */}
                     <div className="space-y-2 text-left">
-                      <label className="text-xs font-black text-neutral-300">
-                        {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالإنجليزية) *' : 'Event Title (English) *'}
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالإنجليزية) *' : 'Event Title (English) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminTitleAr, 'en', setAdminTitleEn, 'adminTitleEn')}
+                          disabled={!adminTitleAr || isTranslating === 'adminTitleEn'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminTitleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                        </button>
+                      </div>
                       <input
                         type="text"
                         required
@@ -5141,9 +5460,20 @@ export const AdminPanel: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Desc Arabic */}
                     <div className="space-y-2 text-right">
-                      <label className="text-xs font-black text-neutral-300">
-                        {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالعربية) *' : 'Event Description (Arabic) *'}
-                      </label>
+                      <div className="flex items-center justify-between flex-row-reverse">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالعربية) *' : 'Event Description (Arabic) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminDescEn, 'ar', setAdminDescAr, 'adminDescAr')}
+                          disabled={!adminDescEn || isTranslating === 'adminDescAr'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminDescAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                        </button>
+                      </div>
                       <textarea
                         required
                         rows={4}
@@ -5156,9 +5486,20 @@ export const AdminPanel: React.FC = () => {
 
                     {/* Desc English */}
                     <div className="space-y-2 text-left">
-                      <label className="text-xs font-black text-neutral-300">
-                        {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالإنجليزية) *' : 'Event Description (English) *'}
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالإنجليزية) *' : 'Event Description (English) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminDescAr, 'en', setAdminDescEn, 'adminDescEn')}
+                          disabled={!adminDescAr || isTranslating === 'adminDescEn'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminDescEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                        </button>
+                      </div>
                       <textarea
                         required
                         rows={4}
@@ -5515,20 +5856,6 @@ export const AdminPanel: React.FC = () => {
                         onChange={handleAdminFileSelect}
                         accept={adminMediaType === 'video' ? 'video/*' : 'image/*'}
                         className="hidden"
-                      />
-                    </div>
-
-                    {/* Direct Text URL Link Input (Fallback) */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-black text-neutral-400">
-                        {lang === 'ar' ? 'أو أدخل رابط ميديا خارجي مباشرة (URL):' : 'Or enter custom Media URL link:'}
-                      </label>
-                      <input
-                        type="url"
-                        value={adminMediaUrl}
-                        onChange={(e) => setAdminMediaUrl(e.target.value)}
-                        placeholder="https://example.com/flyer.jpg"
-                        className="w-full rounded-xl bg-neutral-950 border border-neutral-800 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
                       />
                     </div>
                   </div>

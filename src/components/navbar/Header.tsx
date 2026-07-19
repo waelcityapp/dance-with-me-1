@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Bell, Globe, Sparkles, ShieldAlert, CheckCircle, Sun, Moon, Monitor, Share2, Smartphone, Crown, Mail } from 'lucide-react';
+import { Bell, Globe, Sparkles, ShieldAlert, CheckCircle, Sun, Moon, Monitor, Share2, Smartphone, Crown, Mail, ScanLine } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface HeaderProps {
@@ -180,23 +180,36 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
 
           {/* Admin Panel Button */}
           {user?.isAdmin && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (isAdminUnlocked) {
-                  setActiveTab('admin');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                  setIsAdminLockModalOpen(true);
-                }
-              }}
-              className="flex items-center gap-1.5 rounded-xl border border-amber-400 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-3 py-1.5 text-xs font-black text-neutral-950 transition-all shadow-md h-9 gold-glow cursor-pointer"
-              title={lang === 'ar' ? 'لوحة تحكم ومراجعة الإعلانات VIP' : 'VIP Ads Admin Panel'}
-            >
-              <Crown className="h-4 w-4 stroke-[2.5]" />
-              <span>{lang === 'ar' ? '👑 لوحة الإدارة والفواتير' : '👑 Admin Panel'}</span>
-            </motion.button>
+            <div className="flex items-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => window.open('/?verify=scan', '_blank')}
+                className="flex items-center justify-center rounded-xl border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 px-3 py-1.5 text-xs font-bold text-emerald-300 transition-all shadow-sm h-9 cursor-pointer gap-1.5"
+                title={lang === 'ar' ? 'مسح تذكرة (للمنظمين)' : 'Scan Ticket (Organizers)'}
+              >
+                <ScanLine className="h-4 w-4" />
+                <span>{lang === 'ar' ? 'مسح باركود' : 'Scan QR'}</span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  if (isAdminUnlocked) {
+                    setActiveTab('admin');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    setIsAdminLockModalOpen(true);
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-xl border border-amber-400 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-3 py-1.5 text-xs font-black text-neutral-950 transition-all shadow-md h-9 gold-glow cursor-pointer"
+                title={lang === 'ar' ? 'لوحة تحكم ومراجعة الإعلانات VIP' : 'VIP Ads Admin Panel'}
+              >
+                <Crown className="h-4 w-4 stroke-[2.5]" />
+                <span>{lang === 'ar' ? '👑 لوحة الإدارة والفواتير' : '👑 Admin Panel'}</span>
+              </motion.button>
+            </div>
           )}
         </div>
       </div>

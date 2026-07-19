@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
-import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore } from '../../lib/firebase';
+import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
 
 const GoogleLogo = ({ className = "h-4 w-4 shrink-0" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -83,6 +83,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [authErrorCode, setAuthErrorCode] = useState<string | null>(null);
   const [googleUid, setGoogleUid] = useState<string>('');
+  const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
 
   React.useEffect(() => {
     setErrorMsg(null);
@@ -134,6 +135,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         }
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setErrorMsg(null);
+    setResetSuccessMsg(null);
+    const cleanEmail = email.trim().toLowerCase();
+    
+    if (!cleanEmail) {
+      setErrorMsg(lang === 'ar' ? 'الرجاء إدخال البريد الإلكتروني أولاً لإرسال رابط إعادة التعيين.' : 'Please enter your email first to send the reset link.');
+      return;
+    }
+
+    try {
+      setLoadingAuth(true);
+      await resetFirebasePassword(cleanEmail);
+      setResetSuccessMsg(lang === 'ar' ? 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.' : 'Password reset link sent to your email.');
+    } catch (err: any) {
+      setErrorMsg(getAuthErrorMessage(err.code || 'unknown', lang));
+    } finally {
+      setLoadingAuth(false);
     }
   };
 
@@ -705,6 +727,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </div>
               )}
 
+              {resetSuccessMsg && (
+                <div className="p-3.5 text-xs rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 font-bold flex flex-col gap-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm shrink-0">✅</span>
+                    <span className="leading-relaxed">{resetSuccessMsg}</span>
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'register' && (
                 <div>
                   <label className="block text-xs font-mono text-neutral-300 mb-1">
@@ -742,9 +773,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-neutral-300 mb-1">
-                  {lang === 'ar' ? 'كلمة المرور' : 'Password'}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-mono text-neutral-300">
+                    {lang === 'ar' ? 'كلمة المرور' : 'Password'}
+                  </label>
+                  {activeTab === 'login' && (
+                    <button
+                      type="button"
+                      onClick={handleResetPassword}
+                      className="text-xs font-mono text-amber-500 hover:text-amber-400 underline transition-colors"
+                    >
+                      {lang === 'ar' ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Lock className="absolute top-3 left-3 h-4 w-4 text-neutral-500" />
                   <input

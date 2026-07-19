@@ -21,6 +21,7 @@ import {
   Clock,
   Phone
 } from 'lucide-react';
+import { QrScanner } from './QrScanner';
 
 export const VerificationView: React.FC = () => {
   const { lang, setActiveTab } = useApp();
@@ -43,7 +44,7 @@ export const VerificationView: React.FC = () => {
     // Parse URL parameter
     const params = new URLSearchParams(window.location.search);
     const id = params.get('verify');
-    if (id) {
+    if (id && id !== 'scan') {
       setBookingId(id);
       fetchBookingDetails(id);
     } else {
@@ -139,6 +140,27 @@ export const VerificationView: React.FC = () => {
     }
   };
 
+  const handleScanSuccess = (decodedText: string) => {
+    try {
+      const url = new URL(decodedText);
+      const verifyId = url.searchParams.get('verify');
+      if (verifyId) {
+        setBookingId(verifyId);
+        fetchBookingDetails(verifyId);
+      } else {
+        setError(isArabic ? 'صيغة الباركود غير صالحة' : 'Invalid QR code format');
+      }
+    } catch {
+      // If it's not a URL, maybe it's just the booking ID
+      if (decodedText && decodedText.length > 5) {
+        setBookingId(decodedText);
+        fetchBookingDetails(decodedText);
+      } else {
+        setError(isArabic ? 'صيغة الباركود غير صالحة' : 'Invalid QR code format');
+      }
+    }
+  };
+
   const handleClearUrl = () => {
     // Clear url query param and return home
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -177,28 +199,43 @@ export const VerificationView: React.FC = () => {
           <h3 className="text-base font-bold text-white">{isArabic ? 'خطأ في التحقق' : 'Verification Error'}</h3>
           <p className="text-xs text-neutral-400 leading-relaxed font-sans">{error}</p>
           <button 
+            onClick={() => {
+              setError(null);
+              setBookingId(null);
+            }}
+            className="w-full py-3 bg-neutral-800 text-neutral-200 rounded-xl text-xs font-bold hover:bg-neutral-700 transition-all cursor-pointer mt-2"
+          >
+            {isArabic ? 'مسح باركود آخر' : 'Scan another QR code'}
+          </button>
+          <button 
             onClick={handleClearUrl}
-            className="w-full py-3 bg-neutral-800 text-neutral-200 rounded-xl text-xs font-bold hover:bg-neutral-700 transition-all cursor-pointer"
+            className="w-full py-3 bg-neutral-900 text-neutral-400 rounded-xl text-xs font-bold hover:text-white transition-all cursor-pointer mt-2"
           >
             {isArabic ? 'العودة للرئيسية' : 'Return to Home'}
           </button>
         </div>
       ) : !bookingId ? (
-        <div className="rounded-3xl border-2 border-dashed border-neutral-800 bg-neutral-900/40 p-8 text-center space-y-4">
-          <Ticket className="w-12 h-12 text-neutral-600 mx-auto" />
-          <h3 className="text-base font-bold text-white">
-            {isArabic ? 'مسح الباركود مخصص لبوابة الأمن والمنظمين' : 'Security Scanner Verification Portal'}
-          </h3>
-          <p className="text-xs text-neutral-500 leading-relaxed font-sans">
-            {isArabic 
-              ? 'يرجى مسح كود الباركود/QR المرفق على تذكرة المستخدم لفتح تفاصيل الحجز وتأكيد الحضور تلقائياً.' 
-              : 'Please scan the QR code displayed on the attendee’s ticket directly to unlock booking details & confirm gate entry.'}
-          </p>
+        <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 text-center space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-base font-bold text-white">
+              {isArabic ? 'مسح الباركود مخصص لبوابة الأمن والمنظمين' : 'Security Scanner Verification Portal'}
+            </h3>
+            <p className="text-xs text-neutral-500 leading-relaxed font-sans">
+              {isArabic 
+                ? 'يرجى توجيه الكاميرا لمسح كود الباركود/QR المرفق على تذكرة المستخدم لفتح تفاصيل الحجز وتأكيد الحضور تلقائياً.' 
+                : 'Please point your camera at the QR code displayed on the attendee’s ticket directly to unlock booking details & confirm gate entry.'}
+            </p>
+          </div>
+          
+          <div className="bg-black/50 p-2 rounded-2xl">
+            <QrScanner onScanSuccess={handleScanSuccess} />
+          </div>
+
           <button 
             onClick={handleClearUrl}
             className="w-full py-3 bg-neutral-800 text-neutral-200 rounded-xl text-xs font-bold hover:bg-neutral-700 transition-all cursor-pointer"
           >
-            {isArabic ? 'تصفح الفعاليات' : 'Explore Events'}
+            {isArabic ? 'إلغاء وتصفح الفعاليات' : 'Cancel & Explore Events'}
           </button>
         </div>
       ) : booking ? (
@@ -299,15 +336,40 @@ export const VerificationView: React.FC = () => {
             {/* Bottom confirmation verification details */}
             <div className="p-6 bg-neutral-950/60">
               {successMessage ? (
-                <div className="text-center space-y-2 py-2">
+                <div className="text-center space-y-4 py-2">
                   <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
                   <p className="text-xs font-bold text-emerald-400 leading-relaxed">{successMessage}</p>
+                  <button 
+                    onClick={() => {
+                      setSuccessMessage(null);
+                      setBookingId(null);
+                      setBooking(null);
+                      setInputRefNumber('');
+                      window.history.replaceState({}, document.title, window.location.pathname);
+                    }}
+                    className="w-full py-3 mt-4 bg-neutral-800 text-neutral-200 rounded-xl text-xs font-bold hover:bg-neutral-700 transition-all cursor-pointer"
+                  >
+                    {isArabic ? 'مسح باركود آخر' : 'Scan another QR code'}
+                  </button>
                 </div>
               ) : booking.attended ? (
-                <div className="text-center py-2 text-neutral-500 text-xs font-semibold">
-                  {isArabic 
-                    ? '🔒 تم تأكيد الدخول وقفل هذه التذكرة مسبقاً.' 
-                    : '🔒 Booking check-in is finalized and locked.'}
+                <div className="text-center space-y-4 py-2">
+                  <div className="text-neutral-500 text-xs font-semibold">
+                    {isArabic 
+                      ? '🔒 تم تأكيد الدخول وقفل هذه التذكرة مسبقاً.' 
+                      : '🔒 Booking check-in is finalized and locked.'}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setBookingId(null);
+                      setBooking(null);
+                      setInputRefNumber('');
+                      window.history.replaceState({}, document.title, window.location.pathname);
+                    }}
+                    className="w-full py-3 mt-4 bg-neutral-800 text-neutral-200 rounded-xl text-xs font-bold hover:bg-neutral-700 transition-all cursor-pointer"
+                  >
+                    {isArabic ? 'مسح باركود آخر' : 'Scan another QR code'}
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-4">

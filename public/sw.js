@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v=20260706';
+const CACHE_VERSION = 'v=20260717';
 const CACHE_NAME = `dwm-luxury-cache-${CACHE_VERSION}`;
 
 // Core assets to cache one by one defensively
@@ -44,11 +44,15 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      // Clear out older non-versioned caches to ensure fresh start
+      return self.clients.claim();
+    })
   );
 });
 
-// Fetch strategy: Stale-While-Revalidate for fast loading and offline resilience
+// Fetch strategy: Network First for fast loading and offline resilience
+// This ensures that updates are always delivered immediately.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
@@ -56,21 +60,17 @@ self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      }).catch((err) => {
-        console.warn('[SW Defensive] Network fetch failed, relying on cache:', event.request.url);
-        return cachedResponse;
-      });
-
-      return cachedResponse || fetchPromise;
+    fetch(event.request).then((networkResponse) => {
+      if (networkResponse && networkResponse.status === 200) {
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+      }
+      return networkResponse;
+    }).catch((err) => {
+      console.warn('[SW Defensive] Network fetch failed, relying on cache:', event.request.url);
+      return caches.match(event.request);
     })
   );
 });

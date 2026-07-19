@@ -110,6 +110,7 @@ export interface UserProfile {
 
 export interface NotificationItem {
   id: string;
+  userId?: string;
   titleAr: string;
   titleEn: string;
   messageAr: string;
@@ -123,6 +124,7 @@ export interface NotificationItem {
 
 export interface AdSubmission {
   id: string;
+  eventRef?: number;
   invoiceNumber: string;
   advertiserId?: string;
   advertiserName: string;

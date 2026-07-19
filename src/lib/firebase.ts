@@ -21,7 +21,8 @@ import {
   GoogleAuthProvider, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  signOut as firebaseSignOut 
+  signOut as firebaseSignOut,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { DanceEvent, UserProfile, NotificationItem, AdSubmission, SupportMessage, EventBooking } from '../types';
@@ -90,6 +91,19 @@ export async function loginWithFirebaseEmail(email: string, pass: string): Promi
     return res.user;
   } catch (err: any) {
     console.error('Firebase email login error:', err);
+    throw err;
+  }
+}
+
+/**
+ * Helper to send password reset email via Firebase
+ */
+export async function resetFirebasePassword(email: string): Promise<boolean> {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return true;
+  } catch (err: any) {
+    console.error('Firebase password reset error:', err);
     throw err;
   }
 }
@@ -291,7 +305,8 @@ export function subscribeToUser(
 export async function saveUserToFirestore(user: UserProfile): Promise<boolean> {
   try {
     const docRef = doc(db, COLLECTIONS.USERS, user.id);
-    await setDoc(docRef, user, { merge: true });
+    const safeUser = { ...user, phone: user.phone || '', avatar: user.avatar || '', name: user.name || '', favoriteStyles: user.favoriteStyles || [], likedEventIds: user.likedEventIds || [], bookedEventIds: user.bookedEventIds || [] };
+    await setDoc(docRef, safeUser, { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving user to Firestore:', error);
@@ -309,9 +324,15 @@ export async function getUserByEmailFromFirestore(email: string): Promise<UserPr
     const snap = await getDocs(q);
     if (!snap.empty) {
       // Prioritize document that has isAdmin set to true if duplicates exist
-      let selectedUser = snap.docs[0].data() as UserProfile;
+      let raw = snap.docs[0].data();
+      if (raw.name && typeof raw.name === 'object') raw.name = 'User';
+      if (raw.phone && typeof raw.phone === 'object') raw.phone = '';
+      let selectedUser = { ...raw, favoriteStyles: raw.favoriteStyles || [], likedEventIds: raw.likedEventIds || [], bookedEventIds: raw.bookedEventIds || [] } as UserProfile;
       for (const docSnap of snap.docs) {
-        const u = docSnap.data() as UserProfile;
+        const uRaw = docSnap.data();
+        if (uRaw.name && typeof uRaw.name === 'object') uRaw.name = 'User';
+        if (uRaw.phone && typeof uRaw.phone === 'object') uRaw.phone = '';
+        const u = { ...uRaw, favoriteStyles: uRaw.favoriteStyles || [], likedEventIds: uRaw.likedEventIds || [], bookedEventIds: uRaw.bookedEventIds || [] } as UserProfile;
         if (u.isAdmin) {
           selectedUser = u;
           break;

@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceEvent, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
 import { EventCard } from '../events/EventCard';
 import { WeeklyPromoBanner } from '../events/WeeklyPromoBanner';
-import { Sparkles, Music, GraduationCap, Palmtree, PlusCircle, Filter, Search, Clock, CheckCircle, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, X, Crown, Gift, Star, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Sparkles, Music, GraduationCap, Palmtree, PlusCircle, Filter, Search, Clock, CheckCircle, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, X, Crown, Gift, Star, ArrowLeft, ArrowRight, WifiOff, Loader2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { logAnalyticsEvent } from '../../lib/firebase';
 
@@ -15,7 +15,7 @@ interface HomeFeedProps {
 }
 
 export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOpenCreate, onOpenInstallModal }) => {
-  const { lang, activeTab, selectedCategory, setSelectedCategory, activeEvents, user } = useApp();
+  const { lang, activeTab, selectedCategory, setSelectedCategory, activeEvents, user, isLoadingEvents, loadingEventsError } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStyleFilter, setSelectedStyleFilter] = useState<string>('all');
   const [visibleCount, setVisibleCount] = useState(5);
@@ -262,13 +262,42 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               : categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}
           </h3>
           <span className="rounded-full bg-neutral-800 px-3 py-0.5 text-xs font-mono font-bold text-amber-400 border border-neutral-700">
-            {filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
+            {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
           </span>
         </div>
       </div>
 
       {/* Events Grid */}
-      {filteredEvents.length === 0 ? (
+      {isLoadingEvents ? (
+        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/50 p-12 text-center flex flex-col items-center justify-center">
+          <Loader2 className="h-10 w-10 text-amber-500 animate-spin mb-4" />
+          <h4 className="text-lg font-bold text-white mb-2">
+            {lang === 'ar' ? 'جاري تحميل الفعاليات...' : 'Loading events...'}
+          </h4>
+          <p className="text-xs text-neutral-400">
+            {lang === 'ar' ? 'لحظات ونعرض لك أحدث الإعلانات' : 'Please wait while we fetch the latest announcements'}
+          </p>
+        </div>
+      ) : loadingEventsError ? (
+        <div className="rounded-3xl border border-red-900/30 bg-red-950/20 p-12 text-center flex flex-col items-center justify-center">
+          <WifiOff className="h-12 w-12 text-red-500 mb-4 opacity-80" />
+          <h4 className="text-lg font-bold text-white mb-2">
+            {lang === 'ar' ? 'الاتصال بالشبكة ضعيف جداً' : 'Poor Network Connection'}
+          </h4>
+          <p className="text-xs text-neutral-400 max-w-sm mx-auto mb-6">
+            {lang === 'ar' 
+              ? 'يرجى مراجعة اتصالك بالإنترنت والمحاولة مرة أخرى. لم نتمكن من جلب الفعاليات بنجاح.' 
+              : 'Please check your internet connection and try again. We could not fetch the events successfully.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-3 text-xs font-bold text-red-400 hover:bg-red-500/20 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {lang === 'ar' ? 'تحديث الصفحة' : 'Refresh Page'}
+          </button>
+        </div>
+      ) : filteredEvents.length === 0 ? (
         <div className="rounded-3xl border border-neutral-800 bg-neutral-900/50 p-12 text-center">
           <Music className="h-12 w-12 mx-auto text-neutral-600 mb-3" />
           <h4 className="text-lg font-bold text-white mb-1">

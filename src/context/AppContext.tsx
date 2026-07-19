@@ -124,6 +124,8 @@ interface AppContextType {
     resolve: ((val: boolean) => void) | null;
   };
   triggerConfirm: (msg: string) => Promise<boolean>;
+  isLoadingEvents: boolean;
+  loadingEventsError: 'slow' | 'offline' | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -274,6 +276,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Events in state
   const [events, setEvents] = useState<DanceEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(true);
+  const [loadingEventsError, setLoadingEventsError] = useState<'slow' | 'offline' | null>(null);
 
   const [editingEvent, setEditingEvent] = useState<DanceEvent | null>(null);
 
@@ -410,9 +414,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     
 
+    let isInitialLoad = true;
+    let loadingTimeout = setTimeout(() => {
+      setLoadingEventsError(!navigator.onLine ? 'offline' : 'slow');
+    }, 8000);
+
     // 2. Subscribe to live events collection
     const unsubEvents = subscribeToEvents((liveEvents) => {
+      clearTimeout(loadingTimeout);
       setEvents(liveEvents || []);
+      setIsLoadingEvents(false);
+      setLoadingEventsError(null);
       
       // Auto assign reference numbers starting from 1001 for any events that do not have one
       if (liveEvents && liveEvents.length > 0) {
@@ -468,12 +480,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             alert(lang === 'ar' ? '⚠️ هذا الحساب معطل مؤقتاً من قبل الإدارة.' : '⚠️ This account is temporarily suspended by the administration.');
             return;
           }
-          if (isUserAdmin || existing.isAdmin) {
-            existing.isAdmin = true;
-          }
-          setUser(existing);
+          const updatedUser = { ...existing, isAdmin: isUserAdmin || existing.isAdmin };
+          setUser(updatedUser);
           try {
-            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(existing));
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
           } catch (e) {}
         } else {
           try {
@@ -487,10 +497,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   localStorage.removeItem(STORAGE_KEYS.USER);
                   return;
                 }
-                if (isUserAdmin) {
-                  parsed.isAdmin = true;
-                }
-                setUser(parsed);
+                const updatedParsed = { ...parsed, isAdmin: isUserAdmin || parsed.isAdmin };
+                setUser(updatedParsed);
               }
             }
           } catch (e) {}
@@ -505,6 +513,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return () => {
+      clearTimeout(loadingTimeout);
       unsubEvents();
       unsubAssets();
             unsubNotifs();
@@ -598,11 +607,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return [...filtered].sort((a, b) => {
-      const posA = a.position !== undefined && a.position !== null ? a.position : 999999;
-      const posB = b.position !== undefined && b.position !== null ? b.position : 999999;
-      if (posA !== posB) {
-        return posA - posB;
+      const posA = a.position !== undefined && a.position !== null && a.position > 0 ? a.position : 999999;
+      const posB = b.position !== undefined && b.position !== null && b.position > 0 ? b.position : 999999;
+      
+      const aIsVip = posA < 20;
+      const bIsVip = posB < 20;
+
+      if (aIsVip && !bIsVip) return -1;
+      if (!aIsVip && bIsVip) return 1;
+      
+      if (aIsVip && bIsVip) {
+        if (posA !== posB) {
+          return posA - posB;
+        }
       }
+      
       return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
     });
   }, [events, user]);
@@ -621,11 +640,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return [...filtered].sort((a, b) => {
-      const posA = a.position !== undefined && a.position !== null ? a.position : 999999;
-      const posB = b.position !== undefined && b.position !== null ? b.position : 999999;
-      if (posA !== posB) {
-        return posA - posB;
+      const posA = a.position !== undefined && a.position !== null && a.position > 0 ? a.position : 999999;
+      const posB = b.position !== undefined && b.position !== null && b.position > 0 ? b.position : 999999;
+      
+      const aIsVip = posA < 20;
+      const bIsVip = posB < 20;
+
+      if (aIsVip && !bIsVip) return -1;
+      if (!aIsVip && bIsVip) return 1;
+      
+      if (aIsVip && bIsVip) {
+        if (posA !== posB) {
+          return posA - posB;
+        }
       }
+      
       return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
     });
   }, [events, user]);
@@ -1038,14 +1067,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  const addNewEvent = (newEv: Omit<DanceEvent, 'id' | 'likesCount' | 'uploadDate'>) => {
+  const addNewEvent = (newEv: Omit<DanceEvent, 'id' | 'likesCount' | 'uploadDate'>): DanceEvent | undefined => {
     if (!user) {
       openGuestAlert('post_ad');
       return;
     }
+    
+    // Calculate new eventRef
+    let maxRef = 1000;
+    const assignedRefs = events.map(e => e.eventRef).filter((r): r is number => typeof r === 'number');
+    if (assignedRefs.length > 0) {
+      maxRef = Math.max(...assignedRefs);
+    }
+    const newEventRef = maxRef + 1;
+
     const createdEvent: DanceEvent = {
       ...newEv,
       id: `ev-${Date.now()}`,
+      eventRef: newEventRef,
       likesCount: 1,
       uploadDate: new Date().toISOString()
     };
@@ -1066,6 +1105,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setNotifications(prev => [newNotif, ...prev]);
     saveNotificationToFirestore(newNotif);
+    return createdEvent;
   };
 
   const deleteEvent = async (eventId: string) => {
@@ -1273,7 +1313,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       triggerAlert,
       closeCustomAlert,
       customConfirm,
-      triggerConfirm
+      triggerConfirm,
+      isLoadingEvents,
+      loadingEventsError
     }}>
       {children}
     </AppContext.Provider>

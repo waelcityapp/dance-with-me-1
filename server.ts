@@ -24,6 +24,45 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  app.post("/api/translate", async (req, res) => {
+    try {
+      const { text, targetLang } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "No text provided" });
+      }
+      
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Gemini API Key is not configured." });
+      }
+
+      // Dynamic import to avoid loading it if not used immediately, though top-level is fine if installed
+      const { GoogleGenAI } = await import("@google/genai");
+
+      const ai = new GoogleGenAI({
+        apiKey: apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const prompt = `Translate the following text to ${targetLang === 'ar' ? 'Arabic' : 'English'}. Return ONLY the translated text without any explanation, markdown formatting, or quotes.\n\nOriginal text:\n${text}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+      });
+
+      const translatedText = response.text?.trim() || "";
+      res.json({ translatedText });
+    } catch (error) {
+      console.error("Translation error:", error);
+      res.status(500).json({ error: "Failed to translate text" });
+    }
+  });
+
   app.post("/api/delete-media", async (req, res) => {
     const { url, resourceType } = req.body;
     if (!url || !url.includes("cloudinary.com")) {

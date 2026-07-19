@@ -140,7 +140,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [mediaUploadProgress, setMediaUploadProgress] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [activeSection, setActiveSection] = useState<'overview' | 'ads' | 'support' | 'booked' | 'liked' | 'archive'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'ads' | 'support' | 'booked' | 'liked' | 'archive'>('booked');
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState('');
@@ -212,7 +212,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         }
         
         // 3. Update User Profile
-        await updateUserProfile({ avatar: imageUrl });
+        updateUserAvatar(imageUrl);
         setShowAvatarPicker(false);
       } else {
         alert(lang === 'ar' ? 'فشل رفع الصورة. يرجى التأكد من إعدادات Cloudinary' : 'Upload failed. Please check Cloudinary config');
@@ -453,8 +453,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     );
   }
 
-  const likedEvents = events.filter(ev => user.likedEventIds.includes(ev.id));
-  const bookedEvents = events.filter(ev => user.bookedEventIds.includes(ev.id));
+  const likedEvents = events.filter(ev => (user.likedEventIds || []).includes(ev.id));
+  const bookedEvents = events.filter(ev => (user.bookedEventIds || []).includes(ev.id));
   const mySupportMessages = supportMessages.filter(m => user && m.userId === user.id);
   const myBookings = bookings.filter(b => user && b.userId === user.id);
 
@@ -464,88 +464,118 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900/90 dark:to-neutral-950 p-6 sm:p-8 shadow-2xl gold-glow"
+        className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-neutral-900 dark:bg-neutral-900 p-6 sm:p-8 shadow-2xl"
       >
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-start">
-          <div className="relative group cursor-pointer flex flex-col items-center" onClick={() => setShowAvatarPicker(!showAvatarPicker)}>
-            <img
-              src={user.avatar || DEFAULT_NEUTRAL_AVATAR}
-              alt={user.name}
-              className="h-24 w-24 rounded-2xl object-cover border-2 border-amber-400 shadow-xl transition-transform group-hover:scale-105"
-            />
-            <span className="mt-1.5 text-[11px] font-mono font-bold text-amber-300 underline underline-offset-2">
-              {lang === 'ar' ? 'تغيير الصورة' : 'Change Photo'}
-            </span>
-          </div>
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-              <h2 className="text-2xl font-extrabold text-white">{user.name}</h2>
-              <span className={`rounded-full px-3 py-0.5 text-[10px] font-mono font-bold border ${user.isAdmin ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}`}>
-                {user.isAdmin ? (lang === 'ar' ? 'إدارة المنصة (Admin)' : 'PLATFORM ADMIN') : (lang === 'ar' ? 'عضوية النادي (VIP)' : 'VIP CLUB MEMBER')}
-              </span>
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
+        
+        <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          <div className="shrink-0 flex flex-col items-center gap-3">
+            <div 
+              className="relative group cursor-pointer" 
+              onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+            >
+              <img
+                src={user.avatar || DEFAULT_NEUTRAL_AVATAR}
+                alt={user.name}
+                className="h-28 w-28 rounded-full object-cover border-4 border-neutral-800 shadow-xl transition-transform group-hover:scale-105 group-hover:border-amber-400"
+              />
+              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <span className="text-white text-xs font-bold">{lang === 'ar' ? 'تعديل' : 'Edit'}</span>
+              </div>
             </div>
-            <p className="text-xs font-mono text-neutral-400 mb-4">{user.email} • {user.phone}</p>
+            <button 
+              onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+              className="text-xs font-semibold text-amber-500 hover:text-amber-400 underline-offset-4 hover:underline transition-all"
+            >
+              {lang === 'ar' ? 'تغيير الصورة' : 'Change Photo'}
+            </button>
+          </div>
 
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mb-4">
-              <span className="text-xs text-neutral-400 font-mono mr-1">{lang === 'ar' ? 'الأنماط:' : 'Styles:'}</span>
-              {user.favoriteStyles.map(style => (
-                <span key={style} className="rounded-md bg-white/10 px-2.5 py-0.5 text-xs font-mono font-semibold text-amber-300 border border-white/10">
-                  #{style}
+          <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-start w-full">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 mb-2">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{user.name}</h2>
+              {user.isAdmin ? (
+                <span className="rounded-lg bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/20 flex items-center gap-1">
+                  {lang === 'ar' ? 'مدير المنصة (Admin)' : 'PLATFORM ADMIN'}
+                </span>
+              ) : (
+                <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-amber-500/20">
+                  {lang === 'ar' ? 'عضوية VIP' : 'VIP MEMBER'}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-sm font-mono text-neutral-400 mb-5">
+              <span>{user.email}</span>
+              <span className="hidden sm:inline text-neutral-600">•</span>
+              <span dir="ltr">{user.phone}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-6">
+              <span className="text-xs text-neutral-500 font-bold ml-1">{lang === 'ar' ? 'الأنماط:' : 'Styles:'}</span>
+              {(user.favoriteStyles || []).map(style => (
+                <span key={style} className="rounded-md bg-neutral-800 px-3 py-1 text-xs font-semibold text-neutral-300 border border-white/5 shadow-sm">
+                  {style}
                 </span>
               ))}
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 pt-2 border-t border-white/10">
-              <button
-                onClick={onOpenCreateModal}
-                className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-neutral-950 hover:bg-amber-400 shadow-md gold-glow transition-all"
-              >
-                <PlusCircle className="h-4 w-4" />
-                <span>{lang === 'ar' ? 'إضافة إعلان' : 'Post Ad'}</span>
-              </button>
-
-              <button
-                onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-colors"
-              >
-                {lang === 'ar' ? 'اختيار أيقونة' : 'Choose Avatar'}
-              </button>
-
-              <button
+              <button 
                 onClick={handleOpenEditProfile}
-                className="rounded-xl border border-white/10 bg-neutral-800 px-3.5 py-2 text-xs font-semibold text-neutral-300 hover:bg-neutral-700 transition-colors"
+                className="rounded-md bg-neutral-800/50 px-3 py-1 text-xs font-semibold text-amber-500 hover:bg-neutral-800 hover:text-amber-400 border border-dashed border-amber-500/30 transition-colors"
+                title={lang === 'ar' ? 'إضافة/تعديل' : 'Add/Edit'}
               >
-                {lang === 'ar' ? 'تعديل الملف' : 'Edit Profile'}
-              </button>
-
-              <button
-                onClick={logoutUser}
-                className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-600/10 px-3.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-600 hover:text-white transition-all ml-auto"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                <span>{lang === 'ar' ? 'خروج' : 'Logout'}</span>
+                +
               </button>
             </div>
-          </div>
-        </div>
 
-        {/* Gender-Neutral Avatar Picker Section */}
-        <AnimatePresence>
-          {showAvatarPicker && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-6 pt-5 border-t border-white/10 flex flex-col items-center sm:items-start gap-3 overflow-hidden"
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-xs font-mono text-amber-300 font-bold flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                  {lang === 'ar' ? 'اختر أيقونة لملفك الشخصي:' : 'Select a Profile Avatar:'}
-                </span>
-                <button onClick={() => setShowAvatarPicker(false)} className="text-xs text-neutral-400 hover:text-white">✕</button>
-              </div>
+            {/* Quick Actions or Avatar Picker */}
+            <AnimatePresence mode="wait">
+              {!showAvatarPicker ? (
+                <motion.div
+                  key="quick-actions"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="flex flex-wrap items-center justify-center sm:justify-start gap-3 w-full border-t border-white/5 pt-5 overflow-hidden"
+                >
+                  <button
+                    onClick={onOpenCreateModal}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-neutral-950 hover:bg-amber-400 shadow-md transition-all"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    <span>{lang === 'ar' ? 'إضافة إعلان' : 'Post Ad'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleOpenEditProfile}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-neutral-800 border border-white/10 px-5 py-2.5 text-sm font-bold text-neutral-200 hover:bg-neutral-700 transition-all"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    <span>{lang === 'ar' ? 'تعديل البيانات' : 'Edit Profile'}</span>
+                  </button>
+
+                  <button
+                    onClick={logoutUser}
+                    className="w-full sm:w-auto mt-2 sm:mt-0 sm:ms-auto flex items-center justify-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-5 py-2.5 text-sm font-bold text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>{lang === 'ar' ? 'تسجيل الخروج' : 'Logout'}</span>
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="avatar-picker"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="w-full border-t border-white/10 pt-5 flex flex-col items-center sm:items-start gap-3 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="text-xs font-mono text-amber-300 font-bold flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      {lang === 'ar' ? 'اختر أيقونة لملفك الشخصي:' : 'Select a Profile Avatar:'}
+                    </span>
+                    <button onClick={() => setShowAvatarPicker(false)} className="text-xs text-neutral-400 hover:text-white px-2 py-1 rounded-md bg-neutral-800 border border-white/10">✕ {lang === 'ar' ? 'إغلاق' : 'Close'}</button>
+                  </div>
               <div className="flex flex-wrap items-center gap-3">
                 {GENDER_NEUTRAL_AVATARS.map((av, idx) => (
                   <button
@@ -602,179 +632,64 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 )}
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </motion.div>
 
-      {activeSection === 'overview' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {/* Card 1: Confirmed Bookings */}
-          <motion.div
-            whileHover={{ scale: 1.02, y: -3 }}
+
+      {/* Sticky Modern Tab Bar */}
+      <div className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-md pt-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-white/5 mb-6">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 snap-x">
+          <button
             onClick={() => setActiveSection('booked')}
-            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'booked' || activeSection === 'overview' ? 'bg-emerald-500 text-neutral-950 shadow-md' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-neutral-950 transition-colors">
-                  <Ticket className="h-6 w-6" />
-                </div>
-                <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-400 font-mono">
-                  {bookedEvents.length}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-1 group-hover:text-emerald-400 transition-colors">
-                {lang === 'ar' ? 'تذاكري وحجوزاتي المؤكدة' : 'My Confirmed Bookings'}
-              </h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                {lang === 'ar' ? 'عرض وحفظ تذاكر الحضور والتفاصيل الخاصة بالفعاليات التي قمت بحجزها.' : 'View your booked event tickets, dates, and check-in details.'}
-              </p>
-            </div>
-            <div className="mt-6 flex items-center justify-between text-xs font-bold text-emerald-400 pt-3 border-t border-white/5">
-              <span>{lang === 'ar' ? 'عرض التذاكر' : 'View Tickets'}</span>
-              <span>{lang === 'ar' ? '←' : '→'}</span>
-            </div>
-          </motion.div>
-
-          {/* Card 2: Liked Events */}
-          <motion.div
-            whileHover={{ scale: 1.02, y: -3 }}
+            <Ticket className="h-4 w-4" />
+            <span>{lang === 'ar' ? 'تذاكري وحجوزاتي' : 'Bookings'}</span>
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'booked' || activeSection === 'overview' ? 'bg-neutral-950/20' : 'bg-neutral-800'}`}>{bookedEvents.length}</span>
+          </button>
+          
+          <button
             onClick={() => setActiveSection('liked')}
-            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-red-500/50 transition-all group flex flex-col justify-between"
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'liked' ? 'bg-red-500 text-white shadow-md shadow-red-500/20' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 group-hover:bg-red-500 group-hover:text-white transition-colors">
-                  <Heart className="h-6 w-6 fill-current" />
-                </div>
-                <span className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-bold text-red-400 font-mono">
-                  {likedEvents.length}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-1 group-hover:text-red-400 transition-colors">
-                {lang === 'ar' ? 'الفعاليات والحفلات المفضلة' : 'My Liked Events'}
-              </h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                {lang === 'ar' ? 'قائمة الحفلات وورش العمل التي قمت بحفظها في المفضلة للرجوع إليها.' : 'List of parties and workshops you saved to your favorites.'}
-              </p>
-            </div>
-            <div className="mt-6 flex items-center justify-between text-xs font-bold text-red-400 pt-3 border-t border-white/5">
-              <span>{lang === 'ar' ? 'عرض المفضلة' : 'View Favorites'}</span>
-              <span>{lang === 'ar' ? '←' : '→'}</span>
-            </div>
-          </motion.div>
-
-          {/* Card 3: VIP Ad Submissions & Host Dashboard */}
-          <motion.div
-            whileHover={{ scale: 1.02, y: -3 }}
+            <Heart className="h-4 w-4" />
+            <span>{lang === 'ar' ? 'المفضلة' : 'Favorites'}</span>
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'liked' ? 'bg-black/20' : 'bg-neutral-800'}`}>{likedEvents.length}</span>
+          </button>
+          
+          <button
             onClick={() => setActiveSection('ads')}
-            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900/90 dark:to-amber-950/20 p-6 shadow-xl cursor-pointer hover:border-amber-500/50 transition-all group flex flex-col justify-between gold-glow"
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'ads' ? 'bg-amber-500 text-neutral-950 shadow-md gold-glow' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors">
-                  <FileText className="h-6 w-6" />
-                </div>
-                <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-300 font-mono">
-                  {adSubmissions.length}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-1 group-hover:text-amber-400 transition-colors">
-                {lang === 'ar' ? 'إعلاناتي وفواتيري VIP' : 'My VIP Ads & Invoices'}
-              </h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                {lang === 'ar' ? 'إدارة إعلاناتك المرفوعة، متابعة حالات الموافقة، التعديل، أو التجديد من الأرشيف.' : 'Manage your promo submissions, track approvals, edits, or renewals.'}
-              </p>
-            </div>
-            <div className="mt-6 flex items-center justify-between text-xs font-bold text-amber-400 pt-3 border-t border-white/5">
-              <span>{lang === 'ar' ? 'إدارة الإعلانات' : 'Manage Ads'}</span>
-              <span>{lang === 'ar' ? '←' : '→'}</span>
-            </div>
-          </motion.div>
+            <FileText className="h-4 w-4" />
+            <span>{lang === 'ar' ? 'إعلاناتي VIP' : 'My Ads'}</span>
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'ads' ? 'bg-neutral-950/20' : 'bg-neutral-800'}`}>{adSubmissions.length}</span>
+          </button>
 
-          {/* Card 4: Support Messages */}
-          <motion.div
-            whileHover={{ scale: 1.02, y: -3 }}
+          <button
             onClick={() => setActiveSection('support')}
-            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-blue-500/50 transition-all group flex flex-col justify-between"
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'support' ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-neutral-950 transition-colors">
-                  <MessageSquare className="h-6 w-6" />
-                </div>
-                <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-bold text-blue-400 font-mono">
-                  {mySupportMessages.length}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">
-                {lang === 'ar' ? 'رسائلي والدعم الفني' : 'Support Inquiries & Replies'}
-              </h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                {lang === 'ar' ? 'متابعة استفساراتك المرسلة للإدارة وقراءة الردود والإشعارات الرسمية عليها.' : 'Track your submitted support inquiries and check admin replies.'}
-              </p>
-            </div>
-            <div className="mt-6 flex items-center justify-between text-xs font-bold text-blue-400 pt-3 border-t border-white/5">
-              <span>{lang === 'ar' ? 'عرض الرسائل' : 'View Inquiries'}</span>
-              <span>{lang === 'ar' ? '←' : '→'}</span>
-            </div>
-          </motion.div>
+            <MessageSquare className="h-4 w-4" />
+            <span>{lang === 'ar' ? 'الدعم الفني' : 'Support'}</span>
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'support' ? 'bg-black/20' : 'bg-neutral-800'}`}>{mySupportMessages.length}</span>
+          </button>
 
-          {/* Card 5: Expired Archive */}
-          <motion.div
-            whileHover={{ scale: 1.02, y: -3 }}
+          <button
             onClick={() => setActiveSection('archive')}
-            className="rounded-3xl border border-white/10 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 p-6 shadow-xl cursor-pointer hover:border-amber-500/50 transition-all group flex flex-col justify-between sm:col-span-2 lg:col-span-2"
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'archive' ? 'bg-neutral-700 text-white shadow-md' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-800 text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors">
-                    <Clock className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">
-                      {lang === 'ar' ? 'أرشيف الإعلانات والفعاليات المنقضية' : 'Expired Ads & Events Archive'}
-                    </h3>
-                    <span className="text-[11px] font-mono text-neutral-400">
-                      {lang === 'ar' ? 'الأرشيف التلقائي للفعاليات المنتهية' : 'Automatic Archive for Concluded Events'}
-                    </span>
-                  </div>
-                </div>
-                <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs font-bold text-amber-300 font-mono border border-white/10">
-                  {expiredEvents.length}
-                </span>
-              </div>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                {lang === 'ar'
-                  ? 'الوصول إلى أرشيف الإعلانات والفعاليات التي انتهى موعد عرضها وإدارتها أو تنظيفها.'
-                  : 'Access archived ads and events whose date has passed, manage or clean up past listings.'}
-              </p>
-            </div>
-            <div className="mt-6 flex items-center justify-between text-xs font-bold text-amber-400 pt-3 border-t border-white/5">
-              <span>{lang === 'ar' ? 'فتح الأرشيف والفعاليات المنقضية' : 'Open Expired Archive'}</span>
-              <span>{lang === 'ar' ? '←' : '→'}</span>
-            </div>
-          </motion.div>
+            <Clock className="h-4 w-4" />
+            <span>{lang === 'ar' ? 'الأرشيف' : 'Archive'}</span>
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'archive' ? 'bg-black/20' : 'bg-neutral-800'}`}>{expiredEvents.length}</span>
+          </button>
         </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Top Bar with Back Button */}
-          <div className="flex items-center justify-between rounded-2xl bg-neutral-900 border border-white/10 p-4 shadow-lg">
-            <button
-              onClick={() => setActiveSection('overview')}
-              className="flex items-center gap-2 rounded-xl bg-neutral-800 px-4 py-2 text-xs sm:text-sm font-bold text-white hover:bg-neutral-700 transition-all cursor-pointer"
-            >
-              <span>{lang === 'ar' ? '→ عودة للقائمة الرئيسية للملف الشخصي' : '← Back to Profile Overview'}</span>
-            </button>
-            <span className="text-xs sm:text-sm font-extrabold text-amber-400 font-mono">
-              {activeSection === 'booked' && (lang === 'ar' ? '🎟️ تذاكري وحجوزاتي المؤكدة' : '🎟️ My Confirmed Bookings')}
-              {activeSection === 'liked' && (lang === 'ar' ? '❤️ الفعاليات والحفلات المفضلة' : '❤️ My Liked Events')}
-              {activeSection === 'ads' && (lang === 'ar' ? '📢 إعلاناتي وفواتيري VIP' : '📢 My VIP Ads & Invoices')}
-              {activeSection === 'support' && (lang === 'ar' ? '💬 رسائلي وإشعارات الدعم الفني' : '💬 My Support Inquiries')}
-              {activeSection === 'archive' && (lang === 'ar' ? '📦 أرشيف الإعلانات والفعاليات المنقضية' : '📦 Expired Ads & Events Archive')}
-            </span>
-          </div>
+      </div>
+
+      <div className="space-y-6">
 
           {activeSection === 'archive' && (
             <div className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 sm:p-6 shadow-xl">
@@ -934,7 +849,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <span className="px-3 py-1 rounded-xl bg-neutral-800 text-amber-400 font-mono text-xs font-bold border border-white/10">
                         {sub.invoiceNumber}
                       </span>
-                      {associatedEvent?.eventRef && (
+                      {(sub.eventRef || associatedEvent?.eventRef) && (
+                        <span className="px-3 py-1 rounded-xl bg-indigo-950/80 text-indigo-400 font-mono text-xs font-black border border-indigo-500/20">
+                          {lang === 'ar' ? `الرقم المرجعي: ${sub.eventRef || associatedEvent?.eventRef}` : `Ref No: ${sub.eventRef || associatedEvent?.eventRef}`}
+                        </span>
+                      )}
+                      {/* Old block just in case */ false && (
                         <span className="px-3 py-1 rounded-xl bg-indigo-950/80 text-indigo-400 font-mono text-xs font-black border border-indigo-500/20">
                           {lang === 'ar' ? `الرقم المرجعي: ${associatedEvent.eventRef}` : `Ref No: ${associatedEvent.eventRef}`}
                         </span>
@@ -984,6 +904,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <Edit3 className="h-4 w-4" />
                         <span>{lang === 'ar' ? 'تعديل بيانات الإعلان الفاخر' : 'Edit VIP Ad Details'}</span>
                       </h4>
+
+                      {sub.eventRef && (
+                        <div className="mb-2 p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5">
+                          <label className="text-xs font-bold text-indigo-400 block mb-1">
+                            {lang === 'ar' ? 'كود الحدث (الرقم المرجعي)' : 'Event Code (Reference)'}
+                          </label>
+                          <input
+                            disabled
+                            type="text"
+                            value={sub.eventRef}
+                            className="w-full rounded-xl bg-neutral-900/50 border border-indigo-500/30 px-3.5 py-2 text-indigo-300 font-mono font-bold select-all focus:outline-none opacity-80 cursor-not-allowed"
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'عنوان الإعلان (بالعربية)' : 'Title (Arabic)'}</label>
                         <input
@@ -1834,9 +1768,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
       </div>
       )}
-        </div>
-      )}
-
+      </div>
       {/* Booking Deletion Confirmation Modals */}
       <AnimatePresence>
         {bookingToDelete && (
