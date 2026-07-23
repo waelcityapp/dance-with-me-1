@@ -244,6 +244,22 @@ export async function saveEventToFirestore(event: DanceEvent): Promise<boolean> 
  */
 export async function deleteEventFromFirestore(eventId: string): Promise<boolean> {
   try {
+    // 1. Find all bookings associated with this event and delete them
+    const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
+    const q = query(bookingsRef, where('eventId', '==', eventId));
+    const snapshot = await getDocs(q);
+    
+    // Create a batch or just delete them one by one
+    // Since batch has a limit of 500, and this is client side, let's just do Promise.all
+    const deletePromises = snapshot.docs.map(docSnap => {
+      // Also, we might need to delete receipt images if any, but since we can't do it cleanly without the API from here 
+      // it's okay for now, or the API call could be done. But let's just delete the documents to keep DB clean.
+      return deleteDoc(docSnap.ref);
+    });
+    await Promise.all(deletePromises);
+    console.log(`Deleted ${snapshot.docs.length} bookings associated with event ${eventId}`);
+
+    // 2. Delete the event itself
     const docRef = doc(db, COLLECTIONS.EVENTS, eventId);
     await deleteDoc(docRef);
     return true;
@@ -461,6 +477,13 @@ export async function saveAdSubmissionToFirestore(submission: AdSubmission): Pro
 export async function deleteAdSubmissionFromFirestore(submissionId: string): Promise<boolean> {
   try {
     const docRef = doc(db, COLLECTIONS.AD_SUBMISSIONS, submissionId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data && data.eventData && data.eventData.id) {
+        await deleteEventFromFirestore(data.eventData.id);
+      }
+    }
     await deleteDoc(docRef);
     return true;
   } catch (error) {
@@ -961,21 +984,20 @@ export function subscribeToBookings(
   isAdmin?: boolean
 ): () => void {
   try {
-    let q;
-    if (isAdmin) {
-      q = collection(db, COLLECTIONS.BOOKINGS);
-    } else if (userId) {
-      q = query(collection(db, COLLECTIONS.BOOKINGS), where('userId', '==', userId));
-    } else {
-      q = collection(db, COLLECTIONS.BOOKINGS);
-    }
+    const q = collection(db, COLLECTIONS.BOOKINGS);
     return onSnapshot(
       q,
       (snapshot) => {
-        const list: EventBooking[] = [];
+        const map = new Map<string, EventBooking>();
         snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as EventBooking);
+          const data = docSnap.data() as EventBooking;
+          const item = { ...data, id: docSnap.id || data.id };
+          const key = item.id || item.refNumber;
+          if (key) {
+            map.set(key, item);
+          }
         });
+        const list = Array.from(map.values());
         list.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
         onUpdate(list);
       },
@@ -1054,5 +1076,21 @@ export async function reorderAdsStartingFrom20(): Promise<void> {
     console.log('Ads reordered successfully starting from 20');
   } catch (error) {
     console.error('Error reordering ads:', error);
+  }
+}
+
+export async function deleteAllBookingsForEvent(eventId: string): Promise<boolean> {
+  try {
+    const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
+    const q = query(bookingsRef, where('eventId', '==', eventId));
+    const snapshot = await getDocs(q);
+    
+    const deletePromises = snapshot.docs.map(docSnap => deleteDoc(docSnap.ref));
+    await Promise.all(deletePromises);
+    console.log(`Deleted ${snapshot.docs.length} bookings for soft-deleted event ${eventId}`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting bookings for event:', error);
+    return false;
   }
 }

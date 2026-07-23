@@ -12,6 +12,7 @@ import {
   subscribeToSupportMessages,
   saveEventToFirestore,
   deleteEventFromFirestore,
+  deleteAllBookingsForEvent,
   saveUserToFirestore,
   saveNotificationToFirestore,
   saveSupportMessageToFirestore,
@@ -34,7 +35,7 @@ import {
 } from '../lib/firebase';
 import { PricingConfig } from '../types';
 
-export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'default';
+export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'scan_qr' | 'default';
 
 interface AppContextType {
   lang: Language;
@@ -568,21 +569,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setBookings([]);
       return;
     }
-    const isOrganizer = userAdSubmissions && userAdSubmissions.length > 0;
     const unsubBookings = subscribeToBookings(
       (liveBookings) => {
         setBookings(liveBookings || []);
       },
       user.id,
-      user.isAdmin || isOrganizer
+      true
     );
     const unsubAds = subscribeToAdSubmissions((ads) => setUserAdSubmissions(ads || []), user.id, false);
     return () => {
       unsubBookings();
       unsubAds();
     };
-
-  }, [user, userAdSubmissions?.length]);
+  }, [user]);
 
   const setLang = (newLang: Language) => {
     setLangState(newLang);
@@ -897,7 +896,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const success = await saveBookingToFirestore(newBooking);
     if (success) {
-      setBookings(prev => [newBooking, ...prev]);
+      setBookings(prev => {
+        if (prev.some(b => b.id === newBooking.id || (b.refNumber && b.refNumber === newBooking.refNumber))) {
+          return prev;
+        }
+        return [newBooking, ...prev];
+      });
 
       // Add to user's booked event IDs
       if (!user.bookedEventIds.includes(bookingData.eventId)) {
@@ -1136,6 +1140,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       saveEventToFirestore(emptyEv);
       setEvents(prev => prev.map(e => e.id === eventId ? emptyEv : e));
+      deleteAllBookingsForEvent(eventId);
+      setBookings(prev => prev.filter(b => b.eventId !== eventId));
     } else {
       setEvents(prev => prev.filter(e => e.id !== eventId));
       deleteEventFromFirestore(eventId);

@@ -1,12 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, PlusCircle, Heart, Ticket, ShieldAlert, Sparkles, Clock, Trash2, LogOut, CheckCircle, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare, Camera, Loader2, Info } from 'lucide-react';
+import { User, Users, PlusCircle, Heart, Ticket, ShieldAlert, ShieldCheck, Sparkles, Clock, Trash2, LogOut, CheckCircle, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare, Camera, Loader2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventCard } from '../events/EventCard';
-import { DanceEvent, AdSubmission, DanceStyle, ALL_DANCE_STYLES } from '../../types';
+import { ActualAttendanceModal } from '../modals/ActualAttendanceModal';
+import { StaffManagementModal } from '../modals/StaffManagementModal';
+import { DanceEvent, AdSubmission, EventBooking, DanceStyle, ALL_DANCE_STYLES } from '../../types';
 import { subscribeToAdSubmissions, saveAdSubmissionToFirestore, saveNotificationToFirestore, deleteAdSubmissionFromFirestore, deleteSupportMessageFromFirestore, saveEventToFirestore } from '../../lib/firebase';
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
+
+// Helper function to match bookings to a specific ad submission / event
+export const getSubBookings = (sub: AdSubmission, allBookings: EventBooking[], allEvents: DanceEvent[]) => {
+  if (!sub || !allBookings) return [];
+  
+  const targetIds = new Set<string>();
+  if (sub.id) targetIds.add(sub.id);
+  if (sub.eventData?.id) targetIds.add(sub.eventData.id);
+  if (sub.eventRef) targetIds.add(String(sub.eventRef));
+
+  const associatedEvent = allEvents.find(e => 
+    (e.id && (e.id === sub.eventData?.id || e.id === sub.id)) || 
+    (e.eventRef && sub.eventRef && e.eventRef === sub.eventRef) ||
+    (e.titleAr && sub.titleAr && e.titleAr.trim() === sub.titleAr.trim())
+  );
+
+  if (associatedEvent?.id) targetIds.add(associatedEvent.id);
+  if (associatedEvent?.eventRef) targetIds.add(String(associatedEvent.eventRef));
+
+  return allBookings.filter(b => {
+    if (!b) return false;
+    if (b.status === 'rejected' || b.status === 'cancelled') return false;
+
+    // Direct match by eventId or refNumber
+    if (b.eventId && targetIds.has(b.eventId)) return true;
+    if (b.refNumber && targetIds.has(String(b.refNumber))) return true;
+
+    // Match by event title
+    if (b.eventTitleAr && sub.titleAr && b.eventTitleAr.trim().toLowerCase() === sub.titleAr.trim().toLowerCase()) return true;
+    if (b.eventTitleEn && sub.titleEn && b.eventTitleEn.trim().toLowerCase() === sub.titleEn.trim().toLowerCase()) return true;
+
+    return false;
+  });
+};
 
 interface ProfileViewProps {
   onOpenCreateModal: () => void;
@@ -47,6 +83,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [adSubmissions, setAdSubmissions] = useState<AdSubmission[]>([]);
   const [cleaningUp, setCleaningUp] = useState(false);
 
+  // Strictly filter adSubmissions to ONLY show ads belonging to the logged in user
+  const myUserAdSubmissions = useMemo(() => {
+    if (!user) return [];
+    return adSubmissions.filter(sub => {
+      if (sub.advertiserId && sub.advertiserId === user.id) return true;
+      if (user.phone && sub.phone && sub.phone === user.phone) return true;
+      return false;
+    });
+  }, [adSubmissions, user]);
+
   const handleCleanUpClutter = async () => {
     setCleaningUp(true);
     try {
@@ -77,6 +123,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف هذا الإعلان بشكل نهائي؟' : 'Are you sure you want to permanently delete this ad?');
     if (!confirmed) return;
     try {
+      const subToDelete = adSubmissions.find(s => s.id === submissionId);
+      if (subToDelete) {
+        const eventId = subToDelete.eventData?.id || subToDelete.id;
+        if (eventId) deleteEvent(eventId);
+      }
       await deleteAdSubmissionFromFirestore(submissionId);
       setAdSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
       try {
@@ -93,7 +144,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف جميع إعلاناتك وفواتيرك بشكل نهائي؟' : 'Are you sure you want to permanently delete all your ads and invoices?');
     if (!confirmed) return;
     try {
-      const promises = adSubmissions.map(sub => deleteAdSubmissionFromFirestore(sub.id));
+      const promises = myUserAdSubmissions.map(sub => {
+        const eventId = sub.eventData?.id || sub.id;
+        if (eventId) deleteEvent(eventId);
+        return deleteAdSubmissionFromFirestore(sub.id);
+      });
       await Promise.all(promises);
       setAdSubmissions([]);
       localStorage.setItem('dwm_ad_submissions', '[]');
@@ -151,6 +206,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [deleteBkgLoading, setDeleteBkgLoading] = useState(false);
+  const [qrModalBooking, setQrModalBooking] = useState<any | null>(null);
+  const [attendanceEventId, setAttendanceEventId] = useState<string | null>(null);
+  const [attendanceSub, setAttendanceSub] = useState<AdSubmission | null>(null);
+  const [manageStaffSub, setManageStaffSub] = useState<AdSubmission | null>(null);
+
+  const myBookings = useMemo(() => {
+    if (!user) return [];
+    const rawMyBookings = bookings.filter(b => b && b.userId === user.id);
+    const map = new Map<string, EventBooking>();
+    rawMyBookings.forEach(b => {
+      const key = b.id || b.refNumber;
+      if (key && !map.has(key)) {
+        map.set(key, b);
+      }
+    });
+    return Array.from(map.values());
+  }, [bookings, user]);
 
   const handleDeleteBooking = async (bookingId: string) => {
     setDeleteBkgLoading(true);
@@ -245,20 +317,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const loadLocal = () => {
       try {
         const local = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
-        setAdSubmissions(local as AdSubmission[]);
+        if (user) {
+          const filtered = (local as AdSubmission[]).filter(sub => 
+            (sub.advertiserId && sub.advertiserId === user.id) ||
+            (user.phone && sub.phone && sub.phone === user.phone)
+          );
+          setAdSubmissions(filtered);
+        } else {
+          setAdSubmissions([]);
+        }
       } catch (e) {}
     };
     loadLocal();
+
+    if (!user?.id) return;
 
     const unsubscribe = subscribeToAdSubmissions(
       (list) => {
         setAdSubmissions(list);
       },
-      user?.id,
-      user?.isAdmin || isAdminUnlocked
+      user.id,
+      false
     );
     return () => unsubscribe();
-  }, [user, isAdminUnlocked]);
+  }, [user]);
 
   const updateLocalAndState = (updated: AdSubmission) => {
     try {
@@ -456,7 +538,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const likedEvents = events.filter(ev => (user.likedEventIds || []).includes(ev.id));
   const bookedEvents = events.filter(ev => (user.bookedEventIds || []).includes(ev.id));
   const mySupportMessages = supportMessages.filter(m => user && m.userId === user.id);
-  const myBookings = bookings.filter(b => user && b.userId === user.id);
 
   return (
     <div className="space-y-8 pb-12">
@@ -666,7 +747,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           >
             <FileText className="h-4 w-4" />
             <span>{lang === 'ar' ? 'إعلاناتي VIP' : 'My Ads'}</span>
-            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'ads' ? 'bg-neutral-950/20' : 'bg-neutral-800'}`}>{adSubmissions.length}</span>
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'ads' ? 'bg-neutral-950/20' : 'bg-neutral-800'}`}>{myUserAdSubmissions.length}</span>
           </button>
 
           <button
@@ -772,7 +853,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg sm:text-xl font-extrabold text-white">
-                  {lang === 'ar' ? `إعلاناتي وفواتيري VIP وأرشيف الإعلانات (${adSubmissions.length})` : `My VIP Ads & Archive (${adSubmissions.length})`}
+                  {lang === 'ar' ? `إعلاناتي وفواتيري VIP وأرشيف الإعلانات (${myUserAdSubmissions.length})` : `My VIP Ads & Archive (${myUserAdSubmissions.length})`}
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-mono border border-amber-500/30">
                   {lang === 'ar' ? 'نظام شهر' : '30-Day Archive'}
@@ -797,7 +878,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span>{cleaningUp ? (lang === 'ar' ? 'جاري التنظيف...' : 'Cleaning...') : (lang === 'ar' ? '🧹 تنظيف الزحمة والمكرر' : '🧹 Clean Clutter')}</span>
             </button>
 
-            {adSubmissions.length > 0 && (
+            {myUserAdSubmissions.length > 0 && (
               <button
                 onClick={handleDeleteAllAdSubmissions}
                 className="flex items-center gap-2 rounded-xl bg-red-600/10 border border-red-500/30 px-3 py-2.5 text-xs font-bold text-red-400 hover:bg-red-600 hover:text-white transition-all cursor-pointer shadow-md"
@@ -818,13 +899,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
 
-        {adSubmissions.length === 0 ? (
+        {myUserAdSubmissions.length === 0 ? (
           <div className="rounded-2xl border border-white/5 bg-neutral-900/50 p-8 text-center text-neutral-500 text-sm">
             {lang === 'ar' ? 'لم تقم بإرسال أي إعلانات VIP بعد. اضغط على زر "إضافة إعلان" للبدء!' : 'No VIP ad submissions yet. Click "Post Ad" to start promoting!'}
           </div>
         ) : (
           <div className="space-y-4">
-            {adSubmissions.map((sub) => {
+            {myUserAdSubmissions.map((sub) => {
               const isArchived = sub.status === 'archived' || (sub.expiresAt && new Date(sub.expiresAt).getTime() <= Date.now());
               const isEditing = editingSubId === sub.id;
               const associatedEvent = events.find(e => e.id === sub.eventData?.id || e.id === sub.id);
@@ -853,6 +934,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <span className="px-3 py-1 rounded-xl bg-indigo-950/80 text-indigo-400 font-mono text-xs font-black border border-indigo-500/20">
                           {lang === 'ar' ? `الرقم المرجعي: ${sub.eventRef || associatedEvent?.eventRef}` : `Ref No: ${sub.eventRef || associatedEvent?.eventRef}`}
                         </span>
+                      )}
+                      
+                      {sub.status === 'approved' && (sub.eventData?.id || sub.id) && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setAttendanceEventId(associatedEvent?.id || sub.eventData?.id || sub.id);
+                            setAttendanceSub(sub);
+                          }}
+                          type="button" className="relative z-50 px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          {lang === 'ar' ? 'الحضور الفعلي' : 'Actual Attendance'}
+                        </button>
                       )}
                       {/* Old block just in case */ false && (
                         <span className="px-3 py-1 rounded-xl bg-indigo-950/80 text-indigo-400 font-mono text-xs font-black border border-indigo-500/20">
@@ -948,20 +1044,54 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'الوصف (بالعربية)' : 'Description (Arabic)'}</label>
                         <textarea
                           value={editDescAr}
-                          onChange={e => setEditDescAr(e.target.value)}
+                          onChange={e => {
+                            if (e.target.value.length <= 500) {
+                              setEditDescAr(e.target.value);
+                            }
+                          }}
+                          maxLength={500}
                           rows={3}
                           className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none resize-none"
                         />
+                        <div className="flex justify-between items-center mt-1 px-1">
+                          <span className={`text-[11px] transition-colors duration-200 ${500 - editDescAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                            {lang === 'ar' 
+                              ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - editDescAr.length}` 
+                              : `Maximum 500 characters | Remaining: ${500 - editDescAr.length} characters`}
+                          </span>
+                          {500 - editDescAr.length === 0 && (
+                            <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                              {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'الوصف (بالإنجليزية)' : 'Description (English)'}</label>
                         <textarea
                           value={editDescEn}
-                          onChange={e => setEditDescEn(e.target.value)}
+                          onChange={e => {
+                            if (e.target.value.length <= 500) {
+                              setEditDescEn(e.target.value);
+                            }
+                          }}
+                          maxLength={500}
                           rows={3}
                           className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none resize-none text-left"
                           dir="ltr"
                         />
+                        <div className="flex justify-between items-center mt-1 px-1">
+                          <span className={`text-[11px] transition-colors duration-200 ${500 - editDescEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                            {lang === 'ar' 
+                              ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - editDescEn.length}` 
+                              : `Maximum 500 characters | Remaining: ${500 - editDescEn.length} characters`}
+                          </span>
+                          {500 - editDescEn.length === 0 && (
+                            <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                              {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Price */}
@@ -1154,24 +1284,82 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                   {sub.status === 'approved' && (
                     (() => {
-                      const eventId = sub.eventData?.id || sub.id;
-                      const eventBookings = bookings?.filter(b => b.eventId === eventId) || [];
-                      const actualAttendeesCount = eventBookings
-                        .filter(b => b.status === 'approved' && b.attended === true)
-                        .reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                      const eventBookings = getSubBookings(sub, bookings, events);
+                      const totalBookedCount = eventBookings.length;
+                      const totalBookedPax = eventBookings.reduce((sum, b) => sum + (Number(b.numberOfIndividuals) || 1), 0);
+                      
+                      const attendedBookingsList = eventBookings.filter(b => b.attended === true);
+                      const actualAttendeesPax = attendedBookingsList.reduce((sum, b) => sum + (Number(b.numberOfIndividuals) || 1), 0);
+                      const actualRevenue = attendedBookingsList.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+                      const totalRevenue = eventBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
 
                       return (
-                        <div className="mt-4 p-4 rounded-2xl bg-indigo-950/20 border border-indigo-500/20 text-xs space-y-3 mb-4">
-                          <h5 className="font-bold text-indigo-400 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
-                            <Sparkles className="h-3.5 w-3.5" />
-                            <span>{lang === 'ar' ? '📊 إحصائيات الحضور الفعلية' : '📊 Real Attendance Stats'}</span>
-                          </h5>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                            <div>
-                              <span className="text-neutral-500 block">{lang === 'ar' ? 'الذين حضروا بالفعل' : 'Actual Attendees'}</span>
-                              <span className="text-white font-extrabold text-base font-sans">{actualAttendeesCount} {lang === 'ar' ? 'أفراد' : 'people'}</span>
-                            </div>
+                        <div className="mt-4 p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 text-xs space-y-3 mb-4 shadow-md">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <h5 className="font-bold text-indigo-400 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                              <Sparkles className="h-3.5 w-3.5" />
+                              <span>{user?.isAdmin ? (lang === 'ar' ? '📊 إحصائيات وحجوزات الفعالية' : '📊 Real Event Stats & Bookings') : (lang === 'ar' ? '📊 إحصائيات الحضور الفعلي' : '📊 Actual Attendance Stats')}</span>
+                            </h5>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setAttendanceEventId(associatedEvent?.id || sub.eventData?.id || sub.id);
+                                setAttendanceSub(sub);
+                              }}
+                              className="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            >
+                              <Users className="w-3.5 h-3.5" />
+                              <span>{lang === 'ar' ? 'تفاصيل الحضور' : 'Attendance Details'}</span>
+                            </button>
                           </div>
+
+                          {user?.isAdmin ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+                              <div className="bg-neutral-900/80 p-3 rounded-xl border border-white/5">
+                                <span className="text-neutral-400 text-[10px] block font-bold mb-0.5">{lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Booked'}</span>
+                                <span className="text-amber-400 font-black text-sm font-mono block">
+                                  {totalBookedPax} <span className="text-[10px] font-sans font-normal text-neutral-300">{lang === 'ar' ? 'أفراد' : 'pax'}</span>
+                                </span>
+                                <span className="text-[10px] text-neutral-500 block font-mono">({totalBookedCount} {lang === 'ar' ? 'حجز' : 'bkgs'})</span>
+                              </div>
+
+                              <div className="bg-neutral-900/80 p-3 rounded-xl border border-white/5">
+                                <span className="text-neutral-400 text-[10px] block font-bold mb-0.5">{lang === 'ar' ? 'الحاضرون فعلياً' : 'Actual Attended'}</span>
+                                <span className="text-emerald-400 font-black text-sm font-mono block">
+                                  {actualAttendeesPax} <span className="text-[10px] font-sans font-normal text-neutral-300">{lang === 'ar' ? 'أفراد' : 'pax'}</span>
+                                </span>
+                                <span className="text-[10px] text-neutral-500 block">{lang === 'ar' ? 'تأكد دخولهم' : 'Checked-in'}</span>
+                              </div>
+
+                              <div className="bg-neutral-900/80 p-3 rounded-xl border border-white/5 col-span-2 sm:col-span-1">
+                                <span className="text-neutral-400 text-[10px] block font-bold mb-0.5">{lang === 'ar' ? 'إجمالي التحصيل' : 'Total Price'}</span>
+                                <span className="text-amber-300 font-black text-sm font-mono block">
+                                  {totalRevenue.toLocaleString()} <span className="text-[10px] font-sans font-normal text-neutral-300">{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                                </span>
+                                <span className="text-[10px] text-neutral-500 block">{lang === 'ar' ? 'قيمة الحجوزات' : 'Total revenue'}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-3 pt-1">
+                              <div className="bg-neutral-900/80 p-3 rounded-xl border border-white/5">
+                                <span className="text-neutral-400 text-[10px] block font-bold mb-0.5">{lang === 'ar' ? 'الحاضرون فعلياً' : 'Actual Attended'}</span>
+                                <span className="text-emerald-400 font-black text-sm font-mono block">
+                                  {actualAttendeesPax} <span className="text-[10px] font-sans font-normal text-neutral-300">{lang === 'ar' ? 'أفراد' : 'pax'}</span>
+                                </span>
+                                <span className="text-[10px] text-neutral-500 block">{lang === 'ar' ? 'أفراد تأكد دخولهم' : 'Checked-in individuals'}</span>
+                              </div>
+
+                              <div className="bg-neutral-900/80 p-3 rounded-xl border border-white/5">
+                                <span className="text-neutral-400 text-[10px] block font-bold mb-0.5">{lang === 'ar' ? 'عمليات الدخول' : 'Check-ins Count'}</span>
+                                <span className="text-indigo-400 font-black text-sm font-mono block">
+                                  {attendedBookingsList.length} <span className="text-[10px] font-sans font-normal text-neutral-300">{lang === 'ar' ? 'عملية' : 'entries'}</span>
+                                </span>
+                                <span className="text-[10px] text-neutral-500 block">{lang === 'ar' ? 'حضور مؤكد' : 'Verified entries'}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })()
@@ -1200,6 +1388,38 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <Edit3 className="h-4 w-4 text-amber-400" />
                         <span>{lang === 'ar' ? '✏️ تعديل البيانات' : '✏️ Edit Details'}</span>
                       </button>
+
+                      {sub.status === 'approved' && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => setManageStaffSub(sub)}
+                            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30 font-bold text-xs transition-all border border-indigo-500/30 cursor-pointer shadow"
+                          >
+                            <ShieldCheck className="h-4 w-4 text-indigo-400" />
+                            <span>{lang === 'ar' ? '👮 تعيين موظفي مسح التذاكر' : '👮 Gate Security Staff'}</span>
+                          </button>
+
+                          {(() => {
+                            const settings = sub.staffSettings || sub.eventData?.staffSettings;
+                            const isRestricted = settings?.mode === 'restricted' || (settings?.staffList && settings.staffList.length > 0);
+                            const count = settings?.staffList?.filter(s => s.isActive !== false).length || 0;
+
+                            if (isRestricted && count > 0) {
+                              return (
+                                <span className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-300 text-xs font-extrabold border border-emerald-500/30 flex items-center gap-1 shadow-sm">
+                                  🔒 {lang === 'ar' ? `مخصص (${count} موظف)` : `Designated (${count} staff)`}
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 text-xs font-extrabold border border-amber-500/30 flex items-center gap-1 shadow-sm">
+                                  🔓 {lang === 'ar' ? 'متاح للجميع' : 'Open to Everyone'}
+                                </span>
+                              );
+                            }
+                          })()}
+                        </div>
+                      )}
 
                       <button
                         onClick={() => handleDeleteAdSubmission(sub.id)}
@@ -1606,32 +1826,57 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           }
 
                           return (
-                            <div className="flex flex-col sm:flex-row gap-4 items-center bg-zinc-950/85 p-3 rounded-2xl border border-zinc-800">
-                              {/* Live QR generator for the entry card */}
-                              <div className="w-20 h-20 bg-white p-1 rounded-lg shrink-0 border border-zinc-800">
-                                <img 
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&color=245-158-11&data=${encodeURIComponent(
-                                    (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                                      ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
-                                      : window.location.origin) + '/?verify=' + b.id
-                                  )}`} 
-                                  className="w-full h-full object-contain" 
-                                  alt="Entry QR" 
-                                />
+                            <div className="flex flex-col items-center justify-center bg-zinc-950 p-4 rounded-2xl border border-amber-500/30 space-y-3 text-center">
+                              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                                <span>{isArabic ? 'تذكرة دخول معتمدة ورسمية' : 'OFFICIAL APPROVED ENTRY PASS'}</span>
                               </div>
-                              <div className="space-y-1 flex-1 text-center sm:text-right">
-                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">
-                                  {isArabic ? 'كود الدخول والتحقق الرقمي' : 'DIGITAL ENTRY PASSCODE'}
+
+                              {/* Prominent High-Resolution QR Code Container */}
+                              <div 
+                                onClick={() => setQrModalBooking(b)}
+                                className="relative group cursor-pointer p-3 bg-white rounded-2xl border-2 border-amber-500 shadow-2xl transition-all hover:scale-105 active:scale-95"
+                                title={isArabic ? 'انقر لتكبير الكود ملء الشاشة' : 'Click to enlarge full-screen'}
+                              >
+                                <div className="w-48 h-48 sm:w-56 sm:h-56 bg-white flex items-center justify-center">
+                                  <img 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=245-158-11&data=${encodeURIComponent(
+                                      (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
+                                        ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                                        : window.location.origin) + '/?verify=' + b.id
+                                    )}`} 
+                                    className="w-full h-full object-contain" 
+                                    alt="Entry QR Code" 
+                                  />
+                                </div>
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center text-white text-xs font-bold gap-1 p-2 backdrop-blur-[2px]">
+                                  <Sparkles className="w-5 h-5 text-amber-400" />
+                                  <span>{isArabic ? 'انقر لتكبير الكود' : 'Tap to enlarge'}</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 w-full max-w-xs">
+                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                                  {isArabic ? 'رمز الدخول الرقمي (Passcode)' : 'DIGITAL ACCESS CODE'}
                                 </span>
-                                <span className="text-sm font-mono font-black text-emerald-400 tracking-widest block">
+                                <div className="py-1.5 px-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 font-mono font-black text-lg tracking-widest inline-block shadow-inner">
                                   {b.accessCode || 'DWM-ACTIVE'}
-                                </span>
-                                <span className="text-[10px] text-zinc-400 block font-sans leading-relaxed">
+                                </div>
+                                <p className="text-xs text-emerald-400 font-semibold block pt-1 leading-relaxed">
                                   {isArabic 
                                     ? '✅ أظهر هذا الباركود للمسؤول عند بوابة الحضور للدخول مباشرة!' 
-                                    : '✅ Present this barcode at the entry gate to gain access!'}
-                                </span>
+                                    : '✅ Show this QR code at the event gate for instant access!'}
+                                </p>
                               </div>
+
+                              <button
+                                type="button"
+                                onClick={() => setQrModalBooking(b)}
+                                className="mt-1 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-xs font-bold text-amber-400 hover:text-amber-300 transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                                <span>{isArabic ? 'عرض الباركود بالشاشة الكاملة' : 'View Full-Screen QR'}</span>
+                              </button>
                             </div>
                           );
                         })()
@@ -2002,6 +2247,93 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Full-Screen QR Code Modal for approved ticket gate scanning */}
+      {qrModalBooking && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="bg-zinc-900 border border-amber-500/40 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 relative shadow-2xl">
+            <button
+              onClick={() => setQrModalBooking(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1 pt-2">
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
+                {lang === 'ar' ? 'تذكرة دخول معتمدة ورسمية' : 'Official Entry Pass'}
+              </span>
+              <h3 className="text-base font-extrabold text-white line-clamp-1">
+                {lang === 'ar' ? qrModalBooking.eventTitleAr : qrModalBooking.eventTitleEn}
+              </h3>
+              <p className="text-xs text-zinc-400 font-mono">
+                REF: <span className="text-amber-400 font-bold">{qrModalBooking.refNumber}</span>
+              </p>
+            </div>
+
+            {/* Extra Large QR code image */}
+            <div className="bg-white p-4 rounded-2xl border-4 border-amber-500 shadow-2xl mx-auto w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=245-158-11&data=${encodeURIComponent(
+                  (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
+                    ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                    : window.location.origin) + '/?verify=' + qrModalBooking.id
+                )}`}
+                className="w-full h-full object-contain"
+                alt="Full Screen QR"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="py-2 px-5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400 font-mono font-black text-xl tracking-widest inline-block shadow-inner">
+                {qrModalBooking.accessCode || 'DWM-ACTIVE'}
+              </div>
+              <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+                {lang === 'ar' 
+                  ? '💡 يُنصح برفع إضاءة الشاشة للحد الأقصى لسهولة المسح الضوئي عند البوابة.' 
+                  : '💡 Please increase your screen brightness for fast scanning at the gate.'}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setQrModalBooking(null)}
+              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-sm transition cursor-pointer shadow-lg"
+            >
+              {lang === 'ar' ? 'إغلاق الشاشة' : 'Close'}
+            </button>
+          </div>
+        </div>
+      )}
+      <AnimatePresence>
+        {attendanceEventId && (
+          <ActualAttendanceModal
+            eventId={attendanceEventId}
+            sub={attendanceSub}
+            onClose={() => {
+              setAttendanceEventId(null);
+              setAttendanceSub(null);
+            }}
+          />
+        )}
+        {manageStaffSub && (
+          <StaffManagementModal
+            adSubmission={manageStaffSub}
+            onClose={() => setManageStaffSub(null)}
+            onSaved={(newSettings) => {
+              setAdSubmissions(prev => prev.map(s => {
+                if (s.id === manageStaffSub.id) {
+                  return {
+                    ...s,
+                    staffSettings: newSettings,
+                    eventData: s.eventData ? { ...s.eventData, staffSettings: newSettings } : undefined
+                  };
+                }
+                return s;
+              }));
+            }}
+          />
         )}
       </AnimatePresence>
     </div>

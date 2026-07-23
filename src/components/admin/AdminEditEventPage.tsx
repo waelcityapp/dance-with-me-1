@@ -386,9 +386,26 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
               required
               rows={3}
               value={descAr}
-              onChange={e => setDescAr(e.target.value)}
+              onChange={e => {
+                if (e.target.value.length <= 500) {
+                  setDescAr(e.target.value);
+                }
+              }}
+              maxLength={500}
               className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all resize-none"
             />
+            <div className="flex justify-between items-center mt-1 px-1">
+              <span className={`text-[11px] transition-colors duration-200 ${500 - descAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                {lang === 'ar' 
+                  ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descAr.length}` 
+                  : `Maximum 500 characters | Remaining: ${500 - descAr.length} characters`}
+              </span>
+              {500 - descAr.length === 0 && (
+                <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                  {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                </span>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -409,10 +426,27 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
               required
               rows={3}
               value={descEn}
-              onChange={e => setDescEn(e.target.value)}
+              onChange={e => {
+                if (e.target.value.length <= 500) {
+                  setDescEn(e.target.value);
+                }
+              }}
+              maxLength={500}
               className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all resize-none text-left"
               dir="ltr"
             />
+            <div className="flex justify-between items-center mt-1 px-1">
+              <span className={`text-[11px] transition-colors duration-200 ${500 - descEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                {lang === 'ar' 
+                  ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descEn.length}` 
+                  : `Maximum 500 characters | Remaining: ${500 - descEn.length} characters`}
+              </span>
+              {500 - descEn.length === 0 && (
+                <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                  {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

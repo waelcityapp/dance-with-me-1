@@ -51,6 +51,7 @@ import {
   MousePointerClick,
   Bell
 , Maximize2, Minimize2, Languages, Loader2 } from 'lucide-react';
+import { QrCode, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle } from '../../types';
 import { EventCard } from '../events/EventCard';
@@ -70,7 +71,8 @@ import {
   resolvedFirebaseConfig,
   databaseId,
   subscribeToAnalyticsCounters,
-  subscribeToDailyAnalytics, reorderAdsStartingFrom20
+  subscribeToDailyAnalytics, reorderAdsStartingFrom20,
+  db
 } from '../../lib/firebase';
 
 import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
@@ -113,6 +115,7 @@ export const AdminPanel: React.FC = () => {
   const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | 'pricing' | 'analytics' | 'create_ad_admin' | 'bookings' | null>(null);
   const [dbSubTab, setDbSubTab] = useState<'events' | 'submissions' | 'notifications' | 'schema'>('events');
   const [selectedJsonDoc, setSelectedJsonDoc] = useState<{ id: string; title: string; data: any } | null>(null);
+  const [qrEventDoc, setQrEventDoc] = useState<{ id: string; title: string } | null>(null);
   const [viewingAttendeesEvent, setViewingAttendeesEvent] = useState<DanceEvent | null>(null);
   
   const [submissionPositions, setSubmissionPositions] = useState<Record<string, number | ''>>({});
@@ -152,9 +155,18 @@ export const AdminPanel: React.FC = () => {
       const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
       
       const oldArchived = submissions.filter(s => {
-        if (s.status !== 'archived') return false;
-        if (!s.archivedAt) return false;
-        const archivedTime = new Date(s.archivedAt).getTime();
+        let isArchived = s.status === 'archived';
+        let archivedTime = s.archivedAt ? new Date(s.archivedAt).getTime() : 0;
+
+        if (!isArchived && s.expiresAt) {
+           const exp = new Date(s.expiresAt).getTime();
+           if (now >= exp) {
+              isArchived = true;
+              archivedTime = exp;
+           }
+        }
+
+        if (!isArchived || !archivedTime) return false;
         return (now - archivedTime) > thirtyDaysMs;
       });
 
@@ -764,24 +776,37 @@ export const AdminPanel: React.FC = () => {
         }
       }
 
-      // Send personal notification to admin with the event code
-      if (user?.id) {
-        try {
-          const personalNotifId = `notif-adm-personal-${Date.now()}`;
-          await saveNotificationToFirestore({
-            id: personalNotifId,
-            userId: user.id,
-            titleAr: 'تم نشر إعلانك الإداري بنجاح! 🎉',
-            titleEn: 'Your Admin Ad is Published! 🎉',
-            messageAr: `تم نشر إعلانك "${createdEvent.titleAr}". كود الحدث (الرقم المرجعي) الخاص بك هو: ${newEventRef}. استخدم هذا الكود للبحث عن إعلانك أو لمشاركته مع الآخرين.`,
-            messageEn: `Your ad "${createdEvent.titleEn}" has been published. Your Event Code is: ${newEventRef}. Use this code to search or share your ad.`,
-            date: new Date().toISOString(),
-            read: false,
-            type: 'system'
-          } as any);
-        } catch (e) {
-          console.error('Failed to send personal admin notification:', e);
+      // Send personal notification to all Admins with the event code and initial attendee count (0)
+      try {
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const adminsCol = collection(db, 'users');
+        const adminsQuery = query(adminsCol, where('isAdmin', '==', true));
+        const adminsSnapshot = await getDocs(adminsQuery);
+        const adminIds: string[] = [];
+        adminsSnapshot.forEach(docSnap => {
+          adminIds.push(docSnap.id);
+        });
+
+        // Ensure current admin's ID is included if not fetched
+        if (user?.id && !adminIds.includes(user.id)) {
+          adminIds.push(user.id);
         }
+
+        for (const adminId of adminIds) {
+          await saveNotificationToFirestore({
+            id: `notif_adm_pub_${Date.now()}_${adminId}`,
+            userId: adminId,
+            type: 'system',
+            titleAr: 'تم نشر إعلان إداري بنجاح! 🎉',
+            titleEn: 'Your Admin Ad is Published! 🎉',
+            messageAr: `تم نشر إعلانك الإداري "${createdEvent.titleAr}" بنجاح. كود الحدث (الرقم المرجعي): ${newEventRef}. عدد الحضور الفعلي حالياً: 0. استخدم هذا الكود لمتابعة الدخول وإدارة الحضور.`,
+            messageEn: `Your admin ad "${createdEvent.titleEn}" has been published. Event Code: ${newEventRef}. Actual attendees count: 0. Use this code to manage check-ins.`,
+            date: new Date().toISOString(),
+            read: false
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send admin publication notifications:', e);
       }
 
       setAdminSaveStatus('success');
@@ -1104,7 +1129,7 @@ export const AdminPanel: React.FC = () => {
       if (eventId && updated.eventData) { updated.eventData.id = eventId; } updateLocalStorageItem(updated);
       await saveAdSubmissionToFirestore(updated);
       
-      // Send personal notification to the user with the event code
+      // Send personal notification to the user with the event code and attendance count (initially 0)
       if (sub.advertiserId) {
         try {
           const { saveNotificationToFirestore } = await import('../../lib/firebase');
@@ -1114,14 +1139,43 @@ export const AdminPanel: React.FC = () => {
             type: 'system',
             titleAr: 'تم تفعيل إعلانك بنجاح! 🎉',
             titleEn: 'Your Ad is Approved! 🎉',
-            messageAr: `تمت الموافقة على نشر إعلانك "${sub.titleAr}". كود الحدث (الرقم المرجعي) الخاص بك هو: ${newEventRef}. استخدم هذا الكود للبحث عن إعلانك أو لمشاركته مع الآخرين.`,
-            messageEn: `Your ad "${sub.titleEn}" has been published. Your Event Code is: ${newEventRef}. Use this code to search or share your ad.`,
+            messageAr: `تمت الموافقة على نشر إعلانك "${sub.titleAr}". كود الحدث (الرقم المرجعي) الخاص بك هو: ${newEventRef}. عدد الحضور الفعلي حالياً: 0. استخدم هذا الكود للبحث عن إعلانك أو لمشاركته مع الآخرين.`,
+            messageEn: `Your ad "${sub.titleEn}" has been published. Your Event Code is: ${newEventRef}. Actual attendees count: 0. Use this code to search or share your ad.`,
             date: new Date().toISOString(),
             read: false
           });
         } catch (e) {
           console.error('Failed to send personal approval notification:', e);
         }
+      }
+
+      // Also send approval notification to all Admins containing Event Code, Advertiser, and Attendance Count
+      try {
+        const { saveNotificationToFirestore } = await import('../../lib/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const adminsCol = collection(db, 'users');
+        const adminsQuery = query(adminsCol, where('isAdmin', '==', true));
+        const adminsSnapshot = await getDocs(adminsQuery);
+        const adminIds: string[] = [];
+        adminsSnapshot.forEach(docSnap => {
+          adminIds.push(docSnap.id);
+        });
+
+        for (const adminId of adminIds) {
+          await saveNotificationToFirestore({
+            id: `notif_appr_adm_${Date.now()}_${adminId}_${sub.id}`,
+            userId: adminId,
+            type: 'system',
+            titleAr: 'تمت الموافقة على إعلان ونشره! 📢',
+            titleEn: 'Ad Approved & Published! 📢',
+            messageAr: `تمت الموافقة على نشر إعلان "${sub.titleAr}". كود الحدث (الرقم المرجعي) الخاص به هو: ${newEventRef}. عدد الحضور الفعلي حالياً: 0. المعلن: ${sub.advertiserName || 'مستخدم'}.`,
+            messageEn: `The ad "${sub.titleEn}" has been approved. Event Code: ${newEventRef}. Actual attendees count: 0. Advertiser: ${sub.advertiserName || 'User'}.`,
+            date: new Date().toISOString(),
+            read: false
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send admin approval notification:', e);
       }
     } catch (err) {
       console.error('Error approving ad:', err);
@@ -1177,6 +1231,51 @@ export const AdminPanel: React.FC = () => {
 
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handlePurgeEventCompletely = async (eventId: string, eventTitle: string) => {
+    const confirmed = await triggerConfirm(
+      lang === 'ar' 
+        ? `هل أنت متأكد من حذف الفعالية "${eventTitle}" وكل حجوزاتها المتعلقة بها بالكامل لتوفير المساحة؟ هذا الإجراء لا يمكن التراجع عنه!`
+        : `Are you sure you want to completely delete the event "${eventTitle}" and ALL its related bookings to save space? This action cannot be undone!`
+    );
+
+    if (confirmed) {
+      setActionLoading(eventId);
+      try {
+        const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
+        const { db } = await import('../../lib/firebase');
+
+        // 1. Delete all bookings
+        const bookingsCol = collection(db, 'bookings');
+        const bQuery = query(bookingsCol, where('eventId', '==', eventId));
+        const bSnap = await getDocs(bQuery);
+        for (const bDoc of bSnap.docs) {
+          await deleteDoc(bDoc.ref);
+        }
+
+        // 2. Clear out the event and its media (preserves the position slot)
+        deleteEvent(eventId);
+
+        // 3. Delete associated ad submission if any
+        const ev = events.find(e => e.id === eventId);
+        if (ev && ev.eventRef) {
+          const adsCol = collection(db, 'ad_submissions');
+          const adsQuery = query(adsCol, where('eventRef', '==', ev.eventRef));
+          const adsSnap = await getDocs(adsQuery);
+          for (const adDoc of adsSnap.docs) {
+            await deleteDoc(adDoc.ref);
+          }
+        }
+
+        alert(lang === 'ar' ? 'تم مسح الفعالية وكل المتعلقات بها بنجاح.' : 'Event and all related data purged successfully.');
+      } catch (err) {
+        console.error('Error purging event:', err);
+        alert(lang === 'ar' ? 'حدث خطأ أثناء مسح البيانات.' : 'Error purging data.');
+      } finally {
+        setActionLoading(null);
+      }
     }
   };
 
@@ -1347,18 +1446,54 @@ export const AdminPanel: React.FC = () => {
                   .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
                 return (
-                  <div className="grid grid-cols-3 gap-3 my-4">
-                    <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
-                      <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Registered'}</span>
-                      <span className="text-white text-lg font-black">{totalBookedCount}</span>
+                  <div className="space-y-3 my-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                        <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Registered'}</span>
+                        <span className="text-white text-lg font-black">{totalBookedCount}</span>
+                      </div>
+                      <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                        <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'الحضور الفعلي' : 'Actual Check-in'}</span>
+                        <span className="text-emerald-400 text-lg font-black">{actualAttendedCount}</span>
+                      </div>
+                      <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                        <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'المستحقات المحسوبة' : 'Revenue Collected'}</span>
+                        <span className="text-indigo-400 text-lg font-black font-mono">{totalRevenue} EGP</span>
+                      </div>
                     </div>
-                    <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
-                      <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'الحضور الفعلي' : 'Actual Check-in'}</span>
-                      <span className="text-emerald-400 text-lg font-black">{actualAttendedCount}</span>
-                    </div>
-                    <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
-                      <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'المستحقات المحسوبة' : 'Revenue Collected'}</span>
-                      <span className="text-indigo-400 text-lg font-black font-mono">{totalRevenue} EGP</span>
+
+                    {/* Staff Security Status Bar for Admin */}
+                    <div className="bg-neutral-950 p-3 rounded-2xl border border-indigo-500/20 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-indigo-400 shrink-0" />
+                        <span className="font-bold text-neutral-300">
+                          {lang === 'ar' ? 'إعدادات أمن البوابة:' : 'Gate Security Mode:'}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-extrabold text-[10px]">
+                          {viewingAttendeesEvent.staffSettings?.mode === 'restricted' 
+                            ? (lang === 'ar' ? '🔒 موظفين محددين برقم سري' : '🔒 Restricted (PIN required)')
+                            : (lang === 'ar' ? '🔓 السماح لأي شخص بالمسح' : '🔓 Anyone authorized')}
+                        </span>
+                      </div>
+
+                      {viewingAttendeesEvent.staffSettings?.mode === 'restricted' && viewingAttendeesEvent.staffSettings?.staffList && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {viewingAttendeesEvent.staffSettings.staffList.map((s, idx) => (
+                            <span 
+                              key={idx}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 ${
+                                s.isActive 
+                                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300' 
+                                  : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                              }`}
+                            >
+                              <span>{s.name}</span>
+                              <span className="text-amber-400 font-bold">({s.pin})</span>
+                              <span>{s.isActive ? '🟢' : '🔴'}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -1414,6 +1549,11 @@ export const AdminPanel: React.FC = () => {
                                     <CheckCircle className="h-3 w-3" />
                                     {lang === 'ar' ? 'حضر' : 'Attended'}
                                   </span>
+                                  {b.attendedByStaffName && (
+                                    <span className="text-[10px] text-indigo-300 font-bold mt-0.5 flex items-center gap-1">
+                                      👮 {b.attendedByStaffName}
+                                    </span>
+                                  )}
                                   {b.attendedAt && (
                                     <span className="text-[9px] text-neutral-500 font-mono mt-0.5">
                                       {new Date(b.attendedAt).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -2520,13 +2660,26 @@ export const AdminPanel: React.FC = () => {
                             onClick={() => setSelectedBookedAdId(group.eventId)}
                             className="p-5 sm:p-6 rounded-3xl border border-neutral-800 bg-neutral-900 hover:border-amber-500/40 hover:bg-neutral-850/50 transition-all cursor-pointer group flex flex-col justify-between space-y-4 shadow-xl"
                           >
-                            <div>
-                              <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase font-black">
-                                {lang === 'ar' ? 'الفعالية / الإعلان' : 'EVENT / AD'}
-                              </span>
-                              <h4 className="text-base font-black text-white group-hover:text-amber-400 transition-colors mt-0.5 line-clamp-1">
-                                {lang === 'ar' ? group.titleAr : group.titleEn}
-                              </h4>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase font-black">
+                                  {lang === 'ar' ? 'الفعالية / الإعلان' : 'EVENT / AD'}
+                                </span>
+                                <h4 className="text-base font-black text-white group-hover:text-amber-400 transition-colors mt-0.5 line-clamp-1">
+                                  {lang === 'ar' ? group.titleAr : group.titleEn}
+                                </h4>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePurgeEventCompletely(group.eventId, lang === 'ar' ? group.titleAr : group.titleEn);
+                                }}
+                                className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all shrink-0"
+                                title={lang === 'ar' ? 'حذف الفعالية وكل الحجوزات المتعلقة بها نهائياً' : 'Purge event and all related data completely'}
+                                disabled={actionLoading === group.eventId}
+                              >
+                                {actionLoading === group.eventId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                              </button>
                             </div>
 
                             <div className="grid grid-cols-3 gap-2 bg-neutral-950/60 p-3 rounded-2xl border border-neutral-800/40 text-left">
@@ -3385,6 +3538,13 @@ export const AdminPanel: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <button
+                        onClick={() => setQrEventDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn })}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold text-xs transition-all cursor-pointer border border-amber-500/30"
+                      >
+                        <QrCode className="h-3.5 w-3.5" />
+                        <span>{lang === 'ar' ? 'QR الدخول' : 'Check-in QR'}</span>
+                      </button>
                       <button
                         onClick={() => setSelectedJsonDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn, data: ev })}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs transition-all cursor-pointer border border-blue-500/30"
@@ -5264,8 +5424,8 @@ export const AdminPanel: React.FC = () => {
 
                           {/* Quick details */}
                           <div className="md:col-span-2 text-left md:text-right text-[11px] font-mono text-neutral-400 flex md:flex-col justify-between">
-                            <div><strong className="text-cyan-400">{day.unique_sessions || 0}</strong> {lang === 'ar' ? 'زائر' : 'visitors'}</div>
-                            <div><strong className="text-pink-400">{day.total_page_views || 0}</strong> {lang === 'ar' ? 'مشاهدة' : 'views'}</div>
+                            <div><strong className="text-cyan-400">{day.unique_sessions || 0}</strong> {lang === 'ar' ? ' زائر فريد' : ' visitors'}</div>
+                            <div><strong className="text-pink-400">{day.total_page_views || 0}</strong> {lang === 'ar' ? ' مشاهدة' : ' views'}</div>
                           </div>
                         </div>
                       );
@@ -5478,10 +5638,27 @@ export const AdminPanel: React.FC = () => {
                         required
                         rows={4}
                         value={adminDescAr}
-                        onChange={(e) => setAdminDescAr(e.target.value)}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 500) {
+                            setAdminDescAr(e.target.value);
+                          }
+                        }}
+                        maxLength={500}
                         placeholder="اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور..."
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
                       />
+                      <div className="flex justify-between items-center mt-1 px-1 text-right" dir="rtl">
+                        <span className={`text-[11px] transition-colors duration-200 ${500 - adminDescAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                          {lang === 'ar' 
+                            ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - adminDescAr.length}` 
+                            : `Maximum 500 characters | Remaining: ${500 - adminDescAr.length} characters`}
+                        </span>
+                        {500 - adminDescAr.length === 0 && (
+                          <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                            {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Desc English */}
@@ -5504,10 +5681,27 @@ export const AdminPanel: React.FC = () => {
                         required
                         rows={4}
                         value={adminDescEn}
-                        onChange={(e) => setAdminDescEn(e.target.value)}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 500) {
+                            setAdminDescEn(e.target.value);
+                          }
+                        }}
+                        maxLength={500}
                         placeholder="Write details of the event, instructors, music styles, dress codes..."
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-left"
                       />
+                      <div className="flex justify-between items-center mt-1 px-1 text-left" dir="ltr">
+                        <span className={`text-[11px] transition-colors duration-200 ${500 - adminDescEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                          {lang === 'ar' 
+                            ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - adminDescEn.length}` 
+                            : `Maximum 500 characters | Remaining: ${500 - adminDescEn.length} characters`}
+                        </span>
+                        {500 - adminDescEn.length === 0 && (
+                          <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                            {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -6991,6 +7185,13 @@ export const AdminPanel: React.FC = () => {
 
                     <div className="flex items-center gap-2 mt-auto pt-2 border-t border-white/5">
                       <button
+                        onClick={() => setQrEventDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn })}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold text-xs sm:text-sm transition-all cursor-pointer border border-amber-500/30 shadow-sm"
+                        title={lang === 'ar' ? 'QR الدخول' : 'Check-in QR'}
+                      >
+                        <QrCode className="h-5 w-5" />
+                      </button>
+                      <button
                         onClick={() => setSelectedJsonDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn, data: ev })}
                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs sm:text-sm transition-all cursor-pointer border border-blue-500/30 shadow-sm"
                       >
@@ -7016,6 +7217,45 @@ export const AdminPanel: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* QR Code Modal for Event Check-in */}
+      {qrEventDoc && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="bg-zinc-900 border border-amber-500/40 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 relative shadow-2xl">
+            <button
+              onClick={() => setQrEventDoc(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="space-y-1 pt-2">
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
+                {lang === 'ar' ? 'باركود الدخول للفعالية' : 'Event Check-in QR'}
+              </span>
+              <h3 className="text-base font-extrabold text-white line-clamp-1">
+                {qrEventDoc.title}
+              </h3>
+              <p className="text-[10px] text-zinc-400 font-sans px-2">
+                {lang === 'ar' 
+                  ? 'اطبع هذا الباركود أو اعرضه ليقوم الحاضرون بمسحه عبر هواتفهم لتسجيل الدخول السريع.' 
+                  : 'Print or display this QR code so attendees can scan it to check in.'}
+              </p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border-4 border-amber-500 shadow-2xl mx-auto w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=245-158-11&data=${encodeURIComponent(
+                  (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
+                    ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                    : window.location.origin) + '/?eventCheckin=' + qrEventDoc.id
+                )}`}
+                className="w-full h-full object-contain"
+                alt="Event Check-in QR"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

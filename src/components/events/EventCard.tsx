@@ -39,6 +39,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-[16/10]');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -437,9 +438,28 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           {lang === 'ar' ? event.titleAr : event.titleEn}
         </h3>
 
-        <p className="text-xs sm:text-sm text-neutral-300 mb-4 line-clamp-2 flex-1 leading-relaxed">
-          {lang === 'ar' ? event.descriptionAr : event.descriptionEn}
-        </p>
+        <div className="mb-4">
+          <p className={`text-xs sm:text-sm text-neutral-300 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-2'}`}>
+            {lang === 'ar' ? event.descriptionAr : event.descriptionEn}
+          </p>
+          {((lang === 'ar' ? event.descriptionAr : event.descriptionEn) || '').length > 120 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsDescExpanded(!isDescExpanded);
+              }}
+              className="mt-1.5 text-[11px] sm:text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/20 hover:border-amber-500/40"
+            >
+              <span>
+                {isDescExpanded 
+                  ? (lang === 'ar' ? 'عرض تفاصيل أقل ⬆️' : 'Show less details ⬆️') 
+                  : (lang === 'ar' ? 'مزيد من التفاصيل... ⬇️' : 'More details... ⬇️')
+                }
+              </span>
+            </button>
+          )}
+        </div>
 
         {/* Date & Location Grid */}
         <div className="space-y-2 mb-4 rounded-2xl bg-neutral-950 p-3.5 border border-neutral-800 text-xs">

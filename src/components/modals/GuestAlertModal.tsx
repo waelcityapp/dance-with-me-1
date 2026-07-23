@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp, GuestAlertReason } from '../../context/AppContext';
-import { X, ShieldAlert, Sparkles, User, MessageCircle, Heart, Ticket, PlusCircle } from 'lucide-react';
+import { X, ShieldAlert, Sparkles, User, MessageCircle, Heart, Ticket, PlusCircle, ScanLine } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface GuestAlertModalProps {
@@ -57,6 +57,18 @@ export const GuestAlertModal: React.FC<GuestAlertModalProps> = ({ isOpen, onClos
           headingEn: 'Login to Save Events to Favorites',
           descAr: 'لإضافة الحفلات والفعاليات إلى قائمة المفضلة لديك والرجوع إليها في أي وقت، يرجى إنشاء حساب مجاني أو تسجيل الدخول أولاً.',
           descEn: 'To add events and parties to your favorites list and access them anytime, please login or create a free account first.'
+        };
+      case 'scan_qr':
+        return {
+          icon: ScanLine,
+          titleAr: 'تنبيه: لابد من وجود حساب لمسح الباركود',
+          titleEn: 'Notice: Account Required to Scan Barcode',
+          subtitleAr: 'خدمة مسح وتأكيد التذاكر',
+          subtitleEn: 'Barcode & Ticket Scan Service',
+          headingAr: 'سجل دخولك أو أنشئ حساباً لمسح الباركود',
+          headingEn: 'Login or Create Account to Scan Barcodes',
+          descAr: 'لاستخدام مسح الباركود والتحقق من التذاكر والدخول، يرجى إنشاء حساب مجاني أو تسجيل الدخول أولاً في التطبيق.',
+          descEn: 'To scan ticket barcodes and verify entries, please login or create a free account first in the application.'
         };
       case 'post_ad':
       default:

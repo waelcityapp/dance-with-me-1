@@ -202,12 +202,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           }
           const customUid = `user-${Date.now()}`;
           const userName = name.trim();
+          setAppActiveTab('explore');
           await loginUser(userName, cleanEmail, selectedAvatar, customUid, password);
         } else {
           if (!firebaseUser) {
             throw new Error('Registration failed');
           }
           const userName = name.trim();
+          setAppActiveTab('explore');
           await loginUser(userName, cleanEmail, selectedAvatar, firebaseUser.uid, password);
         }
       } else {
@@ -245,6 +247,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           }
           const userAvatar = existing.avatar || selectedAvatar;
           const userName = existing.name || name.trim() || (lang === 'ar' ? 'عضو النادي (VIP)' : 'VIP Club Member');
+          setAppActiveTab('explore');
           await loginUser(userName, cleanEmail, userAvatar, existing.id, password);
         } else {
           if (!firebaseUser) {
@@ -254,6 +257,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           const existing = await getUserByEmailFromFirestore(cleanEmail);
           const userName = existing?.name || name.trim() || (lang === 'ar' ? 'عضو زائر' : 'Guest Member');
           const userAvatar = existing?.avatar || selectedAvatar;
+          setAppActiveTab('explore');
           await loginUser(userName, cleanEmail, userAvatar, firebaseUser.uid, password);
         }
       }
@@ -286,8 +290,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setGoogleUid(googleUser.id);
         const existing = await getUserByEmailFromFirestore(googleUser.email);
         if (existing) {
-          await loginUser(existing.name || googleUser.name, googleUser.email, existing.avatar || googleUser.avatar, existing.id);
           setAppActiveTab('explore');
+          await loginUser(existing.name || googleUser.name, googleUser.email, existing.avatar || googleUser.avatar, existing.id);
           onClose();
           return;
         }

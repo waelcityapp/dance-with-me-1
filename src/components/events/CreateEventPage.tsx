@@ -1209,10 +1209,27 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 <textarea
                   rows={4}
                   value={descAr}
-                  onChange={e => setDescAr(e.target.value)}
+                  onChange={e => {
+                    if (e.target.value.length <= 500) {
+                      setDescAr(e.target.value);
+                    }
+                  }}
+                  maxLength={500}
                   placeholder={lang === 'ar' ? 'تفاصيل الحفلة، أسماء المدربين، التعليمات، وقواعد اللبس (Dress Code)...' : 'Party details, instructor names, guidelines, dress code...'}
                   className={`w-full rounded-xl border ${urlRegex.test(descAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner leading-relaxed`}
                 />
+                <div className="flex justify-between items-center mt-1 px-1">
+                  <span className={`text-[11px] transition-colors duration-200 ${500 - descAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                    {lang === 'ar' 
+                      ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descAr.length}` 
+                      : `Maximum 500 characters | Remaining: ${500 - descAr.length} characters`}
+                  </span>
+                  {500 - descAr.length === 0 && (
+                    <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                      {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -1232,10 +1249,27 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 <textarea
                   rows={4}
                   value={descEn}
-                  onChange={e => setDescEn(e.target.value)}
+                  onChange={e => {
+                    if (e.target.value.length <= 500) {
+                      setDescEn(e.target.value);
+                    }
+                  }}
+                  maxLength={500}
                   placeholder="Party details, instructor names, guidelines, dress code..."
                   className={`w-full rounded-xl border ${urlRegex.test(descEn) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner leading-relaxed`}
                 />
+                <div className="flex justify-between items-center mt-1 px-1">
+                  <span className={`text-[11px] transition-colors duration-200 ${500 - descEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                    {lang === 'ar' 
+                      ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descEn.length}` 
+                      : `Maximum 500 characters | Remaining: ${500 - descEn.length} characters`}
+                  </span>
+                  {500 - descEn.length === 0 && (
+                    <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                      {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

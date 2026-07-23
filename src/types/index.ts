@@ -64,6 +64,19 @@ export interface PricingConfig {
   };
 }
 
+export interface TicketStaffMember {
+  id: string;
+  name: string;
+  pin: string; // 4 digits
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface SecurityStaffSettings {
+  mode: 'anyone' | 'restricted';
+  staffList: TicketStaffMember[]; // max 2 in free plan
+}
+
 export interface DanceEvent {
   id: string;
   titleAr: string;
@@ -91,6 +104,7 @@ export interface DanceEvent {
   adNumber?: string;
   adType?: 'vip' | 'standard';
   eventRef?: number;
+  staffSettings?: SecurityStaffSettings;
 }
 
 export interface UserProfile {
@@ -151,6 +165,7 @@ export interface AdSubmission {
   archivedAt?: string;
   renewalCount?: number;
   eventData?: Partial<DanceEvent>;
+  staffSettings?: SecurityStaffSettings;
 }
 
 export interface SupportMessage {
@@ -193,9 +208,11 @@ export interface EventBooking {
   eventDate?: string;
   attended?: boolean;
   attendedAt?: string;
+  attendedByStaffName?: string;
+  attendedByStaffPin?: string;
   cancelledAt?: string;
 }
 
 export type Language = 'ar' | 'en';
 export type ThemeMode = 'light' | 'dark' | 'system';
-export type TabType = 'explore' | 'parties' | 'courses' | 'trips' | 'profile' | 'create_ad' | 'admin' | 'edit_ad_admin';
+export type TabType = 'explore' | 'parties' | 'courses' | 'trips' | 'profile' | 'create_ad' | 'admin' | 'edit_ad_admin' | 'verification';

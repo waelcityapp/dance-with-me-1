@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/navbar/Header';
 import { BottomNav } from './components/navbar/BottomNav';
@@ -26,9 +26,34 @@ import { DanceEvent } from './types';
 
 import { AdminEditEventPage } from './components/admin/AdminEditEventPage';
 import { VerificationView } from './components/verification/VerificationView';
+import { AttendeeCheckinHandler } from './components/verification/AttendeeCheckinHandler';
 
 const AppContent: React.FC = () => {
-  const { activeTab, setActiveTab, user, openGuestAlert, guestAlertState, closeGuestAlert, isSupportModalOpen, closeSupportModal, setEditingEvent, editingEvent } = useApp();
+  const { lang, activeTab, setActiveTab, user, openGuestAlert, guestAlertState, closeGuestAlert, isSupportModalOpen, closeSupportModal, setEditingEvent, editingEvent } = useApp();
+
+  // Handle hardware / browser back button on mobile
+  const lastBackPressRef = useRef<number>(0);
+
+  useEffect(() => {
+    // Check if initial URL contains verification code parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('verify')) {
+      setActiveTab('verification');
+    }
+  }, [setActiveTab]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (activeTab !== 'explore') {
+        setActiveTab('explore');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [activeTab, setActiveTab]);
 
   // Modal States
   const [selectedMapEvent, setSelectedMapEvent] = useState<DanceEvent | null>(null);
@@ -59,7 +84,7 @@ const AppContent: React.FC = () => {
 
       {/* Main Body Content */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 pt-5 pb-24">
-        {new URLSearchParams(window.location.search).get('verify') ? (
+        {activeTab === 'verification' ? (
           <VerificationView />
         ) : (
           <>
@@ -159,6 +184,7 @@ const AppContent: React.FC = () => {
       <BookingModal />
       <CustomAlertModal />
       <CustomConfirmModal />
+      <AttendeeCheckinHandler />
     </div>
   );
 };

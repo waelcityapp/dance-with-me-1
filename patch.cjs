@@ -1,10 +1,11 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/admin/AdminPanel.tsx', 'utf8');
+let code = fs.readFileSync('src/context/AppContext.tsx', 'utf8');
 code = code.replace(
-  "  const [savingBranding, setSavingBranding] = useState(false);",
-  `  const [savingBranding, setSavingBranding] = useState(false);
-  const [localPricingConfig, setLocalPricingConfig] = useState(pricingConfig);
-  const [savingPricing, setSavingPricing] = useState(false);
-  useEffect(() => { setLocalPricingConfig(pricingConfig); }, [pricingConfig]);`
+  "user.isAdmin || isOrganizer",
+  "user.isAdmin || isOrganizer || isAdminUnlocked"
 );
-fs.writeFileSync('src/components/admin/AdminPanel.tsx', code);
+code = code.replace(
+  "[user, userAdSubmissions?.length]);",
+  "[user, userAdSubmissions?.length, isAdminUnlocked]);"
+);
+fs.writeFileSync('src/context/AppContext.tsx', code);

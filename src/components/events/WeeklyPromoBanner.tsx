@@ -32,6 +32,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-video');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -362,9 +363,28 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           {lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
         </h2>
 
-        <p className="text-xs sm:text-sm text-neutral-300 mb-3.5 line-clamp-3 leading-normal">
-          {lang === 'ar' ? promoEvent.descriptionAr : promoEvent.descriptionEn}
-        </p>
+        <div className="mb-3.5">
+          <p className={`text-xs sm:text-sm text-neutral-300 leading-normal ${isDescExpanded ? '' : 'line-clamp-3'}`}>
+            {lang === 'ar' ? promoEvent.descriptionAr : promoEvent.descriptionEn}
+          </p>
+          {((lang === 'ar' ? promoEvent.descriptionAr : promoEvent.descriptionEn) || '').length > 150 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsDescExpanded(!isDescExpanded);
+              }}
+              className="mt-1.5 text-[11px] sm:text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/20 hover:border-amber-500/40"
+            >
+              <span>
+                {isDescExpanded 
+                  ? (lang === 'ar' ? 'عرض تفاصيل أقل ⬆️' : 'Show less details ⬆️') 
+                  : (lang === 'ar' ? 'مزيد من التفاصيل... ⬇️' : 'More details... ⬇️')
+                }
+              </span>
+            </button>
+          )}
+        </div>
 
         {/* Metadata Grid (Date, Location, Price) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3.5 rounded-2xl bg-neutral-900/40 p-3 sm:p-4 border border-neutral-800">

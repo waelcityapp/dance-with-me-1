@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, User, Phone, Users, CheckCircle, Copy, Check, Upload, 
-  Camera, Ticket, QrCode, AlertTriangle, Info, Calendar, DollarSign
+  Camera, Ticket, QrCode, AlertTriangle, Info, Calendar, DollarSign, Clock
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -593,23 +593,21 @@ export const BookingModal: React.FC = () => {
                   <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-zinc-900 border-l border-zinc-800"></div>
                 </div>
 
-                {/* Barcode/QR Mock Placeholder */}
-                <div className="p-5 flex flex-col items-center bg-zinc-900/20">
-                  <div className="w-32 h-32 bg-white p-1.5 rounded-xl border border-zinc-800">
-                    {/* Generates a live QR representing this specific booking reference code! */}
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=245-158-11&data=${encodeURIComponent(
-                        (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                          ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
-                          : window.location.origin) + '/?verify=' + bookingResult.id
-                      )}`}
-                      alt="Booking Access QR" 
-                      className="w-full h-full object-contain"
-                    />
+                {/* Booking Submitted Status Badge (QR code generated in user profile upon approval) */}
+                <div className="p-5 flex flex-col items-center justify-center bg-zinc-900/30 text-center space-y-3">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                    <Clock className="w-8 h-8 animate-pulse" />
                   </div>
-                  <p className="text-[10px] text-zinc-500 font-mono mt-2.5">
-                    {isArabic ? 'سوف يتفعل هذا الكود فور تأكيد الحجز' : 'QR code will activate once confirmed'}
-                  </p>
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-amber-400 block">
+                      {isArabic ? '⏳ تم استلام الطلب وبانتظار موافقة الإدارة' : '⏳ Booking Received - Pending Admin Review'}
+                    </span>
+                    <p className="text-[11px] text-zinc-400 max-w-xs mx-auto leading-relaxed">
+                      {isArabic 
+                        ? 'سيتم إصدار وتفعيل رمز الـ QR وكود الدخول الخاص بك في ملفك الشخصي فور مراجعة الإيصال والموافقة.' 
+                        : 'Your activation QR code and passcode will be issued in your profile as soon as the receipt is verified.'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
