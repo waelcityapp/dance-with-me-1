@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Crown, Sparkles } from 'lucide-react';
+import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Crown, Sparkles, UserCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -434,9 +434,24 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         </div>
 
-        <h3 className="text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-amber-400 transition-colors">
+        <h3 className="text-lg font-bold text-white mb-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
           {lang === 'ar' ? (event.titleAr || event.titleEn) : (event.titleEn || event.titleAr)}
         </h3>
+
+        {/* Organizer / Organizing Entity Badge below Event Title */}
+        {(() => {
+          const displayOrganizer = event.contact?.organizerName?.trim() || (event as any).organizerName?.trim() || (event as any).advertiserName?.trim() || '';
+          if (!displayOrganizer) return null;
+          return (
+            <div className="flex items-center gap-1.5 text-xs text-amber-300 font-medium mb-2.5 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-xl w-fit backdrop-blur-sm">
+              <UserCheck className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <span className="flex items-center gap-1">
+                <span className="text-neutral-400 text-[11px] font-normal">{lang === 'ar' ? 'المنظم / الجهة المنظمة:' : 'Organizer:'}</span>
+                <strong className="text-amber-200 font-bold">{displayOrganizer}</strong>
+              </span>
+            </div>
+          );
+        })()}
 
         <div className="mb-4">
           <p className={`text-xs sm:text-sm text-neutral-300 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-2'}`}>

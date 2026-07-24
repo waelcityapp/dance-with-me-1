@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Crown } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Crown, UserCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -362,6 +362,21 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         <h2 className="text-xl sm:text-2xl font-black text-white mb-1.5 leading-tight">
           {lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
         </h2>
+
+        {/* Organizer / Organizing Entity Badge below Event Title */}
+        {(() => {
+          const displayOrganizer = promoEvent.contact?.organizerName?.trim() || (promoEvent as any).organizerName?.trim() || (promoEvent as any).advertiserName?.trim() || '';
+          if (!displayOrganizer) return null;
+          return (
+            <div className="flex items-center gap-1.5 text-xs text-amber-300 font-medium mb-2.5 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-xl w-fit backdrop-blur-sm">
+              <UserCheck className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <span className="flex items-center gap-1">
+                <span className="text-neutral-400 text-[11px] font-normal">{lang === 'ar' ? 'المنظم / الجهة المنظمة:' : 'Organizer:'}</span>
+                <strong className="text-amber-200 font-bold">{displayOrganizer}</strong>
+              </span>
+            </div>
+          );
+        })()}
 
         <div className="mb-3.5">
           <p className={`text-xs sm:text-sm text-neutral-300 leading-normal ${isDescExpanded ? '' : 'line-clamp-3'}`}>

@@ -74,10 +74,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     // Search query check
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchTitle = ev.titleAr.toLowerCase().includes(q) || ev.titleEn.toLowerCase().includes(q);
-      const matchDesc = ev.descriptionAr.toLowerCase().includes(q) || ev.descriptionEn.toLowerCase().includes(q);
-      const matchLoc = ev.location.nameAr.toLowerCase().includes(q) || ev.location.nameEn.toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc && !matchLoc) return false;
+      const matchTitle = (ev.titleAr || '').toLowerCase().includes(q) || (ev.titleEn || '').toLowerCase().includes(q);
+      const matchDesc = (ev.descriptionAr || '').toLowerCase().includes(q) || (ev.descriptionEn || '').toLowerCase().includes(q);
+      const matchLoc = (ev.location?.nameAr || '').toLowerCase().includes(q) || (ev.location?.nameEn || '').toLowerCase().includes(q);
+      const matchOrganizer = (ev.contact?.organizerName || '').toLowerCase().includes(q);
+      if (!matchTitle && !matchDesc && !matchLoc && !matchOrganizer) return false;
     }
     // Style filter check
     if (selectedStyleFilter !== 'all' && !ev.styles.includes(selectedStyleFilter as DanceStyle)) {
@@ -129,7 +130,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder={lang === 'ar' ? 'ابحث عن حفلة، كورس، موقع، أو اسم مدرب...' : 'Search for party, course, venue, or instructor...'}
+              placeholder={lang === 'ar' ? 'ابحث عن حفلة، كورس، موقع، منظم، أو اسم مدرب...' : 'Search for party, course, venue, organizer, or instructor...'}
               className="w-full rounded-2xl border border-neutral-800 bg-neutral-950 py-3 pl-11 pr-4 text-xs sm:text-sm text-white placeholder-neutral-600 outline-none focus:border-amber-500 transition-all shadow-inner"
             />
             {searchQuery && (

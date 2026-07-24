@@ -129,6 +129,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   });
   const [phone, setPhone] = useState(editingEvent ? editingEvent.contact.phone : (user?.phone || '+201011223344'));
   const [whatsapp, setWhatsapp] = useState(editingEvent ? editingEvent.contact.whatsapp : (user?.phone ? user.phone.replace(/[^0-9]/g, '') : '201011223344'));
+  const [organizerName, setOrganizerName] = useState(
+    editingEvent && editingEvent.contact?.organizerName 
+      ? editingEvent.contact.organizerName 
+      : (user?.name || '')
+  );
   const [locationNameAr, setLocationNameAr] = useState(editingEvent ? editingEvent.location.nameAr : 'أستوديو الرقص - الزمالك');
   const [locationNameEn, setLocationNameEn] = useState(editingEvent ? editingEvent.location.nameEn : 'Dance Studio - Zamalek');
   const [addressAr, setAddressAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressAr || 'القاهرة، مصر') : 'القاهرة، مصر');
@@ -495,6 +500,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         },
         contact: {
           ...editingEvent.contact,
+          organizerName: organizerName.trim() || editingEvent.contact?.organizerName || user?.name || 'إدارة DWM للرقص',
           phone,
           whatsapp,
         },
@@ -556,7 +562,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           contact: {
             phone,
             whatsapp,
-            organizerName: user?.name || 'إدارة DWM للرقص'
+            organizerName: organizerName.trim() || user?.name || 'إدارة DWM للرقص'
           },
           isFeatured: false,
           isWeeklyPromo: false,
@@ -637,7 +643,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           contact: {
             phone,
             whatsapp,
-            organizerName: user?.name || 'إدارة DWM للرقص'
+            organizerName: organizerName.trim() || user?.name || 'إدارة DWM للرقص'
           },
           isFeatured: false,
           isWeeklyPromo: false,
@@ -940,7 +946,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       contact: {
                         phone: phone.trim() || '+201011223344',
                         whatsapp: whatsapp.trim() || '201011223344',
-                        organizerName: user?.name || 'الإدارة'
+                        organizerName: organizerName.trim() || user?.name || 'الإدارة'
                       },
                       likesCount: 15,
                       isFeatured: false,
@@ -1692,32 +1698,48 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="pt-2 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{lang === 'ar' ? 'رقم الهاتف للاستفسار' : 'Contact Phone'}</span>
+                  <UserCheck className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{lang === 'ar' ? 'اسم المنظم أو الجهة المنظمة' : 'Organizer / Academy Name'}</span>
                 </label>
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  dir="ltr"
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500 text-left"
+                  type="text"
+                  value={organizerName}
+                  onChange={e => setOrganizerName(e.target.value)}
+                  placeholder={lang === 'ar' ? 'أدخل اسم المنظم أو الأكاديمية...' : 'e.g. DWM Dance Academy'}
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 text-green-400" />
-                  <span>{lang === 'ar' ? 'رقم الواتساب للحجز المباشر' : 'WhatsApp Number'}</span>
-                </label>
-                <input
-                  type="tel"
-                  value={whatsapp}
-                  onChange={e => setWhatsapp(e.target.value)}
-                  dir="ltr"
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500 text-left"
-                />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? 'رقم الهاتف للاستفسار' : 'Contact Phone'}</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    dir="ltr"
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500 text-left"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-green-400" />
+                    <span>{lang === 'ar' ? 'رقم الواتساب للحجز المباشر' : 'WhatsApp Number'}</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={whatsapp}
+                    onChange={e => setWhatsapp(e.target.value)}
+                    dir="ltr"
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500 text-left"
+                  />
+                </div>
               </div>
             </div>
           </div>

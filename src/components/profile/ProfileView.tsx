@@ -189,6 +189,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [editLocationEn, setEditLocationEn] = useState('');
   const [editContactPhone, setEditContactPhone] = useState('');
   const [editContactWhatsapp, setEditContactWhatsapp] = useState('');
+  const [editOrganizerName, setEditOrganizerName] = useState('');
   const [editMediaUrl, setEditMediaUrl] = useState('');
   const [editMediaType, setEditMediaType] = useState<'image' | 'video'>('image');
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
@@ -399,6 +400,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setEditLocationEn(sub.eventData?.location?.nameEn || '');
     setEditContactPhone(sub.eventData?.contact?.phone || sub.phone || '');
     setEditContactWhatsapp(sub.eventData?.contact?.whatsapp || sub.phone || '');
+    setEditOrganizerName(sub.eventData?.contact?.organizerName || sub.advertiserName || '');
     setEditMediaUrl(sub.eventData?.mediaUrl || sub.mediaUrl || '');
     setEditMediaType(sub.eventData?.mediaType || sub.mediaType || 'image');
   };
@@ -452,6 +454,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     try {
       const oldMediaUrl = sub.eventData?.mediaUrl || sub.mediaUrl;
       const mediaChanged = editMediaUrl && editMediaUrl !== oldMediaUrl;
+      const finalOrganizerName = editOrganizerName.trim() || sub.eventData?.contact?.organizerName || sub.advertiserName || '';
       
       const updated: AdSubmission = {
         ...sub,
@@ -475,6 +478,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           },
           contact: {
             ...sub.eventData.contact,
+            organizerName: finalOrganizerName,
             phone: editContactPhone || sub.eventData.contact?.phone,
             whatsapp: editContactWhatsapp || sub.eventData.contact?.whatsapp
           },
@@ -484,7 +488,45 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       };
 
       updateLocalAndState(updated);
-      await saveAdSubmissionToFirestore(updated); if (updated.status === "approved" && updated.eventData && updated.eventData.id) { await saveEventToFirestore(updated.eventData as DanceEvent); }
+      await saveAdSubmissionToFirestore(updated);
+
+      // Sync to 'events' collection and AppContext state
+      const matchingEv = events.find(e => 
+        (updated.eventData?.id && e.id === updated.eventData.id) || 
+        (updated.eventRef && e.eventRef === updated.eventRef) ||
+        (e.id === sub.id)
+      );
+
+      if (matchingEv) {
+        const updatedEv: DanceEvent = {
+          ...matchingEv,
+          titleAr: editTitleAr || matchingEv.titleAr,
+          titleEn: editTitleEn || matchingEv.titleEn,
+          descriptionAr: editDescAr || matchingEv.descriptionAr,
+          descriptionEn: editDescEn || matchingEv.descriptionEn,
+          priceAr: editPriceAr || matchingEv.priceAr,
+          priceEn: editPriceEn || matchingEv.priceEn,
+          eventDate: editEventDate ? new Date(editEventDate).toISOString() : matchingEv.eventDate,
+          location: {
+            ...matchingEv.location,
+            nameAr: editLocationAr || matchingEv.location?.nameAr,
+            nameEn: editLocationEn || matchingEv.location?.nameEn
+          },
+          contact: {
+            ...matchingEv.contact,
+            organizerName: finalOrganizerName,
+            phone: editContactPhone || matchingEv.contact?.phone,
+            whatsapp: editContactWhatsapp || matchingEv.contact?.whatsapp
+          },
+          mediaUrl: mediaChanged ? editMediaUrl : matchingEv.mediaUrl,
+          mediaType: editMediaType
+        };
+        updateEvent(updatedEv);
+        await saveEventToFirestore(updatedEv);
+      } else if (updated.status === "approved" && updated.eventData && updated.eventData.id) {
+        await saveEventToFirestore(updated.eventData as DanceEvent);
+        updateEvent(updated.eventData as DanceEvent);
+      }
       
       // Delete old media if changed and it was on Cloudinary
       if (mediaChanged && oldMediaUrl && oldMediaUrl.includes('cloudinary.com')) {
@@ -1156,29 +1198,44 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Contact */}
-                      <div className="grid grid-cols-2 gap-4">
+                      {/* Organizer & Contact */}
+                      <div className="space-y-3">
                         <div>
-                          <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'هاتف الاتصال' : 'Contact Phone'}</label>
+                          <label className="text-xs text-neutral-400 block mb-1">
+                            {lang === 'ar' ? 'المنظم / الجهة المنظمة' : 'Organizer / Organizing Entity'}
+                          </label>
                           <input
-                            type="tel"
-                            value={editContactPhone}
-                            onChange={e => setEditContactPhone(e.target.value)}
-                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
-                            dir="ltr"
-                            placeholder="971..."
+                            type="text"
+                            value={editOrganizerName}
+                            onChange={e => setEditOrganizerName(e.target.value)}
+                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                            placeholder={lang === 'ar' ? 'اسم المنظم أو الأكاديمية...' : 'Organizer or academy name...'}
                           />
                         </div>
-                        <div>
-                          <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'رقم واتساب' : 'WhatsApp Number'}</label>
-                          <input
-                            type="tel"
-                            value={editContactWhatsapp}
-                            onChange={e => setEditContactWhatsapp(e.target.value)}
-                            className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
-                            dir="ltr"
-                            placeholder="971..."
-                          />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'هاتف الاتصال' : 'Contact Phone'}</label>
+                            <input
+                              type="tel"
+                              value={editContactPhone}
+                              onChange={e => setEditContactPhone(e.target.value)}
+                              className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
+                              dir="ltr"
+                              placeholder="971..."
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-neutral-400 block mb-1">{lang === 'ar' ? 'رقم واتساب' : 'WhatsApp Number'}</label>
+                            <input
+                              type="tel"
+                              value={editContactWhatsapp}
+                              onChange={e => setEditContactWhatsapp(e.target.value)}
+                              className="w-full rounded-xl bg-neutral-900 border border-white/10 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none text-left"
+                              dir="ltr"
+                              placeholder="971..."
+                            />
+                          </div>
                         </div>
                       </div>
                       

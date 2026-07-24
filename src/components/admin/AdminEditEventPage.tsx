@@ -8,7 +8,9 @@ import {
 import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
 import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
-import { saveEventToFirestore } from '../../lib/firebase';
+import { saveEventToFirestore, db } from '../../lib/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { AdSubmission } from '../../types';
 
 interface AdminEditEventPageProps {
   onComplete: () => void;
@@ -65,7 +67,9 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
   const [priceAr, setPriceAr] = useState(editingEvent?.priceAr || '');
   const [priceEn, setPriceEn] = useState(editingEvent?.priceEn || '');
   
-  const [organizerName, setOrganizerName] = useState(editingEvent?.contact?.organizerName || '');
+  const [organizerName, setOrganizerName] = useState(
+    editingEvent?.contact?.organizerName || (editingEvent as any)?.organizerName || ''
+  );
   const [phone, setPhone] = useState(editingEvent?.contact?.phone || '');
   const [whatsapp, setWhatsapp] = useState(editingEvent?.contact?.whatsapp || '');
   const [locationNameAr, setLocationNameAr] = useState(editingEvent?.location?.nameAr || '');
@@ -107,7 +111,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
     }
     setPriceAr(editingEvent.priceAr || '');
     setPriceEn(editingEvent.priceEn || '');
-    setOrganizerName(editingEvent.contact?.organizerName || '');
+    setOrganizerName(editingEvent.contact?.organizerName || (editingEvent as any)?.organizerName || '');
     setPhone(editingEvent.contact?.phone || '');
     setWhatsapp(editingEvent.contact?.whatsapp || '');
     setLocationNameAr(editingEvent.location?.nameAr || '');
@@ -226,7 +230,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           googleMapsUrl
         },
         contact: {
-          organizerName,
+          organizerName: organizerName.trim(),
           phone,
           whatsapp
         },
@@ -252,6 +256,54 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
       // Just update existing
       updateEvent(baseUpdatedData);
       await saveEventToFirestore(baseUpdatedData);
+
+      // Sync with ad_submissions in Firestore if matching doc exists
+      if (editingEvent.id) {
+        try {
+          const adDocRef = doc(db, 'ad_submissions', editingEvent.id);
+          const adSnap = await getDoc(adDocRef);
+          if (adSnap.exists()) {
+            await updateDoc(adDocRef, {
+              'eventData.contact.organizerName': organizerName.trim(),
+              'eventData.contact.phone': phone,
+              'eventData.contact.whatsapp': whatsapp,
+              'eventData.titleAr': titleAr,
+              'eventData.titleEn': titleEn,
+              'eventData.descriptionAr': descAr,
+              'eventData.descriptionEn': descEn,
+              'eventData.location.nameAr': locationNameAr,
+              'eventData.location.nameEn': locationNameEn,
+              'eventData.priceAr': priceAr,
+              'eventData.priceEn': priceEn,
+              'eventData.mediaUrl': mediaUrl,
+              'eventData.mediaType': mediaType,
+              eventData: baseUpdatedData
+            });
+          }
+        } catch (syncErr) {
+          console.warn("Could not sync ad_submissions doc:", syncErr);
+        }
+      }
+
+      // Sync with local storage ad submissions
+      try {
+        const localSubsRaw = localStorage.getItem('dwm_ad_submissions');
+        if (localSubsRaw) {
+          const localSubs: AdSubmission[] = JSON.parse(localSubsRaw);
+          const updatedSubs = localSubs.map(s => {
+            if (s.id === editingEvent.id || (s.eventData && s.eventData.id === editingEvent.id)) {
+              return {
+                ...s,
+                eventData: baseUpdatedData
+              };
+            }
+            return s;
+          });
+          localStorage.setItem('dwm_ad_submissions', JSON.stringify(updatedSubs));
+        }
+      } catch (err) {
+        console.warn("Could not sync local ad submissions:", err);
+      }
       
       // Delete old media from Cloudinary if the URL changed and it was a Cloudinary URL
       if (editingEvent.mediaUrl !== mediaUrl && editingEvent.mediaUrl.includes('cloudinary.com')) {
