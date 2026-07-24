@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { DanceCategory, DanceEvent, Language, NotificationItem, TabType, ThemeMode, UserProfile, SupportMessage, DanceStyle, EventBooking, AdSubmission } from '../types';
+import { DanceCategory, DanceEvent, Language, NotificationItem, TabType, ThemeMode, UserProfile, SupportMessage, DanceStyle, EventBooking, AdSubmission, AccountTier } from '../types';
 import { isEventExpired } from '../utils/dateUtils';
 import { DEFAULT_NEUTRAL_AVATAR } from '../utils/avatars';
 import confetti from 'canvas-confetti';
@@ -52,11 +52,11 @@ interface AppContextType {
   showExpiredArchive: boolean;
   setShowExpiredArchive: (show: boolean) => void;
   user: UserProfile | null;
-  loginUser: (name: string, email: string, avatar?: string, customId?: string, password?: string) => void | Promise<void>;
+  loginUser: (name: string, email: string, avatar?: string, customId?: string, password?: string, accountTier?: AccountTier) => void | Promise<void>;
   logoutUser: () => void;
   updateUserFavorites: (styles: any[]) => void;
   updateUserAvatar: (avatar: string) => void;
-  updateUserProfile: (name: string, phone: string, favoriteStyles: DanceStyle[]) => void;
+  updateUserProfile: (name: string, phone: string, favoriteStyles: DanceStyle[], accountTier?: AccountTier) => void;
   toggleLikeEvent: (eventId: string, eventElement?: HTMLElement) => void;
   clearAllLikedEvents: () => void;
   bookTicket: (eventId: string) => void;
@@ -676,11 +676,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // Actions
-  const loginUser = async (name: string, email: string, avatar?: string, customId?: string, password?: string) => {
+  const loginUser = async (name: string, email: string, avatar?: string, customId?: string, password?: string, accountTier?: AccountTier) => {
     const cleanEmail = email.trim().toLowerCase();
     const adminEmail = ((import.meta as any).env.VITE_ADMIN_EMAIL?.trim().toLowerCase()) || 'waelvts@gmail.com';
     const isUserAdmin = cleanEmail === adminEmail;
     const existing = await getUserByEmailFromFirestore(cleanEmail);
+    const chosenRequestedTier = accountTier && accountTier !== 'free' ? accountTier : undefined;
+
     if (existing) {
       if (existing.isSuspended) {
         const err = new Error(lang === 'ar' ? 'هذا الحساب معطل مؤقتاً من قبل الإدارة' : 'This account is temporarily suspended by the administration.');
@@ -691,7 +693,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...existing,
         name: name || existing.name || 'VIP Member',
         avatar: avatar || existing.avatar || DEFAULT_NEUTRAL_AVATAR,
-        isAdmin: isUserAdmin || existing.isAdmin ? true : false
+        isAdmin: isUserAdmin || existing.isAdmin ? true : false,
+        accountTier: isUserAdmin ? 'vip' : (existing.accountTier || 'free'),
+        requestedTier: chosenRequestedTier && (existing.accountTier === 'free' || !existing.accountTier) ? chosenRequestedTier : existing.requestedTier
       };
       if (password) {
         restored.password = password;
@@ -710,7 +714,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...parsed,
             name: name || parsed.name || 'VIP Member',
             avatar: avatar || parsed.avatar || DEFAULT_NEUTRAL_AVATAR,
-            isAdmin: isUserAdmin ? true : parsed.isAdmin
+            isAdmin: isUserAdmin ? true : parsed.isAdmin,
+            accountTier: isUserAdmin ? 'vip' : (parsed.accountTier || 'free'),
+            requestedTier: chosenRequestedTier && (parsed.accountTier === 'free' || !parsed.accountTier) ? chosenRequestedTier : parsed.requestedTier
           };
           if (password) {
             restored.password = password;
@@ -732,6 +738,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       likedEventIds: [],
       bookedEventIds: [],
       isAdmin: isUserAdmin,
+      accountTier: isUserAdmin ? 'vip' : 'free',
+      requestedTier: isUserAdmin ? undefined : chosenRequestedTier,
       createdAt: new Date().toISOString()
     };
     if (password) {
@@ -760,9 +768,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveUserToFirestore(updated);
   };
 
-  const updateUserProfile = (name: string, phone: string, favoriteStyles: DanceStyle[]) => {
+  const updateUserProfile = (name: string, phone: string, favoriteStyles: DanceStyle[], accountTier?: AccountTier) => {
     if (!user) return;
-    const updated = { ...user, name, phone, favoriteStyles };
+    let newTier = user.accountTier || 'free';
+    let newRequestedTier = user.requestedTier;
+
+    if (accountTier) {
+      if (user.isAdmin) {
+        newTier = accountTier;
+        newRequestedTier = undefined;
+      } else {
+        if (accountTier === 'free') {
+          newTier = 'free';
+          newRequestedTier = undefined;
+        } else if (accountTier !== user.accountTier) {
+          // If requesting paid tier, keep active tier as current tier (e.g. free) and record requestedTier
+          newRequestedTier = accountTier;
+        }
+      }
+    }
+
+    const updated: UserProfile = {
+      ...user,
+      name,
+      phone,
+      favoriteStyles,
+      accountTier: newTier,
+      requestedTier: newRequestedTier
+    };
     setUser(updated);
     saveUserToFirestore(updated);
   };

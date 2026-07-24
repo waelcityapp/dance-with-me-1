@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, Users, PlusCircle, Heart, Ticket, ShieldAlert, ShieldCheck, Sparkles, Clock, Trash2, LogOut, CheckCircle, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare, Camera, Loader2, Info } from 'lucide-react';
+import { User, Users, PlusCircle, Heart, Ticket, ShieldAlert, ShieldCheck, Sparkles, Clock, Trash2, LogOut, CheckCircle, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare, Camera, Loader2, Info, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventCard } from '../events/EventCard';
 import { ActualAttendanceModal } from '../modals/ActualAttendanceModal';
 import { StaffManagementModal } from '../modals/StaffManagementModal';
-import { DanceEvent, AdSubmission, EventBooking, DanceStyle, ALL_DANCE_STYLES } from '../../types';
+import { DanceEvent, AdSubmission, EventBooking, DanceStyle, ALL_DANCE_STYLES, AccountTier } from '../../types';
 import { subscribeToAdSubmissions, saveAdSubmissionToFirestore, saveNotificationToFirestore, deleteAdSubmissionFromFirestore, deleteSupportMessageFromFirestore, saveEventToFirestore } from '../../lib/firebase';
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
@@ -77,7 +77,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     cancelBooking,
     deleteAllBookings,
     clearAllLikedEvents,
-    triggerConfirm
+    triggerConfirm,
+    updateEvent
   } = useApp();
 
   const [adSubmissions, setAdSubmissions] = useState<AdSubmission[]>([]);
@@ -202,6 +203,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editStyles, setEditStyles] = useState<DanceStyle[]>([]);
+  const [editAccountTier, setEditAccountTier] = useState<AccountTier>('free');
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
@@ -254,6 +256,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setEditName(user.name || '');
       setEditPhone(user.phone || '');
       setEditStyles(user.favoriteStyles || []);
+      setEditAccountTier(user.accountTier || 'free');
       setIsEditingProfile(true);
     }
   };
@@ -621,9 +624,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <span className="rounded-lg bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/20 flex items-center gap-1">
                   {lang === 'ar' ? 'مدير المنصة (Admin)' : 'PLATFORM ADMIN'}
                 </span>
+              ) : user.accountTier === 'vip' ? (
+                <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-amber-500/20 shadow-sm flex items-center gap-1">
+                  <span>👑</span>
+                  <span>{lang === 'ar' ? 'عضوية VIP' : 'VIP MEMBER'}</span>
+                </span>
+              ) : user.accountTier === 'featured' ? (
+                <span className="rounded-lg bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-300 border border-sky-500/20 shadow-sm flex items-center gap-1">
+                  <span>🌟</span>
+                  <span>{lang === 'ar' ? 'حساب مميز' : 'FEATURED MEMBER'}</span>
+                </span>
               ) : (
-                <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-amber-500/20">
-                  {lang === 'ar' ? 'عضوية VIP' : 'VIP MEMBER'}
+                <span className="rounded-lg bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-400 border border-emerald-500/20 shadow-sm flex items-center gap-1">
+                  <span>🟢</span>
+                  <span>{lang === 'ar' ? 'حساب مجاني' : 'FREE MEMBER'}</span>
+                </span>
+              )}
+
+              {user.requestedTier && user.requestedTier !== user.accountTier && (
+                <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-amber-500/30 flex items-center gap-1.5 animate-pulse">
+                  <span>⏳</span>
+                  <span>
+                    {lang === 'ar' 
+                      ? `طلب ترقية (${user.requestedTier === 'vip' ? 'حساب VIP' : 'حساب مميز'}) قيد التأكيد والدفع`
+                      : `Upgrade Request (${user.requestedTier.toUpperCase()}) Pending Payment & Admin Approval`}
+                  </span>
                 </span>
               )}
             </div>
@@ -2282,13 +2307,72 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     })}
                   </div>
                 </div>
+
+                {/* Account Tier Selection */}
+                <div>
+                  <label className="text-xs font-bold text-neutral-300 block mb-2">
+                    {lang === 'ar' ? 'نوع باقة الحساب:' : 'Account Tier:'}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Free */}
+                    <button
+                      type="button"
+                      onClick={() => setEditAccountTier('free')}
+                      className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                        editAccountTier === 'free'
+                          ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400'
+                          : 'border-white/5 bg-neutral-950 text-neutral-400 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-xs font-bold mb-0.5 flex items-center justify-center gap-1">
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                        {lang === 'ar' ? 'مجاني' : 'Free'}
+                      </div>
+                      <div className="text-[10px] text-neutral-400">{lang === 'ar' ? 'حساب عادي' : 'Standard'}</div>
+                    </button>
+
+                    {/* Featured */}
+                    <button
+                      type="button"
+                      onClick={() => setEditAccountTier('featured')}
+                      className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                        editAccountTier === 'featured'
+                          ? 'border-sky-400 bg-sky-500/15 text-sky-300 ring-1 ring-sky-400'
+                          : 'border-white/5 bg-neutral-950 text-neutral-400 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-xs font-bold mb-0.5 flex items-center justify-center gap-1">
+                        <Sparkles className="h-3.5 w-3.5 text-sky-400" />
+                        {lang === 'ar' ? 'مميز' : 'Featured'}
+                      </div>
+                      <div className="text-[10px] text-neutral-400">{lang === 'ar' ? 'حساب مميز' : 'Featured'}</div>
+                    </button>
+
+                    {/* VIP */}
+                    <button
+                      type="button"
+                      onClick={() => setEditAccountTier('vip')}
+                      className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                        editAccountTier === 'vip'
+                          ? 'border-amber-400 bg-amber-500/15 text-amber-300 gold-glow ring-1 ring-amber-400'
+                          : 'border-white/5 bg-neutral-950 text-neutral-400 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-xs font-bold mb-0.5 flex items-center justify-center gap-1">
+                        <Crown className="h-3.5 w-3.5 text-amber-400" />
+                        {lang === 'ar' ? 'VIP' : 'VIP'}
+                      </div>
+                      <div className="text-[10px] text-neutral-300">{lang === 'ar' ? 'عضوية فاخرة' : 'Luxury VIP'}</div>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Footer Actions */}
               <div className="flex items-center gap-3 pt-4 mt-6 border-t border-white/5">
                 <button
                   onClick={() => {
-                    updateUserProfile(editName.trim(), editPhone.trim(), editStyles);
+                    updateUserProfile(editName.trim(), editPhone.trim(), editStyles, editAccountTier);
                     setIsEditingProfile(false);
                   }}
                   className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-sm font-bold text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-xl gold-glow transition-all"

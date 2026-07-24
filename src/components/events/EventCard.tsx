@@ -595,15 +595,24 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               </motion.button>
             )}
 
-            {/* Book Now */}
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => bookTicket(event.id)}
-              className="flex h-10 items-center justify-center rounded-xl px-6 sm:px-8 min-w-[120px] sm:min-w-[140px] text-xs font-bold transition-all bg-amber-500 text-neutral-950 hover:bg-amber-400 shadow-lg"
-            >
-              <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
-            </motion.button>
+            {/* Book Now & Price/Promo Subtext */}
+            {event.showBookingButton !== false && (
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => bookTicket(event.id)}
+                  className="flex h-10 items-center justify-center rounded-xl px-6 sm:px-8 min-w-[120px] sm:min-w-[140px] text-xs font-bold transition-all bg-amber-500 text-neutral-950 hover:bg-amber-400 shadow-lg cursor-pointer"
+                >
+                  <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
+                </motion.button>
+                {(event.bookingSubtextAr || event.bookingSubtextEn) && (
+                  <span className="text-[10px] font-extrabold text-amber-400 text-center max-w-[150px] truncate" title={lang === 'ar' ? (event.bookingSubtextAr || event.bookingSubtextEn) : (event.bookingSubtextEn || event.bookingSubtextAr)}>
+                    {lang === 'ar' ? (event.bookingSubtextAr || event.bookingSubtextEn) : (event.bookingSubtextEn || event.bookingSubtextAr)}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

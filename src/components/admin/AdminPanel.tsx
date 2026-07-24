@@ -53,7 +53,7 @@ import {
 , Maximize2, Minimize2, Languages, Loader2 } from 'lucide-react';
 import { QrCode, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle } from '../../types';
+import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle, AccountTier } from '../../types';
 import { EventCard } from '../events/EventCard';
 import { 
   subscribeToAdSubmissions, 
@@ -65,6 +65,7 @@ import {
   subscribeToAllUsers,
   deleteUserFromFirestore,
   toggleUserSuspensionInFirestore,
+  updateUserTierInFirestore,
   getAdminSecretCodes,
   updateAdminSecretCode,
   subscribeToSecurityViolations,
@@ -308,6 +309,9 @@ export const AdminPanel: React.FC = () => {
   }, [events, hasAutoSetPosition]);
   const [adminIsWeeklyPromo, setAdminIsWeeklyPromo] = useState(false);
   const [adminIsFeatured, setAdminIsFeatured] = useState(true);
+  const [adminShowBookingButton, setAdminShowBookingButton] = useState(true);
+  const [adminBookingSubtextAr, setAdminBookingSubtextAr] = useState('');
+  const [adminBookingSubtextEn, setAdminBookingSubtextEn] = useState('');
   const [adminEventsFilter, setAdminEventsFilter] = useState<'all' | 'empty' | 'paused' | 'active' | 'available'>('all');
 
   // Auto-save draft functionality
@@ -340,6 +344,9 @@ export const AdminPanel: React.FC = () => {
         if (draft.adminPosition) setAdminPosition(draft.adminPosition);
         if (typeof draft.adminIsFeatured !== 'undefined') setAdminIsFeatured(draft.adminIsFeatured);
         if (typeof draft.adminIsWeeklyPromo !== 'undefined') setAdminIsWeeklyPromo(draft.adminIsWeeklyPromo);
+        if (typeof draft.adminShowBookingButton !== 'undefined') setAdminShowBookingButton(draft.adminShowBookingButton);
+        if (draft.adminBookingSubtextAr) setAdminBookingSubtextAr(draft.adminBookingSubtextAr);
+        if (draft.adminBookingSubtextEn) setAdminBookingSubtextEn(draft.adminBookingSubtextEn);
       }
     } catch (e) { console.error('Error loading draft', e); }
   }, []);
@@ -349,14 +356,14 @@ export const AdminPanel: React.FC = () => {
       adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
       adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
       adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGoogleMapsUrl,
-      adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo
+      adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminBookingSubtextAr, adminBookingSubtextEn
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [
     adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
     adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
     adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGoogleMapsUrl,
-    adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo
+    adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminBookingSubtextAr, adminBookingSubtextEn
   ]);
 
   
@@ -721,7 +728,10 @@ export const AdminPanel: React.FC = () => {
         likesCount: 15,
         isFeatured: !!adminIsFeatured,
         isWeeklyPromo: !!adminIsWeeklyPromo,
-        position: adminPosition ? Number(adminPosition) : 999999
+        position: adminPosition ? Number(adminPosition) : 999999,
+        showBookingButton: adminShowBookingButton,
+        bookingSubtextAr: adminBookingSubtextAr.trim(),
+        bookingSubtextEn: adminBookingSubtextEn.trim()
       };
       
       // Save to Firestore and verify success
@@ -1970,6 +1980,39 @@ export const AdminPanel: React.FC = () => {
               </div>
             </motion.div>
 
+            {/* Card 2: Bookings Management (Ticket reservations) */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              onClick={() => {
+                setAdminSection('bookings');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+            >
+              <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <FileText className="h-6 w-6 stroke-[2]" />
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black font-mono">
+                    {bookings.filter(b => b.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                  {lang === 'ar' ? '🎟️ إدارة وحجوزات التذاكر' : '🎟️ Ticket Bookings Panel'}
+                </h3>
+                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'التحقق من تحويلات فودافون كاش ومطابقة الإيصالات، وتأكيد حجز التذاكر وإصدار الباركود وكود الدخول للحضور.'
+                    : 'Match Instapay/Vodafone Cash receipts, activate attendee tickets, and issue check-in gate barcodes.'}
+                </p>
+              </div>
+              <div className="flex items-center justify-end text-xs font-black text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
+              </div>
+            </motion.div>
+
             {/* Card 2: Database */}
             <motion.div
               whileHover={{ scale: 1.02 }}
@@ -2228,38 +2271,6 @@ export const AdminPanel: React.FC = () => {
               </div>
             </motion.div>
 
-            {/* Card 9: Bookings Management (Ticket reservations) */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('bookings');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                    <FileText className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black font-mono">
-                    {bookings.filter(b => b.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
-                  {lang === 'ar' ? '🎟️ إدارة وحجوزات التذاكر' : '🎟️ Ticket Bookings Panel'}
-                </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'التحقق من تحويلات فودافون كاش ومطابقة الإيصالات، وتأكيد حجز التذاكر وإصدار الباركود وكود الدخول للحضور.'
-                    : 'Match Instapay/Vodafone Cash receipts, activate attendee tickets, and issue check-in gate barcodes.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
             {/* Card 10: Send Notifications */}
             <motion.div
               whileHover={{ scale: 1.02 }}
@@ -4329,6 +4340,7 @@ export const AdminPanel: React.FC = () => {
                     <tr className="bg-neutral-900/90 border-b border-neutral-800 text-neutral-400 font-bold text-xs uppercase tracking-wider">
                       <th className="px-6 py-4 text-right">{lang === 'ar' ? 'المستخدم' : 'User'}</th>
                       <th className="px-6 py-4 text-right">{lang === 'ar' ? 'البريد الإلكتروني' : 'Email'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الباقة / العضوية' : 'Account Tier'}</th>
                       <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الرمز السري' : 'Password'}</th>
                       <th className="px-6 py-4 text-right">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Creation Date'}</th>
                       <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الحالة' : 'Status'}</th>
@@ -4372,6 +4384,64 @@ export const AdminPanel: React.FC = () => {
                           {/* Email Column */}
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-300 select-all">
                             {u.email}
+                          </td>
+
+                          {/* Account Tier Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-xs font-bold">
+                            <div className="flex flex-col gap-1.5 items-start">
+                              <div className="flex items-center gap-1">
+                                {u.accountTier === 'vip' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                    <Crown className="h-3 w-3 text-amber-400" />
+                                    {lang === 'ar' ? 'حساب VIP' : 'VIP Tier'}
+                                  </span>
+                                ) : u.accountTier === 'featured' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                                    <Sparkles className="h-3 w-3 text-sky-400" />
+                                    {lang === 'ar' ? 'حساب مميز' : 'Featured Tier'}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                    <ShieldCheck className="h-3 w-3 text-emerald-400" />
+                                    {lang === 'ar' ? 'حساب مجاني' : 'Free Tier'}
+                                  </span>
+                                )}
+                              </div>
+
+                              {u.requestedTier && u.requestedTier !== u.accountTier && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] animate-pulse">
+                                  <span>⏳ يطلب ترقية إلى:</span>
+                                  <strong className="underline font-black">{u.requestedTier === 'vip' ? 'VIP 👑' : 'مميز 🌟'}</strong>
+                                </span>
+                              )}
+
+                              {/* Admin Change Tier selector */}
+                              <select
+                                value={u.accountTier || 'free'}
+                                onChange={async (e) => {
+                                  const newTier = e.target.value as AccountTier;
+                                  const confirmMsg = lang === 'ar' 
+                                    ? `هل تريد تغيير باقة حساب (${u.name}) إلى (${newTier === 'vip' ? 'VIP 👑' : newTier === 'featured' ? 'مميز 🌟' : 'مجاني 🟢'})؟`
+                                    : `Do you want to change (${u.name})'s tier to (${newTier})?`;
+                                  
+                                  const confirmed = await triggerConfirm(confirmMsg);
+                                  if (confirmed) {
+                                    const ok = await updateUserTierInFirestore(u.id, newTier);
+                                    if (ok) {
+                                      setAllUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, accountTier: newTier, requestedTier: undefined } : usr));
+                                      alert(lang === 'ar' ? '✅ تم تحديث باقة الحساب وتفعيل الصلاحيات بنجاح!' : '✅ User tier updated successfully!');
+                                    } else {
+                                      alert(lang === 'ar' ? '❌ حدث خطأ أثناء تحديث الباقة' : '❌ Failed to update user tier');
+                                    }
+                                  }
+                                }}
+                                className="bg-neutral-950 text-neutral-200 border border-neutral-700 text-[11px] rounded-lg px-2 py-1 outline-none focus:border-purple-500 cursor-pointer mt-0.5 font-sans"
+                              >
+                                <option value="free">{lang === 'ar' ? 'تحويل إلى: مجاني 🟢' : 'Set to: Free 🟢'}</option>
+                                <option value="featured">{lang === 'ar' ? 'تفعيل: مميز 🌟 (مدفوع)' : 'Activate: Featured 🌟'}</option>
+                                <option value="vip">{lang === 'ar' ? 'تفعيل: VIP 👑 (مدفوع)' : 'Activate: VIP 👑'}</option>
+                              </select>
+                            </div>
                           </td>
 
                           {/* Password Column */}
@@ -5869,6 +5939,87 @@ export const AdminPanel: React.FC = () => {
                       />
                     </div>
                   </div>
+
+                  {/* Booking Button & Price Subtext ON / OFF Toggle */}
+                  <div className="pt-3 border-t border-neutral-800">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
+                      <div>
+                        <h5 className="text-xs font-black text-white flex items-center gap-2">
+                          <span>🎟️ {lang === 'ar' ? 'إظهار زر "احجز الآن" والسعر/العروض المصاحبة' : 'Show "Book Now" Button & Price/Promo Info'}</span>
+                        </h5>
+                        <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                          {lang === 'ar'
+                            ? 'عند اختيار (أون) يظهر زر احجز الآن والسعر/العرض المصاحب له بالصفحة الرئيسية. عند (أوف) يتم إخفاء زر احجز الآن وتفاصيل السعر تماماً من الإعلان.'
+                            : 'Toggle whether the "Book Now" button and accompanying price/discount text appear on the main feed.'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setAdminShowBookingButton(true)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            adminShowBookingButton
+                              ? 'bg-emerald-500 text-neutral-950 shadow-lg shadow-emerald-500/20 font-extrabold'
+                              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                          <span>ON ({lang === 'ar' ? 'مفعّل' : 'Show'})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAdminShowBookingButton(false)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            !adminShowBookingButton
+                              ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 font-extrabold'
+                              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                          <span>OFF ({lang === 'ar' ? 'معطّل' : 'Hide'})</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Custom Subtext Input Field below the button */}
+                    {adminShowBookingButton && (
+                      <div className="mt-3 pt-3 border-t border-neutral-800/80 space-y-3 animate-fadeIn">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-extrabold text-amber-400 flex items-center gap-1.5">
+                            <span>✏️ {lang === 'ar' ? 'النص المصاحب أسفل زر احجز الآن (بالعربية):' : 'Booking Subtext below button (Arabic):'}</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={adminBookingSubtextAr}
+                            onChange={e => setAdminBookingSubtextAr(e.target.value)}
+                            placeholder={lang === 'ar' ? 'مثال: 500 بدل 700 أو احجز واحصل على 10% خصم' : 'e.g. 500 بدل 700'}
+                            className="w-full bg-neutral-900 border border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold transition-all"
+                          />
+                          <p className="text-[11px] text-neutral-500">
+                            {lang === 'ar'
+                              ? 'إذا تركته فارغاً، سيتم عرض السعر الإفتراضي المحدد بأعلى (مثل 250 ج.م).'
+                              : 'If left empty, the default price specified above will be displayed.'}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-extrabold text-amber-400/90 flex items-center gap-1.5">
+                            <span>✏️ {lang === 'ar' ? 'النص المصاحب أسفل زر احجز الآن (بالإنجليزية):' : 'Booking Subtext below button (English):'}</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={adminBookingSubtextEn}
+                            onChange={e => setAdminBookingSubtextEn(e.target.value)}
+                            placeholder="e.g. 500 instead of 700 or Book & Get 10% OFF"
+                            className="w-full bg-neutral-900 border border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold transition-all text-left"
+                            dir="ltr"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Section 4: Location details */}
@@ -6262,6 +6413,7 @@ export const AdminPanel: React.FC = () => {
                             eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
                             priceAr: adminPriceAr.trim() || '250 ج.م',
                             priceEn: adminPriceEn.trim() || '250 EGP',
+                            showBookingButton: adminShowBookingButton,
                             location: {
                               nameAr: adminLocationNameAr.trim() || 'أستوديو الرقص - الزمالك',
                               nameEn: adminLocationNameEn.trim() || 'Dance Studio - Zamalek',

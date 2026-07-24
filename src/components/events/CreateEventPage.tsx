@@ -28,6 +28,7 @@ import {
   X,
   Maximize2,
   Compass,
+  UserCheck,
   Eye,
   FileText,
   Edit3,

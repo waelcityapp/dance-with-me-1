@@ -106,7 +106,12 @@ export interface DanceEvent {
   adType?: 'vip' | 'standard';
   eventRef?: number;
   staffSettings?: SecurityStaffSettings;
+  showBookingButton?: boolean;
+  bookingSubtextAr?: string;
+  bookingSubtextEn?: string;
 }
+
+export type AccountTier = 'free' | 'featured' | 'vip';
 
 export interface UserProfile {
   id: string;
@@ -121,6 +126,8 @@ export interface UserProfile {
   createdAt: string;
   password?: string;
   isSuspended?: boolean;
+  accountTier?: AccountTier;
+  requestedTier?: AccountTier;
 }
 
 export interface NotificationItem {

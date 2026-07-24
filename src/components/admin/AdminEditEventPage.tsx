@@ -82,6 +82,9 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
   const [adNumber, setAdNumber] = useState<string>(editingEvent?.adNumber || '');
   const [adType, setAdType] = useState<'vip' | 'standard'>(editingEvent?.adType || 'standard');
   const [isFeatured, setIsFeatured] = useState<boolean>(editingEvent?.isFeatured || false);
+  const [showBookingButton, setShowBookingButton] = useState<boolean>(editingEvent?.showBookingButton !== false);
+  const [bookingSubtextAr, setBookingSubtextAr] = useState<string>(editingEvent?.bookingSubtextAr || '');
+  const [bookingSubtextEn, setBookingSubtextEn] = useState<string>(editingEvent?.bookingSubtextEn || '');
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -124,6 +127,9 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
     setAdNumber(editingEvent.adNumber || '');
     setAdType(editingEvent.adType || 'standard');
     setIsFeatured(editingEvent.isFeatured || false);
+    setShowBookingButton(editingEvent.showBookingButton !== false);
+    setBookingSubtextAr(editingEvent.bookingSubtextAr || '');
+    setBookingSubtextEn(editingEvent.bookingSubtextEn || '');
   }, [editingEvent, onCancel]);
 
   const handleStyleToggle = (style: DanceStyle) => {
@@ -237,7 +243,10 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         position: newPos,
         adNumber,
         adType,
-        isFeatured
+        isFeatured,
+        showBookingButton,
+        bookingSubtextAr: bookingSubtextAr.trim(),
+        bookingSubtextEn: bookingSubtextEn.trim()
       };
 
       // If position has changed, check if we need to swap with an existing event (or empty placeholder) at the new position
@@ -556,6 +565,87 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 placeholder="e.g. 250 AED"
               />
             </div>
+          </div>
+
+          {/* Booking Button & Subtext Toggle (ON / OFF) */}
+          <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h5 className="text-sm font-extrabold text-white flex items-center gap-2">
+                  <span>🎟️ {lang === 'ar' ? 'إظهار زر "احجز الآن" والسعر/العروض المصاحبة' : 'Show "Book Now" Button & Price/Promo Info'}</span>
+                </h5>
+                <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'عند اختيار (أون) يظهر زر احجز الآن والنص/السعر المصاحب له بالصفحة الرئيسية. عند (أوف) يتم إخفاء زر احجز الآن والتفاصيل تماماً من الإعلان.'
+                    : 'Toggle whether the "Book Now" button and accompanying price/discount text appear on the main feed.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowBookingButton(true)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    showBookingButton
+                      ? 'bg-emerald-500 text-neutral-950 shadow-lg shadow-emerald-500/20 font-extrabold'
+                      : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>ON ({lang === 'ar' ? 'مفعّل' : 'Show'})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowBookingButton(false)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    !showBookingButton
+                      ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 font-extrabold'
+                      : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                  <span>OFF ({lang === 'ar' ? 'معطّل' : 'Hide'})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Subtext Input Field below the button */}
+            {showBookingButton && (
+              <div className="pt-3 border-t border-neutral-800/80 space-y-3 animate-fadeIn">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-amber-400 flex items-center gap-1.5">
+                    <span>✏️ {lang === 'ar' ? 'النص المصاحب أسفل زر احجز الآن (بالعربية):' : 'Booking Subtext below button (Arabic):'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={bookingSubtextAr}
+                    onChange={e => setBookingSubtextAr(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: 500 بدل 700 أو احجز واحصل على 10% خصم' : 'e.g. 500 بدل 700'}
+                    className="w-full bg-neutral-900 border border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold transition-all"
+                  />
+                  <p className="text-[11px] text-neutral-500">
+                    {lang === 'ar'
+                      ? 'إذا تركته فارغاً، سيتم عرض السعر الإفتراضي المحدد بأعلى (مثل 250 ج.م).'
+                      : 'If left empty, the default price specified above will be displayed.'}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-amber-400/90 flex items-center gap-1.5">
+                    <span>✏️ {lang === 'ar' ? 'النص المصاحب أسفل زر احجز الآن (بالإنجليزية):' : 'Booking Subtext below button (English):'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={bookingSubtextEn}
+                    onChange={e => setBookingSubtextEn(e.target.value)}
+                    placeholder="e.g. 500 instead of 700 or Book & Get 10% OFF"
+                    className="w-full bg-neutral-900 border border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold transition-all text-left"
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Styles */}

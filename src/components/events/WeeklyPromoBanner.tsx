@@ -510,14 +510,16 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           </motion.button>
 
           {/* Book Now Button */}
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => bookTicket(promoEvent.id)}
-            className="flex h-10 flex-1 items-center justify-center gap-1 rounded-xl px-3 sm:px-4 text-xs font-bold transition-colors shrink-0 bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg"
-          >
-            <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'احجز' : 'Book'}</span>
-          </motion.button>
+          {promoEvent.showBookingButton !== false && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => bookTicket(promoEvent.id)}
+              className="flex h-10 flex-1 items-center justify-center gap-1 rounded-xl px-3 sm:px-4 text-xs font-bold transition-colors shrink-0 bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg cursor-pointer"
+            >
+              <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'احجز' : 'Book'}</span>
+            </motion.button>
+          )}
         </div>
       </div>
 

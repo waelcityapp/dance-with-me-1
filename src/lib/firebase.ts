@@ -25,7 +25,7 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { DanceEvent, UserProfile, NotificationItem, AdSubmission, SupportMessage, EventBooking } from '../types';
+import { DanceEvent, UserProfile, NotificationItem, AdSubmission, SupportMessage, EventBooking, AccountTier } from '../types';
 
 // Construct dynamic firebase configuration preferring env variables, falling back to local config json
 export const resolvedFirebaseConfig = {
@@ -608,6 +608,20 @@ export async function toggleUserSuspensionInFirestore(userId: string, isSuspende
     return true;
   } catch (error) {
     console.error('Error toggling user suspension in Firestore:', error);
+    return false;
+  }
+}
+
+/**
+ * Admin action to update a user's account tier (and clear requestedTier)
+ */
+export async function updateUserTierInFirestore(userId: string, accountTier: AccountTier): Promise<boolean> {
+  try {
+    const docRef = doc(db, COLLECTIONS.USERS, userId);
+    await setDoc(docRef, { accountTier, requestedTier: null }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Error updating user tier in Firestore:', error);
     return false;
   }
 }
