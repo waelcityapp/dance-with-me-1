@@ -68,6 +68,7 @@ export interface TicketStaffMember {
   id: string;
   name: string;
   pin: string; // 4 digits
+  gateNumber?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -210,6 +211,7 @@ export interface EventBooking {
   attendedAt?: string;
   attendedByStaffName?: string;
   attendedByStaffPin?: string;
+  attendedByGateNumber?: string;
   cancelledAt?: string;
 }
 

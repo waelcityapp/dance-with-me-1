@@ -27,16 +27,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
   // Initial staff settings
   const initialSettings: SecurityStaffSettings = currentEvent?.staffSettings || currentSub?.staffSettings || {
-    mode: 'anyone',
+    mode: 'restricted',
     staffList: []
   };
 
-  const [mode, setMode] = useState<'anyone' | 'restricted'>(initialSettings.mode || 'anyone');
+  const [mode, setMode] = useState<'restricted'>('restricted');
   const [staffList, setStaffList] = useState<TicketStaffMember[]>(initialSettings.staffList || []);
 
   // Form states for new staff
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffPin, setNewStaffPin] = useState('');
+  const [newStaffGateNumber, setNewStaffGateNumber] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
@@ -51,6 +52,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
     const name = newStaffName.trim();
     const pin = newStaffPin.trim();
+    const gateNumber = newStaffGateNumber.trim();
 
     if (!name) {
       setErrorMsg(isArabic ? 'يرجى إدخال اسم موظف الأمن.' : 'Please enter staff name.');
@@ -77,6 +79,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       id: `staff_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name,
       pin,
+      gateNumber: gateNumber || undefined,
       isActive: true,
       createdAt: new Date().toISOString()
     };
@@ -84,6 +87,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     setStaffList(prev => [...prev, newMember]);
     setNewStaffName('');
     setNewStaffPin('');
+    setNewStaffGateNumber('');
   };
 
   const handleToggleStaffStatus = (id: string) => {
@@ -119,7 +123,12 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       }
 
       // 2. Update event document in 'events' collection
-      const targetEventId = currentEvent?.id || currentSub?.eventData?.id || currentSub?.id;
+      let actualEventId = currentEvent?.id;
+      if (!actualEventId && currentSub) {
+        const matchingEv = events.find(e => e.eventRef === currentSub.eventRef);
+        if (matchingEv) actualEventId = matchingEv.id;
+      }
+      const targetEventId = actualEventId || currentSub?.eventData?.id || currentSub?.id;
       if (targetEventId) {
         try {
           const evDocRef = doc(db, 'events', targetEventId);
@@ -208,81 +217,23 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           <Info className="w-4 h-4 shrink-0 mt-0.5" />
           <p className="leading-relaxed">
             {isArabic 
-              ? '💡 في الخطة المجانية الحالية، يمكنك تحديد ما إذا كان مسح التذاكر متاحاً للجميع أو تخصيص حتى 2 موظفين أمن برقم سري مكون من 4 أرقام.' 
-              : '💡 Free plan allows either unlimited open scanning or assigning up to 2 specific security staff members with 4-digit PINs.'}
+              ? '💡 في الخطة المجانية الحالية، يمكنك تعيين حتى 2 موظفين أمن برقم سري مكون من 4 أرقام لكل موظف لمسح التذاكر.' 
+              : '💡 Free plan allows assigning up to 2 specific security staff members with 4-digit PINs.'}
           </p>
         </div>
 
         <div className="flex-1 overflow-y-auto pr-1 space-y-5 custom-scrollbar">
-          {/* Radio Options for Scanning Mode */}
-          <div className="space-y-3">
-            <label className="text-xs font-extrabold text-white block">
-              {isArabic ? 'صلاحيات مسح التذاكر عند البوابة:' : 'Ticket Scanning Permission Mode:'}
-            </label>
-
-            {/* Mode 1: Anyone */}
-            <div 
-              onClick={() => setMode('anyone')}
-              className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-start gap-3 ${
-                mode === 'anyone' 
-                  ? 'bg-amber-500/10 border-amber-500 text-white' 
-                  : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-700'
-              }`}
-            >
-              <input 
-                type="radio" 
-                checked={mode === 'anyone'} 
-                onChange={() => setMode('anyone')}
-                className="mt-1 accent-amber-500 cursor-pointer" 
-              />
-              <div>
-                <span className="text-xs font-black block text-amber-300">
-                  {isArabic ? 'إتاحة مسح التذاكر لأي شخص / موظف' : 'Allow Anyone to Scan Tickets'}
-                </span>
-                <span className="text-[11px] text-neutral-400 block mt-0.5">
-                  {isArabic ? 'يمكن لأي شخص مسح التذكرة مع تسجيل اسمه عند الدخول.' : 'Anyone can scan tickets; staff inputs their name upon gate check-in.'}
-                </span>
-              </div>
+          {/* Security Staff Management */}
+          <div className="space-y-4 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                <UserCheck className="w-4 h-4 text-indigo-400" />
+                <span>{isArabic ? 'قائمة موظفي الأمن المعتمدين:' : 'Designated Security Staff List:'}</span>
+              </span>
+              <span className="text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                {staffList.length} / 2 {isArabic ? 'موظفين' : 'staff'}
+              </span>
             </div>
-
-            {/* Mode 2: Restricted Staff */}
-            <div 
-              onClick={() => setMode('restricted')}
-              className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-start gap-3 ${
-                mode === 'restricted' 
-                  ? 'bg-indigo-500/10 border-indigo-500 text-white' 
-                  : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-700'
-              }`}
-            >
-              <input 
-                type="radio" 
-                checked={mode === 'restricted'} 
-                onChange={() => setMode('restricted')}
-                className="mt-1 accent-indigo-500 cursor-pointer" 
-              />
-              <div>
-                <span className="text-xs font-black block text-indigo-300">
-                  {isArabic ? 'تحديد موظفين محددين لمسح التذاكر (حد أقصى 2)' : 'Restrict Scanning to Designated Staff (Max 2)'}
-                </span>
-                <span className="text-[11px] text-neutral-400 block mt-0.5">
-                  {isArabic ? 'يشترط أدخال الرقم السري (4 أرقام) للموظف لتأكيد الحضور.' : 'Requires staff member 4-digit PIN for instant real-time authorization.'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* If Restricted Mode is Selected */}
-          {mode === 'restricted' && (
-            <div className="space-y-4 pt-2 border-t border-neutral-800">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-indigo-400" />
-                  <span>{isArabic ? 'قائمة موظفي الأمن المعتمدين:' : 'Designated Staff List:'}</span>
-                </span>
-                <span className="text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                  {staffList.length} / 2 {isArabic ? 'موظفين' : 'staff'}
-                </span>
-              </div>
 
               {/* Staff Members List */}
               {staffList.length === 0 ? (
@@ -311,9 +262,18 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                             {staff.isActive ? (isArabic ? 'مفعل 🟢' : 'Active') : (isArabic ? 'موقوف مؤقتاً 🔴' : 'Paused')}
                           </span>
                         </div>
-                        <div className="text-[11px] text-neutral-400 flex items-center gap-1 font-mono dir-ltr">
-                          <Lock className="w-3 h-3 text-amber-400" />
-                          <span>PIN: {staff.pin}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-mono dir-ltr">
+                            <Lock className="w-3 h-3 text-amber-400" />
+                            <span>PIN: {staff.pin}</span>
+                          </span>
+                          {staff.gateNumber && (
+                            <span className="text-[11px] text-neutral-400 flex items-center gap-1">
+                              <span className="bg-neutral-800 px-1.5 rounded border border-neutral-700">
+                                {isArabic ? `بوابة ${staff.gateNumber}` : `Gate ${staff.gateNumber}`}
+                              </span>
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -357,7 +317,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     <span>{isArabic ? 'إضافة موظف أمن جديد:' : 'Add New Security Staff:'}</span>
                   </span>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
                       <label className="text-[10px] text-neutral-400 block mb-1">
                         {isArabic ? 'اسم الموظف' : 'Staff Name'}
@@ -380,9 +340,27 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                         maxLength={4}
                         pattern="\d{4}"
                         value={newStaffPin}
-                        onChange={(e) => setNewStaffPin(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                          const parsed = val.replace(/[٠-٩]/g, (w) => arabicNumbers.indexOf(w).toString()).replace(/\D/g, '');
+                          setNewStaffPin(parsed);
+                        }}
                         placeholder="1234"
                         className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono font-bold text-amber-300 text-center tracking-widest placeholder-neutral-600 focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-neutral-400 block mb-1">
+                        {isArabic ? 'رقم البوابة (اختياري)' : 'Gate No. (Optional)'}
+                      </label>
+                      <input 
+                        type="text"
+                        value={newStaffGateNumber}
+                        onChange={(e) => setNewStaffGateNumber(e.target.value)}
+                        placeholder={isArabic ? 'مثال: 1' : 'e.g. 1'}
+                        className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-white placeholder-neutral-600 focus:border-amber-500 focus:outline-none text-center"
                       />
                     </div>
                   </div>
@@ -397,7 +375,6 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 </form>
               )}
             </div>
-          )}
 
           {/* Feedback messages */}
           {errorMsg && (

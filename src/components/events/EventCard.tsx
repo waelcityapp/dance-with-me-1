@@ -435,14 +435,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         </div>
 
         <h3 className="text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-amber-400 transition-colors">
-          {lang === 'ar' ? event.titleAr : event.titleEn}
+          {lang === 'ar' ? (event.titleAr || event.titleEn) : (event.titleEn || event.titleAr)}
         </h3>
 
         <div className="mb-4">
           <p className={`text-xs sm:text-sm text-neutral-300 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-2'}`}>
-            {lang === 'ar' ? event.descriptionAr : event.descriptionEn}
+            {lang === 'ar' ? (event.descriptionAr || event.descriptionEn) : (event.descriptionEn || event.descriptionAr)}
           </p>
-          {((lang === 'ar' ? event.descriptionAr : event.descriptionEn) || '').length > 120 && (
+          {((lang === 'ar' ? (event.descriptionAr || event.descriptionEn) : (event.descriptionEn || event.descriptionAr)) || '').length > 120 && (
             <button
               onClick={(e) => {
                 e.stopPropagation();

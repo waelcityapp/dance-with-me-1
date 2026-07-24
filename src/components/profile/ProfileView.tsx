@@ -1404,7 +1404,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             const isRestricted = settings?.mode === 'restricted' || (settings?.staffList && settings.staffList.length > 0);
                             const count = settings?.staffList?.filter(s => s.isActive !== false).length || 0;
 
-                            if (isRestricted && count > 0) {
+                            if (count > 0) {
                               return (
                                 <span className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-300 text-xs font-extrabold border border-emerald-500/30 flex items-center gap-1 shadow-sm">
                                   🔒 {lang === 'ar' ? `مخصص (${count} موظف)` : `Designated (${count} staff)`}
@@ -1413,7 +1413,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             } else {
                               return (
                                 <span className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 text-xs font-extrabold border border-amber-500/30 flex items-center gap-1 shadow-sm">
-                                  🔓 {lang === 'ar' ? 'متاح للجميع' : 'Open to Everyone'}
+                                  ⚠️ {lang === 'ar' ? 'لم يتم تعيين موظفين' : 'No staff assigned'}
                                 </span>
                               );
                             }
@@ -1670,7 +1670,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         {isArabic ? 'الفعالية / الحفلة' : 'EVENT'}
                       </span>
                       <h4 className="text-sm font-bold text-zinc-100 line-clamp-1">
-                        {isArabic ? b.eventTitleAr : b.eventTitleEn}
+                        {isArabic ? (b.eventTitleAr || b.eventTitleEn) : (b.eventTitleEn || b.eventTitleAr)}
                       </h4>
                       {(() => {
                         const matchedEvent = events.find(e => e.id === b.eventId);
@@ -2266,7 +2266,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 {lang === 'ar' ? 'تذكرة دخول معتمدة ورسمية' : 'Official Entry Pass'}
               </span>
               <h3 className="text-base font-extrabold text-white line-clamp-1">
-                {lang === 'ar' ? qrModalBooking.eventTitleAr : qrModalBooking.eventTitleEn}
+                {lang === 'ar' ? (qrModalBooking.eventTitleAr || qrModalBooking.eventTitleEn) : (qrModalBooking.eventTitleEn || qrModalBooking.eventTitleAr)}
               </h3>
               <p className="text-xs text-zinc-400 font-mono">
                 REF: <span className="text-amber-400 font-bold">{qrModalBooking.refNumber}</span>

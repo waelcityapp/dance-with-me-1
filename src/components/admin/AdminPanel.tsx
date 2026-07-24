@@ -1552,6 +1552,11 @@ export const AdminPanel: React.FC = () => {
                                   {b.attendedByStaffName && (
                                     <span className="text-[10px] text-indigo-300 font-bold mt-0.5 flex items-center gap-1">
                                       👮 {b.attendedByStaffName}
+                                      {b.attendedByGateNumber && (
+                                        <span className="text-neutral-400 bg-neutral-800/50 px-1 rounded-sm">
+                                          ({lang === 'ar' ? 'بوابة' : 'Gate'} {b.attendedByGateNumber})
+                                        </span>
+                                      )}
                                     </span>
                                   )}
                                   {b.attendedAt && (

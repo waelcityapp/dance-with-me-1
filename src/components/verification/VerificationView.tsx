@@ -50,21 +50,9 @@ export const VerificationView: React.FC = () => {
   // Staff security & session state
   const [liveStaffSettings, setLiveStaffSettings] = useState<SecurityStaffSettings | null>(null);
   const [staffPinInput, setStaffPinInput] = useState<string>(() => sessionStorage.getItem('dwm_staff_pin') || '');
-  const [scannerNameInput, setScannerNameInput] = useState<string>(() => sessionStorage.getItem('dwm_scanner_name') || '');
   const [inputRefNumber, setInputRefNumber] = useState<string>(() => sessionStorage.getItem('dwm_event_ref') || '');
 
   const isArabic = lang === 'ar';
-
-  // Determine if the current user is the organizer or system admin
-  const isOrganizerOrAdmin = useMemo(() => {
-    if (!user) return false;
-    if (user.isAdmin || isAdminUnlocked) return true;
-    // Check contact phone or advertiserId
-    if (associatedEvent?.contact?.phone && user.phone === associatedEvent.contact.phone) return true;
-    // We can also check advertiserId if it was brought over from adSubmission
-    if ((associatedEvent as any)?.advertiserId === user.id) return true;
-    return false;
-  }, [user, isAdminUnlocked, associatedEvent]);
 
   // Listen in real-time to event staffSettings changes from both 'events' and 'adSubmissions' collections
   useEffect(() => {
@@ -81,15 +69,19 @@ export const VerificationView: React.FC = () => {
       }
     });
 
-    // 2. Listen to 'adSubmissions' doc
-    const subDocRef = doc(db, 'adSubmissions', associatedEvent.id);
-    const unsubSub = onSnapshot(subDocRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as AdSubmission;
-        if (data.staffSettings) {
-          setLiveStaffSettings(data.staffSettings);
+    let unsubSub: () => void = () => {};
+    // 2. Listen to 'ad_submissions' doc by eventRef
+    import('firebase/firestore').then(({ collection, query, where, onSnapshot: onSnap }) => {
+      const subsCol = collection(db, 'ad_submissions');
+      const subsQuery = query(subsCol, where('eventRef', '==', associatedEvent.eventRef));
+      unsubSub = onSnap(subsQuery, (snap) => {
+        if (!snap.empty) {
+          const data = snap.docs[0].data() as AdSubmission;
+          if (data.staffSettings) {
+            setLiveStaffSettings(data.staffSettings);
+          }
         }
-      }
+      });
     });
 
     return () => {
@@ -100,49 +92,40 @@ export const VerificationView: React.FC = () => {
 
   // Determine security staff authorization in real time based strictly on event staffSettings
   const staffAuthStatus = useMemo(() => {
-    if (isOrganizerOrAdmin) {
-      return {
-        isAuthorized: true,
-        scannerName: user?.name || (isArabic ? 'المنظم / المسئول' : 'Organizer / Admin'),
-        message: isArabic ? '👑 أنت منشئ الفاعلية (مصرح لك بالمسح بدون قيود)' : '👑 Organizer (Open Access)'
-      };
-    }
-
     const settings = liveStaffSettings || associatedEvent?.staffSettings;
-    const hasStaffList = Boolean(settings?.staffList && settings.staffList.length > 0);
-    // If staffList exists and has members OR mode is explicitly 'restricted', force restricted mode
-    const mode = (settings?.mode === 'restricted' || hasStaffList) ? 'restricted' : (settings?.mode || 'anyone');
+    const staffList = settings?.staffList || [];
+    const hasStaffList = staffList.length > 0;
 
-    if (mode === 'anyone') {
-      const name = scannerNameInput.trim();
-      if (!name) {
-        return {
-          isAuthorized: false,
-          needsNameInput: true,
-          message: isArabic 
-            ? '✍️ يرجى كتابة اسمك (مسئول الدخول / موظف البوابة) أولاً لتأكيد التذكرة' 
-            : '✍️ Please enter gate staff name first to enable check-in'
-        };
-      }
-      return {
-        isAuthorized: true,
-        scannerName: name,
-        needsNameInput: true,
-        message: isArabic ? `🔓 مسح التذاكر متاح للجميع (مسئول البوابة: ${name})` : `🔓 Open Scanning Authorized (${name})`
-      };
-    }
-
-    // Restricted Mode (requires valid active 4-digit PIN)
     const pin = staffPinInput.trim();
+
+    // PIN is strictly required for security staff
     if (!pin) {
       return {
         isAuthorized: false,
         needsPinInput: true,
-        message: isArabic ? '🔒 يرجى إدخال الرقم السري المكون من 4 أرقام لموظف الأمن المعين' : '🔒 Enter 4-digit PIN for designated security staff'
+        message: isArabic ? '🔒 يرجى إدخال الرقم السري لموظف الأمن (4 أرقام) لتفعيل زر التأكيد' : '🔒 Enter 4-digit PIN for security staff to enable check-in'
       };
     }
 
-    const staffMember = settings?.staffList?.find(s => s.pin === pin);
+    if (pin.length !== 4) {
+      return {
+        isAuthorized: false,
+        needsPinInput: true,
+        isInvalidPin: true,
+        message: isArabic ? '🔒 الرقم السري ينبغي أن يتكون من 4 أرقام' : '🔒 PIN must be exactly 4 digits'
+      };
+    }
+
+    if (!hasStaffList) {
+      return {
+        isAuthorized: false,
+        needsPinInput: true,
+        isInvalidPin: true,
+        message: isArabic ? '❌ لم يتم تعيين أي موظف أمن لهذه الفاعلية بعد!' : '❌ No security staff has been assigned to this event yet!'
+      };
+    }
+
+    const staffMember = staffList.find(s => String(s.pin) === String(pin));
     if (!staffMember) {
       return {
         isAuthorized: false,
@@ -166,11 +149,20 @@ export const VerificationView: React.FC = () => {
       isAuthorized: true,
       scannerName: staffMember.name,
       staffPin: staffMember.pin,
-      message: isArabic ? `🟢 موظف أمن معتمد: ${staffMember.name}` : `🟢 Authorized Security Staff: ${staffMember.name}`
+      gateNumber: staffMember.gateNumber,
+      message: isArabic 
+        ? `🟢 موظف أمن معتمد: ${staffMember.name} ${staffMember.gateNumber ? `(بوابة ${staffMember.gateNumber})` : ''}` 
+        : `🟢 Authorized Security Staff: ${staffMember.name} ${staffMember.gateNumber ? `(Gate ${staffMember.gateNumber})` : ''}`
     };
-  }, [liveStaffSettings, associatedEvent, staffPinInput, scannerNameInput, user, isArabic]);
+  }, [liveStaffSettings, associatedEvent, staffPinInput, isArabic]);
 
-  // Sync valid PIN to sessionStorage
+  // Check if Event Reference Code is valid
+  const isRefCodeValid = useMemo(() => {
+    if (!associatedEvent?.eventRef) return true;
+    return inputRefNumber.trim() !== '' && inputRefNumber.trim() === String(associatedEvent.eventRef);
+  }, [associatedEvent?.eventRef, inputRefNumber]);
+
+  const isCanConfirm = staffAuthStatus.isAuthorized && isRefCodeValid;
   useEffect(() => {
     if (staffAuthStatus.isAuthorized && staffAuthStatus.staffPin) {
       sessionStorage.setItem('dwm_staff_pin', staffAuthStatus.staffPin);
@@ -223,8 +215,8 @@ export const VerificationView: React.FC = () => {
         if (eventSnap.exists()) {
           foundEv = { id: eventSnap.id, ...eventSnap.data() } as DanceEvent;
         } else {
-          // Check adSubmissions collection
-          const subDocRef = doc(db, 'adSubmissions', bookingData.eventId);
+          // Check ad_submissions collection
+          const subDocRef = doc(db, 'ad_submissions', bookingData.eventId);
           const subSnap = await getDoc(subDocRef);
           if (subSnap.exists()) {
             const subData = subSnap.data() as AdSubmission;
@@ -238,13 +230,15 @@ export const VerificationView: React.FC = () => {
         }
 
         if (foundEv) {
-          // If staffSettings missing or staffList empty on foundEv, check adSubmission doc too
+          // If staffSettings missing or staffList empty on foundEv, check ad_submissions doc too
           if (!foundEv.staffSettings || !foundEv.staffSettings.staffList?.length) {
             try {
-              const subDocRef = doc(db, 'adSubmissions', foundEv.id);
-              const subSnap = await getDoc(subDocRef);
-              if (subSnap.exists()) {
-                const sData = subSnap.data() as AdSubmission;
+              const { collection, query, where, getDocs } = await import('firebase/firestore');
+              const subsCol = collection(db, 'ad_submissions');
+              const subsQuery = query(subsCol, where('eventRef', '==', foundEv.eventRef));
+              const subsSnap = await getDocs(subsQuery);
+              if (!subsSnap.empty) {
+                const sData = subsSnap.docs[0].data() as AdSubmission;
                 if (sData.staffSettings) {
                   foundEv.staffSettings = sData.staffSettings;
                 }
@@ -276,7 +270,7 @@ export const VerificationView: React.FC = () => {
     
     // Safety check reference number
     const eventRefStr = String(associatedEvent.eventRef || '');
-    if (!isOrganizerOrAdmin && inputRefNumber.trim() !== eventRefStr) {
+    if (inputRefNumber.trim() !== eventRefStr) {
       alert(
         isArabic
           ? '❌ الرقم المرجعي للحدث غير صحيح! يرجى إدخال الرقم الصحيح المخصص لهذه الحفلة.'
@@ -301,7 +295,8 @@ export const VerificationView: React.FC = () => {
         attended: true,
         attendedAt: attendedTime,
         attendedByStaffName: staffAuthStatus.scannerName,
-        attendedByStaffPin: staffAuthStatus.staffPin || null
+        attendedByStaffPin: staffAuthStatus.staffPin || null,
+        attendedByGateNumber: staffAuthStatus.gateNumber || null
       });
 
       // Update local state
@@ -310,7 +305,8 @@ export const VerificationView: React.FC = () => {
         attended: true, 
         attendedAt: attendedTime,
         attendedByStaffName: staffAuthStatus.scannerName,
-        attendedByStaffPin: staffAuthStatus.staffPin || undefined
+        attendedByStaffPin: staffAuthStatus.staffPin || undefined,
+        attendedByGateNumber: staffAuthStatus.gateNumber || undefined
       } : null);
       
       setSuccessMessage(
@@ -795,7 +791,7 @@ export const VerificationView: React.FC = () => {
               {/* Event title info */}
               <div className="border-b border-neutral-800/50 pb-3">
                 <h3 className="text-base font-bold text-white">
-                  {isArabic ? booking.eventTitleAr : booking.eventTitleEn}
+                  {isArabic ? (booking.eventTitleAr || booking.eventTitleEn) : (booking.eventTitleEn || booking.eventTitleAr)}
                 </h3>
               </div>
               
@@ -879,109 +875,113 @@ export const VerificationView: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4 text-right">
-                  {!isOrganizerOrAdmin && (
-                    <>
-                      {/* 1. Security Authorization: Event Ref Number */}
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-amber-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                          <Lock className="w-3.5 h-3.5" />
-                          <span>{isArabic ? 'كود الفاعلية (Event Reference Code):' : 'Event Reference Number:'}</span>
-                        </label>
-                        <input
-                          type="password"
-                          pattern="[0-9]*"
-                          inputMode="numeric"
-                          value={inputRefNumber}
-                          onChange={(e) => {
-                            setInputRefNumber(e.target.value);
-                            sessionStorage.setItem('dwm_event_ref', e.target.value);
-                          }}
-                          placeholder=""
-                          className="w-full px-4 py-2.5 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-center font-mono font-black text-lg text-white tracking-widest focus:border-indigo-500 focus:outline-none transition-all"
-                        />
-                      </div>
-
-                      {/* 2. Security Staff PIN / Name Input */}
-                      {(liveStaffSettings?.mode === 'restricted' || associatedEvent?.staffSettings?.mode === 'restricted') ? (
-                        <div className="space-y-1.5 p-3.5 bg-neutral-950 border border-neutral-800 rounded-2xl text-right">
-                          <label className="text-xs font-bold text-amber-400 block flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                              <Key className="w-3.5 h-3.5 text-amber-400" />
-                              <span>{isArabic ? 'الرقم السري لموظف الأمن (4 أرقام):' : 'Security Staff PIN (4 digits):'}</span>
-                            </span>
-                            {staffAuthStatus.scannerName && staffAuthStatus.isAuthorized && (
-                              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                                👮 {staffAuthStatus.scannerName}
-                              </span>
-                            )}
-                          </label>
-                          <input
-                            type="password"
-                            maxLength={4}
-                            pattern="\d{4}"
-                            inputMode="numeric"
-                            value={staffPinInput}
-                            onChange={(e) => {
-                              const val = e.target.value.replace(/\D/g, '');
-                              setStaffPinInput(val);
-                              sessionStorage.setItem('dwm_staff_pin', val);
-                            }}
-                            placeholder="****"
-                            className="w-full px-4 py-3 bg-neutral-900 border-2 border-neutral-800 rounded-xl text-center font-mono font-black text-xl text-amber-300 tracking-widest focus:border-amber-500 focus:outline-none"
-                          />
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5 p-3.5 bg-neutral-950 border border-neutral-800 rounded-2xl text-right">
-                          <label className="text-xs font-bold text-amber-400 block flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                              <User className="w-3.5 h-3.5" />
-                              <span>{isArabic ? 'اسم موظف الأمن / مسئول الدخول (مطلوب):' : 'Security Staff / Gatekeeper Name (Required):'}</span>
-                            </span>
-                            {!scannerNameInput.trim() && (
-                              <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
-                                ⚠️ {isArabic ? 'مطلوب للتأكيد' : 'Required'}
-                              </span>
-                            )}
-                          </label>
-                          <input
-                            type="text"
-                            value={scannerNameInput}
-                            onChange={(e) => {
-                              setScannerNameInput(e.target.value);
-                              sessionStorage.setItem('dwm_scanner_name', e.target.value);
-                            }}
-                            placeholder={isArabic ? 'أدخل اسمك هنا (مثال: أحمد مسئول البوابة)' : 'Enter staff name (e.g. Ahmed)'}
-                            className={`w-full px-4 py-2.5 bg-neutral-900 border rounded-xl text-xs text-white placeholder-neutral-600 focus:outline-none transition-all ${
-                              !scannerNameInput.trim() 
-                                ? 'border-amber-500/80 shadow-[0_0_10px_rgba(245,158,11,0.2)]' 
-                                : 'border-neutral-800 focus:border-amber-500'
-                            }`}
-                          />
-                        </div>
+                  {/* 1. Security Authorization: Event Ref Number */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-amber-500 font-bold uppercase tracking-wider flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>{isArabic ? 'كود الفاعلية (Event Reference Code):' : 'Event Reference Code:'}</span>
+                      </span>
+                      {!isRefCodeValid && (
+                        <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
+                          ⚠️ {isArabic ? 'مطلوب لتفعيل الزر' : 'Required'}
+                        </span>
                       )}
-                    </>
-                  )}
+                    </label>
+                    <input
+                      type="password"
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      value={inputRefNumber}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                        const parsed = val.replace(/[٠-٩]/g, (w) => arabicNumbers.indexOf(w).toString()).replace(/\D/g, '');
+                        setInputRefNumber(parsed);
+                        sessionStorage.setItem('dwm_event_ref', parsed);
+                      }}
+                      placeholder={isArabic ? 'أدخل كود الفاعلية هنا' : 'Enter Event Code'}
+                      className={`w-full px-4 py-2.5 bg-neutral-900 border-2 rounded-xl text-center font-mono font-black text-lg tracking-widest focus:outline-none transition-all ${
+                        !isRefCodeValid 
+                          ? 'border-amber-500/80 shadow-[0_0_10px_rgba(245,158,11,0.2)] text-amber-300' 
+                          : 'border-emerald-500/80 text-emerald-400'
+                      }`}
+                    />
+                  </div>
+
+                  {/* 2. Security Staff PIN Input */}
+                  <div className="space-y-1.5 p-3.5 bg-neutral-950 border border-neutral-800 rounded-2xl text-right">
+                    <label className="text-xs font-bold text-amber-400 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-amber-400" />
+                        <span>{isArabic ? 'الرقم السري لموظف الأمن (4 أرقام):' : 'Security Staff PIN (4 digits):'}</span>
+                      </span>
+                      {!staffAuthStatus.isAuthorized ? (
+                        <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
+                          ⚠️ {isArabic ? 'مطلوب للتأكيد' : 'Required'}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                          👮 {staffAuthStatus.scannerName}
+                          {staffAuthStatus.gateNumber && (
+                            <span className="bg-emerald-500/20 px-1.5 rounded-sm border border-emerald-500/30 text-[9px]">
+                              {isArabic ? `بوابة ${staffAuthStatus.gateNumber}` : `Gate ${staffAuthStatus.gateNumber}`}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={4}
+                      pattern="\d{4}"
+                      inputMode="numeric"
+                      value={staffPinInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                        const parsed = val.replace(/[٠-٩]/g, (w) => arabicNumbers.indexOf(w).toString()).replace(/\D/g, '');
+                        setStaffPinInput(parsed);
+                        sessionStorage.setItem('dwm_staff_pin', parsed);
+                      }}
+                      placeholder="****"
+                      className={`w-full px-4 py-3 bg-neutral-900 border-2 rounded-xl text-center font-mono font-black text-xl tracking-widest focus:outline-none transition-all ${
+                        !staffAuthStatus.isAuthorized
+                          ? 'border-amber-500/80 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                          : 'border-emerald-500/80 text-emerald-400'
+                      }`}
+                    />
+                  </div>
 
                   {/* 3. Real-time Status Banner */}
                   <div className={`p-3 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
-                    staffAuthStatus.isAuthorized 
+                    isCanConfirm 
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                      : !isRefCodeValid
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
                       : staffAuthStatus.isPaused 
                       ? 'bg-red-500/15 border-red-500/40 text-red-400 animate-pulse' 
                       : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
                   }`}>
                     <ShieldCheck className="w-4 h-4 shrink-0" />
-                    <span className="leading-relaxed">{staffAuthStatus.message}</span>
+                    <span className="leading-relaxed">
+                      {!isRefCodeValid
+                        ? (inputRefNumber.trim() === ''
+                            ? (isArabic ? '🔒 يرجى إدخال كود الفاعلية المخصص لهذه الحفلة لتفعيل زر التأكيد' : '🔒 Enter Event Reference Code to enable check-in')
+                            : (isArabic ? '❌ كود الفاعلية غير صحيح! يرجى إدخال الكود الصحيح المخصص لهذه الحفلة' : '❌ Incorrect Event Code! Please enter authorized code'))
+                        : staffAuthStatus.message
+                      }
+                    </span>
                   </div>
 
                   {/* 4. Confirm Attendance Button */}
                   <motion.button
-                    whileHover={staffAuthStatus.isAuthorized ? { scale: 1.02 } : {}}
-                    whileTap={staffAuthStatus.isAuthorized ? { scale: 0.98 } : {}}
-                    disabled={isConfirming || !staffAuthStatus.isAuthorized}
+                    whileHover={isCanConfirm ? { scale: 1.02 } : {}}
+                    whileTap={isCanConfirm ? { scale: 0.98 } : {}}
+                    disabled={isConfirming || !isCanConfirm}
                     onClick={handleConfirmAttendance}
                     className={`w-full py-4 font-black text-sm sm:text-base rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${
-                      staffAuthStatus.isAuthorized 
+                      isCanConfirm 
                         ? 'bg-emerald-500 text-neutral-950 hover:bg-emerald-400 shadow-emerald-500/20 cursor-pointer' 
                         : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700'
                     }`}
@@ -992,11 +992,16 @@ export const VerificationView: React.FC = () => {
                       <>
                         <ShieldCheck className="w-5 h-5" />
                         <span>
-                          {staffAuthStatus.isAuthorized 
+                          {isCanConfirm 
                             ? (isArabic ? `تأكيد دخول الزائر: ${booking.userName}` : `Confirm Check-In: ${booking.userName}`)
-                            : (isArabic 
-                                ? (!scannerNameInput.trim() ? '✍️ يرجى كتابة اسمك أولاً لتفعيل زر التأكيد' : 'غير مسموح بمسح التذاكر (الموظف غير معتمد أو الرقم السري خاطئ)')
-                                : 'Check-In Not Authorized')}
+                            : !isRefCodeValid
+                            ? (inputRefNumber.trim() === ''
+                                ? (isArabic ? '🔒 أدخل كود الفاعلية لتأكيد الدخول' : '🔒 Enter Event Code to Enable')
+                                : (isArabic ? '❌ كود الفاعلية غير صحيح' : '❌ Incorrect Event Code'))
+                            : (!staffPinInput.trim() 
+                                ? (isArabic ? '🔒 أدخل الرقم السري لموظف الأمن لتأكيد الدخول' : '🔒 Enter Security PIN to Enable')
+                                : (isArabic ? '❌ الرقم السري لموظف الأمن غير صحيح' : '❌ Incorrect Security Staff PIN'))
+                          }
                         </span>
                       </>
                     )}

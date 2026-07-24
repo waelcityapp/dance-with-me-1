@@ -385,6 +385,11 @@ export const ActualAttendanceModal: React.FC<ActualAttendanceModalProps> = ({ ev
                                   <span className="text-neutral-500">{lang === 'ar' ? 'تم المسح بواسطة (موظف الأمن):' : 'Scanned by (Security Staff):'}</span>
                                   <span className="font-bold text-indigo-300 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg border border-indigo-500/20 text-[11px] flex items-center gap-1">
                                     👮 {booking.attendedByStaffName || (lang === 'ar' ? 'صاحب الإعلان / المنظم' : 'Organizer')}
+                                    {booking.attendedByGateNumber && (
+                                      <span className="text-neutral-400 bg-neutral-800/50 px-1 rounded-sm">
+                                        ({lang === 'ar' ? 'بوابة' : 'Gate'} {booking.attendedByGateNumber})
+                                      </span>
+                                    )}
                                   </span>
                                 </div>
                               )}
