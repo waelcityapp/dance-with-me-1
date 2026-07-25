@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { X, Smartphone, Share, PlusSquare, MoreVertical, Download, CheckCircle, ShieldCheck, Apple, Chrome } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
+import { logAnalyticsEvent } from '../../lib/firebase';
 
 interface PwaInstallModalProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ isOpen, onClos
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setInstalled(true);
+        logAnalyticsEvent('pwa_installs');
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
       }
       setDeferredPrompt(null);

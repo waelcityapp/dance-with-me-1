@@ -406,7 +406,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('dwm_session_date', todayStr);
         logAnalyticsEvent('unique_sessions');
       }
+
+      // Track PWA installs / standalone app usage
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+      if (isStandalone && !localStorage.getItem('dwm_pwa_tracked')) {
+        localStorage.setItem('dwm_pwa_tracked', 'true');
+        logAnalyticsEvent('pwa_installs');
+      }
     } catch (e) {}
+
+    // Track appinstalled browser event
+    const handleAppInstalled = () => {
+      try {
+        localStorage.setItem('dwm_pwa_tracked', 'true');
+        logAnalyticsEvent('pwa_installs');
+      } catch (e) {}
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     // 1. Check and seed initial data if Firestore database is empty
     checkAndSeedEvents([]);

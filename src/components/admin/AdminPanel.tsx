@@ -49,7 +49,8 @@ import {
   BarChart3,
   TrendingUp,
   MousePointerClick,
-  Bell
+  Bell,
+  Smartphone
 , Maximize2, Minimize2, Languages, Loader2 } from 'lucide-react';
 import { QrCode, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -5091,14 +5092,30 @@ export const AdminPanel: React.FC = () => {
       {adminSection === 'analytics' && (
         <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           {/* Summary KPIs Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* KPI 1: Unique Sessions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* KPI 1: App Installs PWA */}
+            <div className="rounded-3xl border border-purple-500/30 bg-purple-950/20 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-20 group-hover:scale-110 transition-transform text-purple-400">
+                <Smartphone className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-purple-300 tracking-wider">
+                {lang === 'ar' ? '📲 تثبيتات التطبيق على الهواتف' : '📲 PWA APP INSTALLS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.pwa_installs || 0}
+              </h4>
+              <p className="text-[10px] text-purple-300 mt-2 font-medium">
+                {lang === 'ar' ? '📱 أجهزة قامت بتثبيت التطبيق PWA' : '📱 PWA installed phone instances'}
+              </p>
+            </div>
+
+            {/* KPI 2: Unique Sessions */}
             <div className="rounded-3xl border border-cyan-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
               <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-cyan-400">
                 <Users className="h-10 w-10" />
               </div>
               <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
-                {lang === 'ar' ? '👥 زوار فريدون (نشاط الأجهزة)' : '👥 UNIQUE VISITORS'}
+                {lang === 'ar' ? '👥 زوار فريدون (أجهزة)' : '👥 UNIQUE VISITORS'}
               </p>
               <h4 className="text-3xl font-black text-white mt-2 font-mono">
                 {analyticsCounters.unique_sessions || 0}
@@ -5108,13 +5125,13 @@ export const AdminPanel: React.FC = () => {
               </p>
             </div>
 
-            {/* KPI 2: Total Page Views */}
+            {/* KPI 3: Total Page Views */}
             <div className="rounded-3xl border border-pink-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
               <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-pink-400">
                 <Eye className="h-10 w-10" />
               </div>
               <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
-                {lang === 'ar' ? '📊 إجمالي مشاهدات التطبيق' : '📊 TOTAL PAGE VIEWS'}
+                {lang === 'ar' ? '📊 إجمالي المشاهدات' : '📊 TOTAL PAGE VIEWS'}
               </p>
               <h4 className="text-3xl font-black text-white mt-2 font-mono">
                 {analyticsCounters.total_page_views || 0}
@@ -5124,13 +5141,13 @@ export const AdminPanel: React.FC = () => {
               </p>
             </div>
 
-            {/* KPI 3: Engagement Factor */}
+            {/* KPI 4: Engagement Factor */}
             <div className="rounded-3xl border border-amber-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
               <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-amber-400">
                 <TrendingUp className="h-10 w-10" />
               </div>
               <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
-                {lang === 'ar' ? '⚡ متوسط التفاعل بالجلسة' : '⚡ ENGAGEMENT METRIC'}
+                {lang === 'ar' ? '⚡ متوسط التفاعل' : '⚡ ENGAGEMENT METRIC'}
               </p>
               <h4 className="text-3xl font-black text-white mt-2 font-mono">
                 {((analyticsCounters.total_page_views || 0) / (analyticsCounters.unique_sessions || 1)).toFixed(1)}
@@ -5140,7 +5157,7 @@ export const AdminPanel: React.FC = () => {
               </p>
             </div>
 
-            {/* KPI 4: Outbound Contacts */}
+            {/* KPI 5: Outbound Contacts */}
             <div className="rounded-3xl border border-emerald-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
               <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-emerald-400">
                 <MousePointerClick className="h-10 w-10" />

@@ -38,6 +38,9 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
         return 'فشل الاتصال بالشبكة. يرجى التحقق من جودة اتصال الإنترنت الخاص بك ثم المحاولة مجدداً.';
       case 'auth/unauthorized-domain':
         return 'هذا النطاق (Domain) غير معتمد في إعدادات Firebase الخاصة بك. إذا كنت قمت برفع التطبيق على Vercel أو استضافة أخرى، يرجى إضافة رابط الموقع إلى قائمة "Authorized Domains" في لوحة تحكم Firebase (Authentication -> Settings).';
+      case 'auth/popup-closed-by-user':
+      case 'auth/cancelled-popup-request':
+        return 'تم إغلاق نافذة تسجيل الدخول قبل إتمام العملية. يمكنك المحاولة مجدداً أو المتابعة بالبريد الإلكتروني.';
       case 'auth/popup-blocked':
         return 'تم حظر النافذة المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة لهذا الموقع للمتابعة.';
       default:
@@ -61,6 +64,9 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
         return 'Network request failed. Please check your internet connection and try again.';
       case 'auth/unauthorized-domain':
         return 'This domain is not authorized in your Firebase project settings. If you deployed to Vercel or another host, please add your domain to the "Authorized Domains" list in Firebase Console (Authentication -> Settings).';
+      case 'auth/popup-closed-by-user':
+      case 'auth/cancelled-popup-request':
+        return 'The sign-in popup was closed before completing authentication. You can try again or use Email & Password.';
       case 'auth/popup-blocked':
         return 'Popup blocked by browser. Please allow popups for this site to continue.';
       default:
@@ -304,15 +310,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setActiveTab('google_onboarding');
       }
     } catch (err: any) {
-      console.error('Google login error:', err);
       const errorCode = err.code || 'unknown';
+      if (errorCode !== 'auth/popup-closed-by-user' && errorCode !== 'auth/cancelled-popup-request') {
+        console.error('Google login error:', err);
+      } else {
+        console.info('Google sign-in popup was closed by user or cancelled.');
+      }
       setAuthErrorCode(errorCode);
       
-      if (errorCode === 'auth/popup-blocked' || errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request') {
+      if (errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request') {
         setErrorMsg(
           lang === 'ar'
-            ? 'فشل تسجيل الدخول بـ Google. يحدث هذا عادةً داخل نافذة المعاينة (iframe) أو بسبب إغلاق النافذة. يرجى فتح التطبيق في نافذة مستقلة ↗️ أو المتابعة بالبريد الإلكتروني.'
-            : 'Google sign-in failed or was blocked/cancelled. This is common inside frames. Please open the app in a new tab ↗️ or use Email & Password.'
+            ? 'تم إغلاق نافذة تسجيل الدخول بـ Google قبل إتمام العملية. يمكنك المحاولة مرة أخرى أو المتابعة بالبريد الإلكتروني.'
+            : 'Google sign-in popup was closed before completing. You can try again or use Email & Password.'
+        );
+      } else if (errorCode === 'auth/popup-blocked') {
+        setErrorMsg(
+          lang === 'ar'
+            ? 'تم حظر النافذة المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة أو فتح التطبيق في نافذة مستقلة ↗️.'
+            : 'Google sign-in popup was blocked by browser. Please allow popups or open in a new tab ↗️.'
         );
       } else {
         setErrorMsg(getAuthErrorMessage(errorCode, lang));
