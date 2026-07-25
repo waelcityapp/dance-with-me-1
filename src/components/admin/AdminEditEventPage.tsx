@@ -76,6 +76,10 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
   const [locationNameEn, setLocationNameEn] = useState(editingEvent?.location?.nameEn || '');
   const [addressAr, setAddressAr] = useState(editingEvent?.location?.addressAr || '');
   const [addressEn, setAddressEn] = useState(editingEvent?.location?.addressEn || '');
+  const [governorateAr, setGovernorateAr] = useState(editingEvent?.location?.governorateAr || '');
+  const [governorateEn, setGovernorateEn] = useState(editingEvent?.location?.governorateEn || '');
+  const [areaAr, setAreaAr] = useState(editingEvent?.location?.areaAr || '');
+  const [areaEn, setAreaEn] = useState(editingEvent?.location?.areaEn || '');
   const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent?.location?.googleMapsUrl || '');
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent?.styles || []);
   const [position, setPosition] = useState<number | ''>(initialPosition);
@@ -233,7 +237,11 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           nameEn: locationNameEn,
           addressAr,
           addressEn,
-          googleMapsUrl
+          googleMapsUrl,
+          governorateAr,
+          governorateEn,
+          areaAr,
+          areaEn
         },
         contact: {
           organizerName: organizerName.trim(),
@@ -830,6 +838,62 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 value={addressEn}
                 onChange={e => setAddressEn(e.target.value)}
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                dir="ltr"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-amber-400">
+                {lang === 'ar' ? '📍 المحافظة (عربي) - مثل: القاهرة' : 'Governorate (Ar)'}
+              </label>
+              <input
+                type="text"
+                value={governorateAr}
+                onChange={e => setGovernorateAr(e.target.value)}
+                placeholder="مثال: القاهرة"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-amber-400">
+                {lang === 'ar' ? '📍 المحافظة (إنجليزي)' : 'Governorate (En)'}
+              </label>
+              <input
+                type="text"
+                value={governorateEn}
+                onChange={e => setGovernorateEn(e.target.value)}
+                placeholder="e.g. Cairo"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-all"
+                dir="ltr"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-amber-400">
+                {lang === 'ar' ? '📍 المنطقة / الحي (عربي) - مثل: الزمالك' : 'Area (Ar)'}
+              </label>
+              <input
+                type="text"
+                value={areaAr}
+                onChange={e => setAreaAr(e.target.value)}
+                placeholder="مثال: الزمالك"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-amber-400">
+                {lang === 'ar' ? '📍 المنطقة / الحي (إنجليزي)' : 'Area (En)'}
+              </label>
+              <input
+                type="text"
+                value={areaEn}
+                onChange={e => setAreaEn(e.target.value)}
+                placeholder="e.g. Zamalek"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-all"
                 dir="ltr"
               />
             </div>

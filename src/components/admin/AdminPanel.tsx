@@ -287,6 +287,10 @@ export const AdminPanel: React.FC = () => {
   const [adminLocationNameEn, setAdminLocationNameEn] = useState('Dance Studio - Zamalek');
   const [adminAddressAr, setAdminAddressAr] = useState('القاهرة، مصر');
   const [adminAddressEn, setAdminAddressEn] = useState('Cairo, Egypt');
+  const [adminGovernorateAr, setAdminGovernorateAr] = useState('القاهرة');
+  const [adminGovernorateEn, setAdminGovernorateEn] = useState('Cairo');
+  const [adminAreaAr, setAdminAreaAr] = useState('الزمالك');
+  const [adminAreaEn, setAdminAreaEn] = useState('Zamalek');
   const [adminGoogleMapsUrl, setAdminGoogleMapsUrl] = useState('https://maps.google.com/?q=30.0444,31.2357');
   const [adminSelectedStyles, setAdminSelectedStyles] = useState<DanceStyle[]>(['Salsa', 'Bachata']);
   const [adminPosition, setAdminPosition] = useState<string>('');
@@ -336,7 +340,10 @@ export const AdminPanel: React.FC = () => {
         if (draft.adminLocationNameEn) setAdminLocationNameEn(draft.adminLocationNameEn);
         if (draft.adminAddressAr) setAdminAddressAr(draft.adminAddressAr);
         if (draft.adminAddressEn) setAdminAddressEn(draft.adminAddressEn);
-        if (draft.adminGoogleMapsUrl) setAdminGoogleMapsUrl(draft.adminGoogleMapsUrl);
+        if (draft.adminGovernorateAr) setAdminGovernorateAr(draft.adminGovernorateAr);
+        if (draft.adminGovernorateEn) setAdminGovernorateEn(draft.adminGovernorateEn);
+        if (draft.adminAreaAr) setAdminAreaAr(draft.adminAreaAr);
+        if (draft.adminAreaEn) setAdminAreaEn(draft.adminAreaEn);
         if (draft.adminPhone) setAdminPhone(draft.adminPhone);
         if (draft.adminWhatsapp) setAdminWhatsapp(draft.adminWhatsapp);
         if (draft.adminOrganizerName) setAdminOrganizerName(draft.adminOrganizerName);
@@ -355,14 +362,14 @@ export const AdminPanel: React.FC = () => {
     const draft = {
       adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
       adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
-      adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGoogleMapsUrl,
+      adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGovernorateAr, adminGovernorateEn, adminAreaAr, adminAreaEn, adminGoogleMapsUrl,
       adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminBookingSubtextAr, adminBookingSubtextEn
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [
     adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
     adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
-    adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGoogleMapsUrl,
+    adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGovernorateAr, adminGovernorateEn, adminAreaAr, adminAreaEn, adminGoogleMapsUrl,
     adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminBookingSubtextAr, adminBookingSubtextEn
   ]);
 
@@ -718,7 +725,11 @@ export const AdminPanel: React.FC = () => {
           addressEn: (adminAddressEn || '').trim() || 'Cairo, Egypt',
           googleMapsUrl: (adminGoogleMapsUrl || '').trim(),
           lat: coords.lat,
-          lng: coords.lng
+          lng: coords.lng,
+          governorateAr: (adminGovernorateAr || '').trim() || 'القاهرة',
+          governorateEn: (adminGovernorateEn || '').trim() || 'Cairo',
+          areaAr: (adminAreaAr || '').trim() || 'الزمالك',
+          areaEn: (adminAreaEn || '').trim() || 'Zamalek'
         },
         contact: {
           phone: (adminPhone || '').trim() || '+201011223344',
@@ -6085,6 +6096,66 @@ export const AdminPanel: React.FC = () => {
                         onChange={(e) => setAdminAddressEn(e.target.value)}
                         placeholder="e.g. Zamalek, El-Maraashly St, 4th Floor"
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-neutral-800">
+                    {/* Governorate Ar */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-amber-400">
+                        {lang === 'ar' ? '📍 المحافظة (بالعربية) - مثل: القاهرة، الإسكندرية' : 'Governorate (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminGovernorateAr}
+                        onChange={(e) => setAdminGovernorateAr(e.target.value)}
+                        placeholder="مثال: القاهرة"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors"
+                      />
+                    </div>
+
+                    {/* Governorate En */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-amber-400">
+                        {lang === 'ar' ? '📍 المحافظة (بالإنجليزية)' : 'Governorate (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminGovernorateEn}
+                        onChange={(e) => setAdminGovernorateEn(e.target.value)}
+                        placeholder="e.g. Cairo"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Area Ar */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-amber-400">
+                        {lang === 'ar' ? '📍 المنطقة / الحي (بالعربية) - مثل: الزمالك، سموحة' : 'Area / District (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminAreaAr}
+                        onChange={(e) => setAdminAreaAr(e.target.value)}
+                        placeholder="مثال: الزمالك"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors"
+                      />
+                    </div>
+
+                    {/* Area En */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-amber-400">
+                        {lang === 'ar' ? '📍 المنطقة / الحي (بالإنجليزية)' : 'Area / District (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminAreaEn}
+                        onChange={(e) => setAdminAreaEn(e.target.value)}
+                        placeholder="e.g. Zamalek"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors"
                       />
                     </div>
                   </div>

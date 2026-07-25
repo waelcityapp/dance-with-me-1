@@ -359,6 +359,20 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           </span>
         </div>
 
+        {/* Governorate & Area Badge in its own line right before event title */}
+        {(promoEvent.location?.governorateAr || promoEvent.location?.areaAr) && (
+          <div className="mb-2">
+            <span className="inline-flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 font-sans px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm">
+              <span className="text-amber-400">📍</span>
+              <span>
+                {lang === 'ar' 
+                  ? [promoEvent.location?.governorateAr, promoEvent.location?.areaAr].filter(Boolean).join(' - ')
+                  : [promoEvent.location?.governorateEn || promoEvent.location?.governorateAr, promoEvent.location?.areaEn || promoEvent.location?.areaAr].filter(Boolean).join(' - ')}
+              </span>
+            </span>
+          </div>
+        )}
+
         <h2 className="text-xl sm:text-2xl font-black text-white mb-1.5 leading-tight">
           {lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
         </h2>

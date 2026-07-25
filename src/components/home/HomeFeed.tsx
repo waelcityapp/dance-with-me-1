@@ -78,7 +78,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       const matchDesc = (ev.descriptionAr || '').toLowerCase().includes(q) || (ev.descriptionEn || '').toLowerCase().includes(q);
       const matchLoc = (ev.location?.nameAr || '').toLowerCase().includes(q) || (ev.location?.nameEn || '').toLowerCase().includes(q);
       const matchOrganizer = (ev.contact?.organizerName || '').toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc && !matchLoc && !matchOrganizer) return false;
+      const matchGov = (ev.location?.governorateAr || '').toLowerCase().includes(q) || (ev.location?.governorateEn || '').toLowerCase().includes(q);
+      const matchArea = (ev.location?.areaAr || '').toLowerCase().includes(q) || (ev.location?.areaEn || '').toLowerCase().includes(q);
+      const matchAddress = (ev.location?.addressAr || '').toLowerCase().includes(q) || (ev.location?.addressEn || '').toLowerCase().includes(q);
+      if (!matchTitle && !matchDesc && !matchLoc && !matchOrganizer && !matchGov && !matchArea && !matchAddress) return false;
     }
     // Style filter check
     if (selectedStyleFilter !== 'all' && !ev.styles.includes(selectedStyleFilter as DanceStyle)) {
@@ -98,9 +101,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Hero Header & Search Bar */}
-      <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-2xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      {/* Hero Header */}
+      <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-2xl space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
               {lang === 'ar' ? 'اكتشف فعاليات و حفلات' : 'Discover Events & Parties'}
@@ -122,59 +125,45 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           </button>
         </div>
 
-        {/* Search Bar & Style Filters */}
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute top-3.5 left-4 h-4 w-4 text-neutral-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder={lang === 'ar' ? 'ابحث عن حفلة، كورس، موقع، منظم، أو اسم مدرب...' : 'Search for party, course, venue, organizer, or instructor...'}
-              className="w-full rounded-2xl border border-neutral-800 bg-neutral-950 py-3 pl-11 pr-4 text-xs sm:text-sm text-white placeholder-neutral-600 outline-none focus:border-amber-500 transition-all shadow-inner"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute top-3 right-4 text-xs text-neutral-500 hover:text-white"
-              >
-                ✕
-              </button>
-            )}
+        {/* Why Book Banner directly under Post Ad button */}
+        <motion.div
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setShowWhyBookModal(true)}
+          className="relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-xl shadow-red-900/10"
+        >
+          {/* Continuous spinning gradient effect */}
+          <div className="absolute inset-[-100%] animate-[spin_4s_linear_infinite] opacity-80 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]"
+               style={{
+                 background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #8b5cf6, #ec4899, #ef4444)'
+               }} 
+          />
+          
+          {/* Inner Content */}
+          <div className="relative flex items-center justify-between bg-neutral-950/95 backdrop-blur-md rounded-[14px] px-5 py-3.5 w-full h-full">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-red-500 animate-pulse" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-500 to-red-500 font-black text-base sm:text-xl tracking-wide drop-shadow-md bg-[length:200%_auto]">
+                {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
+              </span>
+            </div>
+            
+            <motion.div 
+              animate={{ x: lang === 'ar' ? [-5, 0, -5] : [5, 0, 5] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+              className="flex items-center gap-1.5 bg-red-500/10 rounded-full px-3 py-1.5 border border-red-500/30 shrink-0"
+            >
+              <span className="text-[10px] font-bold text-red-400 hidden sm:block uppercase tracking-wider">
+                {lang === 'ar' ? 'اكتشف' : 'Discover'}
+              </span>
+              {lang === 'ar' ? <ArrowLeft className="h-4 w-4 text-red-400" /> : <ArrowRight className="h-4 w-4 text-red-400" />}
+            </motion.div>
           </div>
-
-          {/* Style Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-            <span className="text-[11px] font-mono text-neutral-400 shrink-0 mr-1 flex items-center gap-1">
-              <Filter className="h-3.5 w-3.5 text-amber-400" />
-              <span>{lang === 'ar' ? 'التصنيف بحسب الرقصة:' : 'Style filter:'}</span>
-            </span>
-            {styleChips.map(style => (
-              <button
-                key={style}
-                onClick={() => {
-                  setSelectedStyleFilter(style);
-                  if (style !== 'all') {
-                    // Normalize the name to make it simple/safe for database fields
-                    const normalized = style.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-                    logAnalyticsEvent(`style_${normalized}`);
-                  }
-                }}
-                className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold whitespace-nowrap transition-all border ${
-                  selectedStyleFilter === style
-                    ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-sm'
-                    : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-700 hover:text-white'
-                }`}
-              >
-                {style === 'all' ? (lang === 'ar' ? 'كل الأنماط' : 'All Styles') : `#${getStyleLabel(style, lang)}`}
-              </button>
-            ))}
-          </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Category Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Category Tabs (Compact) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isSelected = selectedCategory === cat.id;
@@ -187,21 +176,21 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                 setSelectedCategory(cat.id);
                 logAnalyticsEvent(`category_${cat.id}`);
               }}
-              className={`flex items-center justify-between p-4 rounded-3xl border transition-all duration-200 ${
+              className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-all duration-200 ${
                 isSelected
-                  ? 'bg-neutral-900 border-amber-500/50 text-white shadow-xl gold-glow'
+                  ? 'bg-neutral-900 border-amber-500/50 text-white shadow-lg gold-glow'
                   : 'bg-neutral-900/50 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white'
               }`}
             >
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${isSelected ? 'bg-amber-500 text-neutral-950 font-bold' : 'bg-neutral-800 text-neutral-400'}`}>
-                  <Icon className="h-5 w-5" />
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl shrink-0 ${isSelected ? 'bg-amber-500 text-neutral-950 font-bold' : 'bg-neutral-800 text-neutral-400'}`}>
+                  <Icon className="h-4 w-4" />
                 </div>
-                <span className="text-xs sm:text-sm font-bold truncate">
+                <span className="text-xs font-bold truncate">
                   {lang === 'ar' ? cat.labelAr : cat.labelEn}
                 </span>
               </div>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-mono font-bold ${isSelected ? 'bg-amber-500 text-neutral-950' : 'bg-neutral-800 text-neutral-400'}`}>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-mono font-bold shrink-0 ${isSelected ? 'bg-amber-500 text-neutral-950' : 'bg-neutral-800 text-neutral-400'}`}>
                 {count}
               </span>
             </button>
@@ -209,41 +198,76 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         })}
       </div>
 
-      {/* Why Book Banner */}
-      <motion.div
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setShowWhyBookModal(true)}
-        className="relative mb-8 rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-xl shadow-red-900/10"
-      >
-        {/* Continuous spinning gradient effect */}
-        <div className="absolute inset-[-100%] animate-[spin_4s_linear_infinite] opacity-80 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]"
-             style={{
-               background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #8b5cf6, #ec4899, #ef4444)'
-             }} 
-        />
-        
-        {/* Inner Content */}
-        <div className="relative flex items-center justify-between bg-neutral-950/95 backdrop-blur-md rounded-[14px] px-5 py-4 w-full h-full">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-red-500 animate-pulse" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-500 to-red-500 font-black text-lg sm:text-xl tracking-wide drop-shadow-md bg-[length:200%_auto]">
-              {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
-            </span>
+      {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
+      <div id="search-section" className="rounded-3xl border-2 border-amber-500/40 bg-neutral-900/90 p-4 sm:p-5 shadow-2xl backdrop-blur-md space-y-3.5 my-2">
+        <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h3 className="text-base sm:text-xl font-black text-amber-400 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400 animate-pulse shrink-0" />
+              <span>{lang === 'ar' ? 'أحدث الإعلانات والفاعليات' : 'Latest Announcements & Events'}</span>
+            </h3>
+            {selectedCategory !== 'all' && (
+              <span className="text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+                {categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}
+              </span>
+            )}
           </div>
-          
-          <motion.div 
-            animate={{ x: lang === 'ar' ? [-5, 0, -5] : [5, 0, 5] }}
-            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-            className="flex items-center gap-1.5 bg-red-500/10 rounded-full px-3 py-1.5 border border-red-500/30"
-          >
-            <span className="text-[10px] font-bold text-red-400 hidden sm:block uppercase tracking-wider">
-              {lang === 'ar' ? 'اكتشف' : 'Discover'}
-            </span>
-            {lang === 'ar' ? <ArrowLeft className="h-4 w-4 text-red-400" /> : <ArrowRight className="h-4 w-4 text-red-400" />}
-          </motion.div>
+          <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 text-xs font-mono font-bold text-amber-400 shadow-sm shrink-0">
+            {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
+          </span>
         </div>
-      </motion.div>
+
+        {/* Prominent Search Bar Input */}
+        <div className="space-y-3">
+          <div className="relative flex items-center bg-neutral-950 border-2 border-amber-500/60 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-500/20 rounded-2xl px-3.5 py-1.5 shadow-xl transition-all">
+            <Search className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400 shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              dir={lang === 'ar' ? 'rtl' : 'ltr'}
+              placeholder={lang === 'ar' ? 'ابحث عن حفلة، كورس، موقع، منظم، محافظة، منطقة، أو اسم مدرب...' : 'Search for party, course, venue, organizer, governorate, area, instructor...'}
+              className="w-full bg-transparent py-2 px-2.5 text-xs sm:text-sm text-white placeholder-neutral-400 outline-none font-medium"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="shrink-0 p-1.5 text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-xl text-xs font-bold transition-colors"
+                title={lang === 'ar' ? 'مسح البحث' : 'Clear search'}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Style Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
+            <span className="text-[11px] font-mono text-neutral-400 shrink-0 mr-1 flex items-center gap-1">
+              <Filter className="h-3.5 w-3.5 text-amber-400" />
+              <span>{lang === 'ar' ? 'التصنيف بحسب الرقصة:' : 'Style filter:'}</span>
+            </span>
+            {styleChips.map(style => (
+              <button
+                key={style}
+                onClick={() => {
+                  setSelectedStyleFilter(style);
+                  if (style !== 'all') {
+                    const normalized = style.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                    logAnalyticsEvent(`style_${normalized}`);
+                  }
+                }}
+                className={`rounded-xl px-2.5 py-1 text-xs font-mono font-bold whitespace-nowrap transition-all border ${
+                  selectedStyleFilter === style
+                    ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-sm'
+                    : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-700 hover:text-white'
+                }`}
+              >
+                {style === 'all' ? (lang === 'ar' ? 'كل الأنماط' : 'All Styles') : `#${getStyleLabel(style, lang)}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Weekly Featured Video Promo (Show on Explore tab when no filter is applied or when all is selected) */}
       {weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all' && (
@@ -253,20 +277,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           onOpenShare={onOpenShare}
         />
       )}
-
-      {/* Section Header */}
-      <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg sm:text-xl font-bold text-amber-400">
-            {selectedCategory === 'all'
-              ? (lang === 'ar' ? 'احدث الاعلانات و الفاعليات' : 'Latest Announcements')
-              : categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}
-          </h3>
-          <span className="rounded-full bg-neutral-800 px-3 py-0.5 text-xs font-mono font-bold text-amber-400 border border-neutral-700">
-            {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
-          </span>
-        </div>
-      </div>
 
       {/* Events Grid */}
       {isLoadingEvents ? (

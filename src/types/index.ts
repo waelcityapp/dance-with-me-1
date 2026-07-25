@@ -49,6 +49,10 @@ export interface LocationInfo {
   googleMapsUrl: string;
   lat: number;
   lng: number;
+  governorateAr?: string;
+  governorateEn?: string;
+  areaAr?: string;
+  areaEn?: string;
 }
 
 export interface PricingConfig {

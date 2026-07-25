@@ -425,7 +425,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       {/* Event Node Content (النود الموجودة تحت بانر الاعلان) */}
       <div className="flex flex-1 flex-col p-5 sm:p-6">
         {/* Upload Date Metadata */}
-        <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-neutral-500 mb-2">
+        <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-neutral-500 mb-2 flex-wrap">
           <span>{lang === 'ar' ? 'تاريخ التحميل: ' : 'Uploaded: '}{formatDate(event.uploadDate, lang)}</span>
           <div className="flex items-center gap-1">
             {event.styles.map(s => (
@@ -433,6 +433,20 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             ))}
           </div>
         </div>
+
+        {/* Governorate & Area Badge in its own line right before event title */}
+        {(event.location?.governorateAr || event.location?.areaAr) && (
+          <div className="mb-2">
+            <span className="inline-flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 font-sans px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm">
+              <span className="text-amber-400">📍</span>
+              <span>
+                {lang === 'ar' 
+                  ? [event.location?.governorateAr, event.location?.areaAr].filter(Boolean).join(' - ')
+                  : [event.location?.governorateEn || event.location?.governorateAr, event.location?.areaEn || event.location?.areaAr].filter(Boolean).join(' - ')}
+              </span>
+            </span>
+          </div>
+        )}
 
         <h3 className="text-lg font-bold text-white mb-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
           {lang === 'ar' ? (event.titleAr || event.titleEn) : (event.titleEn || event.titleAr)}

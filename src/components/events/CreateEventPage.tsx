@@ -139,6 +139,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [locationNameEn, setLocationNameEn] = useState(editingEvent ? editingEvent.location.nameEn : 'Dance Studio - Zamalek');
   const [addressAr, setAddressAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressAr || 'القاهرة، مصر') : 'القاهرة، مصر');
   const [addressEn, setAddressEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressEn || 'Cairo, Egypt') : 'Cairo, Egypt');
+  const [governorateAr, setGovernorateAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.governorateAr || 'القاهرة') : 'القاهرة');
+  const [governorateEn, setGovernorateEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.governorateEn || 'Cairo') : 'Cairo');
+  const [areaAr, setAreaAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaAr || 'الزمالك') : 'الزمالك');
+  const [areaEn, setAreaEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaEn || 'Zamalek') : 'Zamalek');
   const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent && editingEvent.location ? editingEvent.location.googleMapsUrl : 'https://maps.google.com/?q=30.0444,31.2357');
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent ? editingEvent.styles : ['Salsa', 'Bachata']);
   const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
@@ -497,7 +501,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           addressEn: addressEn || 'Cairo, Egypt',
           googleMapsUrl: googleMapsUrl || 'https://maps.google.com/?q=30.0444,31.2357',
           lat: parseCoordinates(googleMapsUrl).lat,
-          lng: parseCoordinates(googleMapsUrl).lng
+          lng: parseCoordinates(googleMapsUrl).lng,
+          governorateAr: governorateAr || 'القاهرة',
+          governorateEn: governorateEn || 'Cairo',
+          areaAr: areaAr || 'الزمالك',
+          areaEn: areaEn || 'Zamalek'
         },
         contact: {
           ...editingEvent.contact,
@@ -558,7 +566,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             addressEn: addressEn || 'Cairo, Egypt',
             googleMapsUrl: googleMapsUrl || 'https://maps.google.com/?q=30.0444,31.2357',
             lat: parseCoordinates(googleMapsUrl).lat,
-            lng: parseCoordinates(googleMapsUrl).lng
+            lng: parseCoordinates(googleMapsUrl).lng,
+            governorateAr: governorateAr || 'القاهرة',
+            governorateEn: governorateEn || 'Cairo',
+            areaAr: areaAr || 'الزمالك',
+            areaEn: areaEn || 'Zamalek'
           },
           contact: {
             phone,
@@ -639,7 +651,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             addressEn: addressEn || 'Cairo, Egypt',
             googleMapsUrl: googleMapsUrl || 'https://maps.google.com/?q=30.0444,31.2357',
             lat: parseCoordinates(googleMapsUrl).lat,
-            lng: parseCoordinates(googleMapsUrl).lng
+            lng: parseCoordinates(googleMapsUrl).lng,
+            governorateAr: governorateAr || 'القاهرة',
+            governorateEn: governorateEn || 'Cairo',
+            areaAr: areaAr || 'الزمالك',
+            areaEn: areaEn || 'Zamalek'
           },
           contact: {
             phone,
@@ -942,7 +958,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         addressEn: addressEn.trim() || 'Cairo, Egypt',
                         googleMapsUrl: googleMapsUrl.trim(),
                         lat: 30.0444,
-                        lng: 31.2357
+                        lng: 31.2357,
+                        governorateAr: governorateAr.trim() || 'القاهرة',
+                        governorateEn: governorateEn.trim() || 'Cairo',
+                        areaAr: areaAr.trim() || 'الزمالك',
+                        areaEn: areaEn.trim() || 'Zamalek'
                       },
                       contact: {
                         phone: phone.trim() || '+201011223344',
@@ -1670,6 +1690,64 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   onChange={e => setAddressEn(e.target.value)}
                   placeholder={lang === 'ar' ? 'مثال: Ain Sokhna, Red Sea' : 'e.g. Ain Sokhna, Red Sea'}
                   className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{lang === 'ar' ? '📍 المحافظة (بالعربية) - مثل: القاهرة' : 'Governorate (Arabic)'}</span>
+                </label>
+                <input
+                  type="text"
+                  value={governorateAr}
+                  onChange={e => setGovernorateAr(e.target.value)}
+                  placeholder="مثال: القاهرة"
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{lang === 'ar' ? '📍 المحافظة (بالإنجليزية)' : 'Governorate (English)'}</span>
+                </label>
+                <input
+                  type="text"
+                  value={governorateEn}
+                  onChange={e => setGovernorateEn(e.target.value)}
+                  placeholder="e.g. Cairo"
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{lang === 'ar' ? '📍 المنطقة / الحي (بالعربية) - مثل: الزمالك' : 'Area / District (Arabic)'}</span>
+                </label>
+                <input
+                  type="text"
+                  value={areaAr}
+                  onChange={e => setAreaAr(e.target.value)}
+                  placeholder="مثال: الزمالك"
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{lang === 'ar' ? '📍 المنطقة / الحي (بالإنجليزية)' : 'Area / District (English)'}</span>
+                </label>
+                <input
+                  type="text"
+                  value={areaEn}
+                  onChange={e => setAreaEn(e.target.value)}
+                  placeholder="e.g. Zamalek"
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
                 />
               </div>
             </div>
