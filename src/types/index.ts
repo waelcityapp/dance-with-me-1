@@ -113,6 +113,10 @@ export interface DanceEvent {
   showBookingButton?: boolean;
   bookingSubtextAr?: string;
   bookingSubtextEn?: string;
+  organizerId?: string;
+  createdByAdmin?: boolean;
+  creatorId?: string;
+  creatorName?: string;
 }
 
 export type AccountTier = 'free' | 'featured' | 'vip';

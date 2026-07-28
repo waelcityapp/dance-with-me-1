@@ -581,7 +581,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           isWeeklyPromo: false,
           position: position !== undefined ? Number(position) : 0,
           adNumber: adNumber || `ADM-${Date.now()}`,
-          adType
+          adType,
+          createdByAdmin: user?.isAdmin || false,
+          creatorId: user?.id,
+          creatorName: user?.name
         });
       }
     }

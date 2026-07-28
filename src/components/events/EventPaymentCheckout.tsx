@@ -253,7 +253,10 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       eventData: {
         ...eventData,
         mediaUrl: finalMediaUrl,
-        thumbnailUrl: finalThumbnailUrl
+        thumbnailUrl: finalThumbnailUrl,
+        createdByAdmin: user?.isAdmin || false,
+        creatorId: user?.id,
+        creatorName: user?.name
       }
     };
 

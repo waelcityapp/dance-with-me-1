@@ -46,6 +46,28 @@ const app = !getApps().length ? initializeApp(resolvedFirebaseConfig) : getApps(
 // Initialize Firestore Database with specific database ID or default if '(default)'
 export const db = databaseId && databaseId !== '(default)' ? getFirestore(app, databaseId) : getFirestore(app);
 
+/**
+ * Recursively removes keys with `undefined` values from an object or array so Firestore setDoc/updateDoc doesn't fail.
+ */
+export function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) {
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeForFirestore(item)) as unknown as T;
+  }
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return data;
+}
+
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
@@ -231,7 +253,7 @@ export function subscribeToEvents(
 export async function saveEventToFirestore(event: DanceEvent): Promise<boolean> {
   try {
     const docRef = doc(db, COLLECTIONS.EVENTS, event.id);
-    await setDoc(docRef, event, { merge: true });
+    await setDoc(docRef, sanitizeForFirestore(event), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving event to Firestore:', error);
@@ -321,7 +343,15 @@ export function subscribeToUser(
 export async function saveUserToFirestore(user: UserProfile): Promise<boolean> {
   try {
     const docRef = doc(db, COLLECTIONS.USERS, user.id);
-    const safeUser = { ...user, phone: user.phone || '', avatar: user.avatar || '', name: user.name || '', favoriteStyles: user.favoriteStyles || [], likedEventIds: user.likedEventIds || [], bookedEventIds: user.bookedEventIds || [] };
+    const safeUser = sanitizeForFirestore({
+      ...user,
+      phone: user.phone || '',
+      avatar: user.avatar || '',
+      name: user.name || '',
+      favoriteStyles: user.favoriteStyles || [],
+      likedEventIds: user.likedEventIds || [],
+      bookedEventIds: user.bookedEventIds || []
+    });
     await setDoc(docRef, safeUser, { merge: true });
     return true;
   } catch (error) {
@@ -397,7 +427,7 @@ export function subscribeToNotifications(
 export async function saveNotificationToFirestore(notif: NotificationItem): Promise<boolean> {
   try {
     const docRef = doc(db, COLLECTIONS.NOTIFICATIONS, notif.id);
-    await setDoc(docRef, notif, { merge: true });
+    await setDoc(docRef, sanitizeForFirestore(notif), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving notification to Firestore:', error);
@@ -463,7 +493,7 @@ export function subscribeToAdSubmissions(
 export async function saveAdSubmissionToFirestore(submission: AdSubmission): Promise<boolean> {
   try {
     const docRef = doc(db, COLLECTIONS.AD_SUBMISSIONS, submission.id);
-    await setDoc(docRef, submission, { merge: true });
+    await setDoc(docRef, sanitizeForFirestore(submission), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving ad submission to Firestore:', error);
@@ -526,7 +556,7 @@ export function subscribeToSupportMessages(
 export async function saveSupportMessageToFirestore(message: SupportMessage): Promise<boolean> {
   try {
     const docRef = doc(db, COLLECTIONS.SUPPORT_MESSAGES, message.id);
-    await setDoc(docRef, message, { merge: true });
+    await setDoc(docRef, sanitizeForFirestore(message), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving support message to Firestore:', error);
@@ -967,7 +997,7 @@ export function subscribeToDailyAnalytics(onUpdate: (dailyList: any[]) => void):
 export async function saveBookingToFirestore(booking: EventBooking): Promise<boolean> {
   try {
     const docRef = doc(db, COLLECTIONS.BOOKINGS, booking.id);
-    await setDoc(docRef, booking, { merge: true });
+    await setDoc(docRef, sanitizeForFirestore(booking), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving booking to Firestore:', error);

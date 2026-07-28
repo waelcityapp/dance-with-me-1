@@ -44,6 +44,8 @@ interface AppContextType {
   setTheme: (theme: ThemeMode) => void;
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
+  adminSelectedUserId: string | null;
+  setAdminSelectedUserId: (id: string | null) => void;
   selectedCategory: DanceCategory;
   setSelectedCategory: (cat: DanceCategory) => void;
   events: DanceEvent[];
@@ -156,6 +158,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAdminLockModalOpen, setIsAdminLockModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabType>('explore');
+  const [adminSelectedUserId, setAdminSelectedUserId] = useState<string | null>(null);
 
   const handleSetActiveTab = (tab: TabType) => {
     setActiveTab(tab);
@@ -1307,6 +1310,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTheme,
       activeTab,
       setActiveTab: handleSetActiveTab,
+      adminSelectedUserId,
+      setAdminSelectedUserId,
       selectedCategory,
       setSelectedCategory,
       events,

@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Crown, Sparkles, UserCheck } from 'lucide-react';
+import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Crown, Sparkles, UserCheck, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -27,7 +27,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
     deleteEvent,
     togglePauseEvent,
     setEditingEvent,
-    setActiveTab
+    setActiveTab,
+    setAdminSelectedUserId
   } = useApp();
 
   const displayAdType = overrideAdType || event.adType;
@@ -364,6 +365,23 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               )}
               {index === undefined && (event.position === undefined || event.position === 999999 || event.position === 0) && '-'}            </div>
 
+            {/* Creator Profile Button */}
+            {event.creatorId && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setAdminSelectedUserId(event.creatorId!);
+                  setActiveTab('admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-xl transition-all border border-purple-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+                title={lang === 'ar' ? 'عرض ملف منشئ الإعلان' : 'View Ad Creator Profile'}
+              >
+                <User className="h-4.5 w-4.5 stroke-[2.5]" />
+              </button>
+            )}
+
             {/* Delete button (triggers local confirm) */}
             <button
               onClick={(e) => {
@@ -526,6 +544,37 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         )}
 
+        {/* Admin Event Creator Info Badge */}
+        {user?.isAdmin && (
+          <div 
+            onClick={(e) => {
+              if (event.creatorId) {
+                e.preventDefault();
+                e.stopPropagation();
+                setAdminSelectedUserId(event.creatorId);
+                setActiveTab('admin');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            className={`mb-3 px-3 py-1.5 rounded-xl bg-purple-950/40 border border-purple-500/20 text-purple-400 font-sans text-xs flex flex-col gap-1 transition-all ${event.creatorId ? 'cursor-pointer hover:bg-purple-900/50 hover:border-purple-500/50 active:scale-[0.98]' : ''}`}
+          >
+            <span className="font-semibold flex items-center justify-between">
+              <span>{lang === 'ar' ? 'معلومات الإنشاء (أدمن فقط):' : 'Creation Info (Admin Only):'}</span>
+              {event.creatorId && (
+                <User className="w-3.5 h-3.5" />
+              )}
+            </span>
+            <span className="font-bold text-[11px] bg-purple-500/10 px-2 py-1 rounded border border-purple-500/30">
+              {event.createdByAdmin === true || (!event.creatorId && (event.contact.organizerName === 'إدارة DWM للرقص' || event.contact.organizerName === 'الإدارة')) 
+                ? (lang === 'ar' ? 'تم إنشاء هذا الإعلان بواسطة الإدارة' : 'This ad was created by Management')
+                : (lang === 'ar' 
+                    ? `تم إنشاء هذا الإعلان بواسطة المستخدم (${event.creatorName || event.contact.organizerName})` 
+                    : `This ad was created by User (${event.creatorName || event.contact.organizerName})`)
+              }
+            </span>
+          </div>
+        )}
+
         {/* Action Buttons Bar: Phone, WhatsApp, Share, Like, Book */}
         <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-800 mt-auto">
           {/* Contact Actions */}
@@ -620,9 +669,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 >
                   <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
                 </motion.button>
-                {(event.bookingSubtextAr || event.bookingSubtextEn) && (
-                  <span className="text-[10px] font-extrabold text-amber-400 text-center max-w-[150px] truncate" title={lang === 'ar' ? (event.bookingSubtextAr || event.bookingSubtextEn) : (event.bookingSubtextEn || event.bookingSubtextAr)}>
-                    {lang === 'ar' ? (event.bookingSubtextAr || event.bookingSubtextEn) : (event.bookingSubtextEn || event.bookingSubtextAr)}
+                {(event.bookingSubtextAr || event.bookingSubtextEn || event.priceAr || event.priceEn) && (
+                  <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-400 text-center max-w-[160px] sm:max-w-[200px] leading-tight break-words" title={lang === 'ar' ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn) : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr)}>
+                    {lang === 'ar' ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn) : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr)}
                   </span>
                 )}
               </div>

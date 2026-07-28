@@ -56,6 +56,7 @@ import { QrCode, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle, AccountTier } from '../../types';
 import { EventCard } from '../events/EventCard';
+import { ProfileView } from '../profile/ProfileView';
 import { 
   subscribeToAdSubmissions, 
   saveAdSubmissionToFirestore, 
@@ -86,7 +87,10 @@ export const AdminPanel: React.FC = () => {
     user, 
     addNewEvent, 
     events, 
+    expiredEvents,
     deleteEvent, 
+    adminSelectedUserId,
+    setAdminSelectedUserId,
     notifications, 
     supportMessages, 
     replyToSupportMessage, 
@@ -123,6 +127,7 @@ export const AdminPanel: React.FC = () => {
   const [submissionPositions, setSubmissionPositions] = useState<Record<string, number | ''>>({});
   
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<UserProfile | null>(null);
   const [usersSubTab, setUsersSubTab] = useState<'search' | 'all'>('all');
   const [userSearchQuery, setUserSearchQuery] = useState<string>('');
   const [usersError, setUsersError] = useState<string | null>(null);
@@ -147,6 +152,16 @@ export const AdminPanel: React.FC = () => {
   });
 
   const hasAutoCleanedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (adminSelectedUserId && allUsers.length > 0) {
+      const u = allUsers.find(u => u.id === adminSelectedUserId);
+      if (u) {
+        setSelectedUserProfile(u);
+        setAdminSelectedUserId(null);
+      }
+    }
+  }, [adminSelectedUserId, allUsers, setAdminSelectedUserId]);
 
   useEffect(() => {
     if (submissions.length === 0 || hasAutoCleanedRef.current) return;
@@ -986,6 +1001,106 @@ export const AdminPanel: React.FC = () => {
     } catch (error) {
       console.error(error);
       alert('Error reordering ads.');
+    }
+  };
+
+  const handleAssignAllAdsToAdmin = async () => {
+    if (!user) return;
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من تعيين جميع الإعلانات لك كمسؤول؟' : 'Are you sure you want to assign all ads to yourself as admin?');
+    if (!confirmed) return;
+    
+    setCleaningUp(true);
+    try {
+      const { collection, getDocs, updateDoc, writeBatch } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+      
+      const batch = writeBatch(db);
+      
+      // Update ad_submissions
+      const subsSnap = await getDocs(collection(db, 'ad_submissions'));
+      const existingSubEventIds = new Set<string>();
+      
+      subsSnap.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.eventData && data.eventData.id) {
+          existingSubEventIds.add(data.eventData.id);
+        } else if (data.id && (data.id.startsWith('ev-') || data.id.startsWith('ad_'))) {
+          existingSubEventIds.add(data.id);
+        }
+        
+        batch.update(doc.ref, {
+          'eventData.createdByAdmin': true,
+          'eventData.creatorId': user.id,
+          'eventData.creatorName': user.name,
+          'eventData.contact.organizerName': user.name,
+          advertiserId: user.id,
+          advertiserName: user.name
+        });
+      });
+
+      // Update events and create missing submissions
+      const eventsSnap = await getDocs(collection(db, 'events'));
+      const { doc: firestoreDoc } = await import('firebase/firestore');
+      
+      eventsSnap.docs.forEach(docSnap => {
+        batch.update(docSnap.ref, {
+          createdByAdmin: true,
+          creatorId: user.id,
+          creatorName: user.name,
+          'contact.organizerName': user.name
+        });
+        
+        const evData = docSnap.data();
+        if (!existingSubEventIds.has(docSnap.id)) {
+           // Create a dummy ad submission so it shows in the admin's profile
+           const newSubRef = firestoreDoc(collection(db, 'ad_submissions'));
+           batch.set(newSubRef, {
+             id: newSubRef.id,
+             invoiceNumber: `INV-ADM-${Date.now().toString().slice(-4)}`,
+             advertiserId: user.id,
+             advertiserName: user.name,
+             phone: evData.contact?.phone || user.phone || '201011223344',
+             titleAr: evData.titleAr || 'إعلان أدمن',
+             titleEn: evData.titleEn || 'Admin Ad',
+             category: evData.category || 'party',
+             styles: evData.styles || ['Salsa'],
+             mediaType: evData.mediaType || 'image',
+             mediaUrl: evData.mediaUrl || '',
+             pricing: { days: 30, subtotal: 0, videoSurcharge: 0, total: 0 },
+             status: 'approved',
+             submittedAt: evData.uploadDate || new Date().toISOString(),
+             eventData: {
+               ...evData,
+               createdByAdmin: true,
+               creatorId: user.id,
+               creatorName: user.name,
+               contact: {
+                 ...evData.contact,
+                 organizerName: user.name
+               }
+             }
+           });
+        }
+      });
+
+      await batch.commit();
+
+      // Update local events array
+      events.forEach(ev => {
+        ev.createdByAdmin = true;
+        ev.creatorId = user.id;
+        ev.creatorName = user.name;
+        if (ev.contact) {
+          ev.contact.organizerName = user.name;
+        }
+      });
+      
+      alert(lang === 'ar' ? 'تم تعيين الإعلانات لك بنجاح.' : 'Ads assigned to you successfully.');
+    } catch (e) {
+      console.error(e);
+      alert(lang === 'ar' ? 'حدث خطأ.' : 'An error occurred.');
+    } finally {
+      setCleaningUp(false);
     }
   };
 
@@ -1893,6 +2008,16 @@ export const AdminPanel: React.FC = () => {
 
               <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap">
                 <button
+                  onClick={handleAssignAllAdsToAdmin}
+                  disabled={cleaningUp}
+                  className="flex items-center gap-2 rounded-xl bg-neutral-800 border border-purple-500/30 px-3.5 py-2.5 text-xs font-bold text-purple-300 hover:bg-purple-500/20 hover:border-purple-500 transition-all cursor-pointer shadow-md"
+                  title="نقل جميع الإعلانات الحالية لملفك الشخصي (أدمن)"
+                >
+                  <User className={`h-4 w-4 ${cleaningUp ? 'animate-spin' : ''}`} />
+                  <span>{cleaningUp ? (lang === 'ar' ? 'جاري النقل...' : 'Transferring...') : (lang === 'ar' ? 'نقل الإعلانات لي' : 'Assign to Me')}</span>
+                </button>
+
+                <button
                   onClick={handleCleanUpClutter}
                   disabled={cleaningUp}
                   className="flex items-center gap-2 rounded-xl bg-neutral-800 border border-red-500/30 px-3.5 py-2.5 text-xs font-bold text-red-300 hover:bg-red-500/20 hover:border-red-500 transition-all cursor-pointer shadow-md"
@@ -2232,9 +2357,14 @@ export const AdminPanel: React.FC = () => {
                   <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
                     <BarChart3 className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-black font-mono">
-                    REALTIME
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-black font-mono">
+                      📲 {analyticsCounters.pwa_installs || 0} {lang === 'ar' ? 'تثبيت' : 'Installs'}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-black font-mono hidden sm:inline-block">
+                      REALTIME
+                    </span>
+                  </div>
                 </div>
                 <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
                   {lang === 'ar' ? '📊 إحصائيات زوار الموقع واهتمام الجمهور' : '📊 Realtime Analytics & Interest'}
@@ -4492,6 +4622,15 @@ export const AdminPanel: React.FC = () => {
                           {/* Actions Column */}
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <div className="flex items-center justify-center gap-2">
+                              {/* View Profile button */}
+                              <button
+                                onClick={() => setSelectedUserProfile(u)}
+                                className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20 hover:border-purple-500 transition-all cursor-pointer"
+                                title={lang === 'ar' ? 'عرض الملف الشخصي' : 'View Profile'}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+
                               {/* Toggle Suspension button */}
                               <button
                                 onClick={async () => {
@@ -7459,6 +7598,22 @@ export const AdminPanel: React.FC = () => {
                   </div>
                 ))}
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Profile View Modal */}
+      {selectedUserProfile && (
+        <div className="fixed inset-0 z-[9999] bg-neutral-950 overflow-y-auto" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="max-w-4xl mx-auto w-full p-4 sm:p-6 lg:p-8 min-h-screen">
+            <ProfileView 
+              onOpenCreateModal={() => {}}
+              onOpenAuth={() => {}}
+              onOpenMap={() => {}}
+              onOpenShare={() => {}}
+              adminViewUser={selectedUserProfile}
+              onCloseAdminView={() => setSelectedUserProfile(null)}
+            />
           </div>
         </div>
       )}

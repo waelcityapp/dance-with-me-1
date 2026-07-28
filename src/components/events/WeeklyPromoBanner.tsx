@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Crown, UserCheck } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Crown, UserCheck, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -24,6 +24,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
     togglePauseEvent,
     setEditingEvent,
     setActiveTab,
+    setAdminSelectedUserId,
     appAssets
   } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -189,6 +190,23 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             className="flex h-9 items-center justify-center rounded-xl bg-neutral-950/95 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-xl px-2 select-all"
             title={lang === 'ar' ? 'الموضع والترتيب' : 'Placement position'}
           >            #{promoEvent.position && promoEvent.position !== 999999 ? promoEvent.position : 1}          </div>
+
+          {/* Creator Profile Button */}
+          {promoEvent.creatorId && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setAdminSelectedUserId(promoEvent.creatorId!);
+                setActiveTab('admin');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-xl transition-all border border-purple-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+              title={lang === 'ar' ? 'عرض ملف منشئ الإعلان' : 'View Ad Creator Profile'}
+            >
+              <User className="h-4.5 w-4.5 stroke-[2.5]" />
+            </button>
+          )}
 
           {/* Delete button */}
           <button
@@ -461,79 +479,123 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           </div>
         )}
 
-        {/* Action Bar: Contact, Share, Like, Book in a single row */}
-        <div className="flex flex-row items-center gap-1.5 sm:gap-2 pt-3 border-t border-neutral-800 overflow-x-auto no-scrollbar w-full whitespace-nowrap">
-          {/* Direct Call Button */}
-          <button
+        {/* Admin Event Creator Info Badge */}
+        {user?.isAdmin && (
+          <div 
             onClick={(e) => {
-              e.preventDefault();
-              if (!user) {
-                openGuestAlert('contact');
-                return;
+              if (promoEvent.creatorId) {
+                e.preventDefault();
+                e.stopPropagation();
+                setAdminSelectedUserId(promoEvent.creatorId);
+                setActiveTab('admin');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }
-              window.location.href = `tel:${promoEvent.contact.phone}`;
             }}
-            className="flex items-center justify-center gap-1 rounded-xl bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-white hover:bg-neutral-800 hover:text-amber-400 border border-neutral-800 transition-all shrink-0 cursor-pointer"
-            title={lang === 'ar' ? 'اتصال مباشر' : 'Direct Call'}
+            className={`mb-3 px-3 py-1.5 mx-4 sm:mx-6 rounded-xl bg-purple-950/40 border border-purple-500/20 text-purple-400 font-sans text-xs flex flex-col gap-1 transition-all ${promoEvent.creatorId ? 'cursor-pointer hover:bg-purple-900/50 hover:border-purple-500/50 active:scale-[0.98]' : ''}`}
           >
-            <Phone className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-            <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'اتصل' : 'Call'}</span>
-          </button>
-
-          {/* WhatsApp Button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              if (!user) {
-                openGuestAlert('contact');
-                return;
+            <span className="font-semibold flex items-center justify-between">
+              <span>{lang === 'ar' ? 'معلومات الإنشاء (أدمن فقط):' : 'Creation Info (Admin Only):'}</span>
+              {promoEvent.creatorId && (
+                <User className="w-3.5 h-3.5" />
+              )}
+            </span>
+            <span className="font-bold text-[11px] bg-purple-500/10 px-2 py-1 rounded border border-purple-500/30">
+              {promoEvent.createdByAdmin === true || (!promoEvent.creatorId && (promoEvent.contact.organizerName === 'إدارة DWM للرقص' || promoEvent.contact.organizerName === 'الإدارة')) 
+                ? (lang === 'ar' ? 'تم إنشاء هذا الإعلان بواسطة الإدارة' : 'This ad was created by Management')
+                : (lang === 'ar' 
+                    ? `تم إنشاء هذا الإعلان بواسطة المستخدم (${promoEvent.creatorName || promoEvent.contact.organizerName})` 
+                    : `This ad was created by User (${promoEvent.creatorName || promoEvent.contact.organizerName})`)
               }
-              const url = `https://wa.me/${promoEvent.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، أستفسر عن حجز تذاكر: ${promoEvent.titleAr}` : `Hello, inquiring about: ${promoEvent.titleEn}`)}`;
-              window.open(url, '_blank', 'noopener,noreferrer');
-            }}
-            className="flex items-center justify-center gap-1 rounded-xl bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-emerald-400 hover:bg-emerald-600 hover:text-white border border-neutral-800 transition-all shrink-0 cursor-pointer"
-          >
-            <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-            <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
-          </button>
+            </span>
+          </div>
+        )}
 
-          {/* Share Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onOpenShare(promoEvent)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-400 border border-neutral-800 transition-all shrink-0 cursor-pointer"
-            title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share Event'}
-          >
-            <Share2 className="h-3.5 w-3.5 shrink-0" />
-          </motion.button>
-
-          {/* Like Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={(e) => toggleLikeEvent(promoEvent.id, e.currentTarget)}
-            className={`flex h-10 px-2.5 sm:px-3 items-center justify-center gap-1.5 rounded-xl border font-bold transition-all shrink-0 cursor-pointer ${
-              isLiked
-                ? 'bg-red-600 text-white border-red-500 shadow-lg'
-                : 'bg-neutral-900 text-red-500 border-neutral-700 hover:bg-red-600 hover:text-white'
-            }`}
-          >
-            <Heart className={`h-3.5 w-3.5 shrink-0 ${isLiked ? 'fill-current' : ''}`} />
-            <span className="font-mono text-[11px] sm:text-xs">{promoEvent.likesCount}</span>
-          </motion.button>
-
-          {/* Book Now Button */}
-          {promoEvent.showBookingButton !== false && (
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => bookTicket(promoEvent.id)}
-              className="flex h-10 flex-1 items-center justify-center gap-1 rounded-xl px-3 sm:px-4 text-xs font-bold transition-colors shrink-0 bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg cursor-pointer"
+        {/* Action Buttons Bar: Phone, WhatsApp, Share, Like, Book */}
+        <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-800 mt-auto flex-wrap">
+          {/* Contact Actions */}
+          <div className="flex items-center gap-1.5">
+            {/* Direct Call Button */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (!user) {
+                  openGuestAlert('contact');
+                  return;
+                }
+                window.location.href = `tel:${promoEvent.contact.phone}`;
+              }}
+              className="flex items-center justify-center gap-1 rounded-xl bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-neutral-300 hover:bg-neutral-800 hover:text-amber-400 border border-neutral-800 transition-all shrink-0 cursor-pointer"
+              title={lang === 'ar' ? 'اتصال مباشر' : 'Direct Call'}
             >
-              <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'احجز' : 'Book'}</span>
+              <Phone className="h-4 w-4 shrink-0" />
+              <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'اتصل' : 'Call'}</span>
+            </button>
+
+            {/* WhatsApp Button */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (!user) {
+                  openGuestAlert('contact');
+                  return;
+                }
+                const url = `https://wa.me/${promoEvent.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، أستفسر عن حجز تذاكر: ${promoEvent.titleAr}` : `Hello, inquiring about: ${promoEvent.titleEn}`)}`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }}
+              className="flex items-center justify-center gap-1 rounded-xl bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-emerald-400 hover:bg-emerald-600 hover:text-white border border-neutral-800 transition-all shrink-0 cursor-pointer"
+            >
+              <MessageCircle className="h-4 w-4 shrink-0" />
+              <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
+            </button>
+          </div>
+
+          {/* Social & Booking Actions */}
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Share Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onOpenShare(promoEvent)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-400 border border-neutral-800 transition-all shrink-0 cursor-pointer"
+              title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share Event'}
+            >
+              <Share2 className="h-4 w-4 shrink-0" />
             </motion.button>
-          )}
+
+            {/* Like Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => toggleLikeEvent(promoEvent.id, e.currentTarget)}
+              className={`flex h-10 px-2.5 sm:px-3 items-center justify-center gap-1.5 rounded-xl border font-bold transition-all shrink-0 cursor-pointer ${
+                isLiked
+                  ? 'bg-red-600 text-white border-red-500 shadow-lg'
+                  : 'bg-neutral-900 text-red-500 border-neutral-700 hover:bg-red-600 hover:text-white'
+              }`}
+            >
+              <Heart className={`h-4 w-4 shrink-0 ${isLiked ? 'fill-current' : ''}`} />
+              <span className="font-mono text-[11px] sm:text-xs">{promoEvent.likesCount}</span>
+            </motion.button>
+
+            {/* Book Now Button */}
+            {promoEvent.showBookingButton !== false && (
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => bookTicket(promoEvent.id)}
+                  className="flex h-10 items-center justify-center gap-1 rounded-xl px-6 sm:px-8 min-w-[120px] sm:min-w-[140px] text-xs font-bold transition-all bg-amber-500 text-neutral-950 hover:bg-amber-400 shadow-lg cursor-pointer"
+                >
+                  <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
+                </motion.button>
+                {(promoEvent.bookingSubtextAr || promoEvent.bookingSubtextEn || promoEvent.priceAr || promoEvent.priceEn) && (
+                  <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-400 text-center max-w-[160px] sm:max-w-[200px] leading-tight break-words" title={lang === 'ar' ? (promoEvent.bookingSubtextAr || promoEvent.priceAr || promoEvent.bookingSubtextEn || promoEvent.priceEn) : (promoEvent.bookingSubtextEn || promoEvent.priceEn || promoEvent.bookingSubtextAr || promoEvent.priceAr)}>
+                    {lang === 'ar' ? (promoEvent.bookingSubtextAr || promoEvent.priceAr || promoEvent.bookingSubtextEn || promoEvent.priceEn) : (promoEvent.bookingSubtextEn || promoEvent.priceEn || promoEvent.bookingSubtextAr || promoEvent.priceAr)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

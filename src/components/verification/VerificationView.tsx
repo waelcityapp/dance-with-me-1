@@ -117,11 +117,22 @@ export const VerificationView: React.FC = () => {
     }
 
     if (!hasStaffList) {
+      if (pin === '0011') {
+        return {
+          isAuthorized: true,
+          scannerName: isArabic ? 'موظف أمن افتراضي' : 'Default Security Staff',
+          staffPin: '0011',
+          gateNumber: undefined,
+          message: isArabic 
+            ? '🟢 موظف أمن معتمد (رقم سري افتراضي)' 
+            : '🟢 Authorized Security Staff (Default PIN)'
+        };
+      }
       return {
         isAuthorized: false,
         needsPinInput: true,
         isInvalidPin: true,
-        message: isArabic ? '❌ لم يتم تعيين أي موظف أمن لهذه الفاعلية بعد!' : '❌ No security staff has been assigned to this event yet!'
+        message: isArabic ? '❌ لم يتم تعيين أي موظف أمن لهذه الفاعلية بعد! (استخدم 0011 للوصول الافتراضي)' : '❌ No security staff has been assigned to this event yet! (Use 0011 for default access)'
       };
     }
 
