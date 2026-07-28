@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, Users, PlusCircle, Heart, Ticket, ShieldAlert, ShieldCheck, Sparkles, Clock, Trash2, LogOut, CheckCircle, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare, Camera, Loader2, Info, Crown } from 'lucide-react';
+import { User, Users, PlusCircle, Heart, Ticket, ShieldAlert, ShieldCheck, Sparkles, Clock, Trash2, LogOut, CheckCircle, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare, Camera, Loader2, Info, Crown, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventCard } from '../events/EventCard';
 import { ActualAttendanceModal } from '../modals/ActualAttendanceModal';
@@ -186,6 +186,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [expandedSubId, setExpandedSubId] = useState<string | null>(null);
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [editTitleAr, setEditTitleAr] = useState('');
   const [editTitleEn, setEditTitleEn] = useState('');
   const [editDescAr, setEditDescAr] = useState('');
@@ -1033,6 +1035,60 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       : 'border-red-500/30 bg-neutral-900/60'
                   }`}
                 >
+                  <div
+                    className="flex justify-between items-center cursor-pointer select-none"
+                    onClick={() => {
+                      if (expandedSubId === sub.id) {
+                        setExpandedSubId(null);
+                        setEditingSubId(null);
+                      } else {
+                        setExpandedSubId(sub.id);
+                      }
+                    }}
+                  >
+                    <div className="flex flex-col gap-2">
+                      <h3 className="text-lg font-black text-white">
+                        {lang === 'ar' ? (sub.eventData?.titleAr || sub.titleAr) : (sub.eventData?.titleEn || sub.titleEn)}
+                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap text-[10px] sm:text-xs">
+                        <span className="text-amber-400 font-mono font-bold">
+                          #{sub.invoiceNumber}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full font-bold uppercase ${
+                          isArchived ? 'bg-amber-500 text-neutral-950 animate-pulse' :
+                          sub.status === 'approved' ? 'bg-emerald-500 text-neutral-950' :
+                          sub.status === 'pending' ? 'bg-amber-400 text-neutral-950' : 'bg-red-500 text-white'
+                        }`}>
+                          {isArchived ? (lang === 'ar' ? 'منتهي (أرشيف)' : 'Archived') : 
+                           sub.status === 'approved' ? (lang === 'ar' ? 'نشط' : 'Active') : 
+                           sub.status === 'pending' ? (lang === 'ar' ? 'مراجعة' : 'Pending') : 
+                           (lang === 'ar' ? 'مرفوض' : 'Rejected')}
+                        </span>
+                        {(sub.eventRef || associatedEvent?.eventRef) && (
+                          <span className="text-indigo-400 font-mono font-bold">
+                            {lang === 'ar' ? `المرجعي: ${sub.eventRef || associatedEvent?.eventRef}` : `Ref: ${sub.eventRef || associatedEvent?.eventRef}`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 ml-4 rtl:mr-4 rtl:ml-0 shrink-0">
+                      <div className="bg-neutral-800/50 p-2 rounded-xl">
+                        <ChevronDown className={`w-5 h-5 text-neutral-400 transition-transform ${expandedSubId === sub.id ? 'rotate-180' : ''}`} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {expandedSubId === sub.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-4 mt-4 border-t border-white/10">
+
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <span className="px-3 py-1 rounded-xl bg-neutral-800 text-amber-400 font-mono text-xs font-bold border border-white/10">
@@ -1554,6 +1610,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </button>
                     </div>
                   )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               );
             })}
@@ -1734,14 +1794,70 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               return (
                 <div 
                   key={b.id} 
-                  className="bg-neutral-900 border border-zinc-800 rounded-3xl overflow-hidden relative shadow-lg flex flex-col justify-between min-h-[320px]"
+                  className="bg-neutral-900 border border-zinc-800 rounded-3xl overflow-hidden relative shadow-lg flex flex-col"
                   dir={isArabic ? 'rtl' : 'ltr'}
                 >
                   {/* Vertical Red Accent - signature visual style! */}
                   <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-red-600"></div>
                   
-                  {/* Ticket Top details */}
-                  <div className="p-5 space-y-4">
+                  {/* Title Toggle Area */}
+                  <div
+                    className="p-5 flex justify-between items-center cursor-pointer select-none border-b border-zinc-800/60"
+                    onClick={() => setExpandedBookingId(expandedBookingId === b.id ? null : b.id)}
+                  >
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                        {isArabic ? 'الفعالية / الحفلة' : 'EVENT'}
+                      </span>
+                      <h4 className="text-base font-bold text-zinc-100 line-clamp-1">
+                        {isArabic ? (b.eventTitleAr || b.eventTitleEn) : (b.eventTitleEn || b.eventTitleAr)}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-2">
+                        {b.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20">
+                            <Clock className="w-3 h-3" />
+                            {isArabic ? 'قيد المراجعة' : 'Pending Review'}
+                          </span>
+                        ) : b.status === 'approved' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                            <CheckCircle className="w-3 h-3" />
+                            {isArabic ? 'مؤكد ومقبول' : 'Confirmed'}
+                          </span>
+                        ) : b.status === 'cancelled' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-neutral-800 text-neutral-400 text-[10px] font-bold border border-zinc-700">
+                            <X className="w-3 h-3" />
+                            {isArabic ? 'ملغي ومسترجع' : 'Cancelled & Refunded'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/25 text-red-400 text-[10px] font-bold border border-red-500/20">
+                            <X className="w-3 h-3" />
+                            {isArabic ? 'مرفوض' : 'Rejected'}
+                          </span>
+                        )}
+                        <span className="text-xs font-mono font-bold text-amber-500">
+                          #{b.refNumber}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-neutral-400 hidden sm:inline-block">
+                        {expandedBookingId === b.id ? (isArabic ? 'إخفاء التفاصيل' : 'Hide Details') : (isArabic ? 'عرض التفاصيل' : 'View Details')}
+                      </span>
+                      <div className="bg-neutral-800/50 p-2 rounded-xl">
+                        <ChevronDown className={`w-5 h-5 text-neutral-400 transition-transform ${expandedBookingId === b.id ? 'rotate-180' : ''}`} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {expandedBookingId === b.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden flex flex-col justify-between"
+                      >
+                        <div className="p-5 space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
@@ -2078,6 +2194,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       );
                     })()}
                   </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}
