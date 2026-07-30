@@ -228,6 +228,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         category,
         mediaType,
         mediaUrl,
+        thumbnailUrl: mediaType === 'video' ? (mediaUrl.includes('cloudinary.com') ? mediaUrl.replace(/\.[^.]+$/, '.jpg') : mediaUrl) : mediaUrl,
         styles: selectedStyles,
         priceAr,
         priceEn,
@@ -715,8 +716,8 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
               <input
                 type="text"
                 value={mediaUrl}
-                readOnly
-                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-neutral-400 focus:outline-none transition-all text-sm font-mono cursor-not-allowed"
+                onChange={(e) => setMediaUrl(e.target.value)}
+                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-neutral-300 focus:outline-none focus:border-amber-500/50 transition-all text-sm font-mono"
                 placeholder="https://"
                 dir="ltr"
               />
