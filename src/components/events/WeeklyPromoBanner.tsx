@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Crown, UserCheck, User } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, UserCheck, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -182,82 +182,86 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         </div>
       )}
 
+
+
       {/* Admin Floating Control Toolbar */}
       {user?.isAdmin && (
-        <div className="absolute top-14 right-4 z-30 flex flex-col gap-2">
-          {/* Position Display next to Admin controls */}
-          <div 
-            className="flex h-9 items-center justify-center rounded-xl bg-neutral-950/95 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-xl px-2 select-all"
-            title={lang === 'ar' ? 'الموضع والترتيب' : 'Placement position'}
-          >            #{promoEvent.position && promoEvent.position !== 999999 ? promoEvent.position : 1}          </div>
+        <div className="absolute top-14 left-4 right-4 z-30 flex flex-wrap gap-2 justify-end pointer-events-none">
+          <div className="pointer-events-auto flex flex-wrap gap-2 bg-neutral-950/40 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl">
+            {/* Position Display */}
+            <div 
+              className="flex h-9 px-3 items-center justify-center rounded-xl bg-neutral-950/80 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-md select-all"
+              title={lang === 'ar' ? 'الموضع والترتيب' : 'Placement position'}
+            >
+              #{promoEvent.position && promoEvent.position !== 999999 ? promoEvent.position : 1}
+            </div>
 
-          {/* Creator Profile Button */}
-          {promoEvent.creatorId && (
+            {/* Creator Profile Button */}
+            {promoEvent.creatorId && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setAdminSelectedUserId(promoEvent.creatorId!);
+                  setActiveTab('admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-md transition-all border border-purple-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+                title={lang === 'ar' ? 'عرض ملف منشئ الإعلان' : 'View Ad Creator Profile'}
+              >
+                <User className="h-4.5 w-4.5 stroke-[2.5]" />
+              </button>
+            )}
+
+            {/* Pause / Resume button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                setAdminSelectedUserId(promoEvent.creatorId!);
-                setActiveTab('admin');
+                togglePauseEvent(promoEvent.id);
+              }}
+              className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-md transition-all border hover:scale-105 active:scale-95 cursor-pointer ${
+                promoEvent.isPaused 
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/30' 
+                  : 'bg-amber-500 hover:bg-amber-400 text-neutral-950 border-amber-400/30'
+              }`}
+              title={promoEvent.isPaused 
+                ? (lang === 'ar' ? 'إعادة تشغيل الإعلان' : 'Resume Ad') 
+                : (lang === 'ar' ? 'إيقاف مؤقت للإعلان' : 'Pause Ad')
+              }
+            >
+              {promoEvent.isPaused ? <Play className="h-4.5 w-4.5 fill-current" /> : <Pause className="h-4.5 w-4.5 fill-current" />}
+            </button>
+
+            {/* Edit button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setEditingEvent(promoEvent);
+                setActiveTab('edit_ad_admin');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-xl transition-all border border-purple-500/30 hover:scale-105 active:scale-95 cursor-pointer"
-              title={lang === 'ar' ? 'عرض ملف منشئ الإعلان' : 'View Ad Creator Profile'}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md transition-all border border-blue-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+              title={lang === 'ar' ? 'تعديل الإعلان' : 'Edit Ad'}
             >
-              <User className="h-4.5 w-4.5 stroke-[2.5]" />
+              <Edit className="h-4.5 w-4.5 stroke-[2.5]" />
             </button>
-          )}
-
-          {/* Delete button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setShowDeleteConfirm(true);
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 hover:bg-red-500 text-white shadow-xl transition-all border border-red-500/30 hover:scale-105 active:scale-95 cursor-pointer"
-            title={lang === 'ar' ? 'حذف الإعلان نهائياً' : 'Delete Ad Permanently'}
-          >
-            <Trash2 className="h-4.5 w-4.5 stroke-[2.5]" />
-          </button>
-
-          {/* Pause / Resume button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              togglePauseEvent(promoEvent.id);
-            }}
-            className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-xl transition-all border hover:scale-105 active:scale-95 cursor-pointer ${
-              promoEvent.isPaused 
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/30' 
-                : 'bg-amber-500 hover:bg-amber-400 text-neutral-950 border-amber-400/30'
-            }`}
-            title={promoEvent.isPaused 
-              ? (lang === 'ar' ? 'إعادة تشغيل الإعلان' : 'Resume Ad') 
-              : (lang === 'ar' ? 'إيقاف مؤقت للإعلان' : 'Pause Ad')
-            }
-          >
-            {promoEvent.isPaused ? <Play className="h-4.5 w-4.5 fill-current" /> : <Pause className="h-4.5 w-4.5 fill-current" />}
-          </button>
-
-          {/* Edit button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setEditingEvent(promoEvent);
-              setActiveTab('edit_ad_admin');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-xl transition-all border border-blue-500/30 hover:scale-105 active:scale-95 cursor-pointer"
-            title={lang === 'ar' ? 'تعديل الإعلان' : 'Edit Ad'}
-          >
-            <Edit className="h-4.5 w-4.5 stroke-[2.5]" />
-          </button>
+            {/* Delete button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setShowDeleteConfirm(true);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 hover:bg-red-500 text-white shadow-md transition-all border border-red-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+              title={lang === 'ar' ? 'حذف الإعلان' : 'Delete Ad'}
+            >
+              <Trash2 className="h-4.5 w-4.5 stroke-[2.5]" />
+            </button>
+          </div>
         </div>
       )}
-
       {/* Media Player Container (Video/Image) */}
       <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${aspectRatioClass}`}>
         {/* Paused Overlay with 'X' mark */}
@@ -271,7 +275,6 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             </span>
           </div>
         )}
-
         {isGoogleDriveUrl(promoEvent.mediaUrl) ? (
           <iframe
             src={getGoogleDrivePreviewUrl(promoEvent.mediaUrl) || promoEvent.mediaUrl}
@@ -279,65 +282,27 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             allow="autoplay; encrypted-media; picture-in-picture"
             referrerPolicy="no-referrer"
           />
-        ) : promoEvent.mediaType === 'video' ? (
-          <div className="relative h-full w-full group/video">
-            <video
-              ref={videoRef}
-              src={getSafePlayableVideoUrl(promoEvent.mediaUrl)}
-              poster={promoEvent.thumbnailUrl || undefined}
-              preload="auto"
-              muted={isMuted}
-              playsInline
-              onLoadedMetadata={(e) => {
-                const video = e.currentTarget;
-                if (video.videoHeight > video.videoWidth) {
-                  setAspectRatioClass('aspect-[9/16] max-h-[550px] sm:max-h-[600px]');
-                } else {
-                  setAspectRatioClass('aspect-video');
-                }
-              }}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onEnded={() => setIsPlaying(false)}
-              className="h-full w-full object-contain bg-neutral-950 cursor-pointer"
-              onClick={() => togglePlay()}
-            />
-            {/* Play/Pause Center Overlay */}
-            {!isPlaying && (
-              <div 
-                onClick={() => togglePlay()}
-                className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 cursor-pointer transition-all duration-300"
-              >
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  whileHover={{ scale: 1.1 }}
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-neutral-950 shadow-2xl hover:scale-110 active:scale-95 transition-all"
-                >
-                  <Play className="h-8 w-8 fill-current ml-1" />
-                </motion.div>
-              </div>
-            )}
-            
-            {/* Fullscreen Button */}
-            <button
-              onClick={openFullscreenVideo}
-              className="absolute top-12 left-4 z-20 flex h-10 px-3 items-center justify-center gap-1.5 rounded-full bg-neutral-950/80 text-white border border-neutral-800 hover:bg-amber-500 hover:text-neutral-950 transition-all shadow-lg backdrop-blur-md text-xs font-semibold"
-              title={lang === 'ar' ? 'عرض بملء الشاشة' : 'View Full Screen'}
-            >
-              <Maximize2 className="h-4 w-4" />
-              <span>{lang === 'ar' ? 'ملء الشاشة' : 'Full Screen'}</span>
-            </button>
-
-            {/* Sound Toggle Button */}
-            <button
-              onClick={toggleMute}
-              className="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-950/80 text-white border border-neutral-800 hover:bg-amber-500 hover:text-neutral-950 transition-all shadow-lg backdrop-blur-md"
-              title={isMuted ? (lang === 'ar' ? 'تشغيل الصوت' : 'Unmute') : (lang === 'ar' ? 'كتم الصوت' : 'Mute')}
-            >
-              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5 animate-pulse" />}
-            </button>
-          </div>
+        ) : getSafePlayableVideoUrl(promoEvent.mediaUrl) ? (
+          <video
+            ref={videoRef}
+            src={getSafePlayableVideoUrl(promoEvent.mediaUrl)}
+            poster={promoEvent.thumbnailUrl || undefined}
+            playsInline
+            muted={isMuted}
+            loop
+            autoPlay
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onLoadedMetadata={(e) => {
+              const video = e.currentTarget;
+              if (video.videoHeight > video.videoWidth) {
+                setAspectRatioClass('aspect-[9/16] max-h-[500px] sm:max-h-[600px]');
+              } else {
+                setAspectRatioClass('aspect-[16/10] sm:aspect-video');
+              }
+            }}
+            className="h-full w-full object-cover"
+          />
         ) : (
           <img
             src={promoEvent.mediaUrl}
@@ -345,72 +310,80 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             onLoad={(e) => {
               const img = e.currentTarget;
               if (img.naturalHeight > img.naturalWidth) {
-                setAspectRatioClass('aspect-[9/16] max-h-[550px] sm:max-h-[600px]');
+                setAspectRatioClass('aspect-[9/16] max-h-[500px] sm:max-h-[600px]');
               } else {
-                setAspectRatioClass('aspect-video');
+                setAspectRatioClass('aspect-[16/10] sm:aspect-video');
               }
             }}
-            className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+            className="h-full w-full object-cover"
           />
         )}
-
-        {/* Price Tag Overlay */}
-        {(promoEvent.priceAr || promoEvent.priceEn) && (
-          <div className="absolute bottom-3 left-3 z-20 rounded-xl bg-amber-500 px-3 py-1 text-xs font-bold text-neutral-950 shadow-lg font-mono">
-            {lang === 'ar' ? (promoEvent.priceAr || promoEvent.priceEn) : (promoEvent.priceEn || promoEvent.priceAr)}
-          </div>
-        )}
-
-        <div className="absolute inset-0 card-gradient pointer-events-none" />
-      </div>
-
-      {/* Event Node Details (النود الموجودة تحت بانر الاعلان) */}
-      <div className="relative z-10 -mt-6 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-          {promoEvent.styles.map((style) => (
-            <span key={style} className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-400/30 font-mono">
-              #{getStyleLabel(style, lang)}
-            </span>
-          ))}
-          <span className="ml-auto text-[10px] font-mono text-neutral-500">
-            {lang === 'ar' ? 'تاريخ التحميل: ' : 'Uploaded: '}{formatDate(promoEvent.uploadDate, lang)}
-          </span>
-        </div>
-
-        {/* Governorate & Area Badge in its own line right before event title */}
-        {(promoEvent.location?.governorateAr || promoEvent.location?.areaAr) && (
-          <div className="mb-2">
-            <span className="inline-flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 font-sans px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm">
-              <span className="text-amber-400">📍</span>
-              <span>
-                {lang === 'ar' 
-                  ? [promoEvent.location?.governorateAr, promoEvent.location?.areaAr].filter(Boolean).join(' - ')
-                  : [promoEvent.location?.governorateEn || promoEvent.location?.governorateAr, promoEvent.location?.areaEn || promoEvent.location?.areaAr].filter(Boolean).join(' - ')}
-              </span>
-            </span>
-          </div>
-        )}
-
-        <h2 className="text-xl sm:text-2xl font-black text-white mb-1.5 leading-tight">
-          {lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
-        </h2>
-
-        {/* Organizer / Organizing Entity Badge below Event Title */}
-        {(() => {
-          const displayOrganizer = promoEvent.contact?.organizerName?.trim() || (promoEvent as any).organizerName?.trim() || (promoEvent as any).advertiserName?.trim() || '';
-          if (!displayOrganizer) return null;
-          return (
-            <div className="flex items-center gap-1.5 text-xs text-amber-300 font-medium mb-2.5 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-xl w-fit backdrop-blur-sm">
-              <UserCheck className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-              <span className="flex items-center gap-1">
-                <span className="text-neutral-400 text-[11px] font-normal">{lang === 'ar' ? 'المنظم / الجهة المنظمة:' : 'Organizer:'}</span>
-                <strong className="text-amber-200 font-bold">{displayOrganizer}</strong>
-              </span>
+        {/* Play/Pause Button overlay */}
+        {getSafePlayableVideoUrl(promoEvent.mediaUrl) && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (videoRef.current) {
+                if (isPlaying) {
+                  videoRef.current.pause();
+                } else {
+                  videoRef.current.play().catch(console.error);
+                }
+              }
+            }}
+            className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 opacity-0 hover:opacity-100 transition-opacity cursor-pointer group/play"
+          >
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-950/80 text-white backdrop-blur-md border border-white/10 group-hover/play:scale-110 transition-transform">
+              {isPlaying ? <Pause className="h-8 w-8 fill-current" /> : <Play className="h-8 w-8 fill-current ml-1" />}
             </div>
-          );
-        })()}
-
-        <div className="mb-3.5">
+          </button>
+        )}
+        {/* Mute/Unmute Button overlay */}
+        {getSafePlayableVideoUrl(promoEvent.mediaUrl) && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (videoRef.current) {
+                videoRef.current.muted = !videoRef.current.muted;
+                setIsMuted(videoRef.current.muted);
+              }
+            }}
+            className="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-950/80 text-white backdrop-blur-md border border-white/10 hover:scale-110 transition-transform"
+          >
+            {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+          </button>
+        )}
+        {/* Fullscreen Button overlay */}
+        {getSafePlayableVideoUrl(promoEvent.mediaUrl) && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsFullscreenVideoOpen(true);
+            }}
+            className="absolute bottom-4 right-16 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-950/80 text-white backdrop-blur-md border border-white/10 hover:scale-110 transition-transform"
+            title={lang === 'ar' ? 'تكبير الفيديو' : 'Fullscreen Video'}
+          >
+            <Maximize2 className="h-4.5 w-4.5" />
+          </button>
+        )}
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent opacity-80" />
+      </div>
+        <div className="flex flex-col p-4 sm:p-5 relative z-10 bg-neutral-900 border-t border-neutral-800">
+          <div className="mb-3.5">
+            <h3 className="text-base sm:text-lg font-black tracking-tight text-white mb-2 line-clamp-2 leading-snug">
+              {lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
+            </h3>
+            {/* Price Badge */}
+            {(promoEvent.priceAr || promoEvent.priceEn) && (
+              <div className="mb-3 inline-block rounded-lg bg-amber-500/10 px-2.5 py-1 border border-amber-500/20">
+                <span className="text-xs font-black tracking-wide text-amber-400">
+                  {lang === 'ar' ? promoEvent.priceAr : promoEvent.priceEn}
+                </span>
+              </div>
+            )}
           <p className={`text-xs sm:text-sm text-neutral-300 leading-normal ${isDescExpanded ? '' : 'line-clamp-3'}`}>
             {lang === 'ar' ? promoEvent.descriptionAr : promoEvent.descriptionEn}
           </p>
@@ -452,19 +425,21 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0">
               <MapPin className="h-4.5 w-4.5" />
             </div>
-            <div className="overflow-hidden w-full flex items-center justify-between">
-              <div>
+            <div className="overflow-hidden w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-mono text-neutral-500 flex items-center gap-1 leading-none">
                   {lang === 'ar' ? 'الموقع' : 'Location'}
                 </p>
-                <p className="text-xs font-bold text-white truncate group-hover:text-amber-400 mt-1">
+                <p className="text-xs font-bold text-white line-clamp-2 group-hover:text-amber-400 mt-1 leading-snug">
                   {lang === 'ar' ? promoEvent.location.nameAr : promoEvent.location.nameEn}
                 </p>
               </div>
               {promoEvent.location?.googleMapsUrl && promoEvent.location.googleMapsUrl.trim().length > 0 && (
-                <span className="text-[10px] text-amber-400 font-black shrink-0 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans ml-2 rtl:mr-2">
-                  {lang === 'ar' ? 'استخدم الخريطة 🗺️' : 'Use Map 🗺️'}
-                </span>
+                <div className="shrink-0 self-start sm:self-auto">
+                  <span className="text-[10px] text-amber-400 font-black bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse font-sans shadow-sm inline-flex items-center gap-1">
+                    {lang === 'ar' ? 'استخدم الخريطة 🗺️' : 'Use Map 🗺️'}
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -514,6 +489,12 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-800 mt-auto flex-wrap">
           {/* Contact Actions */}
           <div className="flex items-center gap-1.5">
+            {user?.isAdmin && (
+              <div className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20" title={lang === 'ar' ? 'عدد مشاهدات الإعلان' : 'Ad Views Count'}>
+                <Eye className="h-4 w-4" />
+                <span className="font-mono">{promoEvent.viewsCount || 0}</span>
+              </div>
+            )}
             {/* Direct Call Button */}
             <button
               onClick={(e) => {

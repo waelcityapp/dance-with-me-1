@@ -18,6 +18,11 @@ export const MapModal: React.FC<MapModalProps> = ({ event, onClose }) => {
   // Construct a reliable Google Maps iframe URL using coordinates or query
   const mapEmbedUrl = `https://maps.google.com/maps?q=${loc.lat},${loc.lng}&z=15&output=embed`;
 
+  let finalMapUrl = loc.googleMapsUrl || `https://maps.google.com/?q=${loc.lat},${loc.lng}`;
+  if (finalMapUrl && !finalMapUrl.startsWith('http')) {
+    finalMapUrl = 'https://' + finalMapUrl;
+  }
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -89,7 +94,7 @@ export const MapModal: React.FC<MapModalProps> = ({ event, onClose }) => {
               </button>
 
               <a
-                href={loc.googleMapsUrl}
+                href={finalMapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-lg gold-glow transition-all"

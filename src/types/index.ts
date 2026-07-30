@@ -100,6 +100,7 @@ export interface DanceEvent {
   location: LocationInfo;
   contact: ContactInfo;
   likesCount: number;
+  viewsCount?: number;
   isFeatured?: boolean;
   isWeeklyPromo?: boolean;
   isExpiredBy15DaysRule?: boolean; // Calculated or manually overridden
