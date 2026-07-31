@@ -15,9 +15,10 @@ interface EventCardProps {
   onOpenShare: (event: DanceEvent) => void;
   overrideAdType?: 'vip' | 'standard';
   isFavoritesTab?: boolean;
+  hideAdminControls?: boolean;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType, isFavoritesTab }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType, isFavoritesTab, hideAdminControls }) => {
   const { 
     lang, 
     toggleLikeEvent, 
@@ -183,17 +184,17 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           <span className={`rounded-lg px-2.5 py-0.5 text-[10px] font-bold border backdrop-blur-md shadow-md ${currentCat.color}`}>
             {lang === 'ar' ? currentCat.ar : currentCat.en}
           </span>
-          {user?.isAdmin && (
+          {user?.isAdmin && !hideAdminControls && (
             <span 
               className="flex h-6 px-2 items-center justify-center rounded-lg bg-neutral-950/90 border border-amber-500/30 text-[10px] font-extrabold text-amber-400 font-mono shadow-md backdrop-blur-sm" 
               title={lang === 'ar' ? 'الترتيب في الصفحة' : 'Page order'}
-            >              #{index !== undefined ? index + 1 : ''}
-              {event.position !== undefined && event.position !== 999999 && event.position !== 0 && (
+            >              #{typeof index === 'number' && !Number.isNaN(index) ? index + 1 : ''}
+              {typeof event.position === 'number' && !Number.isNaN(event.position) && event.position !== 999999 && event.position !== 0 && (
                 <span className="text-[10px] text-neutral-400 font-bold ml-1">
                   ({event.position})
                 </span>
               )}
-              {index === undefined && (event.position === undefined || event.position === 999999 || event.position === 0) && '-'}            </span>
+              {(index === undefined || Number.isNaN(index)) && (event.position === undefined || Number.isNaN(event.position) || event.position === 999999 || event.position === 0) && '-'}            </span>
           )}
         </div>
 
@@ -223,7 +224,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
 
 
       {/* Admin Floating Control Toolbar */}
-      {user?.isAdmin && (
+      {user?.isAdmin && !hideAdminControls && (
         <div className="absolute top-14 left-4 right-4 z-30 flex flex-wrap gap-2 justify-end pointer-events-none">
           <div className="pointer-events-auto flex flex-wrap gap-2 bg-neutral-950/40 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl">
             {/* Position Display */}
@@ -231,13 +232,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               className="flex h-9 px-3 items-center justify-center rounded-xl bg-neutral-950/80 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-md select-all"
               title={lang === 'ar' ? 'الترتيب في الصفحة والموضع' : 'Page order & position'}
             >
-              #{index !== undefined ? index + 1 : ''}
-              {event.position !== undefined && event.position !== 999999 && event.position !== 0 && (
+              #{typeof index === 'number' && !Number.isNaN(index) ? index + 1 : ''}
+              {typeof event.position === 'number' && !Number.isNaN(event.position) && event.position !== 999999 && event.position !== 0 && (
                 <span className="text-[10px] text-neutral-400 font-bold ml-1">
                   ({event.position})
                 </span>
               )}
-              {index === undefined && (event.position === undefined || event.position === 999999 || event.position === 0) && '-'}
+              {(index === undefined || Number.isNaN(index)) && (event.position === undefined || Number.isNaN(event.position) || event.position === 999999 || event.position === 0) && '-'}
             </div>
             {/* Creator Profile Button */}
             {event.creatorId && (
@@ -434,7 +435,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         )}
 
         {/* Admin Event Creator Info Badge */}
-        {user?.isAdmin && (
+        {user?.isAdmin && !hideAdminControls && (
           <div 
             onClick={(e) => {
               if (event.creatorId) {
@@ -468,7 +469,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-800 mt-auto flex-wrap">
           {/* Contact Actions */}
           <div className="flex items-center gap-1.5">
-            {user?.isAdmin && (
+            {user?.isAdmin && !hideAdminControls && (
               <div className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20" title={lang === 'ar' ? 'عدد مشاهدات الإعلان' : 'Ad Views Count'}>
                 <Eye className="h-4 w-4" />
                 <span className="font-mono">{event.viewsCount || 0}</span>

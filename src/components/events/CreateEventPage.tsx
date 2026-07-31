@@ -513,7 +513,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           phone,
           whatsapp,
         },
-        position: position !== undefined ? Number(position) : (editingEvent.position || 0),
+        position: position !== undefined ? (Number(position) || 0) : (editingEvent.position || 0),
         adNumber: adNumber || editingEvent.adNumber
       };
 
@@ -579,7 +579,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           },
           isFeatured: false,
           isWeeklyPromo: false,
-          position: position !== undefined ? Number(position) : 0,
+          position: position !== undefined ? (Number(position) || 0) : 0,
           adNumber: adNumber || `ADM-${Date.now()}`,
           adType,
           createdByAdmin: user?.isAdmin || false,

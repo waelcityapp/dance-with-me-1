@@ -755,7 +755,7 @@ export const AdminPanel: React.FC = () => {
         likesCount: 15,
         isFeatured: !!adminIsFeatured,
         isWeeklyPromo: !!adminIsWeeklyPromo,
-        position: adminPosition ? Number(adminPosition) : 999999,
+        position: adminPosition ? (Number(adminPosition) || 999999) : 999999,
         showBookingButton: adminShowBookingButton,
         bookingSubtextAr: adminBookingSubtextAr.trim(),
         bookingSubtextEn: adminBookingSubtextEn.trim()
@@ -1215,7 +1215,7 @@ export const AdminPanel: React.FC = () => {
 
     setActionLoading(sub.id);
     try {
-      const positionValue = submissionPositions[sub.id] !== undefined && submissionPositions[sub.id] !== '' ? Number(submissionPositions[sub.id]) : (sub.eventData?.position || Number(adminPosition) || 999999);
+      const positionValue = submissionPositions[sub.id] !== undefined && submissionPositions[sub.id] !== '' ? (Number(submissionPositions[sub.id]) || 999999) : (sub.eventData?.position || Number(adminPosition) || 999999);
 
       // 1. Create or save the actual event if eventData exists
       // Generate the unique event code (eventRef) before saving

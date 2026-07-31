@@ -935,7 +935,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {expiredEvents.map((ev, idx) => (
                   <div key={ev.id} className="relative">
-                    <EventCard event={ev} index={idx} onOpenMap={onOpenMap} onOpenShare={onOpenShare} />
+                    <EventCard event={ev} index={idx} onOpenMap={onOpenMap} onOpenShare={onOpenShare} hideAdminControls={!!adminViewUser} />
                     <button
                       onClick={() => deleteEvent(ev.id)}
                       className="absolute top-2 left-2 z-40 flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg hover:bg-red-700 transition-colors"
@@ -2248,6 +2248,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   onOpenMap={onOpenMap} 
                   onOpenShare={onOpenShare} 
                   isFavoritesTab={true}
+                  hideAdminControls={!!adminViewUser}
                 />
               ))}
             </AnimatePresence>

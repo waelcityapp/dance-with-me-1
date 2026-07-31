@@ -547,17 +547,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <div className="rounded-2xl bg-amber-500/10 p-4 border border-amber-500/30 text-left">
                 <div className="flex items-center gap-2 text-amber-300 font-bold text-sm mb-1">
                   <Sparkles className="h-4 w-4 shrink-0" />
-                  <span>{lang === 'ar' ? 'استكمال ملفك الشخصي ودخول الأدمن' : 'Complete Profile & Admin Access'}</span>
+                  <span>{lang === 'ar' ? 'استكمال ملفك الشخصي' : 'Complete Profile Setup'}</span>
                 </div>
                 <p className="text-xs text-neutral-300 leading-relaxed mb-2">
                   {lang === 'ar'
-                    ? 'نظراً لقيود نوافذ Google Auth المنبثقة داخل الـ iframe في بيئة AI Studio، يرجى مراجعة وتأكيد بريدك الإلكتروني بالأسفل لتسجيل الدخول الفوري.'
-                    : 'Due to Google Auth popup constraints inside the AI Studio iframe environment, please review and confirm your email below for instant login.'}
-                </p>
-                <p className="text-[11px] text-amber-400 font-mono">
-                  {lang === 'ar'
-                    ? `💡 تنبيه الأدمن: للوصول للوحة التحكم كأدمن، يرجى التأكد من كتابة بريدك الإلكتروني الصحيح المعتمد في إعدادات النظام.`
-                    : `💡 Admin Note: To log in with Admin access, ensure you write your correct registered admin email.`}
+                    ? 'يرجى مراجعة بياناتك بالأسفل لاستكمال إنشاء الحساب.'
+                    : 'Please review your details below to complete your account setup.'}
                 </p>
               </div>
 
@@ -571,10 +566,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   <input
                     type="email"
                     required
+                    readOnly
+                    disabled
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="email@example.com"
-                    className="w-full rounded-xl border border-amber-500/40 bg-neutral-950 py-2.5 pl-10 pr-4 text-sm text-white font-bold placeholder-neutral-600 outline-none focus:border-amber-400 transition-all shadow-inner"
+                    className="w-full rounded-xl border border-neutral-700 bg-neutral-900/50 py-2.5 pl-10 pr-4 text-sm text-neutral-500 font-bold outline-none cursor-not-allowed shadow-inner"
                   />
                 </div>
               </div>
