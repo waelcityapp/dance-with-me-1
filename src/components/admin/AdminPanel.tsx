@@ -2133,7 +2133,7 @@ export const AdminPanel: React.FC = () => {
                     <FileText className="h-6 w-6 stroke-[2]" />
                   </div>
                   <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black font-mono">
-                    {bookings.filter(b => b.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
+                    {bookings.filter(b => (b.status || 'pending').toLowerCase() === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
                   </span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
@@ -2463,7 +2463,7 @@ export const AdminPanel: React.FC = () => {
                 {lang === 'ar' ? '🎟️ تذاكر قيد المراجعة' : '🎟️ Pending Review'}
               </span>
               <span className="text-xl font-black text-yellow-400 mt-1 block font-mono">
-                {bookings ? bookings.filter(b => b.status === 'pending').length : 0}
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'pending').length : 0}
               </span>
             </div>
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
@@ -2471,7 +2471,7 @@ export const AdminPanel: React.FC = () => {
                 {lang === 'ar' ? '✅ الحجوزات المقبولة' : '✅ Approved Bookings'}
               </span>
               <span className="text-xl font-black text-emerald-400 mt-1 block font-mono">
-                {bookings ? bookings.filter(b => b.status === 'approved').length : 0}
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'approved').length : 0}
               </span>
             </div>
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
@@ -2479,7 +2479,7 @@ export const AdminPanel: React.FC = () => {
                 {lang === 'ar' ? '❌ طلبات مرفوضة' : '❌ Rejected Bookings'}
               </span>
               <span className="text-xl font-black text-red-400 mt-1 block font-mono">
-                {bookings ? bookings.filter(b => b.status === 'rejected').length : 0}
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'rejected').length : 0}
               </span>
             </div>
           </div>
@@ -2901,7 +2901,7 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               {(() => {
-                const cancelRequests = bookings.filter(b => b.status === 'cancelled');
+                const cancelRequests = bookings.filter(b => (b.status || 'pending').toLowerCase() === 'cancelled');
 
                 if (cancelRequests.length === 0) {
                   return (
@@ -3060,7 +3060,8 @@ export const AdminPanel: React.FC = () => {
               const list = bookings || [];
               const filtered = list.filter((b) => {
                 // Status Filter
-                if (bookingsFilter !== 'all' && b.status !== bookingsFilter) return false;
+                const currentStatus = (b.status || 'pending').toLowerCase();
+                if (bookingsFilter !== 'all' && currentStatus !== bookingsFilter.toLowerCase()) return false;
 
                 // Search Filter
                 if (bookingsSearch.trim()) {
@@ -3127,15 +3128,15 @@ export const AdminPanel: React.FC = () => {
                           </div>
 
                           <span className={`px-3 py-1 rounded-full text-[11px] font-black ${
-                            b.status === 'approved' 
+                            (b.status || 'pending').toLowerCase() === 'approved' 
                               ? 'bg-emerald-500/20 text-emerald-300' 
-                              : b.status === 'rejected'
+                              : (b.status || 'pending').toLowerCase() === 'rejected'
                               ? 'bg-red-500/20 text-red-300'
                               : 'bg-amber-500/20 text-amber-300 animate-pulse'
                           }`}>
-                            {b.status === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
-                            {b.status === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : 'Rejected')}
-                            {b.status === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending Review')}
+                            {(b.status || 'pending').toLowerCase() === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
+                            {(b.status || 'pending').toLowerCase() === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : 'Rejected')}
+                            {(b.status || 'pending').toLowerCase() === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending Review')}
                           </span>
                         </div>
 
