@@ -1665,8 +1665,8 @@ export const AdminPanel: React.FC = () => {
                           <tr key={b.id} className="text-neutral-300 hover:bg-neutral-900/50">
                             <td className="py-3 font-semibold text-white">{b.userName}</td>
                             <td className="py-3 font-mono">{b.userPhone}</td>
-                            <td className="py-3 text-center font-bold text-neutral-100">{b.numberOfIndividuals}</td>
-                            <td className="py-3 text-end font-mono font-bold text-amber-500">{b.totalAmount} ج.م</td>
+                            <td className="py-3 text-center font-bold text-neutral-100">{String(b.numberOfIndividuals || 1)}</td>
+                            <td className="py-3 text-end font-mono font-bold text-amber-500">{String(b.totalAmount || 0)} ج.م</td>
                             <td className="py-3 text-center">
                               <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
                                 b.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
@@ -2133,7 +2133,7 @@ export const AdminPanel: React.FC = () => {
                     <FileText className="h-6 w-6 stroke-[2]" />
                   </div>
                   <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black font-mono">
-                    {bookings.filter(b => (b.status || 'pending').toLowerCase() === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
+                    {bookings.filter(b => b.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
                   </span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
@@ -2661,11 +2661,11 @@ export const AdminPanel: React.FC = () => {
                                   </div>
                                   <div>
                                     <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '👥 عدد الأفراد' : '👥 Pax'}</span>
-                                    <span className="text-white font-bold font-mono">{b.numberOfIndividuals} {lang === 'ar' ? 'أفراد' : 'person(s)'}</span>
+                                    <span className="text-white font-bold font-mono">{String(b.numberOfIndividuals || 1)} {lang === 'ar' ? 'أفراد' : 'person(s)'}</span>
                                   </div>
                                   <div>
                                     <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '💰 قيمة الحجز' : '💰 Booking Price'}</span>
-                                    <span className="text-white font-bold font-mono">{b.totalAmount} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                                    <span className="text-white font-bold font-mono">{String(b.totalAmount || 0)} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
                                   </div>
                                   <div>
                                     <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '🚪 حالة الحضور' : '🚪 Attendance'}</span>
@@ -2947,7 +2947,7 @@ export const AdminPanel: React.FC = () => {
                           <div className="flex justify-between">
                             <span className="text-neutral-400">{lang === 'ar' ? 'قيمة الحجز المدفوعة:' : 'Paid Amount:'}</span>
                             <span className="text-white font-bold font-mono">
-                              {b.totalAmount} {lang === 'ar' ? 'ج.م' : 'EGP'}
+                              {String(b.totalAmount || 0)} {lang === 'ar' ? 'ج.م' : 'EGP'}
                             </span>
                           </div>
                           <div className="flex justify-between">
@@ -3059,9 +3059,9 @@ export const AdminPanel: React.FC = () => {
             {(() => {
               const list = bookings || [];
               const filtered = list.filter((b) => {
-                // Status Filter
                 const currentStatus = (b.status || 'pending').toLowerCase();
-                if (bookingsFilter !== 'all' && currentStatus !== bookingsFilter.toLowerCase()) return false;
+                // Status Filter
+                if (bookingsFilter !== 'all' && currentStatus !== bookingsFilter) return false;
 
                 // Search Filter
                 if (bookingsSearch.trim()) {
@@ -3128,15 +3128,15 @@ export const AdminPanel: React.FC = () => {
                           </div>
 
                           <span className={`px-3 py-1 rounded-full text-[11px] font-black ${
-                            (b.status || 'pending').toLowerCase() === 'approved' 
+                            b.status === 'approved' 
                               ? 'bg-emerald-500/20 text-emerald-300' 
-                              : (b.status || 'pending').toLowerCase() === 'rejected'
+                              : b.status === 'rejected'
                               ? 'bg-red-500/20 text-red-300'
                               : 'bg-amber-500/20 text-amber-300 animate-pulse'
                           }`}>
-                            {(b.status || 'pending').toLowerCase() === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
-                            {(b.status || 'pending').toLowerCase() === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : 'Rejected')}
-                            {(b.status || 'pending').toLowerCase() === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending Review')}
+                            {b.status === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
+                            {b.status === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : 'Rejected')}
+                            {b.status === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending Review')}
                           </span>
                         </div>
 
@@ -3231,7 +3231,7 @@ export const AdminPanel: React.FC = () => {
                                   {lang === 'ar' ? 'الإجمالي المطلوب' : 'Grand Total'}
                                 </span>
                                 <span className="text-xs font-black text-emerald-400 mt-0.5 block font-mono">
-                                  {b.totalAmount} ج.م
+                                  {String(b.totalAmount || 0)} ج.م
                                 </span>
                               </div>
                             </div>
@@ -5348,7 +5348,8 @@ export const AdminPanel: React.FC = () => {
                   const maxStyleCount = Math.max(...sortedStyles.map(s => s.count), 1);
 
                   return sortedStyles.map((item, index) => {
-                    const pct = Math.min(Math.round((item.count / maxStyleCount) * 100), 100);
+                    const safeCount = Number(item.count) || 0;
+                    const pct = maxStyleCount > 0 ? Math.min(Math.round((safeCount / maxStyleCount) * 100), 100) : 0;
                     return (
                       <div key={item.name} className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs font-mono">
@@ -5361,7 +5362,7 @@ export const AdminPanel: React.FC = () => {
                             </span>
                           </div>
                           <span className="font-bold text-neutral-400">
-                            {item.count} {lang === 'ar' ? 'نقرة' : 'clicks'} ({pct}%)
+                            {Number(item.count) || 0} {lang === 'ar' ? 'نقرة' : 'clicks'} ({Number.isNaN(pct) ? 0 : pct}%)
                           </span>
                         </div>
                         <div className="h-2 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/50">
