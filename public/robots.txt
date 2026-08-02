@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://dance-with-me.example.com/sitemap.xml
+
+Sitemap: https://cityeve.online/sitemap.xml

@@ -1,8 +1,8 @@
 {
-  "name": "Dance With Me | ارقص معي",
-  "short_name": "DanceWithMe",
-  "description": "Luxury Latin Dance PWA for Parties, Trips & Specialized Courses",
-  "start_url": "/?v=20260705",
+  "name": "CityEve | سيتي إيف",
+  "short_name": "CityEve",
+  "description": "أهم تطبيق لجميع أنواع الحفلات في مصر، دليلك لحفلات لاتيني وكورسات الرقص",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#f59e0b",
@@ -15,5 +15,5 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["entertainment", "lifestyle", "music", "sports"]
+  "categories": ["entertainment", "lifestyle", "music", "events"]
 }

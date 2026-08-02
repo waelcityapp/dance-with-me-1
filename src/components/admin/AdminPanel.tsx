@@ -3355,7 +3355,7 @@ export const AdminPanel: React.FC = () => {
                                   const typedVal = rejectionReasonMap[b.id]?.trim() || '';
                                   const code = typedVal || `DWM-${b.refNumber.replace('#', '')}`;
                                   const qrUrl = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                                    ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                                    ? 'https://cityeve.online'
                                     : window.location.origin) + '/?verify=' + b.id;
                                   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
                                   await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
@@ -3665,7 +3665,7 @@ export const AdminPanel: React.FC = () => {
                         {!ev.isEmpty && (
                           <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                             <span>💰 <strong className="text-white">{lang === 'ar' ? ev.priceAr : ev.priceEn}</strong></span>
-                            <span>❤️ <strong className="text-white">{ev.likesCount}</strong> {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
+                            <span>❤️ <strong className="text-white">{String(ev.likesCount || 0)}</strong> {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
                             <span>📍 {lang === 'ar' ? ev.location?.nameAr : ev.location?.nameEn}</span>
                             {ev.eventRef && <span>🔢 {lang === 'ar' ? 'المرجع:' : 'Ref:'} <strong className="text-amber-400 font-mono">#{ev.eventRef}</strong></span>}
                           </div>
@@ -5593,7 +5593,7 @@ export const AdminPanel: React.FC = () => {
                                 {/* Favorite count bubble */}
                                 <div className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-2xl text-red-400 shrink-0">
                                   <Heart className="h-3 w-3 fill-current text-red-500" />
-                                  <span className="font-extrabold font-mono text-sm">{likes}</span>
+                                  <span className="font-extrabold font-mono text-sm">{String(likes)}</span>
                                 </div>
                                 {/* Progress visualizer */}
                                 <div className="hidden sm:block h-1.5 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/50">
@@ -7560,7 +7560,7 @@ export const AdminPanel: React.FC = () => {
                         </div>
                         <div className="flex flex-col mt-1">
                            <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'التفاعل' : 'Engagement'}</span>
-                           <span className="text-pink-400 font-bold">❤️ {ev.likesCount} {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
+                           <span className="text-pink-400 font-bold">❤️ {String(ev.likesCount || 0)} {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
                         </div>
                         <div className="flex flex-col mt-1">
                            <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'التاريخ' : 'Date'}</span>
@@ -7647,7 +7647,7 @@ export const AdminPanel: React.FC = () => {
               <img 
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=245-158-11&data=${encodeURIComponent(
                   (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                    ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                    ? 'https://cityeve.online'
                     : window.location.origin) + '/?eventCheckin=' + qrEventDoc.id
                 )}`}
                 className="w-full h-full object-contain"

@@ -1951,7 +1951,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           {isArabic ? 'عدد الأفراد' : 'Guests'}
                         </span>
                         <span className="font-semibold text-zinc-300 font-sans">
-                          {b.numberOfIndividuals} {isArabic ? 'أفراد' : 'people'}
+                          {String(b.numberOfIndividuals || 1)} {isArabic ? 'أفراد' : 'people'}
                         </span>
                       </div>
                       <div>
@@ -1959,7 +1959,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           {isArabic ? 'المبلغ الإجمالي' : 'Total Price'}
                         </span>
                         <span className="font-mono font-bold text-amber-500">
-                          {b.totalAmount} {isArabic ? 'ج.م' : 'EGP'}
+                          {String(b.totalAmount || 0)} {isArabic ? 'ج.م' : 'EGP'}
                         </span>
                       </div>
                     </div>
@@ -2081,7 +2081,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                                   <img 
                                     src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=245-158-11&data=${encodeURIComponent(
                                       (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                                        ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                                        ? 'https://cityeve.online'
                                         : window.location.origin) + '/?verify=' + b.id
                                     )}`} 
                                     className="w-full h-full object-contain" 
@@ -2580,7 +2580,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <img 
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=245-158-11&data=${encodeURIComponent(
                   (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                    ? 'https://ais-pre-zo2q5hnuwpcqcr6exb6plx-497491106818.europe-west1.run.app'
+                    ? 'https://cityeve.online'
                     : window.location.origin) + '/?verify=' + qrModalBooking.id
                 )}`}
                 className="w-full h-full object-contain"

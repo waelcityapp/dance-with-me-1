@@ -555,7 +555,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               }`}
             >
               <Heart className={`h-4 w-4 shrink-0 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="font-mono text-[11px] sm:text-xs">{promoEvent.likesCount}</span>
+              <span className="font-mono text-[11px] sm:text-xs">{String(promoEvent.likesCount || 0)}</span>
             </motion.button>
 
             {/* Book Now Button */}

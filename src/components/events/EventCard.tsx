@@ -550,7 +550,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 }`}
               >
                 <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                <span className="font-mono">{event.likesCount}</span>
+                <span className="font-mono">{String(event.likesCount || 0)}</span>
               </motion.button>
             )}
 
