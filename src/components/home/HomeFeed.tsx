@@ -27,6 +27,28 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     setVisibleCount(5);
   }, [selectedCategory, searchQuery, selectedStyleFilter]);
 
+  // Scroll to specific event from URL if present
+  useEffect(() => {
+    if (activeEvents.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const eventId = urlParams.get('event');
+      if (eventId) {
+        // Expand visible count if needed to ensure the event is rendered
+        const index = activeEvents.findIndex(ev => ev.id === eventId);
+        if (index !== -1 && index >= visibleCount) {
+           setVisibleCount(index + 5);
+        }
+        setTimeout(() => {
+          const el = document.getElementById(`event-${eventId}`);
+          if (el) {
+            const y = el.getBoundingClientRect().top + window.scrollY - 100;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+          }
+        }, 500);
+      }
+    }
+  }, [activeEvents.length]);
+
   // Back to Top scroll listener
   useEffect(() => {
     const handleScroll = () => {

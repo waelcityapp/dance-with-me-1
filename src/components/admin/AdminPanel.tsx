@@ -3354,9 +3354,7 @@ export const AdminPanel: React.FC = () => {
                                   setActionLoading(b.id);
                                   const typedVal = rejectionReasonMap[b.id]?.trim() || '';
                                   const code = typedVal || `DWM-${b.refNumber.replace('#', '')}`;
-                                  const qrUrl = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                                    ? 'https://cityeve.online'
-                                    : window.location.origin) + '/?verify=' + b.id;
+                                  const qrUrl = 'https://cityeve.online' + '/?verify=' + b.id;
                                   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
                                   await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
                                   setActionLoading(null);
@@ -3713,9 +3711,10 @@ export const AdminPanel: React.FC = () => {
                       </button>
                       <button
                         onClick={async () => {
-                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من حذف هذه الفعالية من قاعدة البيانات؟' : 'Are you sure you want to delete this event from DB?');
+                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من مسح بيانات هذه الفعالية بالكامل وتفريغ الخانة؟ لن تظهر للمستخدمين بعد الآن.' : 'Are you sure you want to delete this event data and empty the slot? It will no longer show to users.');
                           if (confirmed) {
                             deleteEvent(ev.id);
+                            alert(lang === 'ar' ? 'تم مسح الإعلان بنجاح وتفريغ الخانة! لن يظهر للمستخدمين.' : 'Ad deleted and slot emptied successfully! It is now hidden from users.');
                           }
                         }}
                         className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
@@ -7586,9 +7585,10 @@ export const AdminPanel: React.FC = () => {
                       </button>
                       <button
                         onClick={async () => {
-                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من مسح هذه الفعالية وتفريغ الخانة؟' : 'Are you sure you want to delete this event and empty the slot?');
+                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من مسح بيانات هذه الفعالية بالكامل وتفريغ الخانة؟ لن تظهر للمستخدمين بعد الآن.' : 'Are you sure you want to delete this event data and empty the slot? It will no longer show to users.');
                           if (confirmed) {
                             deleteEvent(ev.id);
+                            alert(lang === 'ar' ? 'تم مسح الإعلان بنجاح وتفريغ الخانة! لن يظهر للمستخدمين.' : 'Ad deleted and slot emptied successfully! It is now hidden from users.');
                           }
                         }}
                         className="p-2.5 sm:p-3 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-sm"
@@ -7646,9 +7646,7 @@ export const AdminPanel: React.FC = () => {
             <div className="bg-white p-4 rounded-2xl border-4 border-amber-500 shadow-2xl mx-auto w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
               <img 
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=245-158-11&data=${encodeURIComponent(
-                  (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                    ? 'https://cityeve.online'
-                    : window.location.origin) + '/?eventCheckin=' + qrEventDoc.id
+                  'https://cityeve.online' + '/?eventCheckin=' + qrEventDoc.id
                 )}`}
                 className="w-full h-full object-contain"
                 alt="Event Check-in QR"

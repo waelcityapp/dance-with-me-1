@@ -2080,9 +2080,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                                 <div className="w-48 h-48 sm:w-56 sm:h-56 bg-white flex items-center justify-center">
                                   <img 
                                     src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=245-158-11&data=${encodeURIComponent(
-                                      (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                                        ? 'https://cityeve.online'
-                                        : window.location.origin) + '/?verify=' + b.id
+                                      'https://cityeve.online' + '/?verify=' + b.id
                                     )}`} 
                                     className="w-full h-full object-contain" 
                                     alt="Entry QR Code" 
@@ -2579,9 +2577,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="bg-white p-4 rounded-2xl border-4 border-amber-500 shadow-2xl mx-auto w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
               <img 
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=245-158-11&data=${encodeURIComponent(
-                  (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('0.0.0.0')
-                    ? 'https://cityeve.online'
-                    : window.location.origin) + '/?verify=' + qrModalBooking.id
+                  'https://cityeve.online' + '/?verify=' + qrModalBooking.id
                 )}`}
                 className="w-full h-full object-contain"
                 alt="Full Screen QR"

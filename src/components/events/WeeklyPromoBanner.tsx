@@ -110,7 +110,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const expiryInfo = getDaysRemainingBeforeExpiry(promoEvent.eventDate);
 
   return (
-    <div className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 shadow-[0_25px_55px_rgba(0,0,0,0.8)] hover:border-white/20 hover:shadow-[0_35px_70px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 gold-glow-lg transition-all duration-300">
+    <div id={`event-${promoEvent.id}`} className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 shadow-[0_25px_55px_rgba(0,0,0,0.8)] hover:border-white/20 hover:shadow-[0_35px_70px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 gold-glow-lg transition-all duration-300">
       {/* Absolute Vertical Red Accent Line */}
       <div className="absolute left-0 top-0 bottom-0 w-[5px] z-30 bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.6)]" />
 
@@ -163,6 +163,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 e.preventDefault();
                 deleteEvent(promoEvent.id);
                 setShowDeleteConfirm(false);
+                alert(lang === 'ar' ? 'تم حذف الإعلان نهائياً ولن يظهر للمستخدمين بعد الآن.' : 'Ad deleted successfully and is now hidden from users.');
               }}
               className="flex-1 rounded-xl bg-red-600 hover:bg-red-500 text-white py-2.5 px-4 text-xs font-bold transition-all shadow-lg active:scale-95 cursor-pointer"
             >
@@ -271,7 +272,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               <span className="text-2xl font-black font-sans leading-none">X</span>
             </div>
             <span className="text-xs font-extrabold text-red-400 uppercase tracking-wider px-2.5 py-1 bg-red-950/60 border border-red-800/40 rounded-lg">
-              {lang === 'ar' ? 'موقوف مؤقتاً' : 'Temporarily Paused'}
+              {lang === 'ar' ? 'موقوف مؤقتاً (مخفي عن المستخدمين)' : 'Temporarily Paused (Hidden from users)'}
             </span>
           </div>
         )}
