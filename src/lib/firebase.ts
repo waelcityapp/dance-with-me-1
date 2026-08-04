@@ -30,7 +30,7 @@ import { DanceEvent, UserProfile, NotificationItem, AdSubmission, SupportMessage
 // Construct dynamic firebase configuration preferring env variables, falling back to local config json
 export const resolvedFirebaseConfig = {
   apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
-  authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+  authDomain: 'cityeve.online',
   projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
   storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
   messagingSenderId: (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
