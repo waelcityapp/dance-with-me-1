@@ -41,7 +41,7 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ onOpenInstal
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl overflow-hidden border border-amber-500/40 shadow-lg bg-neutral-900">
-              <img src={appAssets?.app_icon_url || "/icon.svg?v=20260706"} alt="DWM Icon" className="h-full w-full object-cover" />
+              <img src={appAssets?.app_icon_url || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"} alt="DWM Icon" className="h-full w-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -55,8 +55,8 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ onOpenInstal
               </div>
               <p className="text-xs text-neutral-300 mt-0.5 leading-relaxed">
                 {lang === 'ar'
-                  ? 'أضف تطبيق "Dance With Me" لشاشة هاتفك الرئيسية لتجربة سريعة بدون إنترنت وبدون تأخير.'
-                  : 'Add "Dance With Me" to your home screen for instant offline browsing and alerts.'}
+                  ? 'أضف تطبيق "CityEve" لشاشة هاتفك الرئيسية لتجربة سريعة بدون إنترنت وبدون تأخير.'
+                  : 'Add "CityEve" to your home screen for instant offline browsing and alerts.'}
               </p>
             </div>
           </div>

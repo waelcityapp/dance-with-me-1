@@ -1463,8 +1463,8 @@ export const AdminPanel: React.FC = () => {
     const fullPhone = cleanPhone.startsWith('20') ? cleanPhone : (cleanPhone.startsWith('0') ? `20${cleanPhone.substring(1)}` : `20${cleanPhone}`);
     const msg = encodeURIComponent(
       lang === 'ar'
-        ? `مرحباً بك ${sub.advertiserName} 💃🕺\nنتواصل معك من إدارة تطبيق Dance With Me بخصوص طلب إعلان VIP (فاتورة رقم ${sub.invoiceNumber}).`
-        : `Hello ${sub.advertiserName} 💃🕺\nWe are contacting you from Dance With Me admin regarding your VIP ad submission (Invoice ${sub.invoiceNumber}).`
+        ? `مرحباً بك ${sub.advertiserName} 💃🕺\nنتواصل معك من إدارة تطبيق CityEve بخصوص طلب إعلان VIP (فاتورة رقم ${sub.invoiceNumber}).`
+        : `Hello ${sub.advertiserName} 💃🕺\nWe are contacting you from CityEve admin regarding your VIP ad submission (Invoice ${sub.invoiceNumber}).`
     );
     window.open(`https://wa.me/${fullPhone}?text=${msg}`, '_blank');
   };
@@ -4989,7 +4989,7 @@ export const AdminPanel: React.FC = () => {
                     }}
                     required
                     className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm transition-all outline-none"
-                    placeholder="Dance With Me"
+                    placeholder="CityEve"
                   />
                 </div>
 
@@ -5024,10 +5024,10 @@ export const AdminPanel: React.FC = () => {
                     </label>
                     <div className="h-12 w-12 rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
                       <img
-                        src={formAppIconUrl || "/icon.svg"}
+                        src={formAppIconUrl || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"}
                         alt="Icon Preview"
                         className="h-full w-full object-cover rounded-xl"
-                        onError={(e) => { (e.target as HTMLImageElement).src = '/icon.svg'; }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png'; }}
                       />
                     </div>
                   </div>
@@ -5067,10 +5067,10 @@ export const AdminPanel: React.FC = () => {
                     </label>
                     <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
                       <img
-                        src={formAppLogoUrl || "/logo.svg"}
+                        src={formAppLogoUrl || "https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png"}
                         alt="Logo Preview"
                         className="h-full w-full object-contain"
-                        onError={(e) => { (e.target as HTMLImageElement).src = '/logo.svg'; }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png'; }}
                       />
                     </div>
                   </div>

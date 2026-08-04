@@ -330,10 +330,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [appAssets, setAppAssets] = useState<any>(() => {
     return {
       id: 'current_branding',
-      app_icon_url: '/icon.svg',
-      app_logo_url: '/logo.svg',
-      appNameAr: 'Dance With Me',
-      appNameEn: 'Dance With Me',
+      app_icon_url: 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png',
+      app_logo_url: 'https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png',
+      appNameAr: 'CityEve',
+      appNameEn: 'CityEve',
       whatsappSupport: '201012345678',
       instagramUrl: 'https://instagram.com/dancewithme_luxury',
       promoTitleAr: 'فيديو الأسبوع الحصري المميز VIP',

@@ -456,7 +456,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   {lang === 'ar' ? 'تسجيل الدخول باستخدام حساب Google' : 'Sign in with Google'}
                 </h3>
                 <p className="text-xs text-neutral-400 font-mono mt-1">
-                  {lang === 'ar' ? 'المتابعة بأمان إلى تطبيق Dance With Me' : 'Continue securely to Dance With Me'}
+                  {lang === 'ar' ? 'المتابعة بأمان إلى تطبيق CityEve' : 'Continue securely to CityEve'}
                 </p>
               </div>
 
@@ -478,8 +478,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   <Sparkles className="h-4 w-4 shrink-0" />
                   <span>
                     {lang === 'ar' 
-                      ? 'ستسمح Google لتطبيق Dance With Me بالوصول إلى:' 
-                      : 'Google will allow Dance With Me to access:'}
+                      ? 'ستسمح Google لتطبيق CityEve بالوصول إلى:' 
+                      : 'Google will allow CityEve to access:'}
                   </span>
                 </div>
 
@@ -512,8 +512,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
                 <div className="pt-2 border-t border-white/5 text-[11px] text-neutral-500 font-mono">
                   {lang === 'ar'
-                    ? '🔒 لا يمكن لتطبيق Dance With Me الوصول إلى كلمات مرورك أو أي ملفات خاصة. حماية بياناتك وموافقاتك مضمونة من Google.'
-                    : '🔒 Dance With Me cannot access passwords or private data. Your privacy and consent are protected by Google.'}
+                    ? '🔒 لا يمكن لتطبيق CityEve الوصول إلى كلمات مرورك أو أي ملفات خاصة. حماية بياناتك وموافقاتك مضمونة من Google.'
+                    : '🔒 CityEve cannot access passwords or private data. Your privacy and consent are protected by Google.'}
                 </div>
               </div>
 

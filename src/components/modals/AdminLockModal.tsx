@@ -143,7 +143,7 @@ export const AdminLockModal: React.FC = () => {
     const browser = navigator.userAgent.substring(0, 100);
     const dateStr = new Date().toLocaleString('ar-EG');
 
-    const arabicMessage = `🚨 *تنبيه أمني عاجل من تطبيق Dance With Me* 🚨\n\n` +
+    const arabicMessage = `🚨 *تنبيه أمني عاجل من تطبيق CityEve* 🚨\n\n` +
       `هناك محاولة اختراق متكررة للوحة الإدارة!\n` +
       `• *عدد المحاولات الخاطئة:* ${attemptsCount} محاولات\n` +
       `• *عنوان الـ IP:* ${ip}\n` +

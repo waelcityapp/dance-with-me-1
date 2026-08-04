@@ -705,8 +705,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               </h2>
               <p className="text-xs sm:text-sm text-neutral-300 mt-1.5 leading-relaxed max-w-xl font-medium">
                 {lang === 'ar'
-                  ? 'أنت الآن في صفحة إضافة إعلان جديد في منصة Dance With Me. قم بملء البيانات التالية لنشر فعاليتك أو دورتك التدريبية.'
-                  : 'You are now creating a new ad on Dance With Me. Fill in the fields below to publish your event or workshop.'}
+                  ? 'أنت الآن في صفحة إضافة إعلان جديد في منصة CityEve. قم بملء البيانات التالية لنشر فعاليتك أو دورتك التدريبية.'
+                  : 'You are now creating a new ad on CityEve. Fill in the fields below to publish your event or workshop.'}
               </p>
             </div>
           </div>

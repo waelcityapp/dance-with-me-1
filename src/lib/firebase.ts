@@ -777,10 +777,10 @@ export async function checkAndSeedAppAssets(): Promise<any> {
     
     const defaultAssets = {
       id: 'current_branding',
-      app_icon_url: '/icon.svg',
-      app_logo_url: '/logo.svg',
-      appNameAr: 'Dance With Me',
-      appNameEn: 'Dance With Me',
+      app_icon_url: 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png',
+      app_logo_url: 'https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png',
+      appNameAr: 'CityEve',
+      appNameEn: 'CityEve',
       whatsappSupport: '201012345678',
       instagramUrl: 'https://instagram.com/dancewithme_luxury',
       updatedAt: new Date().toISOString()
@@ -796,15 +796,15 @@ export async function checkAndSeedAppAssets(): Promise<any> {
       if (
         data.app_icon_url?.includes('https://ais-pre-') || 
         data.app_logo_url?.includes('https://ais-pre-') ||
-        data.appNameAr === 'Dance With Me | ارقص معي'
+        data.appNameAr === 'CityEve | ارقص معي'
       ) {
         console.log('Updating legacy/broken app assets in Firestore with local-relative fallback...');
         const repaired = {
           ...data,
-          app_icon_url: '/icon.svg',
-          app_logo_url: '/logo.svg',
-          appNameAr: 'Dance With Me',
-          appNameEn: 'Dance With Me',
+          app_icon_url: 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png',
+          app_logo_url: 'https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png',
+          appNameAr: 'CityEve',
+          appNameEn: 'CityEve',
           updatedAt: new Date().toISOString()
         };
         await setDoc(assetsRef, repaired, { merge: true });

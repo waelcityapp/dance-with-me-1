@@ -65,12 +65,12 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ isOpen, onClos
           <div className="flex items-center justify-between border-b border-white/10 bg-neutral-950 p-5 shrink-0">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-lg shrink-0 overflow-hidden">
-                <img src={appAssets?.app_icon_url || "/icon.svg?v=20260706"} alt="DWM" className="h-full w-full object-cover" />
+                <img src={appAssets?.app_icon_url || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"} alt="DWM" className="h-full w-full object-cover" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-white text-base sm:text-lg">
-                    {lang === 'ar' ? 'تثبيت تطبيق Dance With Me على هاتفك' : 'Install Dance With Me App'}
+                    {lang === 'ar' ? 'تثبيت تطبيق CityEve على هاتفك' : 'Install CityEve App'}
                   </h3>
                   <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-500/30">
                     PWA VIP
@@ -206,7 +206,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ isOpen, onClos
                         <span className="font-bold text-white block mb-0.5">
                           {lang === 'ar' ? 'اضغط "إضافة" (Add) في أعلى الشاشة' : 'Tap "Add" in top right corner'}
                         </span>
-                        {lang === 'ar' ? 'سيتم إضافة أيقونة Dance With Me الذهبية لشاشة هاتفك الرئيسية كأي تطبيق عادي!' : 'The DWM gold icon will appear on your home screen instantly!'}
+                        {lang === 'ar' ? 'سيتم إضافة أيقونة CityEve الذهبية لشاشة هاتفك الرئيسية كأي تطبيق عادي!' : 'The DWM gold icon will appear on your home screen instantly!'}
                       </div>
                     </div>
                   </div>

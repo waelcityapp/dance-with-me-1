@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
   const handleShareApp = async () => {
     const shareUrl = 'https://cityeve.online/';
     const shareData = {
-      title: lang === 'ar' ? 'Dance With Me - بوابة الحفلات والكورسات اللاتينية' : 'Dance With Me - Latin Dance Portal',
+      title: lang === 'ar' ? 'CityEve - بوابة الحفلات والكورسات اللاتينية' : 'CityEve - Latin Dance Portal',
       text: lang === 'ar' ? 'انضم إلينا في أفضل الحفلات والكورسات اللاتينية!' : 'Join us for the best Latin parties and courses!',
       url: shareUrl,
     };
@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
         <div 
           className="flex items-center justify-center gap-3 sm:gap-4 cursor-pointer py-1"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          title="Dance With Me"
+          title="CityEve"
         >
           <motion.div 
             whileHover={{ scale: 1.05 }}
@@ -73,15 +73,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
             className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl overflow-hidden border border-amber-500/40 shadow-xl bg-neutral-900 shrink-0"
           >
             <img 
-              src={appAssets?.app_icon_url || "/icon.svg?v=20260706"} 
-              alt="Dance With Me Logo" 
+              src={appAssets?.app_icon_url || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"} 
+              alt="CityEve Logo" 
               className="h-full w-full object-cover"
             />
           </motion.div>
           
           <div className="flex flex-col justify-center">
             <h1 className="font-sans text-xl sm:text-2xl font-bold tracking-tighter bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent leading-tight">
-              {appAssets?.appNameEn || appAssets?.appNameAr || "Dance With Me"}
+              {appAssets?.appNameEn || appAssets?.appNameAr || "CityEve"}
             </h1>
             <span className="font-mono text-[10px] text-amber-500/70 font-semibold tracking-widest leading-none">
               Beta 1.02
