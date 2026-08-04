@@ -24,9 +24,14 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Redirect favicon requests directly to the app icon image
+  app.get("/favicon.ico", (req, res) => {
+    res.redirect("https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png");
+  });
+
   app.get(["/api/og-event", "/e/:eventId", "/event/:eventId"], async (req, res) => {
     const eventId = (req.query.event || req.params.eventId) as string;
-    let title = "CityEve ✨ | سيتي إيف - أهم تطبيق لجميع أنواع الحفلات في مصر";
+    let title = "CityEve | سيتي إيف - أهم تطبيق لجميع أنواع الحفلات في مصر";
     let description = "منصتك الأولى لمعرفة وحجز أحدث الحفلات، الكورسات، ورحلات الرقص في مصر.";
     let image = "https://res.cloudinary.com/dynasmcaj/image/upload/w_1200,h_630,c_fill,q_auto,f_jpg/fbyjfjq8equle5pl7kwz.png";
     const appIcon = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
@@ -45,7 +50,7 @@ async function startServer() {
             const rawDesc = fbData.fields.descriptionAr?.stringValue || fbData.fields.descriptionEn?.stringValue;
             const rawImg = fbData.fields.mediaUrl?.stringValue || fbData.fields.thumbnailUrl?.stringValue;
 
-            if (rawTitle) title = `${rawTitle} | ✨ CityEve سيتي إيف`;
+            if (rawTitle) title = `${rawTitle} | CityEve سيتي إيف`;
             if (rawDesc) description = rawDesc.substring(0, 200).replace(/[\r\n]+/g, ' ');
             if (rawImg && rawImg.trim().length > 0) {
               let processedImg = rawImg.trim();
@@ -80,10 +85,11 @@ async function startServer() {
 
   <!-- App Logo / Favicon links for WhatsApp & browser crawlers -->
   <link rel="icon" type="image/png" href="${appIcon}" />
+  <link rel="shortcut icon" href="${appIcon}" />
   <link rel="apple-touch-icon" href="${appIcon}" />
 
   <meta property="og:type" content="article" />
-  <meta property="og:site_name" content="CityEve ✨ | سيتي إيف" />
+  <meta property="og:site_name" content="CityEve | سيتي إيف" />
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:title" content="${safeTitle}" />
   <meta property="og:description" content="${safeDesc}" />
