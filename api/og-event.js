@@ -2,9 +2,10 @@ export default async function handler(req, res) {
   const eventId = req.query.event || req.query.eventId;
 
   // Default fallback values (CityEve brand)
-  let title = "CityEve | سيتي إيف - أهم تطبيق لجميع أنواع الحفلات في مصر";
+  let title = "CityEve ✨ | سيتي إيف - أهم تطبيق لجميع أنواع الحفلات في مصر";
   let description = "منصتك الأولى لمعرفة وحجز أحدث الحفلات، الكورسات، ورحلات الرقص في مصر.";
   let image = "https://res.cloudinary.com/dynasmcaj/image/upload/w_1200,h_630,c_fill,q_auto,f_jpg/fbyjfjq8equle5pl7kwz.png";
+  const appIcon = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
 
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'cityeve.online';
   const proto = req.headers['x-forwarded-proto'] || 'https';
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
           const rawDesc = fbData.fields.descriptionAr?.stringValue || fbData.fields.descriptionEn?.stringValue;
           const rawImg = fbData.fields.mediaUrl?.stringValue || fbData.fields.thumbnailUrl?.stringValue;
 
-          if (rawTitle) title = `${rawTitle} | CityEve سيتي إيف`;
+          if (rawTitle) title = `${rawTitle} | ✨ CityEve سيتي إيف`;
           if (rawDesc) description = rawDesc.substring(0, 200).replace(/[\r\n]+/g, ' ');
           if (rawImg && rawImg.trim().length > 0) {
             let processedImg = rawImg.trim();
@@ -56,9 +57,13 @@ export default async function handler(req, res) {
   <title>${safeTitle}</title>
   <meta name="description" content="${safeDesc}" />
 
+  <!-- App Logo / Favicon links for WhatsApp & browser crawlers -->
+  <link rel="icon" type="image/png" href="${appIcon}" />
+  <link rel="apple-touch-icon" href="${appIcon}" />
+
   <!-- Open Graph / WhatsApp / Facebook -->
   <meta property="og:type" content="article" />
-  <meta property="og:site_name" content="CityEve | سيتي إيف" />
+  <meta property="og:site_name" content="CityEve ✨ | سيتي إيف" />
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:title" content="${safeTitle}" />
   <meta property="og:description" content="${safeDesc}" />
