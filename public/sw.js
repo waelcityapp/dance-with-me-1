@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v=20260717';
+const CACHE_VERSION = 'v=20260804';
 const CACHE_NAME = `dwm-luxury-cache-${CACHE_VERSION}`;
 
 // Core assets to cache one by one defensively
@@ -6,8 +6,7 @@ const CORE_ASSETS = [
   '/',
   `/?${CACHE_VERSION}`,
   `/index.html?${CACHE_VERSION}`,
-  `/manifest.json?${CACHE_VERSION}`,
-  `/icon.svg?${CACHE_VERSION}`
+  `/manifest.json?${CACHE_VERSION}`
 ];
 
 // Defensive One-by-One Installation Strategy

@@ -3,6 +3,20 @@
     {
       "source": "/__/auth/(.*)",
       "destination": "https://dance-with-me-35e98.firebaseapp.com/__/auth/$1"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "event"
+        }
+      ],
+      "destination": "/api/og-event"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

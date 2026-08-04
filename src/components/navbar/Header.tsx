@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenAuth,
               {appAssets?.appNameEn || appAssets?.appNameAr || "Dance With Me"}
             </h1>
             <span className="font-mono text-[10px] text-amber-500/70 font-semibold tracking-widest leading-none">
-              Beta 1.01
+              Beta 1.02
             </span>
           </div>
         </div>
