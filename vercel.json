@@ -5,14 +5,23 @@
       "destination": "https://dance-with-me-35e98.firebaseapp.com/__/auth/$1"
     },
     {
+      "source": "/e/:eventId",
+      "destination": "/api/og-event?event=:eventId"
+    },
+    {
+      "source": "/event/:eventId",
+      "destination": "/api/og-event?event=:eventId"
+    },
+    {
       "source": "/",
       "has": [
         {
           "type": "query",
-          "key": "event"
+          "key": "event",
+          "value": "(?<event>.*)"
         }
       ],
-      "destination": "/api/og-event"
+      "destination": "/api/og-event?event=:event"
     },
     {
       "source": "/(.*)",

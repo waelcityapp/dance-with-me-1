@@ -16,9 +16,10 @@ interface EventCardProps {
   overrideAdType?: 'vip' | 'standard';
   isFavoritesTab?: boolean;
   hideAdminControls?: boolean;
+  isHighlighted?: boolean;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType, isFavoritesTab, hideAdminControls }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType, isFavoritesTab, hideAdminControls, isHighlighted }) => {
   const { 
     lang, 
     toggleLikeEvent, 
@@ -135,11 +136,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.3 }}
       className={`group relative flex flex-col overflow-hidden rounded-3xl border transition-all duration-300 hover:-translate-y-1.5 ${
-        isExpired
-          ? 'border-white/5 bg-neutral-900/60 opacity-80 shadow-[0_15px_35px_rgba(0,0,0,0.5)]'
-          : displayAdType === 'vip'
-            ? 'border-amber-500/40 bg-neutral-900 shadow-[0_22px_48px_rgba(245,158,11,0.12)] hover:border-amber-400/80 hover:shadow-[0_32px_64px_rgba(245,158,11,0.25)]'
-            : 'border-white/10 bg-neutral-900 shadow-[0_22px_48px_rgba(0,0,0,0.7)] hover:border-white/25 hover:shadow-[0_32px_64px_rgba(0,0,0,0.9)]'
+        isHighlighted
+          ? 'ring-4 ring-amber-500 shadow-[0_0_60px_rgba(245,158,11,0.5)] border-amber-400 scale-[1.01] z-30'
+          : isExpired
+            ? 'border-white/5 bg-neutral-900/60 opacity-80 shadow-[0_15px_35px_rgba(0,0,0,0.5)]'
+            : displayAdType === 'vip'
+              ? 'border-amber-500/40 bg-neutral-900 shadow-[0_22px_48px_rgba(245,158,11,0.12)] hover:border-amber-400/80 hover:shadow-[0_32px_64px_rgba(245,158,11,0.25)]'
+              : 'border-white/10 bg-neutral-900 shadow-[0_22px_48px_rgba(0,0,0,0.7)] hover:border-white/25 hover:shadow-[0_32px_64px_rgba(0,0,0,0.9)]'
       }`}
     >
 

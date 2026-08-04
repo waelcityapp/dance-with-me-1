@@ -278,9 +278,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Events in state
-  const [events, setEvents] = useState<DanceEvent[]>([]);
-  const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(true);
+  // Events in state with fast LocalStorage fallback to eliminate cold-start loading delays
+  const [events, setEvents] = useState<DanceEvent[]>(() => {
+    try {
+      const cached = localStorage.getItem('dwm_cached_events_v2');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+  const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(() => {
+    try {
+      const cached = localStorage.getItem('dwm_cached_events_v2');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return false;
+      }
+    } catch (e) {}
+    return true;
+  });
   const [loadingEventsError, setLoadingEventsError] = useState<'slow' | 'offline' | null>(null);
 
   const [editingEvent, setEditingEvent] = useState<DanceEvent | null>(null);
@@ -442,7 +460,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. Subscribe to live events collection
     const unsubEvents = subscribeToEvents((liveEvents) => {
       clearTimeout(loadingTimeout);
-      setEvents(liveEvents || []);
+      const items = liveEvents || [];
+      setEvents(items);
+      try {
+        if (items.length > 0) {
+          localStorage.setItem('dwm_cached_events_v2', JSON.stringify(items));
+        }
+      } catch (e) {}
       setIsLoadingEvents(false);
       setLoadingEventsError(null);
       

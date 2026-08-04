@@ -21,30 +21,44 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const [visibleCount, setVisibleCount] = useState(5);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [showWhyBookModal, setShowWhyBookModal] = useState(false);
+  const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
 
   // Reset pagination when category, search, or style filter changes
   useEffect(() => {
     setVisibleCount(5);
   }, [selectedCategory, searchQuery, selectedStyleFilter]);
 
-  // Scroll to specific event from URL if present
+  // Scroll instantly to specific event from URL if present
   useEffect(() => {
     if (activeEvents.length > 0) {
       const urlParams = new URLSearchParams(window.location.search);
       const eventId = urlParams.get('event');
       if (eventId) {
-        // Expand visible count if needed to ensure the event is rendered
         const index = activeEvents.findIndex(ev => ev.id === eventId);
-        if (index !== -1 && index >= visibleCount) {
-           setVisibleCount(index + 5);
-        }
-        setTimeout(() => {
-          const el = document.getElementById(`event-${eventId}`);
-          if (el) {
-            const y = el.getBoundingClientRect().top + window.scrollY - 100;
-            window.scrollTo({ top: y, behavior: 'smooth' });
+        if (index !== -1) {
+          if (index >= visibleCount) {
+            setVisibleCount(index + 5);
           }
-        }, 500);
+          setHighlightedEventId(eventId);
+
+          let attempts = 0;
+          const scrollToTarget = () => {
+            const el = document.getElementById(`event-${eventId}`);
+            if (el) {
+              const y = el.getBoundingClientRect().top + window.scrollY - 100;
+              window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+            } else if (attempts < 15) {
+              attempts++;
+              requestAnimationFrame(scrollToTarget);
+            }
+          };
+          scrollToTarget();
+
+          const timer = setTimeout(() => {
+            setHighlightedEventId(null);
+          }, 4000);
+          return () => clearTimeout(timer);
+        }
       }
     }
   }, [activeEvents.length]);
@@ -360,6 +374,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                   overrideAdType={ev.adType || (ev.isFeatured || (typeof ev.position === 'number' && ev.position <= 19) ? 'vip' : 'standard')}
                   onOpenMap={onOpenMap}
                   onOpenShare={onOpenShare}
+                  isHighlighted={ev.id === highlightedEventId}
                 />
               ))}
             </AnimatePresence>

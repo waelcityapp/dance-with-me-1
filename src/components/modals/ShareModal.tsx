@@ -17,7 +17,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
 
   const shareTitle = lang === 'ar' ? event.titleAr : event.titleEn;
   const shareText = lang === 'ar' ? `${event.titleAr} - ${event.descriptionAr.slice(0, 80)}...` : `${event.titleEn} - ${event.descriptionEn.slice(0, 80)}...`;
-  const shareUrl = `https://cityeve.online/?event=${event.id}`;
+  const currentOrigin = typeof window !== 'undefined' && window.location.origin.includes('cityeve.online') ? 'https://cityeve.online' : (typeof window !== 'undefined' ? window.location.origin : 'https://cityeve.online');
+  const shareUrl = `${currentOrigin}/e/${event.id}`;
 
   const handleCopy = () => {
     try {
