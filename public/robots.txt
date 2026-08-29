@@ -1,4 +1,21 @@
 User-agent: *
 Allow: /
 
+# Allow AI & Search Crawlers (ChatGPT, Perplexity, Gemini, Claude, Copilot)
+User-agent: GPTBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
 Sitemap: https://cityeve.online/sitemap.xml
+# LLM Context File for AI Discovery: https://cityeve.online/llms.txt

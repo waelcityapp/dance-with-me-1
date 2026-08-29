@@ -1,6 +1,6 @@
 {
   "name": "CityEve | سيتي إيف",
-  "description": "أهم منصة وتطبيق لجميع أنواع الحفلات، الفعاليات، الكورسات، ورحلات الرقص في مصر.",
+  "description": "أهم منصة وتطبيق لجميع أنواع الحفلات، المعارض، المؤتمرات، الفعاليات، الكورسات، ورحلات الرقص في مصر.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

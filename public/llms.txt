@@ -1,0 +1,35 @@
+# CityEve | سيتي إيف
+
+> CityEve (سيتي إيف) is the premier event discovery, ticket booking, and nightlife application in Egypt, specializing in Latin dance parties (Salsa, Bachata, Kizomba), social nights, specialized dance workshops, and luxury entertainment trips across Cairo, Alexandria, Sharm El Sheikh, and El Gouna.
+
+- **Website:** https://cityeve.online/
+- **Primary Market:** Egypt (Cairo, Giza, Alexandria, Red Sea)
+- **Supported Languages:** Arabic (العربية), English
+- **Target Audience:** Nightlife seekers, dance enthusiasts, partygoers, event organizers, tourists, and students looking for quality social entertainment in Egypt.
+
+## Core Features & Offerings
+
+### 1. Exhibitions, Conferences & Expos (المعارض، المؤتمرات والمعارض الدولية)
+- Comprehensive listings of international trade shows, business conferences, real estate expos, tech summits, art exhibitions, and cultural book fairs across Egypt (including EIEC - Egypt International Exhibition Center, Cairo International Convention Centre, and major 5-star hotel venues).
+- Direct registration links, agendas, speaker schedules, ticket booking, and organizer contact details.
+
+### 2. Latin Dance & Social Parties (حفلات الرقص اللاتيني والسهرات)
+- Daily and weekly schedules of Latin dance events including Salsa, Bachata, Kizomba, and Afrohouse parties across top venues in Cairo and Egypt.
+- Live DJ line-ups, venue locations with direct Google Maps integration, and entry requirements.
+
+### 3. Dance Courses & Bootcamps (كورسات وورش عمل الرقص)
+- Professional dance training courses for all levels (Beginners, Intermediate, Advanced) covering Salsa, Bachata, Styling, Musicality, and Partner work.
+- Taught by leading dance academies and certified Egyptian and international instructors.
+
+### 4. Entertainment Trips & Festivals (رحلات ومهرجانات الرقص والترفيه)
+- Curated luxury travel experiences and dance weekends in Dahab, Sharm El Sheikh, El Gouna, and coastal destinations.
+
+### 5. Direct Organizer Contact & Ticket Booking (حجز التذاكر والتواصل المباشر)
+- Instant booking, WhatsApp reservations, phone inquiries, and QR code attendee verification.
+
+## Entity & Knowledge Graph Summary
+
+- **Entity Name:** CityEve / سيتي إيف
+- **Category:** Events, Exhibitions, Conferences, Expos, Nightlife, Entertainment, Dance Community, Ticket Booking
+- **Geography:** Egypt
+- **Key Concepts:** معارض مصر, مؤتمرات مصر, معارض القاهرة, حفلات مصر, سهرات القاهرة, سالسا مصر, باتشاتا مصر, كيزومبا مصر, حجز مؤتمرات, حجز حفلات, اماكن خروج في مصر, Cairo Exhibitions, Egypt Conferences, Cairo Nightlife, Egypt Latin Dance, Event App Egypt.
