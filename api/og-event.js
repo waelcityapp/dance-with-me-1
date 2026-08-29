@@ -6,6 +6,8 @@ export default async function handler(req, res) {
   let description = "منصتك الأولى لمعرفة وحجز أحدث الحفلات، الكورسات، ورحلات الرقص في مصر.";
   let image = "https://res.cloudinary.com/dynasmcaj/image/upload/w_1200,h_630,c_fill,q_auto,f_jpg/fbyjfjq8equle5pl7kwz.png";
   const appIcon = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
+  let eventDate = new Date().toISOString();
+  let locationName = "Cairo, Egypt";
 
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'cityeve.online';
   const proto = req.headers['x-forwarded-proto'] || 'https';
@@ -21,9 +23,13 @@ export default async function handler(req, res) {
           const rawTitle = fbData.fields.titleAr?.stringValue || fbData.fields.titleEn?.stringValue;
           const rawDesc = fbData.fields.descriptionAr?.stringValue || fbData.fields.descriptionEn?.stringValue;
           const rawImg = fbData.fields.mediaUrl?.stringValue || fbData.fields.thumbnailUrl?.stringValue;
+          const rawDate = fbData.fields.date?.stringValue;
+          const rawLoc = fbData.fields.locationAr?.stringValue || fbData.fields.locationEn?.stringValue;
 
           if (rawTitle) title = `${rawTitle} | CityEve سيتي إيف`;
           if (rawDesc) description = rawDesc.substring(0, 200).replace(/[\r\n]+/g, ' ');
+          if (rawDate) eventDate = rawDate;
+          if (rawLoc) locationName = rawLoc;
           if (rawImg && rawImg.trim().length > 0) {
             let processedImg = rawImg.trim();
             if (processedImg.includes('cloudinary.com')) {
@@ -48,6 +54,33 @@ export default async function handler(req, res) {
   // Clean strings for HTML attributes
   const safeTitle = title.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeDesc = description.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const keywords = "CityEve, سيتي إيف, حفلات مصر, حفلات القاهرة, حفلات لاتيني في مصر, سالسا مصر, باتشاتا مصر, كيزومبا, سهرات ليلية, حجز تذاكر حفلات, فعاليات مصر, Salsa Egypt, Cairo Nightlife, Egypt Events";
+
+  const eventJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": safeTitle,
+    "description": safeDesc,
+    "image": image,
+    "url": pageUrl,
+    "startDate": eventDate,
+    "eventStatus": "https://schema.org/EventScheduled",
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "location": {
+      "@type": "Place",
+      "name": locationName,
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Cairo",
+        "addressCountry": "EG"
+      }
+    },
+    "organizer": {
+      "@type": "Organization",
+      "name": "CityEve | سيتي إيف",
+      "url": "https://cityeve.online/"
+    }
+  });
 
   const html = `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -56,6 +89,9 @@ export default async function handler(req, res) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${safeTitle}</title>
   <meta name="description" content="${safeDesc}" />
+  <meta name="keywords" content="${keywords}" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="${pageUrl}" />
 
   <!-- App Logo / Favicon links for WhatsApp & browser crawlers -->
   <link rel="icon" type="image/png" href="${appIcon}" />
@@ -81,6 +117,12 @@ export default async function handler(req, res) {
   <meta name="twitter:image" content="${image}" />
 
   <meta itemprop="image" content="${image}" />
+  
+  <!-- JSON-LD Event Structured Data for Google Rich Snippets -->
+  <script type="application/ld+json">
+  ${eventJsonLd}
+  </script>
+
   <meta http-equiv="refresh" content="0;url=${targetUrl}" />
 </head>
 <body style="background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">

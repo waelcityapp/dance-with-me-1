@@ -74,6 +74,32 @@ async function startServer() {
 
     const safeTitle = title.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const safeDesc = description.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const keywords = "CityEve, سيتي إيف, حفلات مصر, حفلات القاهرة, حفلات لاتيني في مصر, سالسا مصر, باتشاتا مصر, كيزومبا, سهرات ليلية, حجز تذاكر حفلات, فعاليات مصر, Salsa Egypt, Cairo Nightlife, Egypt Events";
+
+    const eventJsonLd = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Event",
+      "name": safeTitle,
+      "description": safeDesc,
+      "image": image,
+      "url": pageUrl,
+      "eventStatus": "https://schema.org/EventScheduled",
+      "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+      "location": {
+        "@type": "Place",
+        "name": "Cairo, Egypt",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Cairo",
+          "addressCountry": "EG"
+        }
+      },
+      "organizer": {
+        "@type": "Organization",
+        "name": "CityEve | سيتي إيف",
+        "url": "https://cityeve.online/"
+      }
+    });
 
     const html = `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -82,6 +108,9 @@ async function startServer() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${safeTitle}</title>
   <meta name="description" content="${safeDesc}" />
+  <meta name="keywords" content="${keywords}" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="${pageUrl}" />
 
   <!-- App Logo / Favicon links for WhatsApp & browser crawlers -->
   <link rel="icon" type="image/png" href="${appIcon}" />
@@ -103,6 +132,11 @@ async function startServer() {
   <meta name="twitter:description" content="${safeDesc}" />
   <meta name="twitter:image" content="${image}" />
   <meta itemprop="image" content="${image}" />
+  
+  <script type="application/ld+json">
+  ${eventJsonLd}
+  </script>
+
   <meta http-equiv="refresh" content="0;url=${targetUrl}" />
 </head>
 <body style="background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
