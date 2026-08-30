@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, Bell, BellRing, CheckCircle, Sparkles, Calendar, BookOpen, Volume2, Info } from 'lucide-react';
+import { X, Bell, BellRing, CheckCircle, Sparkles, Calendar, BookOpen, Volume2, Info, Smartphone, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatRelativeTime } from '../../utils/dateUtils';
+import { showTestNotification, playNotificationChime } from '../../lib/pushNotifications';
 
 interface NotificationsModalProps {
   isOpen: boolean;
@@ -11,10 +12,18 @@ interface NotificationsModalProps {
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose }) => {
   const { lang, notifications, markAllNotificationsAsRead, pushEnabled, togglePushNotifications, user } = useApp();
+  const [testingChime, setTestingChime] = useState(false);
   
   const visibleNotifications = notifications.filter(n => !n.userId || n.userId === user?.id);
 
   if (!isOpen) return null;
+
+  const handleTestChime = async () => {
+    setTestingChime(true);
+    playNotificationChime();
+    await showTestNotification(lang);
+    setTimeout(() => setTestingChime(false), 1500);
+  };
 
   const typeIcons = {
     new_party: { icon: Sparkles, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
@@ -93,32 +102,55 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
           </div>
 
           {/* Push Notification Toggle Box */}
-          <div className={`bg-neutral-950/80 p-4 px-5 border-b border-white/5 flex items-center justify-between gap-4 shrink-0 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <div className={`bg-neutral-950/80 p-4 px-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0`}>
             <div className={`flex items-center gap-3 text-xs ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                <Bell className="h-4 w-4" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+                <Smartphone className="h-4 w-4" />
               </div>
               <div>
-                <span className="text-neutral-100 font-bold block">
-                  {lang === 'ar' ? 'إشعارات الهاتف الفورية' : 'Instant Push Alerts'}
-                </span>
-                <span className="text-[10px] text-neutral-400">
-                  {lang === 'ar' ? 'تصلك تنبيهات حتى لو التطبيق مغلق' : 'Get notified even when the app is closed'}
+                <div className="flex items-center gap-2">
+                  <span className="text-neutral-100 font-bold block">
+                    {lang === 'ar' ? 'إشعارات الهاتف الفورية مع الرنة' : 'Instant Push Alerts & Chime'}
+                  </span>
+                  {pushEnabled && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+                      <Check className="w-2.5 h-2.5" />
+                      {lang === 'ar' ? 'نشط' : 'Active'}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-neutral-400 block">
+                  {lang === 'ar' ? 'تصلك تنبيهات الحفلات الجديدة مع رنة مميزة واهتزاز حتى لو التطبيق مغلق' : 'Get notified with distinct chime & vibration when new events drop even if app is closed'}
                 </span>
               </div>
             </div>
 
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={togglePushNotifications}
-              className={`rounded-xl px-4 py-1.5 text-xs font-extrabold transition-all border shrink-0 ${
-                pushEnabled
-                  ? 'bg-amber-500 text-neutral-950 border-amber-400/40 shadow-lg gold-glow font-bold'
-                  : 'bg-neutral-900 text-neutral-400 border-white/5 hover:border-white/10'
-              }`}
-            >
-              {pushEnabled ? (lang === 'ar' ? '✓ مفعلة' : '✓ ON') : (lang === 'ar' ? 'تفعيل الآن' : 'Enable')}
-            </motion.button>
+            <div className={`flex items-center gap-2 self-end sm:self-auto ${isRtl ? 'flex-row-reverse' : ''}`}>
+              {pushEnabled && (
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleTestChime}
+                  disabled={testingChime}
+                  className="rounded-xl px-3 py-1.5 text-xs font-bold bg-neutral-900 border border-amber-500/30 text-amber-400 hover:bg-neutral-800 transition-all flex items-center gap-1.5 shrink-0"
+                  title={lang === 'ar' ? 'تجربة الرنة والإشعار' : 'Test Ringtone & Notification'}
+                >
+                  <Volume2 className="h-3.5 w-3.5" />
+                  <span>{testingChime ? (lang === 'ar' ? 'جاري الرن...' : 'Ringing...') : (lang === 'ar' ? 'تجربة الرنة 🔔' : 'Test Chime 🔔')}</span>
+                </motion.button>
+              )}
+
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={togglePushNotifications}
+                className={`rounded-xl px-4 py-1.5 text-xs font-extrabold transition-all border shrink-0 ${
+                  pushEnabled
+                    ? 'bg-amber-500 text-neutral-950 border-amber-400/40 shadow-lg gold-glow font-bold'
+                    : 'bg-neutral-900 text-neutral-400 border-white/5 hover:border-white/10'
+                }`}
+              >
+                {pushEnabled ? (lang === 'ar' ? '✓ مفعلة' : '✓ ON') : (lang === 'ar' ? 'تفعيل الآن' : 'Enable')}
+              </motion.button>
+            </div>
           </div>
 
           {/* Notifications List */}

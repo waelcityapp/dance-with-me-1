@@ -73,3 +73,90 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Push Notification Listener (Web Push / FCM)
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification event received:', event);
+  let payload = {
+    title: 'CityEve | إشعار جديد 🔔',
+    body: 'يوجد إعلان جديد أو تحديث مهم في التطبيق!',
+    icon: 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png',
+    badge: 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png',
+    url: '/',
+    tag: 'cityeve-alert-' + Date.now()
+  };
+
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      payload = { ...payload, ...parsed };
+    } catch (e) {
+      const text = event.data.text();
+      if (text) payload.body = text;
+    }
+  }
+
+  const notificationOptions = {
+    body: payload.body,
+    icon: payload.icon || 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png',
+    badge: payload.badge || 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png',
+    image: payload.image || undefined,
+    vibrate: [300, 100, 400, 100, 300],
+    tag: payload.tag || ('cityeve-alert-' + Date.now()),
+    renotify: true,
+    requireInteraction: true,
+    data: {
+      url: payload.url || '/',
+      dateOfArrival: Date.now(),
+      eventId: payload.eventId
+    },
+    actions: [
+      { action: 'open', title: 'فتح الإعلان 🎟️' },
+      { action: 'close', title: 'إغلاق ✕' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, notificationOptions)
+  );
+});
+
+// Client Message Listener for direct push notifications
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, options } = event.data;
+    if (self.registration && self.registration.showNotification) {
+      self.registration.showNotification(title, options);
+    }
+  }
+});
+
+// Handle Notification Click & Redirect
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification click action:', event.action);
+  event.notification.close();
+
+  if (event.action === 'close') {
+    return;
+  }
+
+  const rawUrl = event.notification.data?.url || '/';
+  const targetUrl = rawUrl.startsWith('http') ? rawUrl : new URL(rawUrl, self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          if ('navigate' in client) {
+            client.navigate(targetUrl);
+          }
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+

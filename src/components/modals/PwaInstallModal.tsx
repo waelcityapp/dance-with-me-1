@@ -4,6 +4,7 @@ import { X, Smartphone, Share, PlusSquare, MoreVertical, Download, CheckCircle, 
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { logAnalyticsEvent } from '../../lib/firebase';
+import { subscribeUserToPush } from '../../lib/pushNotifications';
 
 interface PwaInstallModalProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ isOpen, onClos
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setInstalled(true);
+        subscribeUserToPush();
         logAnalyticsEvent('pwa_installs');
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
       }

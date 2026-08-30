@@ -35,6 +35,13 @@ import {
 } from '../lib/firebase';
 import { PricingConfig } from '../types';
 import { MODERN_FEATURED_EVENTS } from '../data/defaultEvents';
+import { 
+  subscribeUserToPush, 
+  unsubscribeUserFromPush, 
+  showTestNotification, 
+  playNotificationChime,
+  sendBroadcastPushNotification 
+} from '../lib/pushNotifications';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'scan_qr' | 'default';
 
@@ -73,6 +80,7 @@ interface AppContextType {
   editingEvent: DanceEvent | null;
   setEditingEvent: (ev: DanceEvent | null) => void;
   notifications: NotificationItem[];
+  setNotifications: React.Dispatch<React.SetStateAction<NotificationItem[]>>;
   unreadCount: number;
   markAllNotificationsAsRead: () => void;
   pushEnabled: boolean;
@@ -428,6 +436,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(STORAGE_KEYS.SUPPORT_MESSAGES, JSON.stringify(supportMessages));
     } catch (e) {}
   }, [supportMessages]);
+
+  // Automatically sync and register Push Subscription if user/browser already granted notification permission
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const syncTimer = setTimeout(() => {
+        subscribeUserToPush(user?.id, user?.email).catch((e) => {
+          console.warn('Auto push sync background note:', e);
+        });
+      }, 1500);
+      return () => clearTimeout(syncTimer);
+    }
+  }, [user?.id, user?.email]);
 
   // Connect to Firebase Firestore Database for real-time synchronization
   useEffect(() => {
@@ -1209,8 +1230,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Send a notification to all subscribers
     const newNotif: NotificationItem = {
       id: `notif-new-${Date.now()}`,
-      titleAr: `🔥 إعلان جديد: ${createdEvent.titleAr}`,
-      titleEn: `🔥 New Announcement: ${createdEvent.titleEn}`,
+      titleAr: `🔥 فاعلية جديدة: ${createdEvent.titleAr}`,
+      titleEn: `🔥 New Event: ${createdEvent.titleEn}`,
       messageAr: createdEvent.descriptionAr.slice(0, 100) + '...',
       messageEn: createdEvent.descriptionEn.slice(0, 100) + '...',
       date: new Date().toISOString(),
@@ -1220,6 +1241,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setNotifications(prev => [newNotif, ...prev]);
     saveNotificationToFirestore(newNotif);
+
+    // Broadcast live Web Push alert to all subscriber phones
+    sendBroadcastPushNotification({
+      title: newNotif.titleAr,
+      body: newNotif.messageAr,
+      url: `/?event=${createdEvent.id}`,
+      image: createdEvent.mediaUrl,
+      eventId: createdEvent.id
+    }).catch(e => console.warn('Push broadcast on event creation note:', e));
+
     return createdEvent;
   };
 
@@ -1300,15 +1331,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const togglePushNotifications = () => {
+  const togglePushNotifications = async () => {
     const nextVal = !pushEnabled;
     setPushEnabled(nextVal);
     localStorage.setItem(STORAGE_KEYS.PUSH, nextVal ? 'true' : 'false');
     if (nextVal) {
       try {
-        if ('Notification' in window && Notification.permission !== 'granted') {
-          Notification.requestPermission();
+        const res = await subscribeUserToPush(user?.id, user?.email);
+        if (res.success) {
+          showTestNotification(lang);
+        } else if (res.message) {
+          triggerAlert(res.message);
         }
+      } catch (e) {
+        console.warn('Push subscription failed:', e);
+      }
+    } else {
+      try {
+        await unsubscribeUserFromPush(user?.id);
       } catch (e) {}
     }
   };
@@ -1397,6 +1437,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       editingEvent,
       setEditingEvent,
       notifications,
+      setNotifications,
       unreadCount,
       markAllNotificationsAsRead,
       pushEnabled,

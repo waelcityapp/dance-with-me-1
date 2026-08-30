@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceEvent, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
 import { EventCard } from '../events/EventCard';
 import { WeeklyPromoBanner } from '../events/WeeklyPromoBanner';
-import { Sparkles, Music, GraduationCap, Palmtree, PlusCircle, Filter, Search, Clock, CheckCircle, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, X, Crown, Gift, Star, ArrowLeft, ArrowRight, WifiOff, Loader2, RefreshCw } from 'lucide-react';
+import { Sparkles, Music, GraduationCap, Palmtree, Building2, PlusCircle, Filter, Search, Clock, CheckCircle, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, X, Crown, Gift, Star, ArrowLeft, ArrowRight, WifiOff, Loader2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { logAnalyticsEvent } from '../../lib/firebase';
 
@@ -126,11 +126,72 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     return true;
   });
 
-  const categories: { id: DanceCategory; labelAr: string; labelEn: string; icon: React.ElementType }[] = [
-    { id: 'all', labelAr: 'الكل (All)', labelEn: 'All Events', icon: Sparkles },
-    { id: 'party', labelAr: '🎉 الحفلات (Parties)', labelEn: '🎉 Parties', icon: Music },
-    { id: 'course', labelAr: '🎓 الكورسات (Courses)', labelEn: '🎓 Masterclasses', icon: GraduationCap },
-    { id: 'trip', labelAr: '🌴 الرحلات (Trips)', labelEn: '🌴 Retreats', icon: Palmtree }
+  const categories: { 
+    id: DanceCategory; 
+    labelAr: string; 
+    labelEn: string; 
+    icon: React.ElementType;
+    activeBorder: string;
+    activeShadow: string;
+    activeBadge: string;
+    iconColor: string;
+    iconBg: string;
+  }[] = [
+    { 
+      id: 'all', 
+      labelAr: 'الكل', 
+      labelEn: 'All', 
+      icon: Sparkles,
+      activeBorder: 'border-amber-500',
+      activeShadow: 'shadow-lg shadow-amber-500/10 gold-glow',
+      activeBadge: 'bg-amber-500 text-neutral-950',
+      iconColor: 'text-amber-400',
+      iconBg: 'bg-amber-500/15'
+    },
+    { 
+      id: 'party', 
+      labelAr: 'الحفلات', 
+      labelEn: 'Parties', 
+      icon: Music,
+      activeBorder: 'border-purple-500',
+      activeShadow: 'shadow-lg shadow-purple-500/15',
+      activeBadge: 'bg-purple-500 text-white',
+      iconColor: 'text-purple-400',
+      iconBg: 'bg-purple-500/15'
+    },
+    { 
+      id: 'course', 
+      labelAr: 'الكورسات', 
+      labelEn: 'Courses', 
+      icon: GraduationCap,
+      activeBorder: 'border-sky-500',
+      activeShadow: 'shadow-lg shadow-sky-500/15',
+      activeBadge: 'bg-sky-500 text-white',
+      iconColor: 'text-sky-400',
+      iconBg: 'bg-sky-500/15'
+    },
+    { 
+      id: 'trip', 
+      labelAr: 'الرحلات', 
+      labelEn: 'Trips', 
+      icon: Palmtree,
+      activeBorder: 'border-emerald-500',
+      activeShadow: 'shadow-lg shadow-emerald-500/15',
+      activeBadge: 'bg-emerald-500 text-neutral-950',
+      iconColor: 'text-emerald-400',
+      iconBg: 'bg-emerald-500/15'
+    },
+    { 
+      id: 'exhibition', 
+      labelAr: 'المعارض والمؤتمرات', 
+      labelEn: 'Exhibitions & Conferences', 
+      icon: Building2,
+      activeBorder: 'border-rose-500',
+      activeShadow: 'shadow-lg shadow-rose-500/15',
+      activeBadge: 'bg-rose-500 text-white',
+      iconColor: 'text-rose-400',
+      iconBg: 'bg-rose-500/15'
+    }
   ];
 
   const styleChips: string[] = ['all', ...ALL_DANCE_STYLES];
@@ -138,23 +199,23 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   return (
     <div className="space-y-6 pb-16">
       {/* Hero Header */}
-      <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-2xl space-y-4">
+      <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl dark:shadow-2xl space-y-4 transition-colors">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white leading-tight">
               {lang === 'ar' ? 'اكتشف فعاليات و حفلات' : 'Discover Events & Parties'}
             </h2>
-            <h3 className="text-xl sm:text-2xl font-black text-amber-400 mt-1 leading-tight">
+            <h3 className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 leading-tight">
               {lang === 'ar' ? 'اللاتينى | الشرقى | الغربي| متنوعات' : 'Latin | Oriental | Western | Variety'}
             </h3>
-            <p className="text-xs sm:text-sm text-neutral-400 mt-2 font-medium leading-relaxed">
+            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-2 font-medium leading-relaxed">
               {lang === 'ar' ? 'سالسا بتشاتا كيزومبا تانجو بول روم  شرقى غربى كريوكى متنوعات فى ارقى الاماكن و المنتجعات' : 'Salsa, Bachata, Kizomba, Tango, Ballroom, Oriental, Western, Karaoke, Variety in the finest venues & resorts'}
             </p>
           </div>
 
           <button
             onClick={onOpenCreate}
-            className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 px-6 py-3.5 text-xs sm:text-sm font-bold text-neutral-950 shadow-xl transition-colors shrink-0"
+            className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 px-6 py-3.5 text-xs sm:text-sm font-bold text-neutral-950 shadow-xl transition-colors shrink-0 cursor-pointer"
           >
             <PlusCircle className="h-4 w-4 stroke-[2.5]" />
             <span>{lang === 'ar' ? 'إضافة إعلان' : 'Post Ad'}</span>
@@ -176,10 +237,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           />
           
           {/* Inner Content */}
-          <div className="relative flex items-center justify-between bg-neutral-950/95 backdrop-blur-md rounded-[14px] px-5 py-3.5 w-full h-full">
+          <div className="relative flex items-center justify-between bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md rounded-[14px] px-5 py-3.5 w-full h-full">
             <div className="flex items-center gap-3">
               <Sparkles className="h-5 w-5 text-red-500 animate-pulse" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-500 to-red-500 font-black text-base sm:text-xl tracking-wide drop-shadow-md bg-[length:200%_auto]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-amber-500 to-red-600 dark:from-red-500 dark:via-amber-400 dark:to-red-500 font-black text-base sm:text-xl tracking-wide drop-shadow-sm bg-[length:200%_auto]">
                 {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
               </span>
             </div>
@@ -189,21 +250,22 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
               className="flex items-center gap-1.5 bg-red-500/10 rounded-full px-3 py-1.5 border border-red-500/30 shrink-0"
             >
-              <span className="text-[10px] font-bold text-red-400 hidden sm:block uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-red-600 dark:text-red-400 hidden sm:block uppercase tracking-wider">
                 {lang === 'ar' ? 'اكتشف' : 'Discover'}
               </span>
-              {lang === 'ar' ? <ArrowLeft className="h-4 w-4 text-red-400" /> : <ArrowRight className="h-4 w-4 text-red-400" />}
+              {lang === 'ar' ? <ArrowLeft className="h-4 w-4 text-red-500" /> : <ArrowRight className="h-4 w-4 text-red-500" />}
             </motion.div>
           </div>
         </motion.div>
       </div>
 
-      {/* Category Tabs (Compact) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {categories.map((cat) => {
+      {/* Category Tabs (Clean Single-Language + Distinct Primary Icons) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        {categories.map((cat, index) => {
           const Icon = cat.icon;
           const isSelected = selectedCategory === cat.id;
           const count = activeEvents.filter(ev => cat.id === 'all' || ev.category === cat.id).length;
+          const isLastOnMobile = index === categories.length - 1;
 
           return (
             <button
@@ -212,21 +274,27 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                 setSelectedCategory(cat.id);
                 logAnalyticsEvent(`category_${cat.id}`);
               }}
-              className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-all duration-200 ${
+              className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                isLastOnMobile ? 'col-span-2 sm:col-span-1' : ''
+              } ${
                 isSelected
-                  ? 'bg-neutral-900 border-amber-500/50 text-white shadow-lg gold-glow'
-                  : 'bg-neutral-900/50 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white'
+                  ? `bg-white dark:bg-neutral-900 ${cat.activeBorder} ${cat.activeShadow} text-neutral-950 dark:text-white shadow-md`
+                  : 'bg-white/80 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700 hover:text-neutral-950 dark:hover:text-white shadow-sm'
               }`}
             >
               <div className="flex items-center gap-2 overflow-hidden">
-                <div className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl shrink-0 ${isSelected ? 'bg-amber-500 text-neutral-950 font-bold' : 'bg-neutral-800 text-neutral-400'}`}>
-                  <Icon className="h-4 w-4" />
+                <div className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl shrink-0 transition-colors ${
+                  isSelected ? `${cat.activeBadge}` : `${cat.iconBg} ${cat.iconColor}`
+                }`}>
+                  <Icon className="h-4 w-4 stroke-[2.2]" />
                 </div>
-                <span className="text-xs font-bold truncate">
+                <span className="text-xs sm:text-sm font-bold truncate">
                   {lang === 'ar' ? cat.labelAr : cat.labelEn}
                 </span>
               </div>
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-mono font-bold shrink-0 ${isSelected ? 'bg-amber-500 text-neutral-950' : 'bg-neutral-800 text-neutral-400'}`}>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-mono font-bold shrink-0 transition-colors ${
+                isSelected ? cat.activeBadge : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-400'
+              }`}>
                 {count}
               </span>
             </button>
@@ -235,40 +303,40 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       </div>
 
       {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
-      <div id="search-section" className="rounded-3xl border-2 border-amber-500/40 bg-neutral-900/90 p-4 sm:p-5 shadow-2xl backdrop-blur-md space-y-3.5 my-2">
-        <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
+      <div id="search-section" className="rounded-3xl border-2 border-amber-500/40 bg-white/95 dark:bg-neutral-900/90 p-4 sm:p-5 shadow-xl dark:shadow-2xl backdrop-blur-md space-y-3.5 my-2 transition-colors">
+        <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800/80 pb-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <h3 className="text-base sm:text-xl font-black text-amber-400 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400 animate-pulse shrink-0" />
+            <h3 className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 dark:text-amber-400 animate-pulse shrink-0" />
               <span>{lang === 'ar' ? 'أحدث الإعلانات والفاعليات' : 'Latest Announcements & Events'}</span>
             </h3>
             {selectedCategory !== 'all' && (
-              <span className="text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+              <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
                 {categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}
               </span>
             )}
           </div>
-          <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 text-xs font-mono font-bold text-amber-400 shadow-sm shrink-0">
+          <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 text-xs font-mono font-bold text-amber-600 dark:text-amber-400 shadow-sm shrink-0">
             {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
           </span>
         </div>
 
         {/* Prominent Search Bar Input */}
         <div className="space-y-3">
-          <div className="relative flex items-center bg-neutral-950 border-2 border-amber-500/60 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-500/20 rounded-2xl px-3.5 py-1.5 shadow-xl transition-all">
-            <Search className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400 shrink-0" />
+          <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-950 border-2 border-amber-500/60 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 rounded-2xl px-3.5 py-1.5 shadow-md transition-all">
+            <Search className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 dark:text-amber-400 shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               dir={lang === 'ar' ? 'rtl' : 'ltr'}
               placeholder={lang === 'ar' ? 'ابحث عن حفلة، كورس، موقع، منظم، محافظة، منطقة، أو اسم مدرب...' : 'Search for party, course, venue, organizer, governorate, area, instructor...'}
-              className="w-full bg-transparent py-2 px-2.5 text-xs sm:text-sm text-white placeholder-neutral-400 outline-none font-medium"
+              className="w-full bg-transparent py-2 px-2.5 text-xs sm:text-sm text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none font-medium"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="shrink-0 p-1.5 text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-xl text-xs font-bold transition-colors"
+                className="shrink-0 p-1.5 text-neutral-500 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 title={lang === 'ar' ? 'مسح البحث' : 'Clear search'}
               >
                 <X className="h-4 w-4" />
@@ -278,8 +346,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
 
           {/* Style Chips */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
-            <span className="text-[11px] font-mono text-neutral-400 shrink-0 mr-1 flex items-center gap-1">
-              <Filter className="h-3.5 w-3.5 text-amber-400" />
+            <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 shrink-0 mr-1 flex items-center gap-1">
+              <Filter className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
               <span>{lang === 'ar' ? 'التصنيف بحسب الرقصة:' : 'Style filter:'}</span>
             </span>
             {styleChips.map(style => (
@@ -292,10 +360,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                     logAnalyticsEvent(`style_${normalized}`);
                   }
                 }}
-                className={`rounded-xl px-2.5 py-1 text-xs font-mono font-bold whitespace-nowrap transition-all border ${
+                className={`rounded-xl px-2.5 py-1 text-xs font-mono font-bold whitespace-nowrap transition-all border cursor-pointer ${
                   selectedStyleFilter === style
                     ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-sm'
-                    : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-700 hover:text-white'
+                    : 'bg-white dark:bg-neutral-950 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:text-neutral-900 dark:hover:text-white shadow-xs'
                 }`}
               >
                 {style === 'all' ? (lang === 'ar' ? 'كل الأنماط' : 'All Styles') : `#${getStyleLabel(style, lang)}`}
@@ -316,48 +384,48 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
 
       {/* Events Grid */}
       {isLoadingEvents ? (
-        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/50 p-12 text-center flex flex-col items-center justify-center">
+        <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/50 p-12 text-center flex flex-col items-center justify-center shadow-md">
           <Loader2 className="h-10 w-10 text-amber-500 animate-spin mb-4" />
-          <h4 className="text-lg font-bold text-white mb-2">
+          <h4 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
             {lang === 'ar' ? 'جاري تحميل الفعاليات...' : 'Loading events...'}
           </h4>
-          <p className="text-xs text-neutral-400">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
             {lang === 'ar' ? 'لحظات ونعرض لك أحدث الإعلانات' : 'Please wait while we fetch the latest announcements'}
           </p>
         </div>
       ) : loadingEventsError ? (
-        <div className="rounded-3xl border border-red-900/30 bg-red-950/20 p-12 text-center flex flex-col items-center justify-center">
+        <div className="rounded-3xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-12 text-center flex flex-col items-center justify-center shadow-md">
           <WifiOff className="h-12 w-12 text-red-500 mb-4 opacity-80" />
-          <h4 className="text-lg font-bold text-white mb-2">
+          <h4 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
             {lang === 'ar' ? 'الاتصال بالشبكة ضعيف جداً' : 'Poor Network Connection'}
           </h4>
-          <p className="text-xs text-neutral-400 max-w-sm mx-auto mb-6">
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-sm mx-auto mb-6">
             {lang === 'ar' 
               ? 'يرجى مراجعة اتصالك بالإنترنت والمحاولة مرة أخرى. لم نتمكن من جلب الفعاليات بنجاح.' 
               : 'Please check your internet connection and try again. We could not fetch the events successfully.'}
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-3 text-xs font-bold text-red-400 hover:bg-red-500/20 transition-colors"
+            className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-3 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
           >
             <RefreshCw className="h-4 w-4" />
             {lang === 'ar' ? 'تحديث الصفحة' : 'Refresh Page'}
           </button>
         </div>
       ) : filteredEvents.length === 0 ? (
-        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/50 p-12 text-center">
-          <Music className="h-12 w-12 mx-auto text-neutral-600 mb-3" />
-          <h4 className="text-lg font-bold text-white mb-1">
+        <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/50 p-12 text-center shadow-md">
+          <Music className="h-12 w-12 mx-auto text-neutral-400 dark:text-neutral-600 mb-3" />
+          <h4 className="text-lg font-bold text-neutral-900 dark:text-white mb-1">
             {lang === 'ar' ? 'لا توجد فعاليات مطابقة لبحثك' : 'No matching events found'}
           </h4>
-          <p className="text-xs text-neutral-400 max-w-sm mx-auto mb-6">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto mb-6">
             {lang === 'ar'
               ? 'جرب تغيير خيارات التصفية أو أنماط الرقص، أو كن أول من يضيف إعلاناً جديداً اليوم!'
               : 'Try resetting style filters or search terms, or post a new announcement today!'}
           </p>
           <button
             onClick={() => { setSelectedCategory('all'); setSearchQuery(''); setSelectedStyleFilter('all'); }}
-            className="rounded-xl border border-neutral-700 bg-neutral-800 px-6 py-3 text-xs font-bold text-white hover:bg-neutral-700"
+            className="rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 px-6 py-3 text-xs font-bold text-neutral-900 dark:text-white transition-colors cursor-pointer"
           >
             {lang === 'ar' ? 'إعادة ضبط عوامل التصفية' : 'Reset All Filters'}
           </button>
@@ -394,8 +462,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                 disabled={filteredEvents.length <= visibleCount}
                 className={`flex items-center gap-2 rounded-xl border px-6 py-3 text-xs sm:text-sm font-bold transition-all shadow-md ${
                   filteredEvents.length > visibleCount
-                    ? 'bg-neutral-900 border-neutral-800 hover:border-neutral-700 hover:text-amber-400 text-white cursor-pointer'
-                    : 'bg-neutral-900/50 border-neutral-800/50 text-neutral-500 cursor-not-allowed'
+                    ? 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-amber-500/50 hover:text-amber-600 dark:hover:text-amber-400 text-neutral-900 dark:text-white cursor-pointer'
+                    : 'bg-neutral-100 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800/50 text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
                 }`}
               >
                 {filteredEvents.length > visibleCount && (
@@ -433,50 +501,50 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       {/* Why Book Modal */}
       <AnimatePresence>
         {showWhyBookModal && (
-          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-end sm:justify-center p-0 sm:p-6 text-neutral-100">
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-end sm:justify-center p-0 sm:p-6 text-neutral-900 dark:text-neutral-100">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowWhyBookModal(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
             <motion.div
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
-              className="relative w-full sm:max-w-md bg-neutral-900 border border-neutral-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full sm:max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
             >
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-pink-500 via-indigo-500 to-amber-500" />
               
               <div className="p-6">
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/30">
+                    <div className="h-10 w-10 rounded-full bg-red-500/15 flex items-center justify-center border border-red-500/30">
                       <Sparkles className="h-5 w-5 text-red-500" />
                     </div>
-                    <h3 className="text-xl font-bold text-white">
+                    <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
                       {lang === 'ar' ? 'مميزات الحجز' : 'Booking Benefits'}
                     </h3>
                   </div>
                   <button
                     onClick={() => setShowWhyBookModal(false)}
-                    className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-full text-neutral-400 transition-colors"
+                    className="p-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-full text-neutral-500 dark:text-neutral-400 transition-colors cursor-pointer"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-start gap-4 bg-neutral-950/50 p-4 rounded-2xl border border-neutral-800/50">
-                    <div className="h-10 w-10 shrink-0 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 mt-1">
-                      <Gift className="h-5 w-5 text-emerald-400" />
+                  <div className="flex items-start gap-4 bg-neutral-50 dark:bg-neutral-950/50 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800/50">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-emerald-500/15 flex items-center justify-center border border-emerald-500/30 mt-1">
+                      <Gift className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-emerald-400 mb-1">
+                      <h4 className="font-bold text-emerald-600 dark:text-emerald-400 mb-1">
                         {lang === 'ar' ? 'خصومات خاصة' : 'Special Discounts'}
                       </h4>
-                      <p className="text-sm text-neutral-300 leading-relaxed">
+                      <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
                         {lang === 'ar' 
                           ? 'الاستفادة من خصومات خاصة عن الأسعار الرسمية.'
                           : 'Enjoy special discounts off the official prices.'}
@@ -484,15 +552,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 bg-neutral-950/50 p-4 rounded-2xl border border-neutral-800/50">
-                    <div className="h-10 w-10 shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30 mt-1">
-                      <Crown className="h-5 w-5 text-amber-400" />
+                  <div className="flex items-start gap-4 bg-neutral-50 dark:bg-neutral-950/50 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800/50">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-amber-500/15 flex items-center justify-center border border-amber-500/30 mt-1">
+                      <Crown className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-amber-400 mb-1">
+                      <h4 className="font-bold text-amber-600 dark:text-amber-400 mb-1">
                         {lang === 'ar' ? 'دعوات لحفلات VIP' : 'VIP Event Invites'}
                       </h4>
-                      <p className="text-sm text-neutral-300 leading-relaxed">
+                      <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
                         {lang === 'ar'
                           ? 'عند ملاحظة تفاعلك مع التطبيق والحجز من خلاله ومشاركة الإعلانات تتلقى دعوات لحضور بعض الحفلات بخصومات قد تصل الى 100% وامتيازات تكون فى فئة المستخدمين المميزين جدا أو الـ VIP.'
                           : 'By engaging with the app, booking, and sharing, you may receive invitations to parties with up to 100% discounts and exclusive VIP privileges.'}
@@ -503,7 +571,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
 
                 <button
                   onClick={() => setShowWhyBookModal(false)}
-                  className="mt-6 w-full py-3.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all"
+                  className="mt-6 w-full py-3.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white font-bold rounded-xl transition-all cursor-pointer shadow-md"
                 >
                   {lang === 'ar' ? 'فهمت، شكراً' : 'Got it, Thanks'}
                 </button>

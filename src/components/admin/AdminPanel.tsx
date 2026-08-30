@@ -79,6 +79,7 @@ import {
 } from '../../lib/firebase';
 
 import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
+import { sendBroadcastPushNotification, getPushSubscribersCount, playNotificationChime } from '../../lib/pushNotifications';
 
 export const AdminPanel: React.FC = () => {
   const { 
@@ -139,6 +140,12 @@ export const AdminPanel: React.FC = () => {
   const [notifMessageEn, setNotifMessageEn] = useState('');
   const [notifType, setNotifType] = useState<'system' | 'new_party' | 'course_alert' | 'trip' | 'expiry_warning'>('system');
   const [notifSending, setNotifSending] = useState(false);
+  const [sendMobilePush, setSendMobilePush] = useState(true);
+  const [pushSubscribersCount, setPushSubscribersCount] = useState<number>(0);
+
+  useEffect(() => {
+    getPushSubscribersCount().then(count => setPushSubscribersCount(count));
+  }, []);
 
 
   // Security Section States
@@ -1515,7 +1522,23 @@ export const AdminPanel: React.FC = () => {
         date: new Date().toISOString(),
         read: false
       });
-      alert(lang === 'ar' ? 'تم إرسال الإشعار بنجاح!' : 'Notification sent successfully!');
+
+      let pushStatusMsg = '';
+      if (sendMobilePush) {
+        const pushRes = await sendBroadcastPushNotification({
+          title: notifTitleAr,
+          body: notifMessageAr,
+          url: '/'
+        });
+        if (pushRes.success) {
+          pushStatusMsg = lang === 'ar' 
+            ? `\n📱 وتم إرسال إشعار فوري للشاشات (${pushRes.sentCount || 0} جهاز متصل)`
+            : `\n📱 Push alert delivered to (${pushRes.sentCount || 0} devices)`;
+        }
+      }
+
+      playNotificationChime();
+      alert((lang === 'ar' ? 'تم إرسال الإشعار بنجاح!' : 'Notification sent successfully!') + pushStatusMsg);
       setNotifTitleAr('');
       setNotifTitleEn('');
       setNotifMessageAr('');
@@ -5561,13 +5584,17 @@ export const AdminPanel: React.FC = () => {
                                   ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
                                   : ev.category === 'course' 
                                     ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                    : ev.category === 'trip'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                               }`}>
                                 {ev.category === 'party' 
                                   ? (lang === 'ar' ? 'حفلة' : 'Party') 
                                   : ev.category === 'course' 
                                     ? (lang === 'ar' ? 'دورة' : 'Course') 
-                                    : (lang === 'ar' ? 'رحلة' : 'Trip')}
+                                    : ev.category === 'trip'
+                                      ? (lang === 'ar' ? 'رحلة' : 'Trip')
+                                      : (lang === 'ar' ? 'معارض ومؤتمرات' : 'Exhibition')}
                               </span>
                             </td>
 
@@ -6994,7 +7021,7 @@ export const AdminPanel: React.FC = () => {
                           </div>
                           {adminEditingField === 'category' ? (
                             <div className="flex items-center gap-1 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl">
-                              {(['party', 'course', 'trip'] as DanceCategory[]).map((cat) => (
+                              {(['party', 'course', 'trip', 'exhibition'] as DanceCategory[]).map((cat) => (
                                 <button
                                   type="button"
                                   key={cat}
@@ -7003,7 +7030,7 @@ export const AdminPanel: React.FC = () => {
                                     adminCategory === cat ? 'bg-indigo-500 text-white' : 'text-neutral-400 hover:bg-neutral-800'
                                   }`}
                                 >
-                                  {cat === 'party' ? '🎉' : cat === 'course' ? '🎓' : '✈️'}
+                                  {cat === 'party' ? '🎉' : cat === 'course' ? '🎓' : cat === 'trip' ? '🌴' : '🏛️'}
                                 </button>
                               ))}
                               <button type="button" onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white ml-1">
@@ -7466,6 +7493,38 @@ export const AdminPanel: React.FC = () => {
                   <option value="trip">{lang === 'ar' ? 'رحلة / مهرجان (أخضر)' : 'Trip / Festival (Green)'}</option>
                   <option value="expiry_warning">{lang === 'ar' ? 'تنبيه هام / انتهاء (أصفر)' : 'Warning / Expiry (Yellow)'}</option>
                 </select>
+              </div>
+
+              {/* Mobile Push Notification Broadcast Switch */}
+              <div className="md:col-span-2 bg-neutral-950/60 border border-amber-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+                    <Smartphone className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white text-sm">
+                        {lang === 'ar' ? 'إرسال إشعار فوري لشاشات الهواتف (Web Push)' : 'Broadcast Live Phone Push Notification'}
+                      </span>
+                      <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full">
+                        {lang === 'ar' ? `${pushSubscribersCount} مشترك مسجل` : `${pushSubscribersCount} subscribers`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      {lang === 'ar' ? 'يصل مباشرة على شاشة قفل الموبايل مع رنة مميزة واهتزاز حتى لو التطبيق مغلق' : 'Reaches user lock screens with custom chime & vibration even if app is closed'}
+                    </p>
+                  </div>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={sendMobilePush}
+                    onChange={(e) => setSendMobilePush(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
               </div>
             </div>
             

@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, Sparkles, UserCheck, User } from 'lucide-react';
+import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, Sparkles, UserCheck, User, BellRing, Smartphone, Radio } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
+import { BroadcastPushModal } from '../modals/BroadcastPushModal';
 import { logAnalyticsEvent } from '../../lib/firebase';
 
 interface EventCardProps {
@@ -43,6 +44,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-[16/10]');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -119,10 +121,11 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   const expiryInfo = getDaysRemainingBeforeExpiry(event.eventDate);
   const isExpired = event.isExpiredBy15DaysRule || expiryInfo.isExpired;
 
-  const categoryLabels = {
-    party: { ar: '🎉 حفلة لاتينية', en: '🎉 Latin Party', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-    course: { ar: '🎓 كورس متخصّص', en: '🎓 Masterclass', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-    trip: { ar: '🌴 رحلة / معسكر', en: '🌴 Dance Camp', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' }
+  const categoryLabels: Record<string, { ar: string; en: string; color: string }> = {
+    party: { ar: 'حفلة وسهرة', en: 'Party & Social', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+    course: { ar: 'كورس متخصّص', en: 'Masterclass', color: 'bg-sky-500/20 text-sky-300 border-sky-500/30' },
+    trip: { ar: 'رحلة / معسكر', en: 'Dance Camp', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+    exhibition: { ar: 'معارض ومؤتمرات', en: 'Exhibition & Conference', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30' }
   };
 
   const currentCat = categoryLabels[event.category] || categoryLabels.party;
@@ -139,10 +142,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         isHighlighted
           ? 'ring-4 ring-amber-500 shadow-[0_0_60px_rgba(245,158,11,0.5)] border-amber-400 scale-[1.01] z-30'
           : isExpired
-            ? 'border-white/5 bg-neutral-900/60 opacity-80 shadow-[0_15px_35px_rgba(0,0,0,0.5)]'
+            ? 'border-neutral-200 dark:border-white/5 bg-white/70 dark:bg-neutral-900/60 opacity-80 shadow-md dark:shadow-[0_15px_35px_rgba(0,0,0,0.5)]'
             : displayAdType === 'vip'
-              ? 'border-amber-500/40 bg-neutral-900 shadow-[0_22px_48px_rgba(245,158,11,0.12)] hover:border-amber-400/80 hover:shadow-[0_32px_64px_rgba(245,158,11,0.25)]'
-              : 'border-white/10 bg-neutral-900 shadow-[0_22px_48px_rgba(0,0,0,0.7)] hover:border-white/25 hover:shadow-[0_32px_64px_rgba(0,0,0,0.9)]'
+              ? 'border-amber-400/60 dark:border-amber-500/40 bg-white dark:bg-neutral-900 shadow-xl shadow-amber-500/10 dark:shadow-[0_22px_48px_rgba(245,158,11,0.12)] hover:border-amber-500 dark:hover:border-amber-400/80 hover:shadow-2xl'
+              : 'border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-lg dark:shadow-[0_22px_48px_rgba(0,0,0,0.7)] hover:border-neutral-300 dark:hover:border-white/25 hover:shadow-xl'
       }`}
     >
 
@@ -155,14 +158,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       <div className={`h-1 w-full shrink-0 bg-gradient-to-r ${
         displayAdType === 'vip' 
           ? 'from-amber-600 via-amber-400 to-amber-500 animate-pulse' 
-          : 'from-neutral-700 via-neutral-500 to-neutral-600'
+          : 'from-neutral-400 via-neutral-300 to-neutral-400 dark:from-neutral-700 dark:via-neutral-500 dark:to-neutral-600'
       }`} />
 
       {/* Top Header Labeling to mark beginning of the ad container */}
       <div className={`px-4 py-2.5 flex items-center justify-between text-[11px] font-black tracking-wide uppercase border-b select-none shrink-0 ${
         displayAdType === 'vip'
-          ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20 text-amber-400'
-          : 'bg-neutral-950/40 border-white/5 text-neutral-400'
+          ? 'bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-amber-500/20 text-amber-700 dark:text-amber-400'
+          : 'bg-neutral-100/70 dark:bg-neutral-950/40 border-neutral-200 dark:border-white/5 text-neutral-500 dark:text-neutral-400'
       }`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         <div className="flex items-center gap-1.5">
           {displayAdType === 'vip' ? (
@@ -260,6 +263,18 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 <User className="h-4.5 w-4.5 stroke-[2.5]" />
               </button>
             )}
+            {/* Broadcast Push Alert Button (Admin Only) */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsBroadcastModalOpen(true);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-neutral-950 shadow-md transition-all border border-amber-400/50 hover:scale-105 active:scale-95 cursor-pointer"
+              title={lang === 'ar' ? 'بث إشعار فوري لشاشات الموبايل (مثل الواتساب 📱)' : 'Broadcast Push Notification to Mobile Screens'}
+            >
+              <BellRing className="h-4.5 w-4.5 stroke-[2.5] animate-bounce" />
+            </button>
             {/* Pause / Resume button */}
             <button
               onClick={(e) => {
@@ -366,21 +381,21 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         )}
         <div className="absolute inset-0 card-gradient pointer-events-none" />
       </div>
-        <div className="flex flex-1 flex-col p-4 sm:p-5 relative z-10 bg-neutral-900 border-t border-neutral-800">
+        <div className="flex flex-1 flex-col p-4 sm:p-5 relative z-10 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 transition-colors">
           {/* Content Box (Title, Price, description) */}
           <div className="mb-4">
-            <h3 className="mb-2 text-base sm:text-lg font-black tracking-tight text-white line-clamp-2 leading-snug">
+            <h3 className="mb-2 text-base sm:text-lg font-black tracking-tight text-neutral-900 dark:text-white line-clamp-2 leading-snug">
               {lang === 'ar' ? event.titleAr : event.titleEn}
             </h3>
             {/* Price Badge */}
             {(event.priceAr || event.priceEn) && (
-              <div className="mb-3 inline-block rounded-lg bg-amber-500/10 px-2.5 py-1 border border-amber-500/20">
-                <span className="text-xs font-black tracking-wide text-amber-400">
+              <div className="mb-3 inline-block rounded-lg bg-amber-500/10 px-2.5 py-1 border border-amber-500/30">
+                <span className="text-xs font-black tracking-wide text-amber-700 dark:text-amber-400">
                   {lang === 'ar' ? event.priceAr : event.priceEn}
                 </span>
               </div>
             )}
-          <p className={`text-xs sm:text-sm text-neutral-300 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-2'}`}>
+          <p className={`text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-2'}`}>
             {lang === 'ar' ? (event.descriptionAr || event.descriptionEn) : (event.descriptionEn || event.descriptionAr)}
           </p>
           {((lang === 'ar' ? (event.descriptionAr || event.descriptionEn) : (event.descriptionEn || event.descriptionAr)) || '').length > 120 && (
@@ -390,7 +405,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 e.preventDefault();
                 setIsDescExpanded(!isDescExpanded);
               }}
-              className="mt-1.5 text-[11px] sm:text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/20 hover:border-amber-500/40"
+              className="mt-1.5 text-[11px] sm:text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/20 hover:border-amber-500/40"
             >
               <span>
                 {isDescExpanded 
@@ -403,9 +418,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         </div>
 
         {/* Date & Location Grid */}
-        <div className="space-y-2 mb-4 rounded-2xl bg-neutral-950 p-3.5 border border-neutral-800 text-xs">
-          <div className="flex items-center gap-2.5 text-neutral-200">
-            <Calendar className="h-4 w-4 text-amber-400 shrink-0" />
+        <div className="space-y-2 mb-4 rounded-2xl bg-white dark:bg-neutral-950 p-3.5 border border-neutral-200 dark:border-neutral-800 text-xs shadow-xs transition-colors">
+          <div className="flex items-center gap-2.5 text-neutral-950 dark:text-neutral-200">
+            <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <span className="font-bold">{formatDate(event.eventDate, lang)}</span>
           </div>
 
@@ -414,16 +429,16 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               onOpenMap(event);
               logAnalyticsEvent('clicks_maps');
             }}
-            className="flex items-center justify-between gap-2 text-neutral-300 hover:text-amber-400 cursor-pointer group/map transition-colors"
+            className="flex items-center justify-between gap-2 text-neutral-950 dark:text-neutral-300 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer group/map transition-colors"
           >
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <MapPin className="h-4 w-4 text-amber-400 shrink-0 group-hover/map:scale-110 transition-transform" />
-              <span className="truncate underline decoration-neutral-700 group-hover/map:decoration-amber-400 font-bold">
+              <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 group-hover/map:scale-110 transition-transform" />
+              <span className="truncate underline decoration-neutral-300 dark:decoration-neutral-700 group-hover/map:decoration-amber-500 font-bold">
                 {lang === 'ar' ? event.location.nameAr : event.location.nameEn}
               </span>
             </div>
             {event.location?.googleMapsUrl && event.location.googleMapsUrl.trim().length > 0 && (
-              <span className="text-[10px] text-amber-400 font-black shrink-0 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans">
+              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-black shrink-0 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans">
                 {lang === 'ar' ? 'استخدم الخريطة 🗺️' : 'Use Map 🗺️'}
               </span>
             )}
@@ -432,9 +447,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
 
         {/* Admin Event Reference Number Badge */}
         {user?.isAdmin && !hideAdminControls && event.eventRef && (
-          <div className="mb-3 px-3 py-1.5 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-indigo-400 font-mono text-xs flex items-center justify-between">
+          <div className="mb-3 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/20 text-indigo-900 dark:text-indigo-400 font-mono text-xs flex items-center justify-between">
             <span className="font-semibold">{lang === 'ar' ? 'الرقم المرجعي (أدمن فقط):' : 'Reference Number (Admin Only):'}</span>
-            <span className="font-bold bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/30">{event.eventRef}</span>
+            <span className="font-bold bg-white dark:bg-indigo-500/10 text-neutral-950 dark:text-indigo-300 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-500/30">{event.eventRef}</span>
           </div>
         )}
 
@@ -450,7 +465,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-            className={`mb-3 px-3 py-1.5 rounded-xl bg-purple-950/40 border border-purple-500/20 text-purple-400 font-sans text-xs flex flex-col gap-1 transition-all ${event.creatorId ? 'cursor-pointer hover:bg-purple-900/50 hover:border-purple-500/50 active:scale-[0.98]' : ''}`}
+            className={`mb-3 px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/20 text-purple-900 dark:text-purple-400 font-sans text-xs flex flex-col gap-1 transition-all ${event.creatorId ? 'cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900/50 hover:border-purple-500/50 active:scale-[0.98]' : ''}`}
           >
             <span className="font-semibold flex items-center justify-between">
               <span>{lang === 'ar' ? 'معلومات الإنشاء (أدمن فقط):' : 'Creation Info (Admin Only):'}</span>
@@ -458,7 +473,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 <User className="w-3.5 h-3.5" />
               )}
             </span>
-            <span className="font-bold text-[11px] bg-purple-500/10 px-2 py-1 rounded border border-purple-500/30">
+            <span className="font-bold text-[11px] bg-white dark:bg-purple-500/10 text-neutral-950 dark:text-purple-300 px-2 py-1 rounded border border-purple-200 dark:border-purple-500/30">
               {event.createdByAdmin === true || (!event.creatorId && (event.contact.organizerName === 'إدارة DWM للرقص' || event.contact.organizerName === 'الإدارة')) 
                 ? (lang === 'ar' ? 'تم إنشاء هذا الإعلان بواسطة الإدارة' : 'This ad was created by Management')
                 : (lang === 'ar' 
@@ -469,12 +484,34 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         )}
 
+        {/* Admin Direct Mobile Push Broadcast Bar */}
+        {user?.isAdmin && !hideAdminControls && (
+          <div className="mb-3 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 flex items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2 text-xs text-amber-900 dark:text-amber-300 font-bold">
+              <Smartphone className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>{lang === 'ar' ? 'إشعار شاشات الموبايل (Push):' : 'Broadcast Lock Screen Push:'}</span>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsBroadcastModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black text-xs shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              title={lang === 'ar' ? 'إرسال إشعار فوري لجميع المستخدمين على شاشات الموبايل' : 'Broadcast to all user mobile screens'}
+            >
+              <BellRing className="w-3.5 h-3.5" />
+              <span>{lang === 'ar' ? 'إرسال إشعار للمستخدمين 📱' : 'Send Push Alert 📱'}</span>
+            </button>
+          </div>
+        )}
+
         {/* Action Buttons Bar: Phone, WhatsApp, Share, Like, Book */}
-        <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-800 mt-auto flex-wrap">
+        <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 mt-auto flex-wrap">
           {/* Contact Actions */}
           <div className="flex items-center gap-1.5">
             {user?.isAdmin && !hideAdminControls && (
-              <div className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20" title={lang === 'ar' ? 'عدد مشاهدات الإعلان' : 'Ad Views Count'}>
+              <div className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20" title={lang === 'ar' ? 'عدد مشاهدات الإعلان' : 'Ad Views Count'}>
                 <Eye className="h-4 w-4" />
                 <span className="font-mono">{event.viewsCount || 0}</span>
               </div>
@@ -489,7 +526,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 logAnalyticsEvent('clicks_phone');
                 window.location.href = `tel:${event.contact.phone}`;
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-neutral-300 hover:bg-neutral-800 hover:text-amber-400 border border-neutral-800 transition-all font-bold cursor-pointer"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all font-bold cursor-pointer"
               title={lang === 'ar' ? `اتصال: ${event.contact.phone}` : `Call: ${event.contact.phone}`}
             >
               <Phone className="h-4 w-4" />
@@ -506,7 +543,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 const url = `https://wa.me/${event.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، استفسار بخصوص: ${event.titleAr}` : `Hello, inquiry about: ${event.titleEn}`)}`;
                 window.open(url, '_blank', 'noopener,noreferrer');
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-neutral-800 transition-all font-bold cursor-pointer"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-neutral-900 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-200 dark:border-neutral-800 transition-all font-bold cursor-pointer"
               title={lang === 'ar' ? 'واتساب للمنظم' : 'WhatsApp Organizer'}
             >
               <MessageCircle className="h-4 w-4" />
@@ -520,7 +557,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => onOpenShare(event)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-400 border border-neutral-800 transition-all"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all cursor-pointer"
               title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share'}
             >
               <Share2 className="h-4 w-4" />
@@ -536,7 +573,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                   e.preventDefault();
                   toggleLikeEvent(event.id);
                 }}
-                className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border border-red-500/30 bg-red-600/10 text-red-400 hover:bg-red-600 hover:text-white transition-all cursor-pointer"
+                className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border border-red-500/30 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white transition-all cursor-pointer"
                 title={lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from Favorites'}
               >
                 <Trash2 className="h-4 w-4 text-red-500 group-hover:text-white" />
@@ -547,10 +584,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={(e) => toggleLikeEvent(event.id, e.currentTarget)}
-                className={`flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border transition-all ${
+                className={`flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border transition-all cursor-pointer ${
                   isLiked
                     ? 'bg-red-600 text-white border-red-500 shadow-md'
-                    : 'bg-neutral-900 text-red-600 hover:bg-red-600 hover:text-white border-neutral-700'
+                    : 'bg-neutral-100 dark:bg-neutral-900 text-red-500 hover:bg-red-600 hover:text-white border-neutral-200 dark:border-neutral-700'
                 }`}
               >
                 <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
@@ -570,7 +607,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                   <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
                 </motion.button>
                 {(event.bookingSubtextAr || event.bookingSubtextEn || event.priceAr || event.priceEn) && (
-                  <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-400 text-center max-w-[160px] sm:max-w-[200px] leading-tight break-words" title={lang === 'ar' ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn) : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr)}>
+                  <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-700 dark:text-amber-400 text-center max-w-[160px] sm:max-w-[200px] leading-tight break-words" title={lang === 'ar' ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn) : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr)}>
                     {lang === 'ar' ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn) : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr)}
                   </span>
                 )}
@@ -626,6 +663,12 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         </div>
       )}
+      {/* Broadcast Push Modal for Admins */}
+      <BroadcastPushModal
+        isOpen={isBroadcastModalOpen}
+        onClose={() => setIsBroadcastModalOpen(false)}
+        event={event}
+      />
     </motion.div>
   );
 };

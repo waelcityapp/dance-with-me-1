@@ -532,6 +532,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 <option value="party">{lang === 'ar' ? 'حفلة / سهرة' : 'Party / Social'}</option>
                 <option value="course">{lang === 'ar' ? 'كورس / ورشة عمل' : 'Course / Workshop'}</option>
                 <option value="trip">{lang === 'ar' ? 'رحلة / معسكر' : 'Trip / Camp'}</option>
+                <option value="exhibition">{lang === 'ar' ? 'معارض ومؤتمرات' : 'Exhibitions & Conferences'}</option>
               </select>
             </div>
             <div className="space-y-2">

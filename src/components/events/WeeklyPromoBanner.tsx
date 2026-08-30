@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, UserCheck, User } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, UserCheck, User, BellRing, Smartphone, Radio } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
+import { BroadcastPushModal } from '../modals/BroadcastPushModal';
 
 interface WeeklyPromoBannerProps {
   promoEvent: DanceEvent;
@@ -34,6 +35,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-video');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -110,12 +112,12 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const expiryInfo = getDaysRemainingBeforeExpiry(promoEvent.eventDate);
 
   return (
-    <div id={`event-${promoEvent.id}`} className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 shadow-[0_25px_55px_rgba(0,0,0,0.8)] hover:border-white/20 hover:shadow-[0_35px_70px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 gold-glow-lg transition-all duration-300">
+    <div id={`event-${promoEvent.id}`} className="relative mb-8 overflow-hidden rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-xl dark:shadow-[0_25px_55px_rgba(0,0,0,0.8)] hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-2xl dark:hover:shadow-[0_35px_70px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 gold-glow-lg transition-all duration-300">
       {/* Absolute Vertical Red Accent Line */}
       <div className="absolute left-0 top-0 bottom-0 w-[5px] z-30 bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.6)]" />
 
       {/* Top Header Labeling to mark beginning of the ad container */}
-      <div className="px-4 py-2.5 flex items-center justify-between text-[11px] font-black tracking-wide uppercase border-b bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20 text-amber-400 select-none shrink-0" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="px-4 py-2.5 flex items-center justify-between text-[11px] font-black tracking-wide uppercase border-b bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-amber-500/20 text-amber-700 dark:text-amber-400 select-none shrink-0" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         <div className="flex items-center gap-1.5">
           <Crown className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
           <span>{lang === 'ar' ? (appAssets?.promoTitleAr || 'فيديو الأسبوع الحصري المميز VIP') : (appAssets?.promoTitleEn || 'EXCLUSIVE WEEKLY VIP FEATURED VIDEO')}</span>
@@ -213,6 +215,19 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 <User className="h-4.5 w-4.5 stroke-[2.5]" />
               </button>
             )}
+
+            {/* Broadcast Push Alert Button (Admin Only) */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsBroadcastModalOpen(true);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-neutral-950 shadow-md transition-all border border-amber-400/50 hover:scale-105 active:scale-95 cursor-pointer"
+              title={lang === 'ar' ? 'بث إشعار فوري لشاشات الموبايل (مثل الواتساب 📱)' : 'Broadcast Push Notification to Mobile Screens'}
+            >
+              <BellRing className="h-4.5 w-4.5 stroke-[2.5] animate-bounce" />
+            </button>
 
             {/* Pause / Resume button */}
             <button
@@ -372,20 +387,20 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         )}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent opacity-80" />
       </div>
-        <div className="flex flex-col p-4 sm:p-5 relative z-10 bg-neutral-900 border-t border-neutral-800">
+        <div className="flex flex-col p-4 sm:p-5 relative z-10 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 transition-colors">
           <div className="mb-3.5">
-            <h3 className="text-base sm:text-lg font-black tracking-tight text-white mb-2 line-clamp-2 leading-snug">
+            <h3 className="text-base sm:text-lg font-black tracking-tight text-neutral-950 dark:text-white mb-2 line-clamp-2 leading-snug">
               {lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
             </h3>
             {/* Price Badge */}
             {(promoEvent.priceAr || promoEvent.priceEn) && (
-              <div className="mb-3 inline-block rounded-lg bg-amber-500/10 px-2.5 py-1 border border-amber-500/20">
-                <span className="text-xs font-black tracking-wide text-amber-400">
+              <div className="mb-3 inline-block rounded-lg bg-amber-500/10 px-2.5 py-1 border border-amber-500/30">
+                <span className="text-xs font-black tracking-wide text-amber-700 dark:text-amber-400">
                   {lang === 'ar' ? promoEvent.priceAr : promoEvent.priceEn}
                 </span>
               </div>
             )}
-          <p className={`text-xs sm:text-sm text-neutral-300 leading-normal ${isDescExpanded ? '' : 'line-clamp-3'}`}>
+          <p className={`text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 leading-normal ${isDescExpanded ? '' : 'line-clamp-3'}`}>
             {lang === 'ar' ? promoEvent.descriptionAr : promoEvent.descriptionEn}
           </p>
           {((lang === 'ar' ? promoEvent.descriptionAr : promoEvent.descriptionEn) || '').length > 150 && (
@@ -395,7 +410,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 e.preventDefault();
                 setIsDescExpanded(!isDescExpanded);
               }}
-              className="mt-1.5 text-[11px] sm:text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/20 hover:border-amber-500/40"
+              className="mt-1.5 text-[11px] sm:text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/20 hover:border-amber-500/40"
             >
               <span>
                 {isDescExpanded 
@@ -407,37 +422,37 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           )}
         </div>
 
-        {/* Metadata Grid (Date, Location, Price) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3.5 rounded-2xl bg-neutral-900/40 p-3 sm:p-4 border border-neutral-800">
+        {/* Metadata Grid (Date, Location, Price) - Pure white in light mode, dynamic text pure black */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3.5 rounded-2xl bg-white dark:bg-neutral-900/40 p-3 sm:p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm transition-colors">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
               <Calendar className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-[10px] font-mono text-neutral-500 leading-none">{lang === 'ar' ? 'تاريخ الحدث' : 'Event Date'}</p>
-              <p className="text-xs font-bold text-white mt-1">{formatDate(promoEvent.eventDate, lang)}</p>
+              <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-none">{lang === 'ar' ? 'تاريخ الحدث' : 'Event Date'}</p>
+              <p className="text-xs font-bold text-neutral-950 dark:text-white mt-1">{formatDate(promoEvent.eventDate, lang)}</p>
             </div>
           </div>
 
           <div 
             onClick={() => onOpenMap(promoEvent)}
-            className="flex items-center gap-3 cursor-pointer group rounded-xl hover:bg-neutral-800/50 p-1 transition-colors"
+            className="flex items-center gap-3 cursor-pointer group rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/50 p-1 transition-colors"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0">
               <MapPin className="h-4.5 w-4.5" />
             </div>
             <div className="overflow-hidden w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-mono text-neutral-500 flex items-center gap-1 leading-none">
+                <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 flex items-center gap-1 leading-none">
                   {lang === 'ar' ? 'الموقع' : 'Location'}
                 </p>
-                <p className="text-xs font-bold text-white line-clamp-2 group-hover:text-amber-400 mt-1 leading-snug">
+                <p className="text-xs font-bold text-neutral-950 dark:text-white line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 mt-1 leading-snug">
                   {lang === 'ar' ? promoEvent.location.nameAr : promoEvent.location.nameEn}
                 </p>
               </div>
               {promoEvent.location?.googleMapsUrl && promoEvent.location.googleMapsUrl.trim().length > 0 && (
                 <div className="shrink-0 self-start sm:self-auto">
-                  <span className="text-[10px] text-amber-400 font-black bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse font-sans shadow-sm inline-flex items-center gap-1">
+                  <span className="text-[10px] text-amber-700 dark:text-amber-400 font-black bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse font-sans shadow-xs inline-flex items-center gap-1">
                     {lang === 'ar' ? 'استخدم الخريطة 🗺️' : 'Use Map 🗺️'}
                   </span>
                 </div>
@@ -449,9 +464,9 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
 
         {/* Admin Event Reference Number Badge */}
         {user?.isAdmin && promoEvent.eventRef && (
-          <div className="mb-3 px-3 py-1.5 mx-4 sm:mx-6 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-indigo-400 font-mono text-xs flex items-center justify-between mt-2">
+          <div className="mb-3 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/20 text-indigo-900 dark:text-indigo-400 font-mono text-xs flex items-center justify-between mt-2">
             <span className="font-semibold">{lang === 'ar' ? 'الرقم المرجعي (أدمن فقط):' : 'Reference Number (Admin Only):'}</span>
-            <span className="font-bold bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/30">{promoEvent.eventRef}</span>
+            <span className="font-bold bg-white dark:bg-indigo-500/10 text-neutral-950 dark:text-indigo-300 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-500/30">{promoEvent.eventRef}</span>
           </div>
         )}
 
@@ -467,7 +482,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-            className={`mb-3 px-3 py-1.5 mx-4 sm:mx-6 rounded-xl bg-purple-950/40 border border-purple-500/20 text-purple-400 font-sans text-xs flex flex-col gap-1 transition-all ${promoEvent.creatorId ? 'cursor-pointer hover:bg-purple-900/50 hover:border-purple-500/50 active:scale-[0.98]' : ''}`}
+            className={`mb-3 px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/20 text-purple-900 dark:text-purple-400 font-sans text-xs flex flex-col gap-1 transition-all ${promoEvent.creatorId ? 'cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900/50 hover:border-purple-500/50 active:scale-[0.98]' : ''}`}
           >
             <span className="font-semibold flex items-center justify-between">
               <span>{lang === 'ar' ? 'معلومات الإنشاء (أدمن فقط):' : 'Creation Info (Admin Only):'}</span>
@@ -475,7 +490,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 <User className="w-3.5 h-3.5" />
               )}
             </span>
-            <span className="font-bold text-[11px] bg-purple-500/10 px-2 py-1 rounded border border-purple-500/30">
+            <span className="font-bold text-[11px] bg-white dark:bg-purple-500/10 text-neutral-950 dark:text-purple-300 px-2 py-1 rounded border border-purple-200 dark:border-purple-500/30">
               {promoEvent.createdByAdmin === true || (!promoEvent.creatorId && (promoEvent.contact.organizerName === 'إدارة DWM للرقص' || promoEvent.contact.organizerName === 'الإدارة')) 
                 ? (lang === 'ar' ? 'تم إنشاء هذا الإعلان بواسطة الإدارة' : 'This ad was created by Management')
                 : (lang === 'ar' 
@@ -486,12 +501,34 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           </div>
         )}
 
+        {/* Admin Direct Mobile Push Broadcast Bar */}
+        {user?.isAdmin && (
+          <div className="mb-3 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 flex items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2 text-xs text-amber-900 dark:text-amber-300 font-bold">
+              <Smartphone className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>{lang === 'ar' ? 'إشعار شاشات الموبايل (Push):' : 'Broadcast Lock Screen Push:'}</span>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsBroadcastModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black text-xs shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              title={lang === 'ar' ? 'إرسال إشعار فوري لجميع المستخدمين على شاشات الموبايل' : 'Broadcast to all user mobile screens'}
+            >
+              <BellRing className="w-3.5 h-3.5" />
+              <span>{lang === 'ar' ? 'إرسال إشعار للمستخدمين 📱' : 'Send Push Alert 📱'}</span>
+            </button>
+          </div>
+        )}
+
         {/* Action Buttons Bar: Phone, WhatsApp, Share, Like, Book */}
-        <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-800 mt-auto flex-wrap">
+        <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 mt-auto flex-wrap">
           {/* Contact Actions */}
           <div className="flex items-center gap-1.5">
             {user?.isAdmin && (
-              <div className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20" title={lang === 'ar' ? 'عدد مشاهدات الإعلان' : 'Ad Views Count'}>
+              <div className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20" title={lang === 'ar' ? 'عدد مشاهدات الإعلان' : 'Ad Views Count'}>
                 <Eye className="h-4 w-4" />
                 <span className="font-mono">{promoEvent.viewsCount || 0}</span>
               </div>
@@ -506,7 +543,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 }
                 window.location.href = `tel:${promoEvent.contact.phone}`;
               }}
-              className="flex items-center justify-center gap-1 rounded-xl bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-neutral-300 hover:bg-neutral-800 hover:text-amber-400 border border-neutral-800 transition-all shrink-0 cursor-pointer"
+              className="flex items-center justify-center gap-1 rounded-xl bg-neutral-100 dark:bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all shrink-0 cursor-pointer"
               title={lang === 'ar' ? 'اتصال مباشر' : 'Direct Call'}
             >
               <Phone className="h-4 w-4 shrink-0" />
@@ -524,7 +561,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 const url = `https://wa.me/${promoEvent.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، أستفسر عن حجز تذاكر: ${promoEvent.titleAr}` : `Hello, inquiring about: ${promoEvent.titleEn}`)}`;
                 window.open(url, '_blank', 'noopener,noreferrer');
               }}
-              className="flex items-center justify-center gap-1 rounded-xl bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-emerald-400 hover:bg-emerald-600 hover:text-white border border-neutral-800 transition-all shrink-0 cursor-pointer"
+              className="flex items-center justify-center gap-1 rounded-xl bg-emerald-50 dark:bg-neutral-900 h-10 px-2.5 sm:px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-200 dark:border-neutral-800 transition-all shrink-0 cursor-pointer"
             >
               <MessageCircle className="h-4 w-4 shrink-0" />
               <span className="text-[11px] sm:text-xs">{lang === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
@@ -538,7 +575,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => onOpenShare(promoEvent)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-400 border border-neutral-800 transition-all shrink-0 cursor-pointer"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all shrink-0 cursor-pointer"
               title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share Event'}
             >
               <Share2 className="h-4 w-4 shrink-0" />
@@ -552,7 +589,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               className={`flex h-10 px-2.5 sm:px-3 items-center justify-center gap-1.5 rounded-xl border font-bold transition-all shrink-0 cursor-pointer ${
                 isLiked
                   ? 'bg-red-600 text-white border-red-500 shadow-lg'
-                  : 'bg-neutral-900 text-red-500 border-neutral-700 hover:bg-red-600 hover:text-white'
+                  : 'bg-neutral-100 dark:bg-neutral-900 text-red-500 border-neutral-200 dark:border-neutral-700 hover:bg-red-600 hover:text-white'
               }`}
             >
               <Heart className={`h-4 w-4 shrink-0 ${isLiked ? 'fill-current' : ''}`} />
@@ -571,7 +608,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                   <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
                 </motion.button>
                 {(promoEvent.bookingSubtextAr || promoEvent.bookingSubtextEn || promoEvent.priceAr || promoEvent.priceEn) && (
-                  <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-400 text-center max-w-[160px] sm:max-w-[200px] leading-tight break-words" title={lang === 'ar' ? (promoEvent.bookingSubtextAr || promoEvent.priceAr || promoEvent.bookingSubtextEn || promoEvent.priceEn) : (promoEvent.bookingSubtextEn || promoEvent.priceEn || promoEvent.bookingSubtextAr || promoEvent.priceAr)}>
+                  <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-700 dark:text-amber-400 text-center max-w-[160px] sm:max-w-[200px] leading-tight break-words" title={lang === 'ar' ? (promoEvent.bookingSubtextAr || promoEvent.priceAr || promoEvent.bookingSubtextEn || promoEvent.priceEn) : (promoEvent.bookingSubtextEn || promoEvent.priceEn || promoEvent.bookingSubtextAr || promoEvent.priceAr)}>
                     {lang === 'ar' ? (promoEvent.bookingSubtextAr || promoEvent.priceAr || promoEvent.bookingSubtextEn || promoEvent.priceEn) : (promoEvent.bookingSubtextEn || promoEvent.priceEn || promoEvent.bookingSubtextAr || promoEvent.priceAr)}
                   </span>
                 )}
@@ -589,6 +626,13 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         posterUrl={promoEvent.thumbnailUrl || undefined}
         titleAr={promoEvent.titleAr}
         titleEn={promoEvent.titleEn}
+      />
+
+      {/* Broadcast Push Modal for Admins */}
+      <BroadcastPushModal
+        isOpen={isBroadcastModalOpen}
+        onClose={() => setIsBroadcastModalOpen(false)}
+        event={promoEvent}
       />
     </div>
   );

@@ -1,15 +1,195 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import webpush from "web-push";
+
+// Default / Persisted VAPID Configuration
+// Can be customized via environment variables VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
+let vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "BJGxmjsed25gM5oW5bD85jkU2mXfcMubN-arM5uTobCM5lUQZkUqao22afa32sVLXGvWAcrBnxsz44PYlioeL0I";
+let vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "fRVXq7WFP6pMm3a1J3FESVlyyWrP18K1xVfve6iYECE";
+
+try {
+  webpush.setVapidDetails(
+    "mailto:support@cityeve.online",
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+} catch (vapidErr) {
+  console.warn("VAPID set details note:", vapidErr);
+}
+
+const pushSubscriptionsMap = new Map<string, any>();
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // JSON Body Parser for API routes
+  app.use(express.json({ limit: "10mb" }));
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
+
+  // Web Push Stats Endpoint
+  app.get("/api/push-stats", async (req, res) => {
+    let totalSubscribers = pushSubscriptionsMap.size;
+    const seenEndpoints = new Set<string>();
+
+    for (const item of pushSubscriptionsMap.values()) {
+      if (item.subscription?.endpoint) {
+        seenEndpoints.add(item.subscription.endpoint);
+      }
+    }
+
+    try {
+      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/push_subscribers");
+      if (fbRes.ok) {
+        const fbData: any = await fbRes.json();
+        if (fbData && fbData.documents && Array.isArray(fbData.documents)) {
+          for (const doc of fbData.documents) {
+            const endpoint = doc.fields?.endpoint?.stringValue;
+            if (endpoint && !seenEndpoints.has(endpoint)) {
+              seenEndpoints.add(endpoint);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Error reading push_subscribers stats from Firestore:", err);
+    }
+
+    totalSubscribers = seenEndpoints.size;
+    return res.json({
+      success: true,
+      count: totalSubscribers,
+      activeMemory: pushSubscriptionsMap.size
+    });
+  });
+
+  // Web Push VAPID Public Key Endpoint
+  app.get("/api/push-vapid-key", (req, res) => {
+    res.json({ publicKey: vapidPublicKey });
+  });
+
+  // Web Push Subscribe Endpoint
+  app.post("/api/push-subscribe", (req, res) => {
+    const { subscription, userId, userEmail, subscriberId } = req.body;
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({ error: "Invalid subscription object" });
+    }
+    const id = subscriberId || subscription.endpoint;
+    pushSubscriptionsMap.set(id, {
+      subscription,
+      userId: userId || null,
+      userEmail: userEmail || null,
+      subscribedAt: new Date().toISOString()
+    });
+    return res.json({ success: true, count: pushSubscriptionsMap.size });
+  });
+
+  // Web Push Unsubscribe Endpoint
+  app.post("/api/push-unsubscribe", (req, res) => {
+    const { endpoint } = req.body;
+    if (endpoint) {
+      for (const [key, val] of pushSubscriptionsMap.entries()) {
+        if (val.subscription?.endpoint === endpoint) {
+          pushSubscriptionsMap.delete(key);
+        }
+      }
+    }
+    return res.json({ success: true });
+  });
+
+  // Web Push Send / Broadcast Endpoint
+  app.post("/api/send-push", async (req, res) => {
+    const { title, body, url, image, eventId } = req.body;
+    const payload = JSON.stringify({
+      title: title || "CityEve | إشعار جديد 🔔",
+      body: body || "يوجد إعلان جديد أو تحديث مهم في التطبيق!",
+      url: url || "/",
+      image: image || undefined,
+      eventId: eventId || undefined,
+      timestamp: Date.now()
+    });
+
+    const subsToSend: any[] = [];
+    const seenEndpoints = new Set<string>();
+
+    // 1. From active memory subscribers
+    for (const item of pushSubscriptionsMap.values()) {
+      if (item.subscription && item.subscription.endpoint && !seenEndpoints.has(item.subscription.endpoint)) {
+        subsToSend.push(item.subscription);
+        seenEndpoints.add(item.subscription.endpoint);
+      }
+    }
+
+    // 2. From Firestore push_subscribers collection
+    try {
+      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/push_subscribers");
+      if (fbRes.ok) {
+        const fbData: any = await fbRes.json();
+        if (fbData && fbData.documents && Array.isArray(fbData.documents)) {
+          for (const doc of fbData.documents) {
+            const endpoint = doc.fields?.endpoint?.stringValue;
+            if (endpoint && !seenEndpoints.has(endpoint)) {
+              let subObj = null;
+              if (doc.fields?.subscription?.stringValue) {
+                try {
+                  subObj = JSON.parse(doc.fields.subscription.stringValue);
+                } catch (e) {}
+              } else if (doc.fields?.subscription?.mapValue?.fields) {
+                const f = doc.fields.subscription.mapValue.fields;
+                subObj = {
+                  endpoint: f.endpoint?.stringValue || endpoint,
+                  keys: {
+                    p256dh: f.keys?.mapValue?.fields?.p256dh?.stringValue,
+                    auth: f.keys?.mapValue?.fields?.auth?.stringValue
+                  }
+                };
+              }
+              if (subObj && subObj.keys) {
+                subsToSend.push(subObj);
+                seenEndpoints.add(endpoint);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Error reading push_subscribers from Firestore:", err);
+    }
+
+    let sentCount = 0;
+    let failCount = 0;
+
+    const sendPromises = subsToSend.map(async (sub) => {
+      try {
+        await webpush.sendNotification(sub, payload);
+        sentCount++;
+      } catch (err: any) {
+        failCount++;
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          for (const [key, val] of pushSubscriptionsMap.entries()) {
+            if (val.subscription?.endpoint === sub.endpoint) {
+              pushSubscriptionsMap.delete(key);
+            }
+          }
+        }
+      }
+    });
+
+    await Promise.allSettled(sendPromises);
+
+    return res.json({
+      success: true,
+      sentCount,
+      failCount,
+      totalSubscribers: subsToSend.length
+    });
+  });
+
 
   // Dynamic Open Graph / SEO Preview for Shared Events
   // Allows WhatsApp, Facebook, Twitter, and Telegram to render the event banner & details
