@@ -34,6 +34,7 @@ import {
   deleteBookingFromFirestore
 } from '../lib/firebase';
 import { PricingConfig } from '../types';
+import { MODERN_FEATURED_EVENTS } from '../data/defaultEvents';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'scan_qr' | 'default';
 
@@ -48,6 +49,8 @@ interface AppContextType {
   setAdminSelectedUserId: (id: string | null) => void;
   selectedCategory: DanceCategory;
   setSelectedCategory: (cat: DanceCategory) => void;
+  feedViewMode: 'modern' | 'classic';
+  setFeedViewMode: (mode: 'modern' | 'classic') => void;
   events: DanceEvent[];
   activeEvents: DanceEvent[];
   expiredEvents: DanceEvent[];
@@ -140,7 +143,8 @@ const STORAGE_KEYS = {
   LANG: 'dwm_lang_v1',
   PUSH: 'dwm_push_v1',
   THEME: 'dwm_theme_v1',
-  SUPPORT_MESSAGES: 'dwm_support_msgs_v1'
+  SUPPORT_MESSAGES: 'dwm_support_msgs_v1',
+  FEED_VIEW_MODE: 'cityeve_feed_view_mode_v1'
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -156,6 +160,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [isAdminLockModalOpen, setIsAdminLockModalOpen] = useState(false);
+
+  const [feedViewMode, setFeedViewModeState] = useState<'modern' | 'classic'>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.FEED_VIEW_MODE);
+      if (saved === 'classic' || saved === 'modern') return saved;
+    } catch (e) {}
+    return 'classic';
+  });
+
+  const setFeedViewMode = (mode: 'modern' | 'classic') => {
+    setFeedViewModeState(mode);
+    try {
+      localStorage.setItem(STORAGE_KEYS.FEED_VIEW_MODE, mode);
+    } catch (e) {}
+    logAnalyticsEvent(`view_mode_${mode}`);
+  };
 
   const [activeTab, setActiveTab] = useState<TabType>('explore');
   const [adminSelectedUserId, setAdminSelectedUserId] = useState<string | null>(null);
@@ -648,7 +668,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return true;
     });
 
-    return [...filtered].sort((a, b) => {
+    const result = [...filtered].sort((a, b) => {
       const posA = a.position !== undefined && a.position !== null && a.position > 0 ? a.position : 999999;
       const posB = b.position !== undefined && b.position !== null && b.position > 0 ? b.position : 999999;
       
@@ -666,6 +686,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
     });
+
+    // When no events exist in DB, fallback to rich modern sample events
+    if (result.length === 0) {
+      return MODERN_FEATURED_EVENTS;
+    }
+
+    return result;
   }, [events, user]);
 
   const expiredEvents = useMemo(() => {
@@ -1346,6 +1373,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAdminSelectedUserId,
       selectedCategory,
       setSelectedCategory,
+      feedViewMode,
+      setFeedViewMode,
       events,
       activeEvents,
       expiredEvents,

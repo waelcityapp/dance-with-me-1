@@ -17,8 +17,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
 
   const shareTitle = lang === 'ar' ? event.titleAr : event.titleEn;
   const shareText = lang === 'ar' ? `${event.titleAr} - ${event.descriptionAr.slice(0, 80)}...` : `${event.titleEn} - ${event.descriptionEn.slice(0, 80)}...`;
-  const currentOrigin = typeof window !== 'undefined' && window.location.origin.includes('cityeve.online') ? 'https://cityeve.online' : (typeof window !== 'undefined' ? window.location.origin : 'https://cityeve.online');
-  const shareUrl = `${currentOrigin}/e/${event.id}`;
+  const shareUrl = `https://cityeve.online/e/${event.id}`;
 
   const handleCopy = () => {
     try {
@@ -60,7 +59,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
               </div>
               <div>
                 <h3 className="font-bold text-white text-base">
-                  {lang === 'ar' ? 'مشاركة إعلان الفعالية' : 'Share Event Announcement'}
+                  {lang === 'ar' ? 'مشاركة الفعالية' : 'Share Event'}
                 </h3>
                 <p className="text-xs text-neutral-400 font-mono truncate max-w-[200px]">
                   {shareTitle}
@@ -85,7 +84,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-bold text-neutral-950 hover:bg-amber-400 transition-all shadow-md gold-glow"
               >
                 <Share2 className="h-4 w-4" />
-                <span>{lang === 'ar' ? 'مشاركة فورية عبر الهاتف (Web Share)' : 'Native Instant Share'}</span>
+                <span>{lang === 'ar' ? 'مشاركة عبر الهاتف' : 'Native Share'}</span>
               </button>
             )}
 
@@ -108,14 +107,14 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
                 className="flex items-center justify-center gap-2 rounded-xl bg-blue-600/20 py-3 text-xs font-bold text-blue-300 hover:bg-blue-600 hover:text-white border border-blue-500/30 transition-all"
               >
                 <Send className="h-4 w-4" />
-                <span>{lang === 'ar' ? 'تويتر / X' : 'Twitter / X'}</span>
+                <span>{lang === 'ar' ? 'تويتر' : 'Twitter'}</span>
               </a>
             </div>
 
             {/* Copy Link Input */}
             <div className="space-y-1.5">
               <label className="text-xs font-mono text-neutral-400">
-                {lang === 'ar' ? 'رابط الإعلان المباشر' : 'Direct Announcement Link'}
+                {lang === 'ar' ? 'رابط الفعالية المباشر' : 'Direct Event Link'}
               </label>
               <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-neutral-950 p-2">
                 <input
@@ -140,7 +139,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
                   ) : (
                     <>
                       <Copy className="h-3.5 w-3.5" />
-                      <span>{lang === 'ar' ? 'نسخ الرابط' : 'Copy'}</span>
+                      <span>{lang === 'ar' ? 'نسخ' : 'Copy'}</span>
                     </>
                   )}
                 </button>

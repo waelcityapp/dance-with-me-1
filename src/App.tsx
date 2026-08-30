@@ -29,7 +29,7 @@ import { VerificationView } from './components/verification/VerificationView';
 import { AttendeeCheckinHandler } from './components/verification/AttendeeCheckinHandler';
 
 const AppContent: React.FC = () => {
-  const { lang, activeTab, setActiveTab, user, openGuestAlert, guestAlertState, closeGuestAlert, isSupportModalOpen, closeSupportModal, setEditingEvent, editingEvent } = useApp();
+  const { lang, activeTab, setActiveTab, user, openGuestAlert, guestAlertState, closeGuestAlert, isSupportModalOpen, closeSupportModal, setEditingEvent, editingEvent, feedViewMode } = useApp();
 
   // Handle hardware / browser back button on mobile
   const lastBackPressRef = useRef<number>(0);

@@ -1,32 +1,22 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { v2 as cloudinary } from "cloudinary";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Support JSON request body parsing
-  app.use(express.json());
-
-  // Configure cloudinary if env vars are present
-  if (process.env.VITE_CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
-    cloudinary.config({
-      cloud_name: process.env.VITE_CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET
-    });
-  }
-
-  // API routes go here FIRST
+  // Health check endpoint
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Redirect favicon requests directly to the app icon image
-  app.get("/favicon.ico", (req, res) => {
-    res.redirect("https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png");
+  // Dynamic Open Graph / SEO Preview for Shared Events
+  // Allows WhatsApp, Facebook, Twitter, and Telegram to render the event banner & details
+  app.get("/api/og-image", (req, res) => {
+    const defaultLogo = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
+    const imgUrl = (req.query.url as string) || defaultLogo;
+    res.redirect(302, imgUrl);
   });
 
   app.get(["/api/og-event", "/e/:eventId", "/event/:eventId"], async (req, res) => {
@@ -55,12 +45,13 @@ async function startServer() {
             if (rawImg && rawImg.trim().length > 0) {
               let processedImg = rawImg.trim();
               if (processedImg.includes('cloudinary.com')) {
+                // Add CityEve subtle watermark logo badge in south_east corner
                 if (processedImg.includes('/video/upload/')) {
                   processedImg = processedImg
-                    .replace('/video/upload/', '/video/upload/w_1200,h_630,c_fill,so_1,q_auto,f_jpg/')
+                    .replace('/video/upload/', '/video/upload/w_1200,h_630,c_fill,so_1,q_auto,f_jpg/l_fbyjfjq8equle5pl7kwz,w_180,g_south_east,x_24,y_24,o_90/')
                     .replace(/\.(mp4|mov|webm|avi|m4v)$/i, '.jpg');
                 } else if (processedImg.includes('/image/upload/')) {
-                  processedImg = processedImg.replace('/image/upload/', '/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/');
+                  processedImg = processedImg.replace('/image/upload/', '/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/l_fbyjfjq8equle5pl7kwz,w_180,g_south_east,x_24,y_24,o_90/');
                 }
               }
               image = processedImg;
@@ -112,7 +103,6 @@ async function startServer() {
   <meta name="robots" content="index, follow, max-image-preview:large" />
   <link rel="canonical" href="${pageUrl}" />
 
-  <!-- App Logo / Favicon links for WhatsApp & browser crawlers -->
   <link rel="icon" type="image/png" href="${appIcon}" />
   <link rel="shortcut icon" href="${appIcon}" />
   <link rel="apple-touch-icon" href="${appIcon}" />
@@ -126,7 +116,7 @@ async function startServer() {
   <meta property="og:image:secure_url" content="${image}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:type" content="image/jpeg" />
+  
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${safeTitle}" />
   <meta name="twitter:description" content="${safeDesc}" />
@@ -148,81 +138,105 @@ async function startServer() {
 </body>
 </html>`;
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
-    return res.status(200).send(html);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=7200");
+    return res.send(html);
   });
 
-  app.post("/api/translate", async (req, res) => {
+  // Proxy /api/events for SEO / External Crawlers
+  app.get("/api/events", async (req, res) => {
     try {
-      const { text, targetLang } = req.body;
-      if (!text) {
-        return res.status(400).json({ error: "No text provided" });
+      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events");
+      if (fbRes.ok) {
+        const data = await fbRes.json();
+        return res.json(data);
       }
-      
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: "Gemini API Key is not configured." });
-      }
+      return res.status(500).json({ error: "Failed to fetch from Firestore" });
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
 
-      // Dynamic import to avoid loading it if not used immediately, though top-level is fine if installed
-      const { GoogleGenAI } = await import("@google/genai");
+  // Dynamic Sitemap.xml generator with all active events for Google indexing
+  app.get("/sitemap.xml", async (req, res) => {
+    try {
+      const host = (req.headers['x-forwarded-host'] || req.headers.host || 'cityeve.online') as string;
+      const proto = (req.headers['x-forwarded-proto'] || 'https') as string;
+      const baseUrl = `${proto}://${host}`;
+      const now = new Date().toISOString();
 
-      const ai = new GoogleGenAI({
-        apiKey: apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
+      let eventUrls = '';
+      try {
+        const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events");
+        if (fbRes.ok) {
+          const data: any = await fbRes.json();
+          if (data && data.documents && Array.isArray(data.documents)) {
+            eventUrls = data.documents.map((doc: any) => {
+              const id = doc.name.split('/').pop();
+              const updateTime = doc.updateTime || now;
+              return `
+  <url>
+    <loc>${baseUrl}/e/${id}</loc>
+    <lastmod>${updateTime}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+            }).join('');
           }
         }
-      });
-
-      const prompt = `Translate the following text to ${targetLang === 'ar' ? 'Arabic' : 'English'}. Return ONLY the translated text without any explanation, markdown formatting, or quotes.\n\nOriginal text:\n${text}`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-      });
-
-      const translatedText = response.text?.trim() || "";
-      res.json({ translatedText });
-    } catch (error) {
-      console.error("Translation error:", error);
-      res.status(500).json({ error: "Failed to translate text" });
-    }
-  });
-
-  app.post("/api/delete-media", async (req, res) => {
-    const { url, resourceType } = req.body;
-    if (!url || !url.includes("cloudinary.com")) {
-      return res.status(400).json({ error: "Invalid Cloudinary URL" });
-    }
-
-    if (!process.env.CLOUDINARY_API_SECRET) {
-      return res.status(500).json({ error: "Cloudinary API Secret not configured on server" });
-    }
-
-    try {
-      // Extract public ID from the URL
-      // Example URL: https://res.cloudinary.com/cloudname/image/upload/v1234567890/folder/filename.jpg
-      const urlParts = url.split("/");
-      const uploadIndex = urlParts.findIndex(p => p === "upload");
-      if (uploadIndex === -1) {
-         return res.status(400).json({ error: "Could not parse public ID from URL" });
+      } catch (err) {
+        console.error('Error querying events for sitemap:', err);
       }
-      
-      const publicIdWithExtension = urlParts.slice(uploadIndex + 2).join("/");
-      const publicId = publicIdWithExtension.replace(/\.[^/.]+$/, ""); // remove extension
-      
-      const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType || 'image' });
-      res.json({ success: true, result });
-    } catch (error) {
-      console.error("Error deleting from Cloudinary:", error);
-      res.status(500).json({ error: "Failed to delete media" });
+
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/?tab=parties</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/?tab=courses</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/?tab=trips</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>${eventUrls}
+</urlset>`;
+
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=7200");
+      return res.send(sitemap);
+    } catch (e: any) {
+      return res.status(500).send("Error generating sitemap");
     }
   });
 
-  // Vite middleware for development
+  // Robots.txt
+  app.get("/robots.txt", (req, res) => {
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || 'cityeve.online') as string;
+    const proto = (req.headers['x-forwarded-proto'] || 'https') as string;
+    const content = `User-agent: *
+Allow: /
+Sitemap: ${proto}://${host}/sitemap.xml
+`;
+    res.setHeader("Content-Type", "text/plain");
+    return res.send(content);
+  });
+
+  // Vite development middleware vs Static production serving
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -230,15 +244,15 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`CityEve Web Server running on port ${PORT}`);
   });
 }
 
