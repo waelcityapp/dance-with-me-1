@@ -250,6 +250,14 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
                         ? (event.location?.nameAr || event.location?.addressAr || 'القاهرة، مصر')
                         : (event.location?.nameEn || event.location?.addressEn || 'Cairo, Egypt')}
                     </div>
+                    {(event.location?.areaAr || event.location?.governorateAr || event.location?.areaEn || event.location?.governorateEn) && (
+                      <div className="text-[11px] text-neutral-400 font-semibold mt-0.5">
+                        📍 {lang === 'ar'
+                          ? [event.location?.areaAr, event.location?.governorateAr].filter(Boolean).join(' - ')
+                          : [event.location?.areaEn, event.location?.governorateEn].filter(Boolean).join(' - ')
+                        }
+                      </div>
+                    )}
                   </div>
                 </div>
                 <button

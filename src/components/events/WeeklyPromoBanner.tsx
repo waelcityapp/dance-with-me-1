@@ -422,8 +422,9 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           )}
         </div>
 
-        {/* Metadata Grid (Date, Location, Price) - Pure white in light mode, dynamic text pure black */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3.5 rounded-2xl bg-white dark:bg-neutral-900/40 p-3 sm:p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm transition-colors">
+        {/* Metadata Grid (Date, Organizer, Location) - Pure white in light mode, dynamic text pure black */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3.5 rounded-2xl bg-white dark:bg-neutral-900/40 p-3 sm:p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm transition-colors">
+          {/* Event Date */}
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
               <Calendar className="h-4.5 w-4.5" />
@@ -434,26 +435,48 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             </div>
           </div>
 
+          {/* Organizer Name */}
+          {promoEvent.contact?.organizerName && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+                <UserCheck className="h-4.5 w-4.5" />
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-none">{lang === 'ar' ? 'المنظم' : 'Organizer'}</p>
+                <p className="text-xs font-bold text-neutral-950 dark:text-white mt-1 truncate">{promoEvent.contact.organizerName}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Location with Area & Governorate */}
           <div 
             onClick={() => onOpenMap(promoEvent)}
-            className="flex items-center gap-3 cursor-pointer group rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/50 p-1 transition-colors"
+            className="flex items-start gap-3 cursor-pointer group rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/50 p-1 transition-colors sm:col-span-2"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0 mt-0.5">
               <MapPin className="h-4.5 w-4.5" />
             </div>
             <div className="overflow-hidden w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 flex items-center gap-1 leading-none">
-                  {lang === 'ar' ? 'الموقع' : 'Location'}
+                  {lang === 'ar' ? 'الموقع والعنوان' : 'Venue & Location'}
                 </p>
                 <p className="text-xs font-bold text-neutral-950 dark:text-white line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 mt-1 leading-snug">
                   {lang === 'ar' ? promoEvent.location.nameAr : promoEvent.location.nameEn}
                 </p>
+                {(promoEvent.location?.areaAr || promoEvent.location?.governorateAr || promoEvent.location?.areaEn || promoEvent.location?.governorateEn || promoEvent.location?.addressAr || promoEvent.location?.addressEn) && (
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 font-semibold mt-0.5">
+                    📍 {lang === 'ar' 
+                      ? [promoEvent.location?.areaAr, promoEvent.location?.governorateAr].filter(Boolean).join(' - ') || promoEvent.location?.addressAr
+                      : [promoEvent.location?.areaEn, promoEvent.location?.governorateEn].filter(Boolean).join(' - ') || promoEvent.location?.addressEn
+                    }
+                  </p>
+                )}
               </div>
               {promoEvent.location?.googleMapsUrl && promoEvent.location.googleMapsUrl.trim().length > 0 && (
                 <div className="shrink-0 self-start sm:self-auto">
                   <span className="text-[10px] text-amber-700 dark:text-amber-400 font-black bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse font-sans shadow-xs inline-flex items-center gap-1">
-                    {lang === 'ar' ? 'استخدم الخريطة 🗺️' : 'Use Map 🗺️'}
+                    {lang === 'ar' ? 'الخريطة 🗺️' : 'Map 🗺️'}
                   </span>
                 </div>
               )}

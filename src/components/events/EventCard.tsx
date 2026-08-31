@@ -417,29 +417,52 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           )}
         </div>
 
-        {/* Date & Location Grid */}
+        {/* Date, Organizer & Location Details */}
         <div className="space-y-2 mb-4 rounded-2xl bg-white dark:bg-neutral-950 p-3.5 border border-neutral-200 dark:border-neutral-800 text-xs shadow-xs transition-colors">
+          {/* Event Date */}
           <div className="flex items-center gap-2.5 text-neutral-950 dark:text-neutral-200">
             <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <span className="font-bold">{formatDate(event.eventDate, lang)}</span>
           </div>
 
+          {/* Organizer Name */}
+          {event.contact?.organizerName && (
+            <div className="flex items-center gap-2.5 text-neutral-950 dark:text-neutral-200">
+              <UserCheck className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="flex items-center gap-1.5 overflow-hidden">
+                <span className="text-neutral-500 dark:text-neutral-400 font-medium shrink-0">{lang === 'ar' ? 'المنظم:' : 'Organizer:'}</span>
+                <span className="font-bold text-neutral-950 dark:text-white truncate">{event.contact.organizerName}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Venue, Area & Governorate */}
           <div 
             onClick={() => {
               onOpenMap(event);
               logAnalyticsEvent('clicks_maps');
             }}
-            className="flex items-center justify-between gap-2 text-neutral-950 dark:text-neutral-300 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer group/map transition-colors"
+            className="flex items-start justify-between gap-2 text-neutral-950 dark:text-neutral-300 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer group/map transition-colors pt-1 border-t border-neutral-100 dark:border-neutral-800/60"
           >
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 group-hover/map:scale-110 transition-transform" />
-              <span className="truncate underline decoration-neutral-300 dark:decoration-neutral-700 group-hover/map:decoration-amber-500 font-bold">
-                {lang === 'ar' ? event.location.nameAr : event.location.nameEn}
-              </span>
+            <div className="flex items-start gap-2.5 overflow-hidden min-w-0">
+              <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 group-hover/map:scale-110 transition-transform" />
+              <div className="flex flex-col min-w-0">
+                <span className="truncate underline decoration-neutral-300 dark:decoration-neutral-700 group-hover/map:decoration-amber-500 font-bold leading-tight">
+                  {lang === 'ar' ? event.location.nameAr : event.location.nameEn}
+                </span>
+                {(event.location?.areaAr || event.location?.governorateAr || event.location?.areaEn || event.location?.governorateEn || event.location?.addressAr || event.location?.addressEn) && (
+                  <span className="text-[11px] text-neutral-600 dark:text-neutral-400 font-semibold mt-0.5 leading-tight">
+                    {lang === 'ar' 
+                      ? [event.location?.areaAr, event.location?.governorateAr].filter(Boolean).join(' - ') || event.location?.addressAr
+                      : [event.location?.areaEn, event.location?.governorateEn].filter(Boolean).join(' - ') || event.location?.addressEn
+                    }
+                  </span>
+                )}
+              </div>
             </div>
             {event.location?.googleMapsUrl && event.location.googleMapsUrl.trim().length > 0 && (
-              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-black shrink-0 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans">
-                {lang === 'ar' ? 'استخدم الخريطة 🗺️' : 'Use Map 🗺️'}
+              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-black shrink-0 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans mt-0.5">
+                {lang === 'ar' ? 'الخريطة 🗺️' : 'Map 🗺️'}
               </span>
             )}
           </div>
