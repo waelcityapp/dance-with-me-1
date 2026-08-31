@@ -82,6 +82,9 @@ interface AppContextType {
   setEditingEvent: (ev: DanceEvent | null) => void;
   notifications: NotificationItem[];
   setNotifications: React.Dispatch<React.SetStateAction<NotificationItem[]>>;
+  activePushToast: NotificationItem | null;
+  setActivePushToast: (item: NotificationItem | null) => void;
+  triggerPushToast: (item: NotificationItem) => void;
   unreadCount: number;
   markAllNotificationsAsRead: () => void;
   pushEnabled: boolean;
@@ -356,6 +359,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [];
   });
 
+  const [activePushToast, setActivePushToast] = useState<NotificationItem | null>(null);
+
+  const triggerPushToast = (item: NotificationItem) => {
+    playNotificationChime();
+    setActivePushToast(item);
+  };
+
   // Support Messages & Modal
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>(() => {
     try {
@@ -441,7 +451,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Automatically register and sync device for Push / In-App Notifications
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const syncTimer圣 = setTimeout(() => {
+    const syncTimer = setTimeout(() => {
       autoRegisterDevice(user?.id, user?.email).catch((e) => {
         console.warn('Auto device register background note:', e);
       });
@@ -451,7 +461,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
     }, 1000);
-    return () => clearTimeout(syncTimer圣);
+    return () => clearTimeout(syncTimer);
   }, [user?.id, user?.email]);
 
   // Connect to Firebase Firestore Database for real-time synchronization
@@ -543,8 +553,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
 
     // 3. Subscribe to live notifications collection
+    let isInitialNotifSync = true;
     const unsubNotifs = subscribeToNotifications((liveNotifs) => {
-      setNotifications(liveNotifs || []);
+      const currentList = liveNotifs || [];
+      if (!isInitialNotifSync && currentList.length > 0) {
+        // Find if there's a new unread notification
+        const latest = currentList[0];
+        if (latest && !latest.read) {
+          triggerPushToast(latest);
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            showTestNotification(lang);
+          }
+        }
+      }
+      isInitialNotifSync = false;
+      setNotifications(currentList);
     });
 
     // 4. Subscribe to live support messages collection
@@ -1442,6 +1465,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setEditingEvent,
       notifications,
       setNotifications,
+      activePushToast,
+      setActivePushToast,
+      triggerPushToast,
       unreadCount,
       markAllNotificationsAsRead,
       pushEnabled,

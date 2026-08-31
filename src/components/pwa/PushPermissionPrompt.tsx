@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { subscribeUserToPush } from '../../lib/pushNotifications';
 
 export const PushPermissionPrompt: React.FC = () => {
-  const { lang } = useApp();
+  const { lang, user } = useApp();
   const [isVisible, setIsVisible] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
 
@@ -30,7 +30,7 @@ export const PushPermissionPrompt: React.FC = () => {
   const handleEnable = async () => {
     setIsSubscribing(true);
     try {
-      const res = await subscribeUserToPush();
+      const res = await subscribeUserToPush(user?.id, user?.email, true);
       if (res.success) {
         setIsVisible(false);
       } else if (res.message) {

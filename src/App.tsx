@@ -22,6 +22,7 @@ import { BookingModal } from './components/modals/BookingModal';
 import { CustomAlertModal } from './components/modals/CustomAlertModal';
 import { CustomConfirmModal } from './components/modals/CustomConfirmModal';
 import { PushPermissionPrompt } from './components/pwa/PushPermissionPrompt';
+import { FloatingNotificationBanner } from './components/pwa/FloatingNotificationBanner';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { DanceEvent } from './types';
 
@@ -30,7 +31,22 @@ import { VerificationView } from './components/verification/VerificationView';
 import { AttendeeCheckinHandler } from './components/verification/AttendeeCheckinHandler';
 
 const AppContent: React.FC = () => {
-  const { lang, activeTab, setActiveTab, user, openGuestAlert, guestAlertState, closeGuestAlert, isSupportModalOpen, closeSupportModal, setEditingEvent, editingEvent, feedViewMode } = useApp();
+  const { 
+    lang, 
+    activeTab, 
+    setActiveTab, 
+    user, 
+    openGuestAlert, 
+    guestAlertState, 
+    closeGuestAlert, 
+    isSupportModalOpen, 
+    closeSupportModal, 
+    setEditingEvent, 
+    editingEvent, 
+    feedViewMode,
+    activePushToast,
+    setActivePushToast
+  } = useApp();
 
   // Handle hardware / browser back button on mobile
   const lastBackPressRef = useRef<number>(0);
@@ -192,6 +208,15 @@ const AppContent: React.FC = () => {
       <CustomAlertModal />
       <CustomConfirmModal />
       <PushPermissionPrompt />
+      <FloatingNotificationBanner 
+        notification={activePushToast} 
+        onClose={() => setActivePushToast(null)} 
+        onOpenNotification={(notif) => {
+          if (notif.relatedEventId || notif.targetEventId) {
+            window.location.search = `?event=${notif.relatedEventId || notif.targetEventId}`;
+          }
+        }}
+      />
       <AttendeeCheckinHandler />
     </div>
   );

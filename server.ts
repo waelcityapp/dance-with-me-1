@@ -43,7 +43,7 @@ async function startServer() {
     }
 
     try {
-      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/push_subscribers");
+      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/push_subscribers?pageSize=300");
       if (fbRes.ok) {
         const fbData: any = await fbRes.json();
         if (fbData && fbData.documents && Array.isArray(fbData.documents)) {
@@ -128,7 +128,7 @@ async function startServer() {
 
     // 2. From Firestore push_subscribers collection
     try {
-      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/push_subscribers");
+      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/push_subscribers?pageSize=300");
       if (fbRes.ok) {
         const fbData: any = await fbRes.json();
         if (fbData && fbData.documents && Array.isArray(fbData.documents)) {
