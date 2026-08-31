@@ -40,7 +40,8 @@ import {
   unsubscribeUserFromPush, 
   showTestNotification, 
   playNotificationChime,
-  sendBroadcastPushNotification 
+  sendBroadcastPushNotification,
+  autoRegisterDevice
 } from '../lib/pushNotifications';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'scan_qr' | 'default';
@@ -437,17 +438,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {}
   }, [supportMessages]);
 
-  // Automatically sync and register Push Subscription if user/browser already granted notification permission
+  // Automatically register and sync device for Push / In-App Notifications
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const syncTimer = setTimeout(() => {
+    const syncTimer圣 = setTimeout(() => {
+      autoRegisterDevice(user?.id, user?.email).catch((e) => {
+        console.warn('Auto device register background note:', e);
+      });
+      if ('Notification' in window && Notification.permission === 'granted') {
         subscribeUserToPush(user?.id, user?.email).catch((e) => {
           console.warn('Auto push sync background note:', e);
         });
-      }, 1500);
-      return () => clearTimeout(syncTimer);
-    }
+      }
+    }, 1000);
+    return () => clearTimeout(syncTimer圣);
   }, [user?.id, user?.email]);
 
   // Connect to Firebase Firestore Database for real-time synchronization

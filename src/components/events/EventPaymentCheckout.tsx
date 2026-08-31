@@ -49,6 +49,7 @@ export interface EventPaymentCheckoutProps {
   pendingFile?: File | null;
   cloudinaryConfig?: { cloudName: string; uploadPreset: string };
   eventData?: any;
+  adType?: 'vip' | 'standard' | 'free';
   onBack: () => void;
   onSuccessComplete: () => void;
 }
@@ -68,6 +69,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   pendingFile = null,
   cloudinaryConfig,
   eventData,
+  adType = 'standard',
   onBack,
   onSuccessComplete
 }) => {
@@ -118,7 +120,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
   const isPhoneValid = cleanPhone.length >= 10 && /^\+?\d+$/.test(cleanPhone);
   
-  const isFormValid = isPhoneValid && receiptImage !== null;
+  const isFormValid = isPhoneValid && (pricing.total === 0 || receiptImage !== null);
 
   const handleCopyPhone = () => {
     navigator.clipboard.writeText('01010764256');
@@ -250,8 +252,10 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       receiptImage: receiptImage || undefined,
       status: 'pending',
       submittedAt: new Date().toISOString(),
+      adType: adType,
       eventData: {
         ...eventData,
+        adType: adType,
         mediaUrl: finalMediaUrl,
         thumbnailUrl: finalThumbnailUrl,
         createdByAdmin: user?.isAdmin || false,
@@ -528,145 +532,149 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
         </div>
 
         {/* Important Payment Instructions Box */}
-        <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-600/15 border-2 border-amber-500/50 p-5 text-neutral-200 space-y-3.5 shadow-xl relative z-10">
-          <div className="flex items-center gap-2.5 text-amber-400 font-extrabold text-sm sm:text-base">
-            <ShieldCheck className="h-5 w-5 shrink-0" />
-            <span>{lang === 'ar' ? 'تعليمات الدفع الهامة:' : 'Important Payment Instructions:'}</span>
-          </div>
-
-          <p className="text-sm sm:text-base leading-relaxed text-neutral-100 font-medium">
-            {lang === 'ar' ? (
-              <span>
-                يرجى تسديد المبلغ المطلوب (<strong className="text-amber-300 font-mono font-bold">{pricing.total} ج.م</strong>) عن طريق التحويل انستاباي (InstaPay) او فودافون كاش على الرقم{' '}
-                <strong className="font-mono text-amber-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-amber-500/40 inline-flex items-center gap-1.5 mx-1 font-bold select-all">
-                  01010764256
-                </strong>{' '}
-                مع ارفاق صورة واضحة لايصال الدفع فى الخانة المبينة هنا.
-              </span>
-            ) : (
-              <span>
-                Please pay the required amount (<strong className="text-amber-300 font-mono font-bold">{pricing.total} EGP</strong>) via InstaPay or Vodafone Cash transfer to the number{' '}
-                <strong className="font-mono text-amber-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-amber-500/40 inline-flex items-center gap-1.5 mx-1 font-bold select-all">
-                  01010764256
-                </strong>{' '}
-                and attach a clear image of the payment receipt in the field indicated below.
-              </span>
-            )}
-          </p>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-500/20">
-            <button
-              type="button"
-              onClick={handleCopyPhone}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 text-neutral-950 hover:bg-amber-400 px-4 py-2 text-xs font-extrabold transition-all shadow-md gold-glow cursor-pointer"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-4 w-4 stroke-[3]" />
-                  <span>{lang === 'ar' ? 'تم نسخ الرقم بنجاح!' : 'Number Copied!'}</span>
-                </>
+        {pricing.total > 0 && (
+          <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-600/15 border-2 border-amber-500/50 p-5 text-neutral-200 space-y-3.5 shadow-xl relative z-10">
+            <div className="flex items-center gap-2.5 text-amber-400 font-extrabold text-sm sm:text-base">
+              <ShieldCheck className="h-5 w-5 shrink-0" />
+              <span>{lang === 'ar' ? 'تعليمات الدفع الهامة:' : 'Important Payment Instructions:'}</span>
+            </div>
+            <p className="text-sm sm:text-base leading-relaxed text-neutral-100 font-medium">
+              {lang === 'ar' ? (
+                <span>
+                  يرجى تسديد المبلغ المطلوب (<strong className="text-amber-300 font-mono font-bold">{pricing.total} ج.م</strong>) عن طريق التحويل انستاباي (InstaPay) او فودافون كاش على الرقم{' '}
+                  <strong className="font-mono text-amber-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-amber-500/40 inline-flex items-center gap-1.5 mx-1 font-bold select-all">
+                    01010764256
+                  </strong>{' '}
+                  مع ارفاق صورة واضحة لايصال الدفع فى الخانة المبينة هنا.
+                </span>
               ) : (
-                <>
-                  <Copy className="h-4 w-4" />
-                  <span>{lang === 'ar' ? 'نسخ رقم التحويل (01010764256)' : 'Copy Transfer Number (01010764256)'}</span>
-                </>
+                <span>
+                  Please pay the required amount (<strong className="text-amber-300 font-mono font-bold">{pricing.total} EGP</strong>) via InstaPay or Vodafone Cash transfer to the number{' '}
+                  <strong className="font-mono text-amber-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-amber-500/40 inline-flex items-center gap-1.5 mx-1 font-bold select-all">
+                    01010764256
+                  </strong>{' '}
+                  and attach a clear image of the payment receipt in the field indicated below.
+                </span>
               )}
-            </button>
+            </p>
 
-            <div className="flex items-center gap-2 text-xs text-amber-300/80 font-mono">
-              <span>🟢 InstaPay</span>
-              <span>•</span>
-              <span>🔴 Vodafone Cash</span>
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-500/20">
+              <button
+                type="button"
+                onClick={handleCopyPhone}
+                className="flex items-center gap-2 rounded-xl bg-amber-500 text-neutral-950 hover:bg-amber-400 px-4 py-2 text-xs font-extrabold transition-all shadow-md gold-glow cursor-pointer"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 stroke-[3]" />
+                    <span>{lang === 'ar' ? 'تم نسخ الرقم بنجاح!' : 'Number Copied!'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    <span>{lang === 'ar' ? 'نسخ رقم التحويل (01010764256)' : 'Copy Transfer Number (01010764256)'}</span>
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center gap-2 text-xs text-amber-300/80 font-mono">
+                <span>🟢 InstaPay</span>
+                <span>•</span>
+                <span>🔴 Vodafone Cash</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Upload Receipt Image Dropzone (إمكانية رفع الصورة) */}
-        <div className="space-y-2.5 relative z-10">
-          <label className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
-            <span className="flex items-center gap-2">
-              <Upload className="h-4 w-4 text-amber-400" />
-              <span>{lang === 'ar' ? 'إرفاق صورة واضحة لإيصال الدفع (سكرين شوت التحويل):' : 'Upload Clear Image of Payment Receipt:'}</span>
-              <span className="text-red-400">*</span>
-            </span>
-            {receiptImage && (
-              <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
-                <Check className="h-3.5 w-3.5 stroke-[3]" />
-                <span>{lang === 'ar' ? 'تم الرفع' : 'Uploaded'}</span>
+        {pricing.total > 0 && (
+          <div className="space-y-2.5 relative z-10">
+            <label className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
+              <span className="flex items-center gap-2">
+                <Upload className="h-4 w-4 text-amber-400" />
+                <span>{lang === 'ar' ? 'إرفاق صورة واضحة لإيصال الدفع (سكرين شوت التحويل):' : 'Upload Clear Image of Payment Receipt:'}</span>
+                <span className="text-red-400">*</span>
               </span>
-            )}
-          </label>
+              {receiptImage && (
+                <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                  <Check className="h-3.5 w-3.5 stroke-[3]" />
+                  <span>{lang === 'ar' ? 'تم الرفع' : 'Uploaded'}</span>
+                </span>
+              )}
+            </label>
 
-          {!receiptImage ? (
-            <div className="space-y-4">
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 bg-neutral-950/60 hover:bg-neutral-950 ${
-                  isDragging 
-                    ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
-                    : 'border-neutral-700 hover:border-amber-500/60'
-                }`}
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="receipt-upload-input"
-                />
-                <label htmlFor="receipt-upload-input" className="cursor-pointer flex flex-col items-center gap-3 w-full">
-                  <div className="h-16 w-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg group-hover:scale-110 transition-transform">
-                    <Upload className="h-8 w-8 animate-bounce" />
-                  </div>
-                  <div>
-                    <span className="text-sm sm:text-base font-bold text-white block">
-                      {lang === 'ar' ? 'اضغط لاختيار صورة الإيصال أو اسحب الملف هنا' : 'Click to upload receipt image or drag file here'}
-                    </span>
-                    <span className="text-xs text-neutral-400 mt-1 block font-mono">
-                      {lang === 'ar' ? 'يدعم صور PNG, JPG, JPEG (صورة واضحة لعملية التحويل)' : 'Supports PNG, JPG, JPEG (Clear screenshot of transfer)'}
-                    </span>
-                  </div>
-                </label>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-neutral-400">
-                  {lang === 'ar' ? 'أو أدخل رابط الإيصال مباشرة (URL):' : 'Or enter receipt URL directly:'}
-                </label>
-                <input
-                  type="url"
-                  value={receiptImage || ''}
-                  onChange={(e) => setReceiptImage(e.target.value)}
-                  placeholder="https://example.com/receipt.jpg"
-                  className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono"
-                  dir="ltr"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-amber-500/40 bg-neutral-950 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold">
-                  <CheckCircle className="h-4 w-4 stroke-[2.5]" />
-                  <span>{lang === 'ar' ? 'تم إرفاق صورة إيصال الدفع بنجاح' : 'Payment receipt attached successfully'}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setReceiptImage(null)}
-                  className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-xl border border-red-500/30 transition-colors"
+            {!receiptImage ? (
+              <div className="space-y-4">
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 bg-neutral-950/60 hover:bg-neutral-950 ${
+                    isDragging 
+                      ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                      : 'border-neutral-700 hover:border-amber-500/60'
+                  }`}
                 >
-                  <X className="h-3.5 w-3.5" />
-                  <span>{lang === 'ar' ? 'حذف وتغيير الصورة' : 'Remove & Change'}</span>
-                </button>
-              </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="receipt-upload-input"
+                  />
+                  <label htmlFor="receipt-upload-input" className="cursor-pointer flex flex-col items-center gap-3 w-full">
+                    <div className="h-16 w-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg group-hover:scale-110 transition-transform">
+                      <Upload className="h-8 w-8 animate-bounce" />
+                    </div>
+                    <div>
+                      <span className="text-sm sm:text-base font-bold text-white block">
+                        {lang === 'ar' ? 'اضغط لاختيار صورة الإيصال أو اسحب الملف هنا' : 'Click to upload receipt image or drag file here'}
+                      </span>
+                      <span className="text-xs text-neutral-400 mt-1 block font-mono">
+                        {lang === 'ar' ? 'يدعم صور PNG, JPG, JPEG (صورة واضحة لعملية التحويل)' : 'Supports PNG, JPG, JPEG (Clear screenshot of transfer)'}
+                      </span>
+                    </div>
+                  </label>
+                </div>
 
-              <div className="relative max-h-80 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900 flex items-center justify-center">
-                <img src={receiptImage} alt="Payment Receipt Preview" className="max-h-80 w-auto object-contain" />
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-neutral-400">
+                    {lang === 'ar' ? 'أو أدخل رابط الإيصال مباشرة (URL):' : 'Or enter receipt URL directly:'}
+                  </label>
+                  <input
+                    type="url"
+                    value={receiptImage || ''}
+                    onChange={(e) => setReceiptImage(e.target.value)}
+                    placeholder="https://example.com/receipt.jpg"
+                    className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono"
+                    dir="ltr"
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="rounded-2xl border border-amber-500/40 bg-neutral-950 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold">
+                    <CheckCircle className="h-4 w-4 stroke-[2.5]" />
+                    <span>{lang === 'ar' ? 'تم إرفاق صورة إيصال الدفع بنجاح' : 'Payment receipt attached successfully'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReceiptImage(null)}
+                    className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-xl border border-red-500/30 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span>{lang === 'ar' ? 'حذف وتغيير الصورة' : 'Remove & Change'}</span>
+                  </button>
+                </div>
+
+                <div className="relative max-h-80 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900 flex items-center justify-center">
+                  <img src={receiptImage} alt="Payment Receipt Preview" className="max-h-80 w-auto object-contain" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Action Button Section (زر ارسال الاعلان الى المراجعة) */}
         <div className="pt-4 space-y-3 relative z-10">

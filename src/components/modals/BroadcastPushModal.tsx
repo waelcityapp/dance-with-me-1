@@ -2,26 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent } from '../../types';
 import { 
-  BellRing, 
-  Smartphone, 
-  Send, 
+  Radio, 
   X, 
-  Sparkles, 
   CheckCircle2, 
   Users, 
-  Volume2, 
-  Radio, 
-  Layers,
-  Loader2,
-  Calendar,
-  MapPin
+  Loader2, 
+  Smartphone, 
+  Sparkles, 
+  Send 
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { 
   sendBroadcastPushNotification, 
   playNotificationChime, 
   getPushSubscribersCount,
-  showTestNotification,
   subscribeUserToPush
 } from '../../lib/pushNotifications';
 import { saveNotificationToFirestore } from '../../lib/firebase';
@@ -56,11 +50,15 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
       if (res.success) {
         const count = await getPushSubscribersCount();
         setSubscribersCount(count);
+        if (res.message) {
+          alert(res.message);
+        }
       } else if (res.message) {
         alert(res.message);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Device activation note:', e);
+      alert(lang === 'ar' ? `خطأ أثناء التفعيل: ${e?.message || e}` : `Activation error: ${e?.message || e}`);
     } finally {
       setIsActivatingDevice(false);
     }
@@ -69,16 +67,16 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
   // Initialize pre-filled notification content whenever the event changes
   useEffect(() => {
     if (event) {
-      const defaultTitleAr = `🔥 فاعلية جديدة: ${event.titleAr}`;
-      const defaultTitleEn = `🔥 New Event: ${event.titleEn}`;
+      const defaultTitleAr = `🔥 ${event.titleAr || event.titleEn || 'فاعلية جديدة في سيتي إيف'}`;
+      const defaultTitleEn = `🔥 ${event.titleEn || event.titleAr || 'New Event on CityEve'}`;
 
       const dateStr = formatDate(event.eventDate, 'ar');
-      const locStr = event.location.venueNameAr || event.location.city;
-      const cleanDescAr = (event.descriptionAr || '').replace(/\s+/g, ' ').slice(0, 100);
-      const defaultBodyAr = `${cleanDescAr}... 📅 ${dateStr} • 📍 ${locStr}`;
+      const locStr = event.location?.nameAr || event.location?.areaAr || event.location?.governorateAr || '';
+      const cleanDescAr = (event.descriptionAr || event.titleAr || '').replace(/\s+/g, ' ').slice(0, 120);
+      const defaultBodyAr = cleanDescAr ? `${cleanDescAr} 📅 ${dateStr}${locStr ? ` • 📍 ${locStr}` : ''}` : `انضم إلينا في ${event.titleAr} 📅 ${dateStr}`;
 
-      const cleanDescEn = (event.descriptionEn || '').replace(/\s+/g, ' ').slice(0, 100);
-      const defaultBodyEn = `${cleanDescEn}... 📅 ${formatDate(event.eventDate, 'en')} • 📍 ${event.location.venueNameEn || event.location.city}`;
+      const cleanDescEn = (event.descriptionEn || event.titleEn || '').replace(/\s+/g, ' ').slice(0, 120);
+      const defaultBodyEn = cleanDescEn ? `${cleanDescEn} 📅 ${formatDate(event.eventDate, 'en')}${event.location?.nameEn ? ` • 📍 ${event.location.nameEn}` : ''}` : `Join us for ${event.titleEn} 📅 ${formatDate(event.eventDate, 'en')}`;
 
       setTitleAr(defaultTitleAr);
       setTitleEn(defaultTitleEn);
@@ -89,7 +87,7 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
       // Fetch active subscribers
       getPushSubscribersCount().then(count => setSubscribersCount(count));
     }
-  }, [event]);
+  }, [event, isOpen]);
 
   if (!isOpen || !event) return null;
 

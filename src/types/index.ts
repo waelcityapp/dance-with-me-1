@@ -66,6 +66,11 @@ export interface PricingConfig {
     extraDayPrice: number;
     videoSurchargePercentage: number;
   };
+  free: {
+    basePrice: number;
+    extraDayPrice: number;
+    videoSurchargePercentage: number;
+  };
 }
 
 export interface TicketStaffMember {
@@ -172,7 +177,7 @@ export interface AdSubmission {
     videoSurcharge: number;
     total: number;
   };
-  adType?: 'vip' | 'standard';
+  adType?: 'vip' | 'standard' | 'free';
   receiptImage?: string;
   status: 'pending' | 'approved' | 'rejected' | 'archived';
   userRead?: boolean;

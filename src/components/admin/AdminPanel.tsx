@@ -1243,11 +1243,11 @@ export const AdminPanel: React.FC = () => {
           titleEn: sub.eventData.titleEn || sub.titleEn,
           uploadDate: new Date().toISOString(),
           likesCount: 15,
-          isFeatured: sub.adType === 'vip' || sub.eventData?.adType === 'vip',
+          isFeatured: sub.adType === 'vip' || sub.eventData?.adType === 'vip' || (sub.pricing?.total !== 0 && sub.adType === 'vip'),
           eventRef: newEventRef,
           isWeeklyPromo: positionValue === 1, // dynamically set weekly promo based on position
           position: positionValue,
-          adType: sub.adType || sub.eventData?.adType || 'standard'
+          adType: sub.adType || sub.eventData?.adType || (sub.pricing?.total === 0 ? 'free' : 'standard')
         } as DanceEvent;
 
         // Add to state (this also saves to Firestore internally)
@@ -1463,17 +1463,6 @@ export const AdminPanel: React.FC = () => {
       
       await deleteAdSubmissionFromFirestore(id);
     }
-  };
-
-  const openWhatsAppChat = (phone: string, sub: AdSubmission) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const fullPhone = cleanPhone.startsWith('20') ? cleanPhone : (cleanPhone.startsWith('0') ? `20${cleanPhone.substring(1)}` : `20${cleanPhone}`);
-    const msg = encodeURIComponent(
-      lang === 'ar'
-        ? `مرحباً بك ${sub.advertiserName} 💃🕺\nنتواصل معك من إدارة تطبيق CityEve بخصوص طلب إعلان VIP (فاتورة رقم ${sub.invoiceNumber}).`
-        : `Hello ${sub.advertiserName} 💃🕺\nWe are contacting you from CityEve admin regarding your VIP ad submission (Invoice ${sub.invoiceNumber}).`
-    );
-    window.open(`https://wa.me/${fullPhone}?text=${msg}`, '_blank');
   };
 
   const handleExportBackup = () => {
@@ -1857,7 +1846,7 @@ export const AdminPanel: React.FC = () => {
               <span>{lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}</span>
             </h3>
             
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* VIP Pricing Form */}
               <div className="bg-neutral-950 p-5 rounded-2xl border border-amber-500/30">
                 <h4 className="text-amber-400 font-bold flex items-center gap-2 mb-4">
@@ -1871,7 +1860,7 @@ export const AdminPanel: React.FC = () => {
                     </label>
                     <input 
                       type="number"
-                      value={localPricingConfig?.vip?.basePrice || 100}
+                      value={localPricingConfig?.vip?.basePrice ?? 100}
                       onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, basePrice: Number(e.target.value) }})}
                       className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                     />
@@ -1882,7 +1871,7 @@ export const AdminPanel: React.FC = () => {
                     </label>
                     <input 
                       type="number"
-                      value={localPricingConfig?.vip?.extraDayPrice || 20}
+                      value={localPricingConfig?.vip?.extraDayPrice ?? 20}
                       onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, extraDayPrice: Number(e.target.value) }})}
                       className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                     />
@@ -1893,7 +1882,7 @@ export const AdminPanel: React.FC = () => {
                     </label>
                     <input 
                       type="number"
-                      value={localPricingConfig?.vip?.videoSurchargePercentage || 20}
+                      value={localPricingConfig?.vip?.videoSurchargePercentage ?? 20}
                       onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, videoSurchargePercentage: Number(e.target.value) }})}
                       className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                     />
@@ -1914,7 +1903,7 @@ export const AdminPanel: React.FC = () => {
                     </label>
                     <input 
                       type="number"
-                      value={localPricingConfig?.standard?.basePrice || 50}
+                      value={localPricingConfig?.standard?.basePrice ?? 50}
                       onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, basePrice: Number(e.target.value) }})}
                       className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                     />
@@ -1925,7 +1914,7 @@ export const AdminPanel: React.FC = () => {
                     </label>
                     <input 
                       type="number"
-                      value={localPricingConfig?.standard?.extraDayPrice || 10}
+                      value={localPricingConfig?.standard?.extraDayPrice ?? 10}
                       onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, extraDayPrice: Number(e.target.value) }})}
                       className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                     />
@@ -1936,8 +1925,51 @@ export const AdminPanel: React.FC = () => {
                     </label>
                     <input 
                       type="number"
-                      value={localPricingConfig?.standard?.videoSurchargePercentage || 10}
+                      value={localPricingConfig?.standard?.videoSurchargePercentage ?? 10}
                       onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Free Pricing Form */}
+              <div className="bg-neutral-950 p-5 rounded-2xl border border-green-500/30">
+                <h4 className="text-green-400 font-bold flex items-center gap-2 mb-4">
+                  <CheckCircle className="h-4 w-4" />
+                  {lang === 'ar' ? 'الإعلان المجاني (Free)' : 'Free Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.basePrice ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.extraDayPrice ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.videoSurchargePercentage ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, videoSurchargePercentage: Number(e.target.value) }})}
                       className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -3994,7 +4026,9 @@ export const AdminPanel: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredSubmissions.map((sub) => (
+          {filteredSubmissions.map((sub) => {
+            const displayAdType = sub.adType || (sub.pricing?.total === 0 ? 'free' : 'standard');
+            return (
             <motion.div
               key={sub.id}
               initial={{ opacity: 0, y: 10 }}
@@ -4008,7 +4042,7 @@ export const AdminPanel: React.FC = () => {
               }`}
             >
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <div className={`px-3 py-1 rounded-xl text-xs font-mono font-bold border ${
                     sub.status === 'pending'
                       ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
@@ -4018,22 +4052,33 @@ export const AdminPanel: React.FC = () => {
                   }`}>
                     {sub.invoiceNumber}
                   </div>
+                  
+                  <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold border flex items-center gap-1.5 shadow-sm ${
+                    displayAdType === 'vip' 
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/40' 
+                      : displayAdType === 'free'
+                      ? 'bg-green-500/10 text-green-400 border-green-500/40'
+                      : 'bg-neutral-800/60 text-neutral-300 border-neutral-600'
+                  }`}>
+                    {displayAdType === 'vip' && <Crown className="h-3.5 w-3.5" />}
+                    {displayAdType === 'free' && <CheckCircle className="h-3.5 w-3.5" />}
+                    {displayAdType !== 'vip' && displayAdType !== 'free' && <FileText className="h-3.5 w-3.5" />}
+                    {displayAdType === 'vip' ? (lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Ad') : displayAdType === 'free' ? (lang === 'ar' ? 'إعلان مجاني' : 'Free Ad') : (lang === 'ar' ? 'إعلان عادي' : 'Standard Ad')}
+                  </span>
                   <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
                     sub.status === 'pending' ? 'bg-amber-500 text-neutral-950 animate-pulse' :
                     sub.status === 'approved' ? 'bg-emerald-500 text-neutral-950' : 'bg-red-500 text-white'
                   }`}>
-                    {sub.status === 'pending' ? (lang === 'ar' ? 'قيد المراجعة' : 'Pending') :
-                     sub.status === 'approved' ? (lang === 'ar' ? 'مفعل ومقبول' : 'Approved') :
+                    {sub.status === 'pending' ? (lang === 'ar' ? 'قيد المراجعة' : 'Pending') : 
+                     sub.status === 'approved' ? (lang === 'ar' ? 'مفعل ومقبول' : 'Approved') : 
                      (lang === 'ar' ? 'مرفوض' : 'Rejected')}
                   </span>
                 </div>
-
                 <div className="text-xs text-neutral-400 font-mono flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-amber-400" />
                   <span>{new Date(sub.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</span>
                 </div>
               </div>
-
               {/* Grid Info */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                 <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
@@ -4055,11 +4100,13 @@ export const AdminPanel: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                      sub.adType === 'vip' 
+                      displayAdType === 'vip' 
                         ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
+                        : displayAdType === 'free'
+                        ? 'bg-green-500/10 text-green-400 border-green-500/30'
                         : 'bg-neutral-800 text-neutral-300 border-neutral-600'
                     }`}>
-                      {sub.adType === 'vip' ? (lang === 'ar' ? 'VIP مميز' : 'VIP Ad') : (lang === 'ar' ? 'عادي' : 'Standard')}
+                      {displayAdType === 'vip' ? (lang === 'ar' ? 'VIP مميز' : 'VIP Ad') : displayAdType === 'free' ? (lang === 'ar' ? 'مجاني' : 'Free') : (lang === 'ar' ? 'عادي' : 'Standard')}
                     </span>
                     <span className="text-xs text-amber-300 font-medium block">
                       {sub.pricing?.days || 3} {lang === 'ar' ? 'أيام ترويج' : 'Days Promo'}
@@ -4131,14 +4178,6 @@ export const AdminPanel: React.FC = () => {
                       {lang === 'ar' ? 'لم يتم إرفاق صورة إيصال' : 'No receipt image attached'}
                     </span>
                   )}
-
-                  <button
-                    onClick={() => openWhatsAppChat(sub.phone, sub)}
-                    className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/30 transition-all text-xs font-bold cursor-pointer w-full sm:w-auto"
-                  >
-                    <Phone className="h-4 w-4 shrink-0" />
-                    <span>{lang === 'ar' ? 'مراسلة المعلن واتساب' : 'WhatsApp Advertiser'}</span>
-                  </button>
                 </div>
 
                 {/* Admin Approval Buttons */}
@@ -4205,7 +4244,8 @@ export const AdminPanel: React.FC = () => {
                 </div>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
       )}
         </div>

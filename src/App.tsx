@@ -21,6 +21,7 @@ import { AdminLockModal } from './components/modals/AdminLockModal';
 import { BookingModal } from './components/modals/BookingModal';
 import { CustomAlertModal } from './components/modals/CustomAlertModal';
 import { CustomConfirmModal } from './components/modals/CustomConfirmModal';
+import { PushPermissionPrompt } from './components/pwa/PushPermissionPrompt';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { DanceEvent } from './types';
 
@@ -184,6 +185,7 @@ const AppContent: React.FC = () => {
       <BookingModal />
       <CustomAlertModal />
       <CustomConfirmModal />
+      <PushPermissionPrompt />
       <AttendeeCheckinHandler />
     </div>
   );

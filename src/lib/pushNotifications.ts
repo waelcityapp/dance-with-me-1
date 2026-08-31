@@ -4,7 +4,7 @@
  * saving subscriber endpoints to Firestore & server, and testing chimes.
  */
 
-import { doc, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { db, sanitizeForFirestore } from './firebase';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -22,13 +22,25 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+export function getDeviceId(): string {
+  if (typeof window === 'undefined') return 'server_device';
+  let deviceId = localStorage.getItem('cityeve_device_id');
+  if (!deviceId) {
+    deviceId = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+    try {
+      localStorage.setItem('cityeve_device_id', deviceId);
+    } catch (e) {}
+  }
+  return deviceId;
+}
+
 export function isPushSupported(): boolean {
   if (typeof window === 'undefined') return false;
-  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  return ('Notification' in window) || ('serviceWorker' in navigator);
 }
 
 export function getPushPermission(): NotificationPermission | 'unsupported' {
-  if (!isPushSupported()) return 'unsupported';
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
   return Notification.permission;
 }
 
@@ -81,101 +93,183 @@ export async function getVapidPublicKey(): Promise<string | null> {
 }
 
 /**
+ * Background auto-registration of device without forcing permission prompt
+ */
+export async function autoRegisterDevice(userId?: string, userEmail?: string): Promise<void> {
+  try {
+    const deviceId = getDeviceId();
+    const permission = typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
+    
+    let subJson: any = null;
+    if ('serviceWorker' in navigator && 'PushManager' in window && permission === 'granted') {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const existingSub = await reg.pushManager.getSubscription();
+        if (existingSub) {
+          subJson = existingSub.toJSON();
+        }
+      } catch (e) {}
+    }
+
+    const subscriberDocId = `dev_${deviceId}`;
+    const payload = {
+      id: subscriberDocId,
+      deviceId,
+      userId: userId || null,
+      userEmail: userEmail || null,
+      permission,
+      subscription: subJson,
+      endpoint: subJson?.endpoint || null,
+      platform: navigator.userAgent,
+      active: true,
+      lastSeen: new Date().toISOString()
+    };
+
+    // 1. Sync to server API
+    fetch('/api/push-subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscriberId: subscriberDocId,
+        deviceId,
+        userId: userId || null,
+        userEmail: userEmail || null,
+        platform: navigator.userAgent,
+        permission,
+        subscription: subJson
+      })
+    }).catch(() => {});
+
+    // 2. Sync to Firestore
+    try {
+      const docRef = doc(db, 'push_subscribers', subscriberDocId);
+      await setDoc(docRef, sanitizeForFirestore(payload), { merge: true });
+    } catch (e) {
+      console.warn('Firestore device auto-register note:', e);
+    }
+  } catch (e) {
+    console.warn('Auto register device note:', e);
+  }
+}
+
+/**
  * Subscribe current browser device to Web Push notifications
  */
-export async function subscribeUserToPush(userId?: string, userEmail?: string): Promise<{ success: boolean; message?: string }> {
-  if (!isPushSupported()) {
-    return { success: false, message: 'المتصفح أو الجهاز لا يدعم الإشعارات الفورية (تأكد من فتح الرابط عبر Chrome أو Safari)' };
-  }
-
+export async function subscribeUserToPush(
+  userId?: string, 
+  userEmail?: string,
+  triggerTestAlert: boolean = false
+): Promise<{ success: boolean; message?: string }> {
   try {
-    // 1. Request permission
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      return { success: false, message: permission === 'denied' ? 'تم حظر الإشعارات في إعدادات المتصفح، يرجى السماح بها من رمز القفل بجانب الرابط' : 'لم يتم منح إذن الإشعارات' };
+    const deviceId = getDeviceId();
+    let permission: NotificationPermission = 'default';
+
+    // 1. Request permission if supported
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        permission = await Notification.requestPermission();
+      } catch (permErr) {
+        // Fallback for older Safari
+        permission = await new Promise((resolve) => {
+          Notification.requestPermission((p) => resolve(p));
+        });
+      }
     }
 
     // 2. Ensure Service Worker is registered & ready
-    let registration = await navigator.serviceWorker.getRegistration();
-    if (!registration || !registration.active) {
-      registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    }
-    
-    // Wait until service worker is active
-    if (registration.installing || registration.waiting) {
-      await new Promise<void>((resolve) => {
-        const sw = registration?.installing || registration?.waiting;
-        if (sw) {
-          sw.addEventListener('statechange', () => {
-            if (sw.state === 'activated') resolve();
-          });
-        } else {
-          resolve();
-        }
-        setTimeout(resolve, 1500);
-      });
-    }
-
-    const activeRegistration = await navigator.serviceWorker.ready;
-
-    // 3. Get VAPID Key
-    const vapidPublicKey = await getVapidPublicKey();
-    
-    // 4. Subscribe with PushManager
-    let subscription = await activeRegistration.pushManager.getSubscription();
-    if (!subscription && vapidPublicKey) {
+    let activeRegistration: ServiceWorkerRegistration | null = null;
+    if ('serviceWorker' in navigator) {
       try {
-        const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-        subscription = await activeRegistration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: convertedVapidKey
-        });
-      } catch (subErr) {
-        console.warn('VAPID subscription error, falling back to local notifications:', subErr);
+        let registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) {
+          registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        }
+        activeRegistration = await navigator.serviceWorker.ready;
+      } catch (swErr) {
+        console.warn('Service worker setup note:', swErr);
       }
     }
 
-    if (subscription) {
-      const subJson = subscription.toJSON();
-      const endpointHash = btoa(subJson.endpoint || '').slice(-32).replace(/[^a-zA-Z0-9]/g, '_');
-      const subscriberId = userId ? `sub_${userId}_${endpointHash}` : `sub_guest_${endpointHash}`;
+    // 3. Get VAPID Key and subscribe with PushManager if available
+    let subJson: any = null;
+    let pushSubError = '';
+    if (activeRegistration && 'PushManager' in window && permission === 'granted') {
+      try {
+        let subscription = await activeRegistration.pushManager.getSubscription();
+        if (!subscription) {
+          const vapidPublicKey = await getVapidPublicKey();
+          if (vapidPublicKey) {
+            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+            subscription = await activeRegistration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: convertedVapidKey
+            });
+          }
+        }
+        if (subscription) {
+          subJson = subscription.toJSON();
+        }
+      } catch (pushErr: any) {
+        console.warn('PushManager subscription note:', pushErr);
+        pushSubError = pushErr?.message || String(pushErr);
+      }
+    }
 
-      // 5. Send to Server API
-      fetch('/api/push-subscribe', {
+    const subscriberDocId = `dev_${deviceId}`;
+    const payload = {
+      id: subscriberDocId,
+      deviceId,
+      userId: userId || null,
+      userEmail: userEmail || null,
+      permission,
+      subscription: subJson,
+      endpoint: subJson?.endpoint || null,
+      platform: navigator.userAgent,
+      active: true,
+      updatedAt: new Date().toISOString()
+    };
+
+    // 4. Send to Server API
+    try {
+      await fetch('/api/push-subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subscription: subJson,
+          subscriberId: subscriberDocId,
+          deviceId,
           userId: userId || null,
           userEmail: userEmail || null,
-          subscriberId,
-          userAgent: navigator.userAgent
+          platform: navigator.userAgent,
+          permission,
+          subscription: subJson
         })
-      }).catch((e) => console.warn('Server push subscribe failed:', e));
-
-      // 6. Save in Firestore 'push_subscribers' collection
-      try {
-        const docRef = doc(db, 'push_subscribers', subscriberId);
-        await setDoc(docRef, sanitizeForFirestore({
-          id: subscriberId,
-          subscription: subJson,
-          endpoint: subJson.endpoint,
-          userId: userId || null,
-          userEmail: userEmail || null,
-          userAgent: navigator.userAgent,
-          active: true,
-          updatedAt: new Date().toISOString()
-        }), { merge: true });
-      } catch (dbErr) {
-        console.warn('Firestore push subscriber save note:', dbErr);
-      }
+      });
+    } catch (e) {
+      console.warn('Server push subscribe failed:', e);
     }
 
-    // Play chime & show immediate test notification on phone lock screen
-    playNotificationChime();
-    await showTestNotification('ar');
+    // 5. Save in Firestore 'push_subscribers' collection
+    try {
+      const docRef = doc(db, 'push_subscribers', subscriberDocId);
+      await setDoc(docRef, sanitizeForFirestore(payload), { merge: true });
+    } catch (dbErr) {
+      console.warn('Firestore push subscriber save note:', dbErr);
+    }
 
-    return { success: true, message: 'تم تفعيل الإشعارات الفورية بنجاح!' };
+    // 6. Only if explicitly requested, trigger single test notification
+    if (triggerTestAlert && permission === 'granted') {
+      playNotificationChime();
+      await showTestNotification('ar');
+    }
+
+    if (permission === 'granted') {
+      const extra = subJson ? ' (تم ربط رمز التشفير بنجاح)' : (pushSubError ? ` (ملاحظة: ${pushSubError})` : '');
+      return { success: true, message: `تم تفعيل الإشعارات الفورية لجهازك بنجاح! 🔔${extra}` };
+    } else if (permission === 'denied') {
+      return { success: false, message: 'المتصفح يقرأ الإذن كـ "محظور". يرجى التأكد من تفعيل خيار الإشعارات في إعدادات الموقع.' };
+    } else {
+      return { success: true, message: 'تم تسجيل جهازك بنجاح في نظام التنبيهات.' };
+    }
   } catch (err: any) {
     console.error('Error during push subscription:', err);
     return { success: false, message: err.message || 'حدث خطأ أثناء تفعيل الإشعارات' };

@@ -389,11 +389,18 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   // Calculate Subscription Pricing
   const getPriceBreakdown = () => {
     const defaultPricing = { basePrice: 100, extraDayPrice: 20, videoSurchargePercentage: 20 };
-    const config = pricingConfig?.[adType] || pricingConfig?.vip || defaultPricing;
+    let config = pricingConfig?.[adType as keyof typeof pricingConfig];
+    if (!config) {
+      if (adType === 'free') {
+        config = { basePrice: 0, extraDayPrice: 0, videoSurchargePercentage: 0 };
+      } else {
+        config = pricingConfig?.vip || defaultPricing;
+      }
+    }
     const days = Math.max(7, subscriptionDays || 7);
-    const basePrice = Number(config?.basePrice) || 100;
-    const extraDayRate = Number(config?.extraDayPrice) || 20;
-    const videoSurchargePercentage = Number(config?.videoSurchargePercentage) || 20;
+    const basePrice = config?.basePrice !== undefined ? Number(config.basePrice) : (adType === 'free' ? 0 : 100);
+    const extraDayRate = config?.extraDayPrice !== undefined ? Number(config.extraDayPrice) : (adType === 'free' ? 0 : 20);
+    const videoSurchargePercentage = config?.videoSurchargePercentage !== undefined ? Number(config.videoSurchargePercentage) : (adType === 'free' ? 0 : 20);
     const extraDays = days - 7;
     const extraPrice = extraDays * extraDayRate;
     const subtotal = basePrice + extraPrice;
@@ -634,6 +641,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         mediaUrl={mediaUrl}
         pendingFile={pendingFile}
         cloudinaryConfig={{ cloudName: cloudinaryCloudName, uploadPreset: cloudinaryUploadPreset }}
+        adType={adType as 'vip' | 'standard' | 'free'}
         eventData={{
           titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
           titleEn: titleEn || 'Royal Salsa & Bachata Night',
@@ -733,7 +741,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             {lang === 'ar' ? 'حدد إن كنت تريد إعلاناً مميزاً في مقدمة القائمة أو إعلاناً عادياً.' : 'Choose whether you want a VIP featured ad at the top of the list or a standard ad.'}
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
             <button
               type="button"
               onClick={async () => {
@@ -784,6 +792,36 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               <p className={`text-sm text-center mt-3 leading-relaxed font-bold ${adType === 'standard' ? 'text-neutral-200' : 'text-neutral-400'}`}>
                 {lang === 'ar' ? 'يظهر الإعلان بشكل قياسي في قائمة الفعاليات وفقاً لتاريخ الإضافة.' : 'Appears standardly in the events list sorted by date added.'}
               </p>
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                setIsLoadingPricing(true);
+                await loadPricingConfig();
+                setAdType('free');
+                setSubscriptionDays(7);
+                setIsLoadingPricing(false);
+              }}
+              className={`relative overflow-hidden flex flex-col items-center justify-center p-6 sm:p-8 rounded-3xl border-2 transition-all duration-300 transform shadow-xl ${
+                adType === 'free' 
+                  ? 'bg-neutral-700 border-green-500 text-white scale-[1.02] ring-4 ring-green-500/20' 
+                  : 'bg-neutral-800 border-neutral-700 hover:bg-neutral-700 hover:border-green-500/50 hover:scale-[1.01]'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full mb-2">
+                <span className={`font-black text-lg sm:text-xl text-white`}>
+                  {lang === 'ar' ? 'إعلان مجاني' : 'Free Ad'}
+                </span>
+                {adType === 'free' && <CheckCircle className="h-6 w-6 text-green-400" />}
+              </div>
+              <p className={`text-sm text-center mt-3 leading-relaxed font-bold ${adType === 'free' ? 'text-green-200' : 'text-neutral-400'}`}>
+                {lang === 'ar' ? 'إعلان مجاني يظهر في القائمة العامة للفعاليات.' : 'Free ad appears in the general events list.'}
+              </p>
+              <div className="mt-3 bg-green-500/20 border border-green-500/30 rounded-lg py-1.5 px-3 w-full">
+                <p className="text-[11px] sm:text-xs text-green-300 font-bold text-center">
+                  {lang === 'ar' ? '⏳ عرض ينتهي في 1 نوفمبر (إعلان واحد فقط كل أسبوع)' : '⏳ Offer ends Nov 1st (Limited to 1 ad per week)'}
+                </p>
+              </div>
             </button>
           </div>
         </div>
@@ -1840,12 +1878,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <label className="block text-xs sm:text-sm font-bold text-white mb-1">
-                    {lang === 'ar' ? `اختر مدة اشتراك الإعلان (${adType === 'vip' ? 'مميز' : 'عادي'}) (بالأيام):` : `Select Ad Duration (${adType === 'vip' ? 'VIP' : 'Standard'}) (in Days):`}
+                    {lang === 'ar' ? `اختر مدة اشتراك الإعلان (${adType === 'vip' ? 'مميز' : adType === 'free' ? 'مجاني' : 'عادي'}) (بالأيام):` : `Select Ad Duration (${adType === 'vip' ? 'VIP' : adType === 'free' ? 'Free' : 'Standard'}) (in Days):`}
                   </label>
                   <p className="text-xs text-neutral-400">
-                    {lang === 'ar'
-                      ? `الأسبوع الأول 7 أيام بقيمة ${pricing.basePrice} ج.م، وكل يوم إضافي بزيادة ${pricing.extraDayRate} ج.م`
-                      : `First 7 days for ${pricing.basePrice} EGP, each extra day is +${pricing.extraDayRate} EGP`}
+                    {adType === 'free'
+                      ? (lang === 'ar' ? 'الإعلان مجاني بالكامل لمدة تصل إلى 7 أيام.' : 'Ad is completely free for up to 7 days.')
+                      : (lang === 'ar'
+                          ? `الأسبوع الأول 7 أيام بقيمة ${pricing.basePrice} ج.م، وكل يوم إضافي بزيادة ${pricing.extraDayRate} ج.م`
+                          : `First 7 days for ${pricing.basePrice} EGP, each extra day is +${pricing.extraDayRate} EGP`)}
                   </p>
                 </div>
 
@@ -1864,8 +1904,12 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   </div>
                   <button
                     type="button"
-                    onClick={() => setSubscriptionDays(subscriptionDays + 1)}
-                    className="h-10 w-10 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 flex items-center justify-center transition-colors"
+                    onClick={() => {
+                      if (adType === 'free' && subscriptionDays >= 7) return;
+                      setSubscriptionDays(subscriptionDays + 1);
+                    }}
+                    disabled={adType === 'free' && subscriptionDays >= 7}
+                    className="h-10 w-10 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-4 w-4" />
                   </button>

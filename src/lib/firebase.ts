@@ -867,6 +867,11 @@ export const DEFAULT_PRICING_CONFIG = {
     basePrice: 50,
     extraDayPrice: 10,
     videoSurchargePercentage: 10,
+  },
+  free: {
+    basePrice: 0,
+    extraDayPrice: 0,
+    videoSurchargePercentage: 0,
   }
 };
 

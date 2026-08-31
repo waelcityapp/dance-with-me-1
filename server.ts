@@ -35,12 +35,11 @@ async function startServer() {
   // Web Push Stats Endpoint
   app.get("/api/push-stats", async (req, res) => {
     let totalSubscribers = pushSubscriptionsMap.size;
-    const seenEndpoints = new Set<string>();
+    const seenIds = new Set<string>();
 
-    for (const item of pushSubscriptionsMap.values()) {
-      if (item.subscription?.endpoint) {
-        seenEndpoints.add(item.subscription.endpoint);
-      }
+    for (const [key, item] of pushSubscriptionsMap.entries()) {
+      const id = item.deviceId || item.subscription?.endpoint || key;
+      if (id) seenIds.add(id);
     }
 
     try {
@@ -49,9 +48,10 @@ async function startServer() {
         const fbData: any = await fbRes.json();
         if (fbData && fbData.documents && Array.isArray(fbData.documents)) {
           for (const doc of fbData.documents) {
-            const endpoint = doc.fields?.endpoint?.stringValue;
-            if (endpoint && !seenEndpoints.has(endpoint)) {
-              seenEndpoints.add(endpoint);
+            const docName = doc.name ? doc.name.split("/").pop() : null;
+            const docId = doc.fields?.id?.stringValue || doc.fields?.deviceId?.stringValue || doc.fields?.endpoint?.stringValue || docName;
+            if (docId && !seenIds.has(docId)) {
+              seenIds.add(docId);
             }
           }
         }
@@ -60,7 +60,7 @@ async function startServer() {
       console.warn("Error reading push_subscribers stats from Firestore:", err);
     }
 
-    totalSubscribers = seenEndpoints.size;
+    totalSubscribers = Math.max(seenIds.size, pushSubscriptionsMap.size);
     return res.json({
       success: true,
       count: totalSubscribers,
@@ -73,28 +73,29 @@ async function startServer() {
     res.json({ publicKey: vapidPublicKey });
   });
 
-  // Web Push Subscribe Endpoint
+  // Web Push / Device Subscribe Endpoint
   app.post("/api/push-subscribe", (req, res) => {
-    const { subscription, userId, userEmail, subscriberId } = req.body;
-    if (!subscription || !subscription.endpoint) {
-      return res.status(400).json({ error: "Invalid subscription object" });
-    }
-    const id = subscriberId || subscription.endpoint;
+    const { subscription, userId, userEmail, subscriberId, deviceId, platform, permission } = req.body;
+    const id = subscriberId || deviceId || subscription?.endpoint || `sub_${Date.now()}`;
+    
     pushSubscriptionsMap.set(id, {
-      subscription,
+      subscription: subscription || null,
+      deviceId: deviceId || id,
       userId: userId || null,
       userEmail: userEmail || null,
+      platform: platform || "web",
+      permission: permission || "default",
       subscribedAt: new Date().toISOString()
     });
-    return res.json({ success: true, count: pushSubscriptionsMap.size });
+    return res.json({ success: true, count: pushSubscriptionsMap.size, id });
   });
 
   // Web Push Unsubscribe Endpoint
   app.post("/api/push-unsubscribe", (req, res) => {
-    const { endpoint } = req.body;
-    if (endpoint) {
+    const { endpoint, deviceId } = req.body;
+    if (endpoint || deviceId) {
       for (const [key, val] of pushSubscriptionsMap.entries()) {
-        if (val.subscription?.endpoint === endpoint) {
+        if ((endpoint && val.subscription?.endpoint === endpoint) || (deviceId && val.deviceId === deviceId)) {
           pushSubscriptionsMap.delete(key);
         }
       }
