@@ -45,7 +45,7 @@ export const getSubBookings = (sub: AdSubmission, allBookings: EventBooking[], a
 };
 
 interface ProfileViewProps {
-  onOpenCreateModal: () => void;
+  onOpenCreateModal: (initialType?: 'vip' | 'standard' | 'free') => void;
   onOpenAuth: () => void;
   onOpenMap: (event: DanceEvent) => void;
   onOpenShare: (event: DanceEvent) => void;

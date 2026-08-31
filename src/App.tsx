@@ -63,12 +63,14 @@ const AppContent: React.FC = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isPersonalNotifOpen, setIsPersonalNotifOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
+  const [createAdInitialType, setCreateAdInitialType] = useState<'vip' | 'standard' | 'free' | null>(null);
 
-  const handleOpenCreateAd = () => {
+  const handleOpenCreateAd = (type?: 'vip' | 'standard' | 'free' | null) => {
     if (!user) {
       openGuestAlert('post_ad');
     } else {
       setEditingEvent(null);
+      setCreateAdInitialType(type || null);
       setActiveTab('create_ad');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -99,11 +101,15 @@ const AppContent: React.FC = () => {
             )}
             {activeTab === 'create_ad' && (
               <CreateEventPage
+                key={createAdInitialType || 'create_ad'}
+                initialAdType={createAdInitialType}
                 onComplete={() => {
+                  setCreateAdInitialType(null);
                   setActiveTab('explore');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 onCancel={() => {
+                  setCreateAdInitialType(null);
                   setActiveTab('explore');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}

@@ -81,12 +81,13 @@ const parseCoordinates = (url: string): { lat: number; lng: number } => {
 interface CreateEventPageProps {
   onComplete: () => void;
   onCancel?: () => void;
+  initialAdType?: 'vip' | 'standard' | 'free' | null;
 }
 
-export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, onCancel }) => {
+export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, onCancel, initialAdType = null }) => {
   const { lang, user, addNewEvent, updateEvent, editingEvent, setEditingEvent, isAdminUnlocked, pricingConfig, loadPricingConfig } = useApp();
 
-  const [adType, setAdType] = useState<'vip' | 'standard' | null>(null);
+  const [adType, setAdType] = useState<'vip' | 'standard' | 'free' | null>(initialAdType || (editingEvent ? ((editingEvent.adType as any) || 'vip') : null));
   const [isLoadingPricing, setIsLoadingPricing] = useState(false);
   const [step, setStep] = useState<'form' | 'payment'>('form');
   const [titleAr, setTitleAr] = useState(editingEvent ? editingEvent.titleAr : '');
@@ -157,6 +158,16 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [createTab, setCreateTab] = useState<'form' | 'preview'>('form');
   const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
   const [previewAlert, setPreviewAlert] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (initialAdType) {
+      setAdType(initialAdType);
+      if (initialAdType === 'free') {
+        setSubscriptionDays(7);
+      }
+      loadPricingConfig();
+    }
+  }, [initialAdType]);
 
 
   // Link violation detection

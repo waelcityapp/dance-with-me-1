@@ -10,7 +10,7 @@ import { logAnalyticsEvent } from '../../lib/firebase';
 interface HomeFeedProps {
   onOpenMap: (event: DanceEvent) => void;
   onOpenShare: (event: DanceEvent) => void;
-  onOpenCreate: () => void;
+  onOpenCreate: (initialType?: 'vip' | 'standard' | 'free') => void;
   onOpenInstallModal?: () => void;
 }
 
@@ -213,13 +213,26 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
             </p>
           </div>
 
-          <button
-            onClick={onOpenCreate}
-            className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 px-6 py-3.5 text-xs sm:text-sm font-bold text-neutral-950 shadow-xl transition-colors shrink-0 cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4 stroke-[2.5]" />
-            <span>{lang === 'ar' ? 'إضافة إعلان' : 'Post Ad'}</span>
-          </button>
+          <div className="flex flex-col items-center md:items-end gap-1.5 shrink-0">
+            <button
+              onClick={() => onOpenCreate()}
+              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 px-6 py-3.5 text-xs sm:text-sm font-bold text-neutral-950 shadow-xl transition-colors shrink-0 cursor-pointer w-full sm:w-auto"
+            >
+              <PlusCircle className="h-4 w-4 stroke-[2.5]" />
+              <span>{lang === 'ar' ? 'إضافة إعلان' : 'Post Ad'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenCreate('free')}
+              className="group flex items-center justify-center gap-1 py-0.5 px-2 text-center cursor-pointer transition-transform hover:scale-105 active:scale-95 rounded-lg hover:bg-emerald-500/10"
+              title={lang === 'ar' ? 'انقر لإضافة إعلان مجاني مباشرة' : 'Click to post a free ad directly'}
+            >
+              <span className="text-[11px] sm:text-xs font-black text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors flex items-center gap-1 drop-shadow-sm">
+                <span>🎁</span>
+                <span>{lang === 'ar' ? 'مجاناً حتى 1 نوفمبر' : 'Free until Nov 1st'}</span>
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Why Book Banner directly under Post Ad button */}
