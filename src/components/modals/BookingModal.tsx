@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, User, Phone, Users, CheckCircle, Copy, Check, Upload, 
-  Camera, Ticket, QrCode, AlertTriangle, Info, Calendar, DollarSign, Clock
+  Camera, Ticket, QrCode, AlertTriangle, Info, Calendar, DollarSign, Clock, ExternalLink
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -53,10 +53,15 @@ export const BookingModal: React.FC = () => {
   const isNameValid = name.trim().split(' ').filter(Boolean).length >= 2;
   const isFormValid = isNameValid && isPhoneValid && receiptImage !== null && !isSubmitting;
 
-  const handleCopyNumber = () => {
-    navigator.clipboard.writeText('01010764256');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const INSTAPAY_LINK = 'https://ipn.eg/S/wael1011/instapay/2dvaYQ';
+  const INSTAPAY_HANDLE = 'wael1011@instapay';
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(INSTAPAY_LINK);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -365,7 +370,7 @@ export const BookingModal: React.FC = () => {
               </div>
 
               {/* Payment Details */}
-              <div className="p-4 bg-amber-950/20 border border-amber-900/40 rounded-xl space-y-3">
+              <div className="p-4 bg-amber-950/20 border border-amber-900/40 rounded-2xl space-y-3.5">
                 <div className="flex gap-2.5">
                   <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                   <div>
@@ -374,11 +379,11 @@ export const BookingModal: React.FC = () => {
                     </h5>
                     <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
                       {isArabic 
-                        ? 'برجاء تحويل المبلغ المطلوب عبر فودافون كاش أو انستاباي على الرقم التالي، ثم أرفق لقطة شاشة لإيصال التحويل بالأسفل لتفعيل الحجز فوراً:' 
-                        : 'Please transfer the total amount via Vodafone Cash or Instapay to the following number, then attach the receipt screenshot below:'}
+                        ? 'وسيلة الدفع المتاحة حالياً هي انستاباي (InstaPay). يمكنك الضغط على الزر أدناه للتحويل المباشر إلى تطبيق أو موقع انستاباي، أو نسخ رابط الدفع، ثم أرفق لقطة شاشة لإيصال التحويل بالأسفل لتفعيل الحجز فوراً:' 
+                        : 'The payment method currently available is InstaPay. Click the button below to pay directly on InstaPay or copy the payment link, then attach the receipt screenshot below:'}
                     </p>
-                    <div className="mt-2.5 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-400 leading-relaxed flex gap-1.5 items-start">
-                      <span>⚠️</span>
+                    <div className="mt-2.5 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-400 leading-relaxed flex gap-2 items-start">
+                      <span className="text-sm">⚠️</span>
                       <span>
                         {isArabic
                           ? 'تنبيه هام: لخصوصيتك وتوفير مساحة على قاعدة البيانات، سيتم حذف صورة إيصال التحويل نهائياً بعد 24 ساعة من تاريخ الحفلة. يرجى حفظ لقطة شاشة (Screenshot) للتذكرة وكود الدخول الخاص بك.'
@@ -388,28 +393,54 @@ export const BookingModal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Transfer Number Copy Box */}
-                <div className="flex items-center justify-between p-3 bg-zinc-950 border border-zinc-800 rounded-xl">
-                  <div className="font-mono text-base font-bold text-amber-500">
-                    01010764256
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyNumber}
-                    className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100 transition py-1 px-2.5 rounded-lg bg-zinc-900"
+                {/* InstaPay Direct Pay & Copy Box */}
+                <div className="p-3.5 bg-zinc-950/90 border border-amber-500/30 rounded-2xl space-y-3 shadow-inner">
+                  {/* Direct Link Button */}
+                  <a
+                    href={INSTAPAY_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/40 hover:border-amber-400 transition-all hover:bg-amber-500/20 text-right"
                   >
-                    {copied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="text-emerald-500 font-sans">{isArabic ? 'تم النسخ!' : 'Copied!'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span className="font-sans">{isArabic ? 'نسخ الرقم' : 'Copy'}</span>
-                      </>
-                    )}
-                  </button>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500 text-neutral-950 flex items-center justify-center font-black text-xs shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                        ⚡
+                      </div>
+                      <div>
+                        <span className="block text-xs sm:text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
+                          {isArabic ? 'اضغط الرابط لإرسال نقود إلى' : 'Click link to send money to'} <span className="font-mono text-amber-400">{INSTAPAY_HANDLE}</span>
+                        </span>
+                        <span className="block text-[10px] text-zinc-400 font-medium tracking-wide">
+                          Powered by InstaPay
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-all shrink-0">
+                      <span className="text-[11px] font-bold">{isArabic ? 'فتح الرابط' : 'Open'}</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </div>
+                  </a>
+
+                  {/* Copy Link Button */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-amber-500/40 text-zinc-300 hover:text-white transition text-xs font-semibold cursor-pointer"
+                    >
+                      {copiedLink ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">{isArabic ? 'تم نسخ الرابط!' : 'Link Copied!'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{isArabic ? 'نسخ رابط الدفع' : 'Copy Payment Link'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 

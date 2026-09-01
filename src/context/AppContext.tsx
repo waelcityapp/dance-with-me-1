@@ -385,7 +385,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [bookings, setBookings] = useState<EventBooking[]>([]);
   const [userAdSubmissions, setUserAdSubmissions] = useState<AdSubmission[]>([]);
-  const [selectedBookingEvent, setSelectedBookingEvent] = useState<DanceEvent | null>(null);
+  const [selectedBookingEvent, setSelectedBookingEvent] = useState<DanceEvent | null>(() => {
+    return MODERN_FEATURED_EVENTS[0] || null;
+  });
   const [selectedViewsEvent, setSelectedViewsEvent] = useState<DanceEvent | null>(null);
   const viewedEventsSessionRef = React.useRef<Set<string>>(new Set());
   const processedRefsSet = React.useRef<Set<string>>(new Set());
