@@ -23,7 +23,9 @@ import { CustomAlertModal } from './components/modals/CustomAlertModal';
 import { CustomConfirmModal } from './components/modals/CustomConfirmModal';
 import { PushPermissionPrompt } from './components/pwa/PushPermissionPrompt';
 import { FloatingNotificationBanner } from './components/pwa/FloatingNotificationBanner';
+import { AdViewsDetailsModal } from './components/modals/AdViewsDetailsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
+import { MainHeroHeaderBanner } from './components/home/MainHeroHeaderBanner';
 import { DanceEvent } from './types';
 
 import { AdminEditEventPage } from './components/admin/AdminEditEventPage';
@@ -45,7 +47,9 @@ const AppContent: React.FC = () => {
     editingEvent, 
     feedViewMode,
     activePushToast,
-    setActivePushToast
+    setActivePushToast,
+    selectedViewsEvent,
+    setSelectedViewsEvent
   } = useApp();
 
   // Handle hardware / browser back button on mobile
@@ -100,6 +104,21 @@ const AppContent: React.FC = () => {
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenInstallModal={() => setIsInstallOpen(true)}
       />
+
+      {/* Hero Header Banner directly under Header */}
+      {(!activeTab || activeTab === 'explore') && (
+        <MainHeroHeaderBanner
+          onExploreClick={() => {
+            const el = document.getElementById('search-section') || document.getElementById('events-feed');
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+              window.scrollTo({ top: 400, behavior: 'smooth' });
+            }
+          }}
+          onPostAdClick={() => handleOpenCreateAd()}
+        />
+      )}
 
       {/* Main Body Content */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 pt-5 pb-24">
@@ -216,6 +235,12 @@ const AppContent: React.FC = () => {
             window.location.search = `?event=${notif.relatedEventId || notif.targetEventId}`;
           }
         }}
+      />
+      <AdViewsDetailsModal
+        isOpen={!!selectedViewsEvent}
+        event={selectedViewsEvent}
+        onClose={() => setSelectedViewsEvent(null)}
+        onShare={(ev) => setSelectedShareEvent(ev)}
       />
       <AttendeeCheckinHandler />
     </div>

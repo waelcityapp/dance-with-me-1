@@ -37,7 +37,8 @@ import {
   ChevronLeft,
   ChevronUp,
   Languages,
-  Loader2
+  Loader2,
+  Globe
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AdSubmission, DanceEvent } from '../../types';
@@ -88,6 +89,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const { lang, user, addNewEvent, updateEvent, editingEvent, setEditingEvent, isAdminUnlocked, pricingConfig, loadPricingConfig } = useApp();
 
   const [adType, setAdType] = useState<'vip' | 'standard' | 'free' | null>(initialAdType || (editingEvent ? ((editingEvent.adType as any) || 'vip') : null));
+  const [contentLangMode, setContentLangMode] = useState<'both' | 'ar' | 'en' | null>(editingEvent ? 'both' : null);
   const [isLoadingPricing, setIsLoadingPricing] = useState(false);
   const [step, setStep] = useState<'form' | 'payment'>('form');
   const [titleAr, setTitleAr] = useState(editingEvent ? editingEvent.titleAr : '');
@@ -841,58 +843,87 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
       {adType && (
         <>
-      {/* Sub-Tab Switcher for Full Live Preview (Highly prominent card) */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-3xl bg-neutral-950/80 border-2 border-amber-500/30 shadow-2xl relative overflow-hidden backdrop-blur-md mb-8" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="text-right flex items-center gap-3">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-          </span>
-          <div>
-            <h4 className="text-sm font-black text-white flex items-center justify-start gap-2">
-              <span>{lang === 'ar' ? '👀 معاينة مباشرة تفاعلية بالكامل' : '👀 Live Interactive Preview'}</span>
-            </h4>
-            <p className="text-[11px] text-neutral-400">
-              {lang === 'ar' ? 'اعرض مظهر الإعلان النهائي للجمهور أثناء تعبئة الحقول لتعديله فوراً.' : 'See exactly how the final ad renders to dancers as you type.'}
-            </p>
+        {/* Ad Content Language Mode Selection - Single Horizontal Line with Concise Labels */}
+        <div className="rounded-2xl sm:rounded-3xl border border-neutral-800 bg-neutral-900/60 p-4 sm:p-6 relative">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 shrink-0">
+              <Globe className="h-5 w-5 text-amber-500 shrink-0" />
+              <h3 className="text-sm sm:text-base font-black text-white whitespace-nowrap">
+                {lang === 'ar' ? 'لغة محتوى الإعلان:' : 'Ad Content Language:'}
+              </h3>
+            </div>
+
+            {/* Horizontal 1-line flex buttons */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 flex-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setContentLangMode('ar');
+                  setPreviewLang('ar');
+                }}
+                className={`flex items-center justify-center gap-2 py-3 px-3 sm:px-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 cursor-pointer text-center font-black text-xs sm:text-sm shadow-md ${
+                  contentLangMode === 'ar'
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-300 ring-2 ring-amber-500/20'
+                    : 'bg-neutral-800/90 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-500 text-neutral-300'
+                }`}
+              >
+                <span className="text-base sm:text-lg">🇸🇦</span>
+                <span className="truncate">{lang === 'ar' ? 'عربي فقط' : 'Arabic Only'}</span>
+                {contentLangMode === 'ar' && <CheckCircle className="h-4 w-4 text-amber-400 shrink-0 hidden sm:inline" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setContentLangMode('en');
+                  setPreviewLang('en');
+                }}
+                className={`flex items-center justify-center gap-2 py-3 px-3 sm:px-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 cursor-pointer text-center font-black text-xs sm:text-sm shadow-md ${
+                  contentLangMode === 'en'
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-300 ring-2 ring-amber-500/20'
+                    : 'bg-neutral-800/90 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-500 text-neutral-300'
+                }`}
+              >
+                <span className="text-base sm:text-lg">🇬🇧</span>
+                <span className="truncate">{lang === 'ar' ? 'إنجليزي فقط' : 'English Only'}</span>
+                {contentLangMode === 'en' && <CheckCircle className="h-4 w-4 text-amber-400 shrink-0 hidden sm:inline" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setContentLangMode('both');
+                }}
+                className={`flex items-center justify-center gap-2 py-3 px-3 sm:px-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 cursor-pointer text-center font-black text-xs sm:text-sm shadow-md ${
+                  contentLangMode === 'both'
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-300 ring-2 ring-amber-500/20'
+                    : 'bg-neutral-800/90 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-500 text-neutral-300'
+                }`}
+              >
+                <span className="text-base sm:text-lg">🌐</span>
+                <span className="truncate">{lang === 'ar' ? 'عربي وإنجليزي' : 'Arabic & English'}</span>
+                {contentLangMode === 'both' && <CheckCircle className="h-4 w-4 text-amber-400 shrink-0 hidden sm:inline" />}
+              </button>
+            </div>
           </div>
         </div>
-
-        <div className="flex rounded-2xl bg-neutral-900 p-1 border border-neutral-800 w-full sm:w-auto shrink-0 relative z-10">
-          <button
-            type="button"
-            onClick={() => setCreateTab('form')}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-              createTab === 'form'
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 shadow-lg shadow-amber-500/20 border border-amber-400/30 font-black'
-                : 'text-neutral-400 hover:text-neutral-200'
-            }`}
-          >
-            <FileText className="h-4 w-4" />
-            <span>{lang === 'ar' ? '📝 نموذج البيانات' : '📝 Form Builder'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setCreateTab('preview');
-              setPreviewAlert(null);
-            }}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-              createTab === 'preview'
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 shadow-lg shadow-amber-500/20 border border-amber-400/30 font-black'
-                : 'text-neutral-400 hover:text-neutral-200'
-            }`}
-          >
-            <Eye className="h-4 w-4" />
-            <span>{lang === 'ar' ? '👁️ المعاينة الحية للجمهور' : '👁️ Live Preview'}</span>
-          </button>
+      {!contentLangMode ? (
+        <div className="p-8 rounded-3xl border border-dashed border-neutral-700 bg-neutral-900/30 text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto text-xl">
+            🌐
+          </div>
+          <h4 className="text-base sm:text-lg font-bold text-white">
+            {lang === 'ar' ? 'يرجى اختيار لغة محتوى الإعلان أولاً' : 'Please Select Ad Content Language First'}
+          </h4>
+          <p className="text-xs sm:text-sm text-neutral-400 max-w-md mx-auto">
+            {lang === 'ar' 
+              ? 'اختر أحد الخيارات أعلاه (عربي فقط، إنجليزي فقط، أو عربي وإنجليزي) لعرض نموذج إدخال البيانات المخصص.' 
+              : 'Choose one of the options above (Arabic Only, English Only, or Arabic & English) to show the tailored form.'}
+          </p>
         </div>
-      </div>
-
-      {/* Removed Floating Action Button per user request to move it near payment button */}
-
-      {createTab === 'preview' && (
+      ) : (
+        <>
+          {createTab === 'preview' && (
         <div className="space-y-6 animate-fadeIn text-right mb-12" dir={previewLang === 'ar' ? 'rtl' : 'ltr'}>
           
           {/* Preview Controls Header Block */}
@@ -1214,53 +1245,61 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               {lang === 'ar' ? '1. عنوان الفعالية' : '1. Event Title'}
             </h4>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-neutral-300">
-                    {lang === 'ar' ? 'عنوان الإعلان (بالعربية)' : 'Title (Arabic)'} <span className="text-amber-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleTranslate(titleEn, 'ar', setTitleAr, 'titleAr')}
-                    disabled={!titleEn || isTranslating === 'titleAr'}
-                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isTranslating === 'titleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
-                    {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
-                  </button>
+            <div className={`grid grid-cols-1 ${contentLangMode === 'both' ? 'sm:grid-cols-2' : ''} gap-4`}>
+              {(contentLangMode === 'ar' || contentLangMode === 'both') && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-neutral-300">
+                      {lang === 'ar' ? 'عنوان الإعلان (بالعربية)' : 'Title (Arabic)'} <span className="text-amber-500">*</span>
+                    </label>
+                    {contentLangMode === 'both' && (
+                      <button
+                        type="button"
+                        onClick={() => handleTranslate(titleEn, 'ar', setTitleAr, 'titleAr')}
+                        disabled={!titleEn || isTranslating === 'titleAr'}
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isTranslating === 'titleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                        {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={titleAr}
+                    onChange={e => setTitleAr(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: سهرة سالسا وباتشاتا ملكية على السطح' : 'e.g. Royal Rooftop Salsa Social'}
+                    className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner`}
+                  />
                 </div>
-                <input
-                  type="text"
-                  value={titleAr}
-                  onChange={e => setTitleAr(e.target.value)}
-                  placeholder={lang === 'ar' ? 'مثال: سهرة سالسا وباتشاتا ملكية على السطح' : 'e.g. Royal Rooftop Salsa Social'}
-                  className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner`}
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-neutral-300">
-                    {lang === 'ar' ? 'عنوان الإعلان (بالإنجليزية)' : 'Title (English)'} <span className="text-amber-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleTranslate(titleAr, 'en', setTitleEn, 'titleEn')}
-                    disabled={!titleAr || isTranslating === 'titleEn'}
-                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isTranslating === 'titleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
-                    {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
-                  </button>
+              )}
+              {(contentLangMode === 'en' || contentLangMode === 'both') && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-neutral-300">
+                      {lang === 'ar' ? 'عنوان الإعلان (بالإنجليزية)' : 'Title (English)'} <span className="text-amber-500">*</span>
+                    </label>
+                    {contentLangMode === 'both' && (
+                      <button
+                        type="button"
+                        onClick={() => handleTranslate(titleAr, 'en', setTitleEn, 'titleEn')}
+                        disabled={!titleAr || isTranslating === 'titleEn'}
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isTranslating === 'titleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                        {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={titleEn}
+                    onChange={e => setTitleEn(e.target.value)}
+                    placeholder="e.g. Royal Rooftop Salsa Social"
+                    className={`w-full rounded-xl border ${urlRegex.test(titleEn) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner`}
+                  />
                 </div>
-                <input
-                  type="text"
-                  value={titleEn}
-                  onChange={e => setTitleEn(e.target.value)}
-                  placeholder="e.g. Royal Rooftop Salsa Social"
-                  className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner`}
-                />
-              </div>
+              )}
             </div>
           </div>
 
@@ -1270,87 +1309,95 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               {lang === 'ar' ? '2. التفاصيل ومواعيد الحضور' : '2. Details & Schedule'}
             </h4>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-neutral-300">
-                    {lang === 'ar' ? 'الوصف والمميزات (بالعربية)' : 'Description (Arabic)'}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleTranslate(descEn, 'ar', setDescAr, 'descAr')}
-                    disabled={!descEn || isTranslating === 'descAr'}
-                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isTranslating === 'descAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
-                    {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
-                  </button>
-                </div>
-                <textarea
-                  rows={4}
-                  value={descAr}
-                  onChange={e => {
-                    if (e.target.value.length <= 500) {
-                      setDescAr(e.target.value);
-                    }
-                  }}
-                  maxLength={500}
-                  placeholder={lang === 'ar' ? 'تفاصيل الحفلة، أسماء المدربين، التعليمات، وقواعد اللبس (Dress Code)...' : 'Party details, instructor names, guidelines, dress code...'}
-                  className={`w-full rounded-xl border ${urlRegex.test(descAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner leading-relaxed`}
-                />
-                <div className="flex justify-between items-center mt-1 px-1">
-                  <span className={`text-[11px] transition-colors duration-200 ${500 - descAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
-                    {lang === 'ar' 
-                      ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descAr.length}` 
-                      : `Maximum 500 characters | Remaining: ${500 - descAr.length} characters`}
-                  </span>
-                  {500 - descAr.length === 0 && (
-                    <span className="text-[10px] text-red-500 font-bold animate-pulse">
-                      {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+            <div className={`grid grid-cols-1 ${contentLangMode === 'both' ? 'sm:grid-cols-2' : ''} gap-4`}>
+              {(contentLangMode === 'ar' || contentLangMode === 'both') && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-neutral-300">
+                      {lang === 'ar' ? 'الوصف والمميزات (بالعربية)' : 'Description (Arabic)'}
+                    </label>
+                    {contentLangMode === 'both' && (
+                      <button
+                        type="button"
+                        onClick={() => handleTranslate(descEn, 'ar', setDescAr, 'descAr')}
+                        disabled={!descEn || isTranslating === 'descAr'}
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isTranslating === 'descAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                        {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={descAr}
+                    onChange={e => {
+                      if (e.target.value.length <= 500) {
+                        setDescAr(e.target.value);
+                      }
+                    }}
+                    maxLength={500}
+                    placeholder={lang === 'ar' ? 'تفاصيل الحفلة، أسماء المدربين، التعليمات، وقواعد اللبس (Dress Code)...' : 'Party details, instructor names, guidelines, dress code...'}
+                    className={`w-full rounded-xl border ${urlRegex.test(descAr) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner leading-relaxed`}
+                  />
+                  <div className="flex justify-between items-center mt-1 px-1">
+                    <span className={`text-[11px] transition-colors duration-200 ${500 - descAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                      {lang === 'ar' 
+                        ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descAr.length}` 
+                        : `Maximum 500 characters | Remaining: ${500 - descAr.length} characters`}
                     </span>
-                  )}
+                    {500 - descAr.length === 0 && (
+                      <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                        {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-neutral-300">
-                    {lang === 'ar' ? 'الوصف والمميزات (بالإنجليزية)' : 'Description (English)'}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleTranslate(descAr, 'en', setDescEn, 'descEn')}
-                    disabled={!descAr || isTranslating === 'descEn'}
-                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isTranslating === 'descEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
-                    {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
-                  </button>
-                </div>
-                <textarea
-                  rows={4}
-                  value={descEn}
-                  onChange={e => {
-                    if (e.target.value.length <= 500) {
-                      setDescEn(e.target.value);
-                    }
-                  }}
-                  maxLength={500}
-                  placeholder="Party details, instructor names, guidelines, dress code..."
-                  className={`w-full rounded-xl border ${urlRegex.test(descEn) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner leading-relaxed`}
-                />
-                <div className="flex justify-between items-center mt-1 px-1">
-                  <span className={`text-[11px] transition-colors duration-200 ${500 - descEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
-                    {lang === 'ar' 
-                      ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descEn.length}` 
-                      : `Maximum 500 characters | Remaining: ${500 - descEn.length} characters`}
-                  </span>
-                  {500 - descEn.length === 0 && (
-                    <span className="text-[10px] text-red-500 font-bold animate-pulse">
-                      {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+              )}
+              {(contentLangMode === 'en' || contentLangMode === 'both') && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-neutral-300">
+                      {lang === 'ar' ? 'الوصف والمميزات (بالإنجليزية)' : 'Description (English)'}
+                    </label>
+                    {contentLangMode === 'both' && (
+                      <button
+                        type="button"
+                        onClick={() => handleTranslate(descAr, 'en', setDescEn, 'descEn')}
+                        disabled={!descAr || isTranslating === 'descEn'}
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-amber-500 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isTranslating === 'descEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                        {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={descEn}
+                    onChange={e => {
+                      if (e.target.value.length <= 500) {
+                        setDescEn(e.target.value);
+                      }
+                    }}
+                    maxLength={500}
+                    placeholder="Party details, instructor names, guidelines, dress code..."
+                    className={`w-full rounded-xl border ${urlRegex.test(descEn) ? 'border-red-500 bg-red-950/20' : 'border-neutral-800 bg-neutral-950 focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm text-white outline-none transition-colors shadow-inner leading-relaxed`}
+                  />
+                  <div className="flex justify-between items-center mt-1 px-1">
+                    <span className={`text-[11px] transition-colors duration-200 ${500 - descEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                      {lang === 'ar' 
+                        ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descEn.length}` 
+                        : `Maximum 500 characters | Remaining: ${500 - descEn.length} characters`}
                     </span>
-                  )}
+                    {500 - descEn.length === 0 && (
+                      <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                        {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -1657,22 +1704,40 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   <DollarSign className="h-3.5 w-3.5 text-amber-400" />
                   <span>{lang === 'ar' ? 'سعر التذكرة / الاشتراك' : 'Ticket / Course Price'}</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                {contentLangMode === 'both' ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={priceAr}
+                      onChange={e => setPriceAr(e.target.value)}
+                      placeholder="250 ج.م"
+                      className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-3 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
+                    />
+                    <input
+                      type="text"
+                      value={priceEn}
+                      onChange={e => setPriceEn(e.target.value)}
+                      placeholder="250 EGP"
+                      className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-3 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
+                    />
+                  </div>
+                ) : contentLangMode === 'ar' ? (
                   <input
                     type="text"
                     value={priceAr}
                     onChange={e => setPriceAr(e.target.value)}
                     placeholder="250 ج.م"
-                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-3 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
                   />
+                ) : (
                   <input
                     type="text"
                     value={priceEn}
                     onChange={e => setPriceEn(e.target.value)}
                     placeholder="250 EGP"
-                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-3 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm font-mono text-white outline-none focus:border-amber-500"
                   />
-                </div>
+                )}
               </div>
             </div>
 
@@ -1691,118 +1756,134 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{lang === 'ar' ? 'اسم المكان / الأستوديو (بالعربية)' : 'Venue Name (Arabic)'}</span>
-                </label>
-                <input
-                  type="text"
-                  value={locationNameAr}
-                  onChange={e => setLocationNameAr(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{lang === 'ar' ? 'اسم المكان / الأستوديو (بالإنجليزية)' : 'Venue Name (English)'}</span>
-                </label>
-                <input
-                  type="text"
-                  value={locationNameEn}
-                  onChange={e => setLocationNameEn(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
-                />
-              </div>
+            <div className={`grid grid-cols-1 ${contentLangMode === 'both' ? 'sm:grid-cols-2' : ''} gap-4 pt-2`}>
+              {(contentLangMode === 'ar' || contentLangMode === 'both') && (
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? 'اسم المكان / الأستوديو (بالعربية)' : 'Venue Name (Arabic)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={locationNameAr}
+                    onChange={e => setLocationNameAr(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+              )}
+              {(contentLangMode === 'en' || contentLangMode === 'both') && (
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? 'اسم المكان / الأستوديو (بالإنجليزية)' : 'Venue Name (English)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={locationNameEn}
+                    onChange={e => setLocationNameEn(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-amber-500" />
-                  <span>{lang === 'ar' ? 'العنوان بالتفصيل (بالعربية)' : 'Detailed Address (Arabic)'}</span>
-                </label>
-                <input
-                  type="text"
-                  value={addressAr}
-                  onChange={e => setAddressAr(e.target.value)}
-                  placeholder={lang === 'ar' ? 'مثال: العين السخنة، البحر الأحمر' : 'e.g. Ain Sokhna, Red Sea'}
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-amber-500" />
-                  <span>{lang === 'ar' ? 'العنوان بالتفصيل (بالإنجليزية)' : 'Detailed Address (English)'}</span>
-                </label>
-                <input
-                  type="text"
-                  value={addressEn}
-                  onChange={e => setAddressEn(e.target.value)}
-                  placeholder={lang === 'ar' ? 'مثال: Ain Sokhna, Red Sea' : 'e.g. Ain Sokhna, Red Sea'}
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
-                />
-              </div>
+            <div className={`grid grid-cols-1 ${contentLangMode === 'both' ? 'sm:grid-cols-2' : ''} gap-4 pt-2`}>
+              {(contentLangMode === 'ar' || contentLangMode === 'both') && (
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-500" />
+                    <span>{lang === 'ar' ? 'العنوان بالتفصيل (بالعربية)' : 'Detailed Address (Arabic)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={addressAr}
+                    onChange={e => setAddressAr(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: العين السخنة، البحر الأحمر' : 'e.g. Ain Sokhna, Red Sea'}
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+              )}
+              {(contentLangMode === 'en' || contentLangMode === 'both') && (
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-500" />
+                    <span>{lang === 'ar' ? 'العنوان بالتفصيل (بالإنجليزية)' : 'Detailed Address (English)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={addressEn}
+                    onChange={e => setAddressEn(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: Ain Sokhna, Red Sea' : 'e.g. Ain Sokhna, Red Sea'}
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{lang === 'ar' ? '📍 المحافظة (بالعربية) - مثل: القاهرة' : 'Governorate (Arabic)'}</span>
-                </label>
-                <input
-                  type="text"
-                  value={governorateAr}
-                  onChange={e => setGovernorateAr(e.target.value)}
-                  placeholder="مثال: القاهرة"
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{lang === 'ar' ? '📍 المحافظة (بالإنجليزية)' : 'Governorate (English)'}</span>
-                </label>
-                <input
-                  type="text"
-                  value={governorateEn}
-                  onChange={e => setGovernorateEn(e.target.value)}
-                  placeholder="e.g. Cairo"
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
-                />
-              </div>
+            <div className={`grid grid-cols-1 ${contentLangMode === 'both' ? 'sm:grid-cols-2' : ''} gap-4 pt-2`}>
+              {(contentLangMode === 'ar' || contentLangMode === 'both') && (
+                <div>
+                  <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? '📍 المحافظة (بالعربية) - مثل: القاهرة' : 'Governorate (Arabic)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={governorateAr}
+                    onChange={e => setGovernorateAr(e.target.value)}
+                    placeholder="مثال: القاهرة"
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
+                  />
+                </div>
+              )}
+              {(contentLangMode === 'en' || contentLangMode === 'both') && (
+                <div>
+                  <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? '📍 المحافظة (بالإنجليزية)' : 'Governorate (English)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={governorateEn}
+                    onChange={e => setGovernorateEn(e.target.value)}
+                    placeholder="e.g. Cairo"
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{lang === 'ar' ? '📍 المنطقة / الحي (بالعربية) - مثل: الزمالك' : 'Area / District (Arabic)'}</span>
-                </label>
-                <input
-                  type="text"
-                  value={areaAr}
-                  onChange={e => setAreaAr(e.target.value)}
-                  placeholder="مثال: الزمالك"
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{lang === 'ar' ? '📍 المنطقة / الحي (بالإنجليزية)' : 'Area / District (English)'}</span>
-                </label>
-                <input
-                  type="text"
-                  value={areaEn}
-                  onChange={e => setAreaEn(e.target.value)}
-                  placeholder="e.g. Zamalek"
-                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
-                />
-              </div>
+            <div className={`grid grid-cols-1 ${contentLangMode === 'both' ? 'sm:grid-cols-2' : ''} gap-4 pt-2`}>
+              {(contentLangMode === 'ar' || contentLangMode === 'both') && (
+                <div>
+                  <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? '📍 المنطقة / الحي (بالعربية) - مثل: الزمالك' : 'Area / District (Arabic)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={areaAr}
+                    onChange={e => setAreaAr(e.target.value)}
+                    placeholder="مثال: الزمالك"
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
+                  />
+                </div>
+              )}
+              {(contentLangMode === 'en' || contentLangMode === 'both') && (
+                <div>
+                  <label className="block text-xs font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? '📍 المنطقة / الحي (بالإنجليزية)' : 'Area / District (English)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={areaEn}
+                    onChange={e => setAreaEn(e.target.value)}
+                    placeholder="e.g. Zamalek"
+                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-3 px-4 text-xs sm:text-sm text-white outline-none focus:border-amber-400"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="pt-2">
@@ -2140,6 +2221,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
         </form>
       </motion.div>
+      )}
+        </>
       )}
         </>
       )}

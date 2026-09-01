@@ -252,8 +252,19 @@ export function subscribeToEvents(
  */
 export async function saveEventToFirestore(event: DanceEvent): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.EVENTS, event.id);
-    await setDoc(docRef, sanitizeForFirestore(event), { merge: true });
+    if (!event) {
+      console.warn('saveEventToFirestore called with null/undefined event');
+      return false;
+    }
+    const rawId = event.id || (event as any)._id || (event as any).eventId;
+    const eventId = rawId ? String(rawId).trim() : `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    const docRef = doc(db, COLLECTIONS.EVENTS, eventId);
+    const cleaned = sanitizeForFirestore({
+      ...event,
+      id: eventId
+    });
+    await setDoc(docRef, cleaned, { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving event to Firestore:', error);
@@ -262,27 +273,48 @@ export async function saveEventToFirestore(event: DanceEvent): Promise<boolean> 
 }
 
 /**
+ * Increment ad / event views in Firestore in real-time
+ */
+export async function incrementEventViewsInFirestore(eventId: string): Promise<void> {
+  try {
+    if (!eventId || typeof eventId !== 'string' || !eventId.trim()) {
+      return;
+    }
+    const safeId = eventId.trim();
+    const docRef = doc(db, COLLECTIONS.EVENTS, safeId);
+    await updateDoc(docRef, {
+      viewsCount: increment(1)
+    }).catch(async () => {
+      await setDoc(docRef, { viewsCount: increment(1) }, { merge: true });
+    });
+  } catch (error) {
+    console.warn('Error incrementing event views:', error);
+  }
+}
+
+/**
  * Delete an event from Firestore
  */
 export async function deleteEventFromFirestore(eventId: string): Promise<boolean> {
   try {
+    if (!eventId || typeof eventId !== 'string' || !eventId.trim()) {
+      return false;
+    }
+    const safeId = eventId.trim();
     // 1. Find all bookings associated with this event and delete them
     const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
-    const q = query(bookingsRef, where('eventId', '==', eventId));
+    const q = query(bookingsRef, where('eventId', '==', safeId));
     const snapshot = await getDocs(q);
     
     // Create a batch or just delete them one by one
-    // Since batch has a limit of 500, and this is client side, let's just do Promise.all
     const deletePromises = snapshot.docs.map(docSnap => {
-      // Also, we might need to delete receipt images if any, but since we can't do it cleanly without the API from here 
-      // it's okay for now, or the API call could be done. But let's just delete the documents to keep DB clean.
       return deleteDoc(docSnap.ref);
     });
     await Promise.all(deletePromises);
-    console.log(`Deleted ${snapshot.docs.length} bookings associated with event ${eventId}`);
+    console.log(`Deleted ${snapshot.docs.length} bookings associated with event ${safeId}`);
 
     // 2. Delete the event itself
-    const docRef = doc(db, COLLECTIONS.EVENTS, eventId);
+    const docRef = doc(db, COLLECTIONS.EVENTS, safeId);
     await deleteDoc(docRef);
     return true;
   } catch (error) {
@@ -342,9 +374,15 @@ export function subscribeToUser(
  */
 export async function saveUserToFirestore(user: UserProfile): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.USERS, user.id);
+    if (!user || !user.id) {
+      console.warn('saveUserToFirestore called without valid user or user.id');
+      return false;
+    }
+    const userId = String(user.id).trim();
+    const docRef = doc(db, COLLECTIONS.USERS, userId);
     const safeUser = sanitizeForFirestore({
       ...user,
+      id: userId,
       phone: user.phone || '',
       avatar: user.avatar || '',
       name: user.name || '',
@@ -426,8 +464,10 @@ export function subscribeToNotifications(
  */
 export async function saveNotificationToFirestore(notif: NotificationItem): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.NOTIFICATIONS, notif.id);
-    await setDoc(docRef, sanitizeForFirestore(notif), { merge: true });
+    if (!notif) return false;
+    const notifId = notif.id ? String(notif.id).trim() : `notif-${Date.now()}`;
+    const docRef = doc(db, COLLECTIONS.NOTIFICATIONS, notifId);
+    await setDoc(docRef, sanitizeForFirestore({ ...notif, id: notifId }), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving notification to Firestore:', error);
@@ -492,8 +532,10 @@ export function subscribeToAdSubmissions(
  */
 export async function saveAdSubmissionToFirestore(submission: AdSubmission): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.AD_SUBMISSIONS, submission.id);
-    await setDoc(docRef, sanitizeForFirestore(submission), { merge: true });
+    if (!submission) return false;
+    const subId = submission.id ? String(submission.id).trim() : `sub-${Date.now()}`;
+    const docRef = doc(db, COLLECTIONS.AD_SUBMISSIONS, subId);
+    await setDoc(docRef, sanitizeForFirestore({ ...submission, id: subId }), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving ad submission to Firestore:', error);
@@ -506,7 +548,9 @@ export async function saveAdSubmissionToFirestore(submission: AdSubmission): Pro
  */
 export async function deleteAdSubmissionFromFirestore(submissionId: string): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.AD_SUBMISSIONS, submissionId);
+    if (!submissionId || typeof submissionId !== 'string' || !submissionId.trim()) return false;
+    const safeSubId = submissionId.trim();
+    const docRef = doc(db, COLLECTIONS.AD_SUBMISSIONS, safeSubId);
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const data = snap.data();
@@ -555,8 +599,10 @@ export function subscribeToSupportMessages(
  */
 export async function saveSupportMessageToFirestore(message: SupportMessage): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.SUPPORT_MESSAGES, message.id);
-    await setDoc(docRef, sanitizeForFirestore(message), { merge: true });
+    if (!message) return false;
+    const msgId = message.id ? String(message.id).trim() : `msg-${Date.now()}`;
+    const docRef = doc(db, COLLECTIONS.SUPPORT_MESSAGES, msgId);
+    await setDoc(docRef, sanitizeForFirestore({ ...message, id: msgId }), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving support message to Firestore:', error);
@@ -569,7 +615,9 @@ export async function saveSupportMessageToFirestore(message: SupportMessage): Pr
  */
 export async function deleteSupportMessageFromFirestore(messageId: string): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.SUPPORT_MESSAGES, messageId);
+    if (!messageId || typeof messageId !== 'string' || !messageId.trim()) return false;
+    const safeMsgId = messageId.trim();
+    const docRef = doc(db, COLLECTIONS.SUPPORT_MESSAGES, safeMsgId);
     await deleteDoc(docRef);
     return true;
   } catch (error) {
@@ -1001,8 +1049,10 @@ export function subscribeToDailyAnalytics(onUpdate: (dailyList: any[]) => void):
  */
 export async function saveBookingToFirestore(booking: EventBooking): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.BOOKINGS, booking.id);
-    await setDoc(docRef, sanitizeForFirestore(booking), { merge: true });
+    if (!booking) return false;
+    const bId = booking.id ? String(booking.id).trim() : `bkg-${Date.now()}`;
+    const docRef = doc(db, COLLECTIONS.BOOKINGS, bId);
+    await setDoc(docRef, sanitizeForFirestore({ ...booking, id: bId }), { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving booking to Firestore:', error);
@@ -1015,7 +1065,9 @@ export async function saveBookingToFirestore(booking: EventBooking): Promise<boo
  */
 export async function deleteBookingFromFirestore(bookingId: string): Promise<boolean> {
   try {
-    const docRef = doc(db, COLLECTIONS.BOOKINGS, bookingId);
+    if (!bookingId || typeof bookingId !== 'string' || !bookingId.trim()) return false;
+    const safeBkgId = bookingId.trim();
+    const docRef = doc(db, COLLECTIONS.BOOKINGS, safeBkgId);
     await deleteDoc(docRef);
     return true;
   } catch (error) {
@@ -1130,13 +1182,15 @@ export async function reorderAdsStartingFrom20(): Promise<void> {
 
 export async function deleteAllBookingsForEvent(eventId: string): Promise<boolean> {
   try {
+    if (!eventId || typeof eventId !== 'string' || !eventId.trim()) return false;
+    const safeEvId = eventId.trim();
     const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
-    const q = query(bookingsRef, where('eventId', '==', eventId));
+    const q = query(bookingsRef, where('eventId', '==', safeEvId));
     const snapshot = await getDocs(q);
     
     const deletePromises = snapshot.docs.map(docSnap => deleteDoc(docSnap.ref));
     await Promise.all(deletePromises);
-    console.log(`Deleted ${snapshot.docs.length} bookings for soft-deleted event ${eventId}`);
+    console.log(`Deleted ${snapshot.docs.length} bookings for soft-deleted event ${safeEvId}`);
     return true;
   } catch (error) {
     console.error('Error deleting bookings for event:', error);

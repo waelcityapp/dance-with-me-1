@@ -31,11 +31,19 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
     togglePauseEvent,
     setEditingEvent,
     setActiveTab,
-    setAdminSelectedUserId
+    setAdminSelectedUserId,
+    setSelectedViewsEvent,
+    recordEventView
   } = useApp();
 
   const displayAdType = overrideAdType || event.adType;
-  console.log("EVENT CARD", event.titleAr, event.eventRef, user?.isAdmin);
+
+  // Auto record view when event is mounted / displayed
+  useEffect(() => {
+    if (event && event.id) {
+      recordEventView(event.id);
+    }
+  }, [event?.id]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
@@ -533,11 +541,19 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 mt-auto flex-wrap">
           {/* Contact Actions */}
           <div className="flex items-center gap-1.5">
-            {user?.isAdmin && !hideAdminControls && (
-              <div className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20" title={lang === 'ar' ? 'عدد مشاهدات الإعلان' : 'Ad Views Count'}>
-                <Eye className="h-4 w-4" />
+            {(!hideAdminControls || user?.isAdmin || (user?.id && event.creatorUserId === user.id)) && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSelectedViewsEvent(event);
+                }}
+                className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-3 sm:px-4 text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:border-blue-500/40 transition-all cursor-pointer active:scale-95 shadow-sm"
+                title={lang === 'ar' ? 'انقر لعرض تفاصيل وإحصائيات مشاهدات الإعلان 📊' : 'Click to view ad views analytics 📊'}
+              >
+                <Eye className="h-4 w-4 shrink-0" />
                 <span className="font-mono">{event.viewsCount || 0}</span>
-              </div>
+              </button>
             )}
             <button
               onClick={(e) => {

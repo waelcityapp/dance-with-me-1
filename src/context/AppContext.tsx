@@ -31,7 +31,8 @@ import {
   saveBookingToFirestore,
   subscribeToBookings,
   subscribeToAdSubmissions,
-  deleteBookingFromFirestore
+  deleteBookingFromFirestore,
+  incrementEventViewsInFirestore
 } from '../lib/firebase';
 import { PricingConfig } from '../types';
 import { MODERN_FEATURED_EVENTS } from '../data/defaultEvents';
@@ -80,6 +81,9 @@ interface AppContextType {
   updateEventPosition: (eventId: string, position: number) => void;
   editingEvent: DanceEvent | null;
   setEditingEvent: (ev: DanceEvent | null) => void;
+  selectedViewsEvent: DanceEvent | null;
+  setSelectedViewsEvent: (ev: DanceEvent | null) => void;
+  recordEventView: (eventId: string) => void;
   notifications: NotificationItem[];
   setNotifications: React.Dispatch<React.SetStateAction<NotificationItem[]>>;
   activePushToast: NotificationItem | null;
@@ -382,6 +386,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [bookings, setBookings] = useState<EventBooking[]>([]);
   const [userAdSubmissions, setUserAdSubmissions] = useState<AdSubmission[]>([]);
   const [selectedBookingEvent, setSelectedBookingEvent] = useState<DanceEvent | null>(null);
+  const [selectedViewsEvent, setSelectedViewsEvent] = useState<DanceEvent | null>(null);
+  const viewedEventsSessionRef = React.useRef<Set<string>>(new Set());
+  const processedRefsSet = React.useRef<Set<string>>(new Set());
+
+  const recordEventView = (eventId: string) => {
+    if (!eventId) return;
+    if (viewedEventsSessionRef.current.has(eventId)) return;
+    viewedEventsSessionRef.current.add(eventId);
+
+    // Increment in Firestore in background without blocking
+    incrementEventViewsInFirestore(eventId).catch(() => {});
+  };
 
   // App Assets / Branding state loaded from Firestore with fallback to default paths
   const [appAssets, setAppAssets] = useState<any>(() => {
@@ -527,7 +543,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Auto assign reference numbers starting from 1001 for any events that do not have one
       if (liveEvents && liveEvents.length > 0) {
-        const missing = liveEvents.filter(e => !e.eventRef && !e.isEmpty);
+        const missing = liveEvents.filter(e => !e.eventRef && !e.isEmpty && !processedRefsSet.current.has(e.id));
         if (missing.length > 0) {
           const assignedRefs = liveEvents.map(e => e.eventRef).filter((r): r is number => typeof r === 'number');
           let maxRef = assignedRefs.length > 0 ? Math.max(...assignedRefs) : 1000;
@@ -537,6 +553,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const sortedMissing = [...missing].sort((a, b) => new Date(a.uploadDate || 0).getTime() - new Date(b.uploadDate || 0).getTime());
           
           sortedMissing.forEach(async (ev) => {
+            processedRefsSet.current.add(ev.id);
             maxRef += 1;
             const updatedEv = { ...ev, eventRef: maxRef };
             await saveEventToFirestore(updatedEv);
@@ -1463,6 +1480,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateEventPosition,
       editingEvent,
       setEditingEvent,
+      selectedViewsEvent,
+      setSelectedViewsEvent,
+      recordEventView,
       notifications,
       setNotifications,
       activePushToast,

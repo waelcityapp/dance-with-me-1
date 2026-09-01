@@ -198,76 +198,41 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Hero Header */}
-      <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl dark:shadow-2xl space-y-4 transition-colors">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white leading-tight">
-              {lang === 'ar' ? 'اكتشف فعاليات و حفلات' : 'Discover Events & Parties'}
-            </h2>
-            <h3 className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 leading-tight">
-              {lang === 'ar' ? 'اللاتينى | الشرقى | الغربي| متنوعات' : 'Latin | Oriental | Western | Variety'}
-            </h3>
-            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-2 font-medium leading-relaxed">
-              {lang === 'ar' ? 'سالسا بتشاتا كيزومبا تانجو بول روم  شرقى غربى كريوكى متنوعات فى ارقى الاماكن و المنتجعات' : 'Salsa, Bachata, Kizomba, Tango, Ballroom, Oriental, Western, Karaoke, Variety in the finest venues & resorts'}
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center md:items-end gap-1.5 shrink-0">
-            <button
-              onClick={() => onOpenCreate()}
-              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 px-6 py-3.5 text-xs sm:text-sm font-bold text-neutral-950 shadow-xl transition-colors shrink-0 cursor-pointer w-full sm:w-auto"
-            >
-              <PlusCircle className="h-4 w-4 stroke-[2.5]" />
-              <span>{lang === 'ar' ? 'إضافة إعلان' : 'Post Ad'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenCreate('free')}
-              className="group flex items-center justify-center gap-1 py-0.5 px-2 text-center cursor-pointer transition-transform hover:scale-105 active:scale-95 rounded-lg hover:bg-emerald-500/10"
-              title={lang === 'ar' ? 'انقر لإضافة إعلان مجاني مباشرة' : 'Click to post a free ad directly'}
-            >
-              <span className="text-[11px] sm:text-xs font-black text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors flex items-center gap-1 drop-shadow-sm">
-                <span>🎁</span>
-                <span>{lang === 'ar' ? 'مجاناً حتى 1 نوفمبر' : 'Free until Nov 1st'}</span>
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Why Book Banner directly under Post Ad button */}
+      {/* Sleek Benefits Bar - Why Book With CityEVE */}
+      <div>
         <motion.div
           whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => setShowWhyBookModal(true)}
-          className="relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-xl shadow-red-900/10"
+          className="relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-md dark:shadow-xl"
         >
-          {/* Continuous spinning gradient effect */}
-          <div className="absolute inset-[-100%] animate-[spin_4s_linear_infinite] opacity-80 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]"
-               style={{
-                 background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #8b5cf6, #ec4899, #ef4444)'
-               }} 
+          {/* Continuous subtle spinning gradient */}
+          <div 
+            className="absolute inset-[-100%] animate-[spin_5s_linear_infinite] opacity-70 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]"
+            style={{
+              background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #ec4899, #ef4444)'
+            }} 
           />
           
           {/* Inner Content */}
-          <div className="relative flex items-center justify-between bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md rounded-[14px] px-5 py-3.5 w-full h-full">
+          <div className="relative flex items-center justify-between bg-white dark:bg-neutral-900 rounded-[14px] p-3.5 sm:p-4 w-full h-full">
             <div className="flex items-center gap-3">
-              <Sparkles className="h-5 w-5 text-red-500 animate-pulse" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-amber-500 to-red-600 dark:from-red-500 dark:via-amber-400 dark:to-red-500 font-black text-base sm:text-xl tracking-wide drop-shadow-sm bg-[length:200%_auto]">
-                {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
-              </span>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 group-hover:rotate-6 transition-transform">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="text-right">
+                <span className="text-sm sm:text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-500 dark:from-red-400 dark:to-amber-400">
+                  {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
+                </span>
+                <span className="block text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
+                  {lang === 'ar' ? 'اكتشف مميزات التذاكر الفورية والخصومات الحصرية' : 'Discover instant tickets & exclusive discounts'}
+                </span>
+              </div>
             </div>
             
-            <motion.div 
-              animate={{ x: lang === 'ar' ? [-5, 0, -5] : [5, 0, 5] }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-              className="flex items-center gap-1.5 bg-red-500/10 rounded-full px-3 py-1.5 border border-red-500/30 shrink-0"
-            >
-              <span className="text-[10px] font-bold text-red-600 dark:text-red-400 hidden sm:block uppercase tracking-wider">
-                {lang === 'ar' ? 'اكتشف' : 'Discover'}
-              </span>
-              {lang === 'ar' ? <ArrowLeft className="h-4 w-4 text-red-500" /> : <ArrowRight className="h-4 w-4 text-red-500" />}
-            </motion.div>
+            <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
+              {lang === 'ar' ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+            </div>
           </div>
         </motion.div>
       </div>

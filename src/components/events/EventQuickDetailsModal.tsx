@@ -24,13 +24,16 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
   onOpenMap,
   onOpenShare,
 }) => {
-  const { lang, user, toggleLikeEvent, setSelectedBookingEvent, openGuestAlert } = useApp();
+  const { lang, user, toggleLikeEvent, setSelectedBookingEvent, openGuestAlert, recordEventView } = useApp();
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    if (event && event.id) {
+      recordEventView(event.id);
+    }
     if (event && videoRef.current) {
       videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
     }

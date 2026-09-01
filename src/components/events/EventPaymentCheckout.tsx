@@ -252,7 +252,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       receiptImage: receiptImage || undefined,
       status: 'pending',
       submittedAt: new Date().toISOString(),
-      adType: adType,
+      adType: adType as ('vip' | 'standard' | 'free'),
       eventData: {
         ...eventData,
         adType: adType,
