@@ -23,6 +23,7 @@ export const BookingModal: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [bookingResult, setBookingResult] = useState<any | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Reset local state when modal opens/closes
   useEffect(() => {
@@ -33,7 +34,47 @@ export const BookingModal: React.FC = () => {
       setReceiptImage(null);
       setBookingResult(null);
       setIsSubmitting(false);
+      setCopiedLink(false);
     }
+  }, [selectedBookingEvent]);
+
+  // Support receiving shared image via Web Share Target (Service Worker Cache / IndexedDB) or Global Paste
+  useEffect(() => {
+    if (!selectedBookingEvent) return;
+
+    const checkSharedImage = async () => {
+      if ('caches' in window) {
+        try {
+          const cache = await caches.open('cityeve-share-target');
+          const response = await cache.match('/shared-receipt-image');
+          if (response) {
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setReceiptImage(reader.result as string);
+            };
+            reader.readAsDataURL(blob);
+            await cache.delete('/shared-receipt-image');
+          }
+        } catch (e) {
+          // Cache check failed or not supported
+        }
+      }
+    };
+
+    checkSharedImage();
+
+    // Clipboard Paste Listener (Ctrl+V / Long Press Paste anywhere in modal)
+    const handlePaste = (e: ClipboardEvent) => {
+      if (e.clipboardData && e.clipboardData.files.length > 0) {
+        const file = e.clipboardData.files[0];
+        if (file.type.startsWith('image/')) {
+          readImageFile(file);
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
   }, [selectedBookingEvent]);
 
   if (!selectedBookingEvent) return null;
@@ -52,8 +93,6 @@ export const BookingModal: React.FC = () => {
   const isPhoneValid = phone.trim().length >= 11 && /^\d+$/.test(phone.trim());
   const isNameValid = name.trim().split(' ').filter(Boolean).length >= 2;
   const isFormValid = isNameValid && isPhoneValid && receiptImage !== null && !isSubmitting;
-
-  const [copiedLink, setCopiedLink] = useState(false);
 
   const INSTAPAY_LINK = 'https://ipn.eg/S/wael1011/instapay/2dvaYQ';
   const INSTAPAY_HANDLE = 'wael1011@instapay';

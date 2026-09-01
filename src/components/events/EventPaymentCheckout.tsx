@@ -50,6 +50,7 @@ export interface EventPaymentCheckoutProps {
   cloudinaryConfig?: { cloudName: string; uploadPreset: string };
   eventData?: any;
   adType?: 'vip' | 'standard' | 'free';
+  contentLangMode?: 'both' | 'ar' | 'en' | null;
   onBack: () => void;
   onSuccessComplete: () => void;
 }
@@ -70,6 +71,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   cloudinaryConfig,
   eventData,
   adType = 'standard',
+  contentLangMode = 'both',
   onBack,
   onSuccessComplete
 }) => {
@@ -253,6 +255,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       status: 'pending',
       submittedAt: new Date().toISOString(),
       adType: adType as ('vip' | 'standard' | 'free'),
+      contentLangMode: (contentLangMode as any) || 'both',
       eventData: {
         ...eventData,
         adType: adType,

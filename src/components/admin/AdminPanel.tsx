@@ -50,8 +50,9 @@ import {
   TrendingUp,
   MousePointerClick,
   Bell,
-  Smartphone
-, Maximize2, Minimize2, Languages, Loader2 } from 'lucide-react';
+  Smartphone,
+  Globe,
+  Maximize2, Minimize2, Languages, Loader2 } from 'lucide-react';
 import { QrCode, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle, AccountTier } from '../../types';
@@ -3822,6 +3823,9 @@ export const AdminPanel: React.FC = () => {
                         }`}>
                           {sub.status}
                         </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-sky-500/10 text-sky-300 border border-sky-500/30">
+                          {sub.contentLangMode === 'both' ? '🌐 عربي + EN' : sub.contentLangMode === 'ar' ? '🇸🇦 عربي فقط' : sub.contentLangMode === 'en' ? '🇬🇧 English Only' : '🌐 عربي + EN'}
+                        </span>
                       </div>
                       <h4 className="font-bold text-white text-sm mt-1.5">{sub.titleAr} <span className="text-neutral-400 font-normal">({sub.advertiserName})</span></h4>
                       <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
@@ -4040,6 +4044,29 @@ export const AdminPanel: React.FC = () => {
         <div className="space-y-4">
           {filteredSubmissions.map((sub) => {
             const displayAdType = sub.adType || (sub.pricing?.total === 0 ? 'free' : 'standard');
+            
+            // Smart language detection: Explicit selection or inferred from titles/data
+            const adLangMode: 'both' | 'ar' | 'en' = (() => {
+              if (sub.contentLangMode) return sub.contentLangMode;
+              const titleArVal = (sub.titleAr || sub.eventData?.titleAr || '').trim();
+              const titleEnVal = (sub.titleEn || sub.eventData?.titleEn || '').trim();
+              const descArVal = (sub.eventData?.descriptionAr || '').trim();
+              const descEnVal = (sub.eventData?.descriptionEn || '').trim();
+
+              const hasAr = Boolean(titleArVal && !/^[A-Za-z0-9\s.,!?'"()-]+$/.test(titleArVal)) || Boolean(descArVal && /[\u0600-\u06FF]/.test(descArVal));
+              const hasEn = Boolean(titleEnVal && !/[\u0600-\u06FF]/.test(titleEnVal)) || Boolean(descEnVal && /[A-Za-z]/.test(descEnVal));
+
+              if (titleArVal && titleEnVal && titleArVal.toLowerCase() === titleEnVal.toLowerCase()) {
+                if (/[\u0600-\u06FF]/.test(titleArVal)) return 'ar';
+                return 'en';
+              }
+
+              if (hasAr && hasEn) return 'both';
+              if (hasAr) return 'ar';
+              if (hasEn) return 'en';
+              return 'both';
+            })();
+
             return (
             <motion.div
               key={sub.id}
@@ -4077,6 +4104,25 @@ export const AdminPanel: React.FC = () => {
                     {displayAdType !== 'vip' && displayAdType !== 'free' && <FileText className="h-3.5 w-3.5" />}
                     {displayAdType === 'vip' ? (lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Ad') : displayAdType === 'free' ? (lang === 'ar' ? 'إعلان مجاني' : 'Free Ad') : (lang === 'ar' ? 'إعلان عادي' : 'Standard Ad')}
                   </span>
+
+                  {/* Selected Language Badge */}
+                  <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold border flex items-center gap-1.5 shadow-sm ${
+                    adLangMode === 'both' 
+                      ? 'bg-sky-500/15 text-sky-300 border-sky-500/40' 
+                      : adLangMode === 'ar'
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                      : 'bg-purple-500/15 text-purple-300 border-purple-500/40'
+                  }`}>
+                    <Globe className="h-3.5 w-3.5" />
+                    {adLangMode === 'both' ? (
+                      <span>{lang === 'ar' ? '🌐 كِلا اللغتين (عربي + English)' : '🌐 Both (AR + EN)'}</span>
+                    ) : adLangMode === 'ar' ? (
+                      <span>{lang === 'ar' ? '🇸🇦 عربي فقط' : '🇸🇦 Arabic Only'}</span>
+                    ) : (
+                      <span>{lang === 'ar' ? '🇬🇧 إنجليزي فقط' : '🇬🇧 English Only'}</span>
+                    )}
+                  </span>
+
                   <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
                     sub.status === 'pending' ? 'bg-amber-500 text-neutral-950 animate-pulse' :
                     sub.status === 'approved' ? 'bg-emerald-500 text-neutral-950' : 'bg-red-500 text-white'
@@ -4102,15 +4148,43 @@ export const AdminPanel: React.FC = () => {
                   <span className="text-xs font-mono text-neutral-400 block">{sub.phone}</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
-                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
-                    <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                    <span>{lang === 'ar' ? 'عنوان ونوع الإعلان:' : 'Ad Title & Type:'}</span>
+                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1.5">
+                  <span className="text-[11px] text-neutral-400 flex items-center justify-between font-medium">
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      <span>{lang === 'ar' ? 'عنوان وتفاصيل الإعلان:' : 'Ad Title & Details:'}</span>
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                      adLangMode === 'both' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                      adLangMode === 'ar' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                      'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                    }`}>
+                      {adLangMode === 'both' ? (lang === 'ar' ? 'لغتين' : 'Both') : adLangMode === 'ar' ? (lang === 'ar' ? 'عربي فقط' : 'AR Only') : (lang === 'ar' ? 'إنجليزي فقط' : 'EN Only')}
+                    </span>
                   </span>
-                  <span className="text-sm font-bold text-white block truncate">
-                    {lang === 'ar' ? sub.titleAr : sub.titleEn}
-                  </span>
-                  <div className="flex items-center gap-2 mt-1">
+
+                  {adLangMode === 'both' ? (
+                    <div className="space-y-1">
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-800 text-amber-400 border border-amber-500/20 shrink-0">عربي</span>
+                        <span className="truncate">{sub.titleAr || sub.eventData?.titleAr || '—'}</span>
+                      </div>
+                      <div className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-800 text-sky-400 border border-sky-500/20 shrink-0 font-mono">EN</span>
+                        <span className="truncate font-sans">{sub.titleEn || sub.eventData?.titleEn || '—'}</span>
+                      </div>
+                    </div>
+                  ) : adLangMode === 'ar' ? (
+                    <div className="text-sm font-bold text-white block truncate">
+                      {sub.titleAr || sub.eventData?.titleAr || sub.titleEn}
+                    </div>
+                  ) : (
+                    <div className="text-sm font-bold text-white block truncate font-sans">
+                      {sub.titleEn || sub.eventData?.titleEn || sub.titleAr}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 mt-1 pt-1 border-t border-white/5">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
                       displayAdType === 'vip' 
                         ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 

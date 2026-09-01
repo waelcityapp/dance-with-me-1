@@ -655,6 +655,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         pendingFile={pendingFile}
         cloudinaryConfig={{ cloudName: cloudinaryCloudName, uploadPreset: cloudinaryUploadPreset }}
         adType={adType as 'vip' | 'standard' | 'free'}
+        contentLangMode={contentLangMode}
         eventData={{
           titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
           titleEn: titleEn || 'Royal Salsa & Bachata Night',

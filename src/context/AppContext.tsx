@@ -399,8 +399,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     incrementEventViewsInFirestore(eventId).catch(() => {});
   };
 
-  // App Assets / Branding state loaded from Firestore with fallback to default paths
+  // App Assets / Branding state loaded from localStorage immediately, then synced with Firestore
   const [appAssets, setAppAssets] = useState<any>(() => {
+    try {
+      const cached = localStorage.getItem('cityeve_app_assets');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') {
+          // Preload banner image if present in cache
+          if (parsed.app_hero_banner_url) {
+            const preloadImg = new Image();
+            preloadImg.src = parsed.app_hero_banner_url;
+          }
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // LocalStorage fallback
+    }
     return {
       id: 'current_branding',
       app_icon_url: 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png',
@@ -423,7 +439,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBrandingAssets = async (newAssets: any): Promise<boolean> => {
     const success = await updateAppAssets(newAssets);
     if (success) {
-      setAppAssets((prev: any) => ({ ...prev, ...newAssets }));
+      setAppAssets((prev: any) => {
+        const updated = { ...prev, ...newAssets };
+        try {
+          localStorage.setItem('cityeve_app_assets', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
     }
     return success;
   };
@@ -564,7 +586,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 2b. Subscribe to live app assets collection
     const unsubAssets = subscribeToAppAssets((liveAssets) => {
-      if (liveAssets) setAppAssets(liveAssets);
+      if (liveAssets) {
+        setAppAssets(liveAssets);
+        try {
+          localStorage.setItem('cityeve_app_assets', JSON.stringify(liveAssets));
+          if (liveAssets.app_hero_banner_url) {
+            const preloadImg = new Image();
+            preloadImg.src = liveAssets.app_hero_banner_url;
+          }
+        } catch (e) {}
+      }
     });
 
     

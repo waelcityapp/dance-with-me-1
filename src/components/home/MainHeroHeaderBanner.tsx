@@ -17,6 +17,17 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
 
   const customBannerUrl = appAssets?.app_hero_banner_url;
 
+  // Optimize Cloudinary banner images for ultra-fast load speed (WebP/AVIF auto compression)
+  const optimizedBannerSrc = React.useMemo(() => {
+    if (!customBannerUrl) return '';
+    if (customBannerUrl.includes('res.cloudinary.com') && customBannerUrl.includes('/image/upload/')) {
+      if (!customBannerUrl.includes('/f_auto') && !customBannerUrl.includes('/q_auto')) {
+        return customBannerUrl.replace('/image/upload/', '/image/upload/f_auto,q_auto,w_1400/');
+      }
+    }
+    return customBannerUrl;
+  }, [customBannerUrl]);
+
   const handleExplore = () => {
     if (onExploreClick) {
       onExploreClick();
@@ -37,12 +48,14 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
     >
       {/* If custom banner image is provided by admin, render it seamlessly with translucent bottom overlay */}
       {customBannerUrl ? (
-        <div className="relative w-full max-w-7xl mx-auto overflow-hidden">
+        <div className="relative w-full max-w-7xl mx-auto overflow-hidden bg-neutral-950 min-h-[180px] sm:min-h-[280px]">
           <img
-            src={customBannerUrl}
+            src={optimizedBannerSrc || customBannerUrl}
             alt="CityEVE - اكبر الحفلات والفعاليات في جيبك"
-            className="w-full h-auto object-cover max-h-[480px] sm:max-h-[540px]"
+            className="w-full h-auto object-cover max-h-[480px] sm:max-h-[540px] will-change-transform"
             loading="eager"
+            fetchPriority="high"
+            decoding="async"
             referrerPolicy="no-referrer"
           />
           {/* Light gentle bottom gradient */}
