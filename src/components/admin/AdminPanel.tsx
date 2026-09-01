@@ -1817,19 +1817,20 @@ export const AdminPanel: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-md dark:shadow-xl mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors"
         >
           <div className="flex items-center gap-4">
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
-              adminSection === 'submissions' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400' :
-              adminSection === 'database' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400' :
-              adminSection === 'support' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
-              adminSection === 'security' ? 'bg-red-500/10 border border-red-500/30 text-red-400' :
-              adminSection === 'branding' ? 'bg-pink-500/10 border border-pink-500/30 text-pink-400' :
-              adminSection === 'pricing' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
-              adminSection === 'analytics' ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400' :
-              adminSection === 'create_ad_admin' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400' :
-              'bg-purple-500/10 border border-purple-500/30 text-purple-400'
+              adminSection === 'submissions' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400' :
+              adminSection === 'database' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-500 dark:text-blue-400' :
+              adminSection === 'support' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400' :
+              adminSection === 'security' ? 'bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-400' :
+              adminSection === 'branding' ? 'bg-pink-500/10 border border-pink-500/30 text-pink-500 dark:text-pink-400' :
+              adminSection === 'pricing' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400' :
+              adminSection === 'analytics' ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 dark:text-cyan-400' :
+              adminSection === 'create_ad_admin' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 dark:text-indigo-400' :
+              adminSection === 'bookings' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400' :
+              'bg-purple-500/10 border border-purple-500/30 text-purple-500 dark:text-purple-400'
             }`}>
               {adminSection === 'submissions' && <Crown className="h-6 w-6" />}
               {adminSection === 'database' && <Database className="h-6 w-6 animate-pulse" />}
@@ -1840,9 +1841,10 @@ export const AdminPanel: React.FC = () => {
               {adminSection === 'pricing' && <DollarSign className="h-6 w-6" />}
               {adminSection === 'analytics' && <BarChart3 className="h-6 w-6" />}
               {adminSection === 'create_ad_admin' && <FilePlus className="h-6 w-6 animate-pulse" />}
+              {adminSection === 'bookings' && <FileText className="h-6 w-6" />}
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">
+              <h2 className="text-xl font-black text-neutral-900 dark:text-white">
                 {adminSection === 'submissions' && (lang === 'ar' ? '📋 مراجعة طلبات الإعلانات VIP' : '📋 VIP Ad Submissions')}
                 {adminSection === 'database' && (lang === 'ar' ? '🗄️ مستكشف قاعدة البيانات المباشر (Firestore)' : '🗄️ Live Database Inspector (Firestore)')}
                 {adminSection === 'support' && (lang === 'ar' ? '💬 صندوق رسائل ومقترحات التطبيق' : '💬 Support Messages & Feedback')}
@@ -1850,173 +1852,11 @@ export const AdminPanel: React.FC = () => {
                 {adminSection === 'security' && (lang === 'ar' ? '🔒 إدارة الأمان وجدار الحماية وسجلات الاختراق' : '🔒 Security Firewall & Violation Logs')}
                 {adminSection === 'branding' && (lang === 'ar' ? '🎨 هوية التطبيق وتطوير المظهر والشعارات' : '🎨 App Identity & Visual Branding')}
                 {adminSection === 'pricing' && (lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices')}
-                
-      {adminSection === 'pricing' && (
-        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-          <div className="rounded-3xl border border-emerald-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl relative overflow-hidden">
-            <h3 className="text-lg sm:text-xl font-extrabold text-white mb-2 flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-emerald-400 animate-pulse" />
-              <span>{lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}</span>
-            </h3>
-            
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* VIP Pricing Form */}
-              <div className="bg-neutral-950 p-5 rounded-2xl border border-amber-500/30">
-                <h4 className="text-amber-400 font-bold flex items-center gap-2 mb-4">
-                  <Crown className="h-4 w-4" />
-                  {lang === 'ar' ? 'أسعار الإعلان المميز (VIP)' : 'VIP Ad Pricing'}
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.vip?.basePrice ?? 100}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, basePrice: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.vip?.extraDayPrice ?? 20}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, extraDayPrice: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.vip?.videoSurchargePercentage ?? 20}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, videoSurchargePercentage: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Standard Pricing Form */}
-              <div className="bg-neutral-950 p-5 rounded-2xl border border-neutral-700">
-                <h4 className="text-white font-bold flex items-center gap-2 mb-4">
-                  <FileText className="h-4 w-4" />
-                  {lang === 'ar' ? 'أسعار الإعلان العادي (Standard)' : 'Standard Ad Pricing'}
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.standard?.basePrice ?? 50}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, basePrice: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.standard?.extraDayPrice ?? 10}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, extraDayPrice: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.standard?.videoSurchargePercentage ?? 10}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, videoSurchargePercentage: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Free Pricing Form */}
-              <div className="bg-neutral-950 p-5 rounded-2xl border border-green-500/30">
-                <h4 className="text-green-400 font-bold flex items-center gap-2 mb-4">
-                  <CheckCircle className="h-4 w-4" />
-                  {lang === 'ar' ? 'الإعلان المجاني (Free)' : 'Free Ad Pricing'}
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.free?.basePrice ?? 0}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, basePrice: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.free?.extraDayPrice ?? 0}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, extraDayPrice: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-neutral-400 block mb-1">
-                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
-                    </label>
-                    <input 
-                      type="number"
-                      value={localPricingConfig?.free?.videoSurchargePercentage ?? 0}
-                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, videoSurchargePercentage: Number(e.target.value) }})}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={async () => {
-                  setSavingPricing(true);
-                  await updatePricingConfig(localPricingConfig as any);
-                  setSavingPricing(false);
-                }}
-                disabled={savingPricing}
-                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-neutral-950 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
-              >
-                {savingPricing ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-                {lang === 'ar' ? 'حفظ الأسعار في قاعدة البيانات' : 'Save Prices to Database'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-{adminSection === 'analytics' && (lang === 'ar' ? '📊 إحصائيات زوار الموقع الحقيقيين واهتمام الجمهور' : '📊 Real-time Analytics & Audience Interest')}
+                {adminSection === 'analytics' && (lang === 'ar' ? '📊 إحصائيات زوار الموقع الحقيقيين واهتمام الجمهور' : '📊 Real-time Analytics & Audience Interest')}
                 {adminSection === 'create_ad_admin' && (lang === 'ar' ? '➕ إنشاء إعلان / حفلة جديدة فوراً بواسطة الإدارة' : '➕ Create & Publish Event Immediately (Admin)')}
                 {adminSection === 'bookings' && (lang === 'ar' ? '🎟️ مراجعة وتأكيد حجوزات التذاكر والحفلات' : '🎟️ Review & Confirm Ticket Bookings')}
               </h2>
-              <p className="text-xs text-neutral-400 mt-1">
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
                 {adminSection === 'submissions' && (lang === 'ar' ? 'مراجعة وتفعيل الإعلانات الفاخرة وتتبع إيصالات التحويل البنكي.' : 'Manage premium ad campaigns, analyze bank receipts, and activate VIP slots.')}
                 {adminSection === 'database' && (lang === 'ar' ? 'استعراض البيانات والفعاليات والإشعارات وحذف المخلفات بشكل مباشر.' : 'Real-time viewer of live Firestore collections, schemas, and events.')}
                 {adminSection === 'support' && (lang === 'ar' ? 'التواصل المباشر وحل المشاكل التقنية للأعضاء وإرسال الردود الرسمية.' : 'Read user feedback and inquiries directly and send notifications.')}
@@ -2036,7 +1876,7 @@ export const AdminPanel: React.FC = () => {
               setAdminSection(null);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="flex items-center gap-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700/60 px-4 py-2.5 text-xs font-bold text-neutral-200 transition-all cursor-pointer self-start sm:self-center shrink-0"
+            className="flex items-center gap-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700/60 px-4 py-2.5 text-xs font-bold text-neutral-800 dark:text-neutral-200 transition-all cursor-pointer self-start sm:self-center shrink-0 shadow-xs"
           >
             <ArrowLeft className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
             <span>{lang === 'ar' ? 'الرجوع للوحة التحكم الرئيسية' : 'Back to Admin Dashboard'}</span>
@@ -2048,7 +1888,7 @@ export const AdminPanel: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-3xl border-2 border-amber-500/50 bg-neutral-900 dark:bg-gradient-to-r dark:from-neutral-900 dark:via-neutral-900/95 dark:to-amber-950/40 p-6 sm:p-8 shadow-2xl gold-glow relative overflow-hidden"
+            className="rounded-3xl border-2 border-amber-500/50 bg-white dark:bg-neutral-900 dark:bg-gradient-to-r dark:from-neutral-900 dark:via-neutral-900/95 dark:to-amber-950/40 p-6 sm:p-8 shadow-lg dark:shadow-2xl gold-glow relative overflow-hidden transition-colors"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
             
@@ -2059,14 +1899,14 @@ export const AdminPanel: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    <h2 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
                       {lang === 'ar' ? 'لوحة تحكم ومراجعة الإعلانات الفاخرة' : 'VIP Ads Admin Panel'}
                     </h2>
                     <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-neutral-950 font-black text-xs">
                       ADMIN
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-neutral-300 font-medium mt-1">
+                  <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 font-medium mt-1">
                     {lang === 'ar' 
                       ? 'مراجعة وتفعيل إعلانات وفواتير المدربين والمنظمين المشتركين، وإشعارهم فورياً عبر فايبر بيز وواتساب.' 
                       : 'Review and approve VIP event submissions and invoices from instructors and organizers.'}
@@ -2078,7 +1918,7 @@ export const AdminPanel: React.FC = () => {
                 <button
                   onClick={handleAssignAllAdsToAdmin}
                   disabled={cleaningUp}
-                  className="flex items-center gap-2 rounded-xl bg-neutral-800 border border-purple-500/30 px-3.5 py-2.5 text-xs font-bold text-purple-300 hover:bg-purple-500/20 hover:border-purple-500 transition-all cursor-pointer shadow-md"
+                  className="flex items-center gap-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-neutral-800 border border-purple-300 dark:border-purple-500/30 px-3.5 py-2.5 text-xs font-bold text-purple-700 dark:text-purple-300 hover:border-purple-500 transition-all cursor-pointer shadow-xs"
                   title="نقل جميع الإعلانات الحالية لملفك الشخصي (أدمن)"
                 >
                   <User className={`h-4 w-4 ${cleaningUp ? 'animate-spin' : ''}`} />
@@ -2088,7 +1928,7 @@ export const AdminPanel: React.FC = () => {
                 <button
                   onClick={handleCleanUpClutter}
                   disabled={cleaningUp}
-                  className="flex items-center gap-2 rounded-xl bg-neutral-800 border border-red-500/30 px-3.5 py-2.5 text-xs font-bold text-red-300 hover:bg-red-500/20 hover:border-red-500 transition-all cursor-pointer shadow-md"
+                  className="flex items-center gap-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-neutral-800 border border-red-300 dark:border-red-500/30 px-3.5 py-2.5 text-xs font-bold text-red-700 dark:text-red-300 hover:border-red-500 transition-all cursor-pointer shadow-xs"
                   title="حذف الإعلانات المكررة وبدون صور لتقليل الزحمة"
                 >
                   <Trash2 className={`h-4 w-4 ${cleaningUp ? 'animate-spin' : ''}`} />
@@ -2100,7 +1940,7 @@ export const AdminPanel: React.FC = () => {
                     setActiveTab('explore');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 px-4 py-2.5 text-xs font-bold text-neutral-300 hover:text-white transition-all border border-neutral-700/60"
+                  className="flex items-center gap-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800/90 dark:hover:bg-neutral-700 px-4 py-2.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all border border-neutral-300 dark:border-neutral-700/60 shadow-xs cursor-pointer"
                 >
                   <ArrowLeft className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
                   <span>{lang === 'ar' ? 'الرجوع للرئيسية' : 'Return to Explore'}</span>
@@ -2109,32 +1949,32 @@ export const AdminPanel: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Glowing Stats Summary */}
+          {/* Stats Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 text-center">
-              <span className="text-xs text-neutral-400 block font-medium">{lang === 'ar' ? 'إجمالي طلبات الإعلانات' : 'Total Ad Submissions'}</span>
-              <span className="text-2xl font-black text-amber-400 mt-1 block font-mono">{submissions.length}</span>
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 text-center shadow-xs">
+              <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-bold">{lang === 'ar' ? 'إجمالي طلبات الإعلانات' : 'Total Ad Submissions'}</span>
+              <span className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 block font-mono">{submissions.length}</span>
             </div>
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 text-center">
-              <span className="text-xs text-neutral-400 block font-medium">{lang === 'ar' ? 'المستخدمين المسجلين' : 'Registered Users'}</span>
-              <span className="text-2xl font-black text-purple-400 mt-1 block font-mono">{allUsers.length}</span>
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 text-center shadow-xs">
+              <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-bold">{lang === 'ar' ? 'المستخدمين المسجلين' : 'Registered Users'}</span>
+              <span className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">{allUsers.length}</span>
             </div>
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 text-center">
-              <span className="text-xs text-neutral-400 block font-medium">{lang === 'ar' ? 'الرسائل المعلقة' : 'Unreplied Support'}</span>
-              <span className="text-2xl font-black text-emerald-400 mt-1 block font-mono">
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 text-center shadow-xs">
+              <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-bold">{lang === 'ar' ? 'الرسائل المعلقة' : 'Unreplied Support'}</span>
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">
                 {supportMessages.filter(m => !m.reply).length}
               </span>
             </div>
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 text-center">
-              <span className="text-xs text-neutral-400 block font-medium">{lang === 'ar' ? 'الفعاليات بقاعدة البيانات' : 'Total Database Events'}</span>
-              <span className="text-2xl font-black text-blue-400 mt-1 block font-mono">{events.length}</span>
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 text-center shadow-xs">
+              <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-bold">{lang === 'ar' ? 'الفعاليات بقاعدة البيانات' : 'Total Database Events'}</span>
+              <span className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block font-mono">{events.length}</span>
             </div>
           </div>
 
           {usersError && (
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-200 text-xs sm:text-sm space-y-2">
+            <div className="rounded-2xl border border-red-500/30 bg-red-50 dark:bg-red-500/10 p-4 text-red-900 dark:text-red-200 text-xs sm:text-sm space-y-2 shadow-xs">
               <p className="font-bold flex items-center gap-2">
-                <AlertCircle className="h-4.5 w-4.5 text-red-400 shrink-0" />
+                <AlertCircle className="h-4.5 w-4.5 text-red-500 shrink-0" />
                 <span>
                   {lang === 'ar' 
                     ? '⚠️ تنبيه قاعدة البيانات: فشل تحميل قائمة المستخدمين بسبب صلاحيات الوصول!' 
@@ -2159,28 +1999,28 @@ export const AdminPanel: React.FC = () => {
                 setAdminSection('submissions');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-amber-500/30 hover:border-amber-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-xl hover:shadow-amber-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-amber-500 dark:hover:border-amber-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
                     <Crown className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black font-mono">
+                  <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-black font-mono">
                     {submissions.filter(s => s.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '📋 مراجعة طلبات الإعلانات' : '📋 VIP Ad Submissions'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'اعتماد وتفعيل إعلانات VIP، مراجعة إيصالات الدفع، إرسال إشعارات التفعيل التلقائية.'
                     : 'Approve or decline premium advertisement slots, review bank transfer documents, and notify advertisers.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-amber-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-amber-600 dark:text-amber-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
@@ -2192,321 +2032,330 @@ export const AdminPanel: React.FC = () => {
                 setAdminSection('bookings');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-emerald-500 dark:hover:border-emerald-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                     <FileText className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black font-mono">
+                  <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-black font-mono">
                     {bookings.filter(b => b.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '🎟️ إدارة وحجوزات التذاكر' : '🎟️ Ticket Bookings Panel'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'التحقق من تحويلات فودافون كاش ومطابقة الإيصالات، وتأكيد حجز التذاكر وإصدار الباركود وكود الدخول للحضور.'
                     : 'Match Instapay/Vodafone Cash receipts, activate attendee tickets, and issue check-in gate barcodes.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-emerald-600 dark:text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
 
-            {/* Card 2: Database */}
+            {/* Card 3: Database */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('database');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-blue-500/30 hover:border-blue-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-blue-950/20 p-6 shadow-xl hover:shadow-blue-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-blue-500 dark:hover:border-blue-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-blue-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
                     <Database className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-black font-mono">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 text-[10px] font-black font-mono">
                     LIVE
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '🗄️ مستكشف قاعدة البيانات' : '🗄️ Live Database Inspector'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'استعراض مستندات ومجموعات Firestore الحية، تعديل وحذف البيانات يدوياً وتصدير النسخ الاحتياطية.'
                     : 'Inspect live Firestore collections directly, modify data, delete duplicate records, and download backups.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-blue-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-blue-600 dark:text-blue-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
 
-            {/* Card 3: Support */}
+            {/* Card 4: Support */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('support');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-emerald-500 dark:hover:border-emerald-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                     <MessageSquare className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black font-mono">
+                  <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-black font-mono">
                     {supportMessages.filter(m => !m.reply).length} {lang === 'ar' ? 'معلق' : 'Unreplied'}
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '💬 رسائل ومقترحات التطبيق' : '💬 Support Messages & Feedback'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'قراءة استفسارات المستخدمين والرد عليها، وإرسال تنبيهات رسمية تظهر مباشرة في حساباتهم.'
                     : 'Read community feedback, respond to inquiries, and notify users of official system updates.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-emerald-600 dark:text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
 
-            {/* Card 4: Users */}
+            {/* Card 5: Users */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('users');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-purple-500/30 hover:border-purple-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-purple-950/20 p-6 shadow-xl hover:shadow-purple-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-purple-500 dark:hover:border-purple-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-purple-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
                     <Users className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-black font-mono">
+                  <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 text-xs font-black font-mono">
                     {allUsers.length} {lang === 'ar' ? 'مستخدم' : 'Users'}
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '👥 مستخدمي التطبيق' : '👥 App Users Management'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'مراقبة حسابات الأعضاء والبحث المتقدم بالرمز السري أو الاسم مع إمكانية التجميد والحذف.'
                     : 'Monitor registered users, search details instantly by email/password, suspend access or delete.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-purple-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-purple-600 dark:text-purple-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
 
-            {/* Card 5: Security Firewall */}
+            {/* Card 6: Security Firewall */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('security');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-red-500/30 hover:border-red-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-red-950/20 p-6 shadow-xl hover:shadow-red-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-red-500 dark:hover:border-red-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-red-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-red-500/10 rounded-full blur-3xl group-hover:bg-red-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
                     <ShieldAlert className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 text-xs font-black font-mono">
+                  <span className="px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300 text-xs font-black font-mono">
                     SECURE
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '🔒 الأمان وسجلات الاختراق' : '🔒 Security & Hack Attempts'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'تعديل الرقم السري الثنائي للوحة، مراقبة محاولات الاختراق، عناوين الـ IP للأجهزة لعمل البلاغات.'
                     : 'Manage firewall access codes, check blocked hacker IPs, locations, and copy reports.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-red-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-red-600 dark:text-red-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
 
-            {/* Card 6: Branding & App Assets */}
+            {/* Card 7: Branding & App Assets */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('branding');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-pink-500/30 hover:border-pink-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-pink-950/20 p-6 shadow-xl hover:shadow-pink-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-pink-500 dark:hover:border-pink-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-pink-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-pink-500/10 rounded-full blur-3xl group-hover:bg-pink-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-600 dark:text-pink-400 shrink-0">
                     <Sparkles className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 text-xs font-black font-mono">
+                  <span className="px-2.5 py-0.5 rounded-full bg-pink-100 dark:bg-pink-500/20 text-pink-800 dark:text-pink-300 text-xs font-black font-mono">
                     ASSETS
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '🎨 هوية التطبيق والشعارات' : '🎨 App Identity & Assets'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'التحكم باسم التطبيق، شعار الهوية (Logo)، أيقونة العرض، روابط الدعم المباشرة وتطوير المظهر.'
                     : 'Manage application title, branding logos, visual icons, custom social links, and contact settings.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-pink-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-pink-600 dark:text-pink-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
 
-                        {/* Card X: Pricing Config */}
+            {/* Card 8: Pricing Config */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('pricing');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-emerald-500/30 hover:border-emerald-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-emerald-500 dark:hover:border-emerald-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                     <DollarSign className="h-6 w-6 stroke-[2]" />
                   </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-black font-mono">
+                    PRICES
+                  </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم، مع تحديد نسبة الزيادة الخاصة بإعلانات الفيديو.'
                     : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge percentage.'}
                 </p>
               </div>
+              <div className="flex items-center justify-end text-xs font-black text-emerald-600 dark:text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
+              </div>
             </motion.div>
 
-{/* Card 7: Live App Analytics & Traffic */}
+            {/* Card 9: Live App Analytics & Traffic */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('analytics');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-cyan-500/30 hover:border-cyan-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-cyan-950/20 p-6 shadow-xl hover:shadow-cyan-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-cyan-500 dark:hover:border-cyan-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-cyan-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shrink-0">
                     <BarChart3 className="h-6 w-6 stroke-[2]" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-black font-mono">
+                    <span className="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 border border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 text-xs font-black font-mono">
                       📲 {analyticsCounters.pwa_installs || 0} {lang === 'ar' ? 'تثبيت' : 'Installs'}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-black font-mono hidden sm:inline-block">
+                    <span className="px-2.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 text-xs font-black font-mono hidden sm:inline-block">
                       REALTIME
                     </span>
                   </div>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '📊 إحصائيات زوار الموقع واهتمام الجمهور' : '📊 Realtime Analytics & Interest'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'مراقبة عدد الزوار الفعليين، مشاهدات الأقسام، واهتمام الجمهور بكل رقصة (سالسا، باتشاتا، إلخ) وتتبع النقرات بشكل حي مجاني.'
                     : 'Track actual site visitors, active session metrics, style interests (Salsa, Bachata) and contact button click rates in real-time, 100% free.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-cyan-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-cyan-600 dark:text-cyan-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
 
-            {/* Card 8: Create Event / Ad (Admin) */}
+            {/* Card 10: Create Event / Ad (Admin) */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('create_ad_admin');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-indigo-500/30 hover:border-indigo-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-indigo-950/20 p-6 shadow-xl hover:shadow-indigo-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-indigo-500 dark:hover:border-indigo-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-indigo-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
                     <FilePlus className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-black font-mono">
+                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 text-xs font-black font-mono">
                     ADMIN ONLY
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '➕ إنشاء إعلان بواسطة الإدارة' : '➕ Create Event (Admin Mode)'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'إنشاء ونشر الفعاليات الفورية مع التحكم في ترتيب الظهور (الترتيب الرقمي) لتثبيت وعرض أي إعلان أولاً.'
                     : 'Compose and publish active events instantly. Define exact custom display priority (numerical order) to pin ads.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-indigo-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-indigo-600 dark:text-indigo-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
 
-            {/* Card 10: Send Notifications */}
+            {/* Card 11: Send Notifications */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               onClick={() => {
                 setAdminSection('send_notifications');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="rounded-3xl border-2 border-amber-500/30 hover:border-amber-400 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-xl hover:shadow-amber-500/5 transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
+              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-amber-500 dark:hover:border-amber-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
             >
               <div className="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
                     <Bell className="h-6 w-6 stroke-[2]" />
                   </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-black font-mono">
+                    PUSH
+                  </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mt-4">
+                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
                   {lang === 'ar' ? '🔔 إرسال الإشعارات والتنبيهات' : '🔔 Send Notifications & Alerts'}
                 </h3>
-                <p className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
                   {lang === 'ar'
                     ? 'إرسال إشعارات عامة لجميع المستخدمين وحذف الإشعارات القديمة.'
                     : 'Send general notifications to all users and delete old notifications.'}
                 </p>
               </div>
-              <div className="flex items-center justify-end text-xs font-black text-amber-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+              <div className="flex items-center justify-end text-xs font-black text-amber-600 dark:text-amber-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
                 <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
               </div>
             </motion.div>
@@ -5416,6 +5265,170 @@ export const AdminPanel: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'pricing' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="rounded-3xl border border-emerald-500/30 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-md dark:shadow-xl relative overflow-hidden">
+            <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mb-2 flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-emerald-500 animate-pulse" />
+              <span>{lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}</span>
+            </h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-6">
+              {lang === 'ar' ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم، مع تحديد نسبة الزيادة الخاصة بإعلانات الفيديو.' : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge percentage.'}
+            </p>
+            
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* VIP Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-amber-500/30 shadow-xs">
+                <h4 className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-2 mb-4">
+                  <Crown className="h-4 w-4" />
+                  {lang === 'ar' ? 'أسعار الإعلان المميز (VIP)' : 'VIP Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.basePrice ?? 100}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.extraDayPrice ?? 20}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.videoSurchargePercentage ?? 20}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Standard Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-neutral-300 dark:border-neutral-700 shadow-xs">
+                <h4 className="text-neutral-900 dark:text-white font-bold flex items-center gap-2 mb-4">
+                  <FileText className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                  {lang === 'ar' ? 'أسعار الإعلان العادي (Standard)' : 'Standard Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.basePrice ?? 50}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.extraDayPrice ?? 10}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.videoSurchargePercentage ?? 10}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Free Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-green-500/30 shadow-xs">
+                <h4 className="text-green-600 dark:text-green-400 font-bold flex items-center gap-2 mb-4">
+                  <CheckCircle className="h-4 w-4" />
+                  {lang === 'ar' ? 'الإعلان المجاني (Free)' : 'Free Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.basePrice ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.extraDayPrice ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.videoSurchargePercentage ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={async () => {
+                  setSavingPricing(true);
+                  await updatePricingConfig(localPricingConfig as any);
+                  setSavingPricing(false);
+                }}
+                disabled={savingPricing}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 dark:text-neutral-950 px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-md cursor-pointer"
+              >
+                {savingPricing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                {lang === 'ar' ? 'حفظ الأسعار في قاعدة البيانات' : 'Save Prices to Database'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -289,7 +289,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               <span>{lang === 'ar' ? 'أحدث الإعلانات والفاعليات' : 'Latest Announcements & Events'}</span>
             </h3>
             {selectedCategory !== 'all' && (
-              <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+              <span className="text-xs sm:text-sm font-black text-neutral-950 bg-white border border-white/90 shadow-md px-3.5 py-1 rounded-xl tracking-tight transition-transform transform active:scale-95 inline-flex items-center justify-center">
                 {categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}
               </span>
             )}

@@ -56,10 +56,18 @@ const AppContent: React.FC = () => {
   const lastBackPressRef = useRef<number>(0);
 
   useEffect(() => {
-    // Check if initial URL contains verification code parameter
+    // Check if initial URL contains verification code parameter or install trigger
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('verify')) {
       setActiveTab('verification');
+    }
+    if (
+      urlParams.get('install') || 
+      urlParams.get('pwa') || 
+      urlParams.get('action') === 'install' ||
+      window.location.hash === '#install'
+    ) {
+      setIsInstallOpen(true);
     }
   }, [setActiveTab]);
 

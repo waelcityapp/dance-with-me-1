@@ -346,11 +346,11 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
     <div className="animate-fade-in w-full max-w-3xl mx-auto py-6 pb-32">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
             <CheckCircle2 className="h-7 w-7 text-blue-500" />
             {lang === 'ar' ? 'تعديل الإعلان الحالي' : 'Edit Current Ad'}
           </h1>
-          <p className="text-neutral-400 mt-2 text-sm">
+          <p className="text-neutral-600 dark:text-neutral-400 mt-2 text-sm">
             {lang === 'ar' 
               ? 'تحديث بيانات الإعلان مباشرة في قاعدة البيانات. انقر حفظ لنشر التعديلات.' 
               : 'Update ad details directly in the database. Click Save to publish.'}
@@ -358,7 +358,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         </div>
         <button
           onClick={onCancel}
-          className="p-2 rounded-full bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+          className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
         >
           <X className="h-6 w-6" />
         </button>
@@ -367,22 +367,22 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
       <form onSubmit={handleSubmit} className="space-y-8">
         
         {/* Core Info */}
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5 space-y-5">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+        <div className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 space-y-5 shadow-xs">
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2 mb-4">
             <FileText className="h-5 w-5 text-amber-500" />
             {lang === 'ar' ? 'البيانات الأساسية' : 'Core Information'}
           </h2>
 
           {editingEvent?.eventRef && (
             <div className="space-y-2 mb-6 p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5">
-              <label className="text-sm font-bold text-indigo-400">
+              <label className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
                 {lang === 'ar' ? 'كود الحدث (الرقم المرجعي)' : 'Event Code (Reference)'}
               </label>
               <input
                 disabled
                 type="text"
                 value={editingEvent.eventRef}
-                className="w-full bg-neutral-950/50 border border-indigo-500/30 rounded-xl px-4 py-3 text-indigo-300 font-mono font-bold select-all focus:outline-none opacity-80 cursor-not-allowed"
+                className="w-full bg-neutral-100 dark:bg-neutral-950/50 border border-indigo-500/30 rounded-xl px-4 py-3 text-indigo-700 dark:text-indigo-300 font-mono font-bold select-all focus:outline-none opacity-80 cursor-not-allowed"
               />
             </div>
           )}
@@ -390,14 +390,14 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-neutral-300">
+                <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                   {lang === 'ar' ? 'العنوان (بالعربية)' : 'Title (Arabic)'}
                 </label>
                 <button
                   type="button"
                   onClick={() => handleTranslate(titleEn, 'ar', setTitleAr, 'titleAr')}
                   disabled={!titleEn || isTranslating === 'titleAr'}
-                  className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-blue-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-blue-600 dark:text-blue-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isTranslating === 'titleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                   {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
@@ -408,19 +408,19 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="text"
                 value={titleAr}
                 onChange={e => setTitleAr(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-neutral-300">
+                <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                   {lang === 'ar' ? 'العنوان (بالإنجليزية)' : 'Title (English)'}
                 </label>
                 <button
                   type="button"
                   onClick={() => handleTranslate(titleAr, 'en', setTitleEn, 'titleEn')}
                   disabled={!titleAr || isTranslating === 'titleEn'}
-                  className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-blue-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-blue-600 dark:text-blue-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isTranslating === 'titleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                   {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
@@ -431,7 +431,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="text"
                 value={titleEn}
                 onChange={e => setTitleEn(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-left"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-left"
                 dir="ltr"
               />
             </div>
@@ -439,14 +439,14 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'الوصف (بالعربية)' : 'Description (Arabic)'}
               </label>
               <button
                 type="button"
                 onClick={() => handleTranslate(descEn, 'ar', setDescAr, 'descAr')}
                 disabled={!descEn || isTranslating === 'descAr'}
-                className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-blue-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-blue-600 dark:text-blue-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isTranslating === 'descAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                 {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
@@ -462,10 +462,10 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 }
               }}
               maxLength={500}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all resize-none"
+              className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none"
             />
             <div className="flex justify-between items-center mt-1 px-1">
-              <span className={`text-[11px] transition-colors duration-200 ${500 - descAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+              <span className={`text-[11px] transition-colors duration-200 ${500 - descAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-600 dark:text-blue-400 font-medium'}`}>
                 {lang === 'ar' 
                   ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descAr.length}` 
                   : `Maximum 500 characters | Remaining: ${500 - descAr.length} characters`}
@@ -479,14 +479,14 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'الوصف (بالإنجليزية)' : 'Description (English)'}
               </label>
               <button
                 type="button"
                 onClick={() => handleTranslate(descAr, 'en', setDescEn, 'descEn')}
                 disabled={!descAr || isTranslating === 'descEn'}
-                className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-blue-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-blue-600 dark:text-blue-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isTranslating === 'descEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                 {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
@@ -502,11 +502,11 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 }
               }}
               maxLength={500}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all resize-none text-left"
+              className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none text-left"
               dir="ltr"
             />
             <div className="flex justify-between items-center mt-1 px-1">
-              <span className={`text-[11px] transition-colors duration-200 ${500 - descEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+              <span className={`text-[11px] transition-colors duration-200 ${500 - descEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-600 dark:text-blue-400 font-medium'}`}>
                 {lang === 'ar' 
                   ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descEn.length}` 
                   : `Maximum 500 characters | Remaining: ${500 - descEn.length} characters`}
@@ -521,13 +521,13 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'التصنيف' : 'Category'}
               </label>
               <select
                 value={category}
                 onChange={e => setCategory(e.target.value as DanceCategory)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
               >
                 <option value="party">{lang === 'ar' ? 'حفلة / سهرة' : 'Party / Social'}</option>
                 <option value="course">{lang === 'ar' ? 'كورس / ورشة عمل' : 'Course / Workshop'}</option>
@@ -536,7 +536,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'تاريخ الفعالية' : 'Event Date'}
               </label>
               <input
@@ -544,33 +544,33 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="date"
                 value={eventDate}
                 onChange={e => setEventDate(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'السعر (بالعربية)' : 'Price (Arabic)'}
               </label>
               <input
                 type="text"
                 value={priceAr}
                 onChange={e => setPriceAr(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
                 placeholder="مثال: ٢٥٠ درهم"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'السعر (بالإنجليزية)' : 'Price (English)'}
               </label>
               <input
                 type="text"
                 value={priceEn}
                 onChange={e => setPriceEn(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all text-left"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all text-left"
                 dir="ltr"
                 placeholder="e.g. 250 AED"
               />
@@ -578,13 +578,13 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           </div>
 
           {/* Booking Button & Subtext Toggle (ON / OFF) */}
-          <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-4">
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h5 className="text-sm font-extrabold text-white flex items-center gap-2">
+                <h5 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
                   <span>🎟️ {lang === 'ar' ? 'إظهار زر "احجز الآن" والسعر/العروض المصاحبة' : 'Show "Book Now" Button & Price/Promo Info'}</span>
                 </h5>
-                <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 leading-relaxed">
                   {lang === 'ar'
                     ? 'عند اختيار (أون) يظهر زر احجز الآن والنص/السعر المصاحب له بالصفحة الرئيسية. عند (أوف) يتم إخفاء زر احجز الآن والتفاصيل تماماً من الإعلان.'
                     : 'Toggle whether the "Book Now" button and accompanying price/discount text appear on the main feed.'}
@@ -598,7 +598,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                   className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
                     showBookingButton
                       ? 'bg-emerald-500 text-neutral-950 shadow-lg shadow-emerald-500/20 font-extrabold'
-                      : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                      : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-800 hover:text-neutral-900 dark:hover:text-white'
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -611,7 +611,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                   className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
                     !showBookingButton
                       ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 font-extrabold'
-                      : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                      : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-800 hover:text-neutral-900 dark:hover:text-white'
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-red-400"></span>
@@ -622,9 +622,9 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
 
             {/* Custom Subtext Input Field below the button */}
             {showBookingButton && (
-              <div className="pt-3 border-t border-neutral-800/80 space-y-3 animate-fadeIn">
+              <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800/80 space-y-3 animate-fadeIn">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-amber-400 flex items-center gap-1.5">
+                  <label className="text-xs font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                     <span>✏️ {lang === 'ar' ? 'النص المصاحب أسفل زر احجز الآن (بالعربية):' : 'Booking Subtext below button (Arabic):'}</span>
                   </label>
                   <input
@@ -632,7 +632,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                     value={bookingSubtextAr}
                     onChange={e => setBookingSubtextAr(e.target.value)}
                     placeholder={lang === 'ar' ? 'مثال: 500 بدل 700 أو احجز واحصل على 10% خصم' : 'e.g. 500 بدل 700'}
-                    className="w-full bg-neutral-900 border border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold transition-all"
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-amber-400 font-bold transition-all"
                   />
                   <p className="text-[11px] text-neutral-500">
                     {lang === 'ar'
@@ -642,7 +642,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-amber-400/90 flex items-center gap-1.5">
+                  <label className="text-xs font-extrabold text-amber-600 dark:text-amber-400/90 flex items-center gap-1.5">
                     <span>✏️ {lang === 'ar' ? 'النص المصاحب أسفل زر احجز الآن (بالإنجليزية):' : 'Booking Subtext below button (English):'}</span>
                   </label>
                   <input
@@ -650,7 +650,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                     value={bookingSubtextEn}
                     onChange={e => setBookingSubtextEn(e.target.value)}
                     placeholder="e.g. 500 instead of 700 or Book & Get 10% OFF"
-                    className="w-full bg-neutral-900 border border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold transition-all text-left"
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-amber-400 font-bold transition-all text-left"
                     dir="ltr"
                   />
                 </div>
@@ -660,7 +660,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
 
           {/* Styles */}
           <div className="space-y-2">
-            <label className="text-sm font-bold text-neutral-300">
+            <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
               {lang === 'ar' ? 'أنماط الرقص' : 'Dance Styles'}
             </label>
             <div className="flex flex-wrap gap-2">
@@ -674,7 +674,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                     className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
                       isSelected
                         ? 'bg-amber-500 text-neutral-950 border-amber-400'
-                        : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:bg-neutral-700'
+                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-400 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                     }`}
                   >
                     {getStyleLabel(style, lang)}
@@ -686,8 +686,8 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         </div>
 
         {/* Media & Type */}
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5 space-y-5">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+        <div className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 space-y-5 shadow-xs">
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2 mb-4">
             <ImageIcon className="h-5 w-5 text-purple-500" />
             {lang === 'ar' ? 'الوسائط ونوع الإعلان' : 'Media & Ad Type'}
           </h2>
@@ -695,14 +695,14 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           <div className="flex gap-4">
             <label className="flex-1">
               <input type="radio" name="mediaType" className="hidden" checked={mediaType === 'image'} onChange={() => setMediaType('image')} />
-              <div className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${mediaType === 'image' ? 'border-amber-500 bg-amber-500/10 text-amber-500' : 'border-neutral-800 bg-neutral-950 text-neutral-500 hover:border-neutral-700'}`}>
+              <div className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${mediaType === 'image' ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-500' : 'border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-700'}`}>
                 <ImageIcon className="h-6 w-6 mb-2" />
                 <span className="font-bold text-sm">{lang === 'ar' ? 'صورة' : 'Image'}</span>
               </div>
             </label>
             <label className="flex-1">
               <input type="radio" name="mediaType" className="hidden" checked={mediaType === 'video'} onChange={() => setMediaType('video')} />
-              <div className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${mediaType === 'video' ? 'border-amber-500 bg-amber-500/10 text-amber-500' : 'border-neutral-800 bg-neutral-950 text-neutral-500 hover:border-neutral-700'}`}>
+              <div className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${mediaType === 'video' ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-500' : 'border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-700'}`}>
                 <Video className="h-6 w-6 mb-2" />
                 <span className="font-bold text-sm">{lang === 'ar' ? 'فيديو' : 'Video'}</span>
               </div>
@@ -710,7 +710,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-neutral-300">
+            <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
               {lang === 'ar' ? 'الرابط الحالي / الجديد' : 'Current / New URL'}
             </label>
             <div className="flex gap-2">
@@ -718,7 +718,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="text"
                 value={mediaUrl}
                 onChange={(e) => setMediaUrl(e.target.value)}
-                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-neutral-300 focus:outline-none focus:border-amber-500/50 transition-all text-sm font-mono"
+                className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-800 dark:text-neutral-300 focus:outline-none focus:border-amber-500/50 transition-all text-sm font-mono"
                 placeholder="https://"
                 dir="ltr"
               />
@@ -733,33 +733,33 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className="flex items-center justify-center px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 disabled:opacity-50"
+                className="flex items-center justify-center px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-white transition-all cursor-pointer border border-neutral-300 dark:border-neutral-700 disabled:opacity-50"
                 title={lang === 'ar' ? 'رفع ملف جديد' : 'Upload new file'}
               >
-                {isUploading ? <div className="h-5 w-5 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : <UploadCloud className="h-5 w-5" />}
+                {isUploading ? <div className="h-5 w-5 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" /> : <UploadCloud className="h-5 w-5" />}
               </button>
             </div>
             {isUploading && (
-              <div className="mt-2 w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+              <div className="mt-2 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
                 <div className="bg-amber-500 h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
               </div>
             )}
             {mediaUrl && mediaType === 'image' && (
-              <div className="mt-4 relative rounded-xl overflow-hidden border border-neutral-800 w-full max-w-sm">
+              <div className="mt-4 relative rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 w-full max-w-sm">
                 <img src={mediaUrl} alt="Preview" className="w-full object-cover" />
               </div>
             )}
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-4 border-t border-neutral-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-4 border-t border-neutral-200 dark:border-neutral-800">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'نوع الإعلان' : 'Ad Type'}
               </label>
               <select
                 value={adType}
                 onChange={e => setAdType(e.target.value as 'vip' | 'standard')}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-all cursor-pointer font-bold"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-amber-500 transition-all cursor-pointer font-bold"
               >
                 <option value="vip">VIP 👑</option>
                 <option value="standard">{lang === 'ar' ? 'عادي' : 'Standard'}</option>
@@ -767,14 +767,14 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
             </div>
             
             <div className="flex items-end mb-1">
-              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-neutral-800 bg-neutral-950 w-full transition-all hover:bg-neutral-900">
+              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 w-full transition-all hover:bg-neutral-100 dark:hover:bg-neutral-900">
                 <input 
                   type="checkbox" 
                   checked={isFeatured}
                   onChange={e => setIsFeatured(e.target.checked)}
-                  className="w-5 h-5 rounded bg-neutral-800 border-neutral-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-neutral-950" 
+                  className="w-5 h-5 rounded bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-neutral-950" 
                 />
-                <span className="font-bold text-sm text-amber-400">
+                <span className="font-bold text-sm text-amber-600 dark:text-amber-400">
                   {lang === 'ar' ? 'تثبيت الإعلان (Featured)' : 'Pin Ad (Featured)'}
                 </span>
               </label>
@@ -783,15 +783,15 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         </div>
 
         {/* Location & Contact */}
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5 space-y-5">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+        <div className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 space-y-5 shadow-xs">
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2 mb-4">
             <MapPin className="h-5 w-5 text-emerald-500" />
             {lang === 'ar' ? 'الموقع والتواصل' : 'Location & Contact'}
           </h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'اسم المكان (عربي)' : 'Venue Name (Ar)'}
               </label>
               <input
@@ -799,11 +799,11 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="text"
                 value={locationNameAr}
                 onChange={e => setLocationNameAr(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'اسم المكان (إنجليزي)' : 'Venue Name (En)'}
               </label>
               <input
@@ -811,7 +811,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="text"
                 value={locationNameEn}
                 onChange={e => setLocationNameEn(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
                 dir="ltr"
               />
             </div>
@@ -819,7 +819,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'العنوان (عربي)' : 'Address (Ar)'}
               </label>
               <input
@@ -827,11 +827,11 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="text"
                 value={addressAr}
                 onChange={e => setAddressAr(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'العنوان (إنجليزي)' : 'Address (En)'}
               </label>
               <input
@@ -839,7 +839,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="text"
                 value={addressEn}
                 onChange={e => setAddressEn(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
                 dir="ltr"
               />
             </div>
@@ -847,7 +847,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-amber-400">
+              <label className="text-sm font-bold text-amber-600 dark:text-amber-400">
                 {lang === 'ar' ? '📍 المحافظة (عربي) - مثل: القاهرة' : 'Governorate (Ar)'}
               </label>
               <input
@@ -855,11 +855,11 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 value={governorateAr}
                 onChange={e => setGovernorateAr(e.target.value)}
                 placeholder="مثال: القاهرة"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-amber-400 transition-all"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-amber-400">
+              <label className="text-sm font-bold text-amber-600 dark:text-amber-400">
                 {lang === 'ar' ? '📍 المحافظة (إنجليزي)' : 'Governorate (En)'}
               </label>
               <input
@@ -867,7 +867,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 value={governorateEn}
                 onChange={e => setGovernorateEn(e.target.value)}
                 placeholder="e.g. Cairo"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-amber-400 transition-all"
                 dir="ltr"
               />
             </div>
@@ -875,7 +875,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-amber-400">
+              <label className="text-sm font-bold text-amber-600 dark:text-amber-400">
                 {lang === 'ar' ? '📍 المنطقة / الحي (عربي) - مثل: الزمالك' : 'Area (Ar)'}
               </label>
               <input
@@ -883,11 +883,11 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 value={areaAr}
                 onChange={e => setAreaAr(e.target.value)}
                 placeholder="مثال: الزمالك"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-amber-400 transition-all"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-amber-400">
+              <label className="text-sm font-bold text-amber-600 dark:text-amber-400">
                 {lang === 'ar' ? '📍 المنطقة / الحي (إنجليزي)' : 'Area (En)'}
               </label>
               <input
@@ -895,14 +895,14 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 value={areaEn}
                 onChange={e => setAreaEn(e.target.value)}
                 placeholder="e.g. Zamalek"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-amber-400 transition-all"
                 dir="ltr"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-neutral-300">
+            <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
               {lang === 'ar' ? 'رابط خرائط جوجل' : 'Google Maps URL'}
             </label>
             <input
@@ -910,14 +910,14 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
               type="url"
               value={googleMapsUrl}
               onChange={e => setGoogleMapsUrl(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all text-left"
+              className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all text-left"
               dir="ltr"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 border-t border-neutral-800 pt-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 border-t border-neutral-200 dark:border-neutral-800 pt-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'المنظم' : 'Organizer'}
               </label>
               <input
@@ -925,11 +925,11 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="text"
                 value={organizerName}
                 onChange={e => setOrganizerName(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'الهاتف' : 'Phone'}
               </label>
               <input
@@ -937,12 +937,12 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all text-left"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all text-left"
                 dir="ltr"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'واتساب' : 'WhatsApp'}
               </label>
               <input
@@ -950,7 +950,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="tel"
                 value={whatsapp}
                 onChange={e => setWhatsapp(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all text-left"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all text-left"
                 dir="ltr"
               />
             </div>
@@ -958,15 +958,15 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         </div>
 
         {/* System Settings */}
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5 space-y-5">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+        <div className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 space-y-5 shadow-xs">
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2 mb-4">
             <AlertCircle className="h-5 w-5 text-red-500" />
             {lang === 'ar' ? 'إعدادات النظام (متقدم)' : 'System Settings (Advanced)'}
           </h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'ترتيب الظهور (Position)' : 'Display Order (Position)'}
               </label>
               <input
@@ -976,18 +976,18 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                   const val = e.target.value;
                   setPosition(val === '' ? '' : Number(val));
                 }}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500 transition-all font-mono"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-red-500 transition-all font-mono"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-neutral-300">
+              <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                 {lang === 'ar' ? 'رقم الإعلان (ID/Number)' : 'Ad Number'}
               </label>
               <input
                 type="text"
                 value={adNumber}
                 onChange={e => setAdNumber(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500 transition-all font-mono"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-red-500 transition-all font-mono"
               />
               <p className="text-xs text-neutral-500">
                 {lang === 'ar' ? 'تغييره قد يؤثر على الربط بالفواتير' : 'Changing this may affect invoice linking'}

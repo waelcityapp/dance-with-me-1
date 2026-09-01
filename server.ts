@@ -2,6 +2,44 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import webpush from "web-push";
+import { v2 as cloudinary } from "cloudinary";
+
+// Helper to extract Cloudinary public_id from URL
+function extractCloudinaryPublicId(url: string): string | null {
+  try {
+    if (!url || typeof url !== "string" || !url.includes("cloudinary.com")) return null;
+    const parts = url.split("/upload/");
+    if (parts.length < 2) return null;
+    let filePath = parts[1];
+    
+    // Remove query params or hashes
+    filePath = filePath.split("?")[0].split("#")[0];
+    
+    // Split into path segments
+    const segments = filePath.split("/");
+    
+    // Filter out transformation segments (e.g. w_500, f_auto, v1234567, c_fill, etc.)
+    const cleanSegments: string[] = [];
+    for (const seg of segments) {
+      if (/^v\d+$/.test(seg)) continue; // version segment like v1740833123
+      if (seg.includes(",") || (seg.includes("_") && /^(c_|w_|h_|f_|q_|l_|g_|b_|so_|e_)/.test(seg))) {
+        continue; // transformation segment
+      }
+      cleanSegments.push(seg);
+    }
+    
+    if (cleanSegments.length === 0) return null;
+    
+    const fullPath = cleanSegments.join("/");
+    const lastDotIndex = fullPath.lastIndexOf(".");
+    if (lastDotIndex !== -1) {
+      return fullPath.substring(0, lastDotIndex);
+    }
+    return fullPath;
+  } catch (e) {
+    return null;
+  }
+}
 
 // Default / Persisted VAPID Configuration
 // Can be customized via environment variables VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
@@ -30,6 +68,65 @@ async function startServer() {
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Cloudinary media delete endpoint
+  app.post("/api/delete-media", async (req, res) => {
+    try {
+      const { url, resourceType = "image" } = req.body || {};
+      if (!url || typeof url !== "string") {
+        return res.json({ success: true, message: "No URL provided" });
+      }
+
+      // Check if not a cloudinary URL
+      if (!url.includes("cloudinary.com")) {
+        return res.json({ success: true, message: "Not a Cloudinary URL" });
+      }
+
+      // Protect default system assets
+      const protectedAssets = ["fbyjfjq8equle5pl7kwz", "r5uj8nyeht88n4wqdihq"];
+      if (protectedAssets.some((asset) => url.includes(asset))) {
+        return res.json({ success: true, message: "Protected default asset preserved" });
+      }
+
+      const cloudName =
+        process.env.CLOUDINARY_CLOUD_NAME ||
+        process.env.VITE_CLOUDINARY_CLOUD_NAME ||
+        "dynasmcaj";
+      const apiKey =
+        process.env.CLOUDINARY_API_KEY ||
+        process.env.VITE_CLOUDINARY_API_KEY;
+      const apiSecret =
+        process.env.CLOUDINARY_API_SECRET ||
+        process.env.VITE_CLOUDINARY_API_SECRET;
+
+      // If credentials are not provided in environment, handle gracefully without failing
+      if (!apiKey || !apiSecret) {
+        return res.json({ success: true, warning: "Cloudinary credentials not set on server" });
+      }
+
+      cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        secure: true,
+      });
+
+      const publicId = extractCloudinaryPublicId(url);
+      if (!publicId) {
+        return res.json({ success: true, message: "Could not extract public_id" });
+      }
+
+      const result = await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType === "video" ? "video" : "image",
+        invalidate: true,
+      });
+
+      return res.json({ success: true, result });
+    } catch (err: any) {
+      console.warn("Cloudinary delete-media note:", err?.message || err);
+      return res.json({ success: false, error: err?.message || "Failed to delete" });
+    }
   });
 
   // Web Push Stats Endpoint

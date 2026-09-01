@@ -61,6 +61,16 @@ export async function uploadToCloudinary(file: File): Promise<string | null> {
  * Deletes a file from Cloudinary via our backend
  */
 export async function deleteFromCloudinary(url: string, resourceType: 'image' | 'video' = 'image'): Promise<boolean> {
+  if (!url || typeof url !== 'string' || !url.includes('cloudinary.com')) {
+    return true;
+  }
+
+  // Never delete default branding assets
+  const protectedAssets = ['fbyjfjq8equle5pl7kwz', 'r5uj8nyeht88n4wqdihq'];
+  if (protectedAssets.some(asset => url.includes(asset))) {
+    return true;
+  }
+
   try {
     const response = await fetch('/api/delete-media', {
       method: 'POST',
@@ -71,13 +81,13 @@ export async function deleteFromCloudinary(url: string, resourceType: 'image' | 
     });
     
     if (!response.ok) {
-      console.error('Failed to delete media from Cloudinary');
       return false;
     }
     
-    return true;
+    const data = await response.json().catch(() => ({}));
+    return data.success !== false;
   } catch (error) {
-    console.error('Error deleting media:', error);
+    console.warn('Note: Cloudinary media deletion skipped or failed gracefully:', error);
     return false;
   }
 }
