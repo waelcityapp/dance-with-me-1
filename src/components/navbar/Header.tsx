@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-950/90 backdrop-blur-xl transition-all duration-300 shadow-sm dark:shadow-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-[#166fe5] dark:border-neutral-800 bg-[#1877F2] dark:bg-neutral-950/90 backdrop-blur-xl transition-all duration-300 shadow-md dark:shadow-xl text-white">
       <div className="mx-auto flex items-center justify-between max-w-6xl px-3 sm:px-6 h-16 gap-2">
         {/* Brand Logo & Title */}
         <div 
@@ -88,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.div 
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.95 }}
-            className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl overflow-hidden border border-amber-500/40 shadow-md bg-neutral-900 shrink-0"
+            className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl overflow-hidden border border-white/30 dark:border-amber-500/40 shadow-md bg-neutral-900 shrink-0"
           >
             <img 
               src={appAssets?.app_icon_url || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"} 
@@ -99,12 +99,12 @@ export const Header: React.FC<HeaderProps> = ({
           
           <div className="flex flex-col justify-center">
             <div className="flex items-center gap-1.5">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <h1 className="font-sans text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 dark:from-amber-200 dark:via-amber-400 dark:to-amber-500 bg-clip-text text-transparent leading-none">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <h1 className="font-sans text-lg sm:text-xl font-black tracking-tight text-white leading-none drop-shadow-sm">
                 {appAssets?.appNameEn || appAssets?.appNameAr || "CityEve"}
               </h1>
             </div>
-            <span className="font-mono text-[9px] text-neutral-500 dark:text-neutral-400 font-bold tracking-wider leading-tight mt-0.5">
+            <span className="font-mono text-[9px] text-blue-100 dark:text-neutral-400 font-bold tracking-wider leading-tight mt-0.5">
               {lang === 'ar' ? 'دليل الفعاليات والسهرات' : 'Events & Nightlife'}
             </span>
           </div>
@@ -114,13 +114,13 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-2">
 
           {/* Language Switcher Pill */}
-          <div className="flex items-center rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900/90 p-0.5 text-xs">
+          <div className="flex items-center rounded-xl border border-white/20 dark:border-neutral-800 bg-blue-700/60 dark:bg-neutral-900/90 p-0.5 text-xs text-white">
             <button
               onClick={() => setLang('ar')}
               className={`px-2.5 py-1 rounded-lg transition-all font-black text-[11px] sm:text-xs cursor-pointer ${
                 lang === 'ar'
-                  ? 'bg-amber-500 text-neutral-950 shadow-md'
-                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-white'
+                  ? 'bg-amber-400 text-neutral-950 shadow-md'
+                  : 'text-blue-100 dark:text-neutral-400 hover:text-white'
               }`}
             >
               عربي
@@ -129,8 +129,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setLang('en')}
               className={`px-2.5 py-1 rounded-lg transition-all font-black text-[11px] sm:text-xs cursor-pointer ${
                 lang === 'en'
-                  ? 'bg-amber-500 text-neutral-950 shadow-md'
-                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-white'
+                  ? 'bg-amber-400 text-neutral-950 shadow-md'
+                  : 'text-blue-100 dark:text-neutral-400 hover:text-white'
               }`}
             >
               EN
@@ -142,13 +142,13 @@ export const Header: React.FC<HeaderProps> = ({
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
             onClick={onOpenNotifications}
-            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900/90 text-neutral-700 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-white hover:border-amber-500/40 transition-all cursor-pointer shadow-sm"
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 dark:border-neutral-800 bg-blue-700/60 dark:bg-neutral-900/90 text-white dark:text-neutral-300 hover:bg-blue-600/80 dark:hover:text-white transition-all cursor-pointer shadow-sm"
             aria-label="Notifications"
             title={lang === 'ar' ? 'الإشعارات' : 'Notifications'}
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 end-1.5 flex h-2 w-2 rounded-full bg-red-500 animate-ping" />
+              <span className="absolute top-1.5 end-1.5 flex h-2 w-2 rounded-full bg-red-400 animate-ping" />
             )}
           </motion.button>
 
@@ -159,8 +159,8 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setShowToolsMenu(prev => !prev)}
             className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-all cursor-pointer shadow-sm ${
               showToolsMenu 
-                ? 'border-amber-500 bg-amber-500 text-neutral-950 shadow-lg shadow-amber-500/20' 
-                : 'border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900/90 text-neutral-700 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-white'
+                ? 'border-amber-400 bg-amber-400 text-neutral-950 shadow-lg shadow-amber-500/20' 
+                : 'border-white/20 dark:border-neutral-800 bg-blue-700/60 dark:bg-neutral-900/90 text-white dark:text-neutral-300 hover:bg-blue-600/80 dark:hover:text-white'
             }`}
             title={lang === 'ar' ? 'أدوات وإعدادات إضافية' : 'More Tools'}
           >
@@ -180,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsAdminLockModalOpen(true);
                 }
               }}
-              className="flex items-center gap-1 h-9 px-2.5 rounded-xl border border-amber-400 bg-gradient-to-r from-amber-500 to-yellow-400 text-neutral-950 font-black text-xs shadow-md gold-glow cursor-pointer"
+              className="flex items-center gap-1 h-9 px-2.5 rounded-xl border border-amber-400 bg-gradient-to-r from-amber-400 to-yellow-400 text-neutral-950 font-black text-xs shadow-md gold-glow cursor-pointer"
               title={lang === 'ar' ? 'لوحة إدارة التطبيق' : 'Admin Panel'}
             >
               <Crown className="h-3.5 w-3.5 stroke-[2.5]" />

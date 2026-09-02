@@ -304,18 +304,38 @@ export async function unsubscribeUserFromPush(userId?: string): Promise<boolean>
 }
 
 /**
- * Trigger local test notification
+ * Trigger local test notification (welcome message upon subscription)
  */
 export async function showTestNotification(lang: 'ar' | 'en' = 'ar'): Promise<void> {
+  await showCustomNotification({
+    title: lang === 'ar' ? '🎉 مرحباً بك في تنبيهات سيتي إيف' : '🎉 Welcome to CityEve Alerts',
+    body: lang === 'ar' 
+      ? 'تم تفعيل التنبيهات بنجاح! ستصلك أحدث الحفلات والكورسات فور نشرها.'
+      : 'Alerts successfully enabled! You will be notified instantly when new events drop.',
+    url: '/'
+  });
+}
+
+/**
+ * Display a custom/real notification on the device
+ */
+export async function showCustomNotification(params: {
+  title: string;
+  body: string;
+  icon?: string;
+  image?: string;
+  url?: string;
+  tag?: string;
+}): Promise<void> {
   playNotificationChime();
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
 
-  const title = lang === 'ar' ? '🎉 مرحباً بك في تنبيهات سيتي إيف' : '🎉 Welcome to CityEve Alerts';
-  const body = lang === 'ar' 
-    ? 'تم تفعيل التنبيهات بنجاح! ستصلك أحدث الحفلات والكورسات فور نشرها.'
-    : 'Alerts successfully enabled! You will be notified instantly when new events drop.';
-  const icon = 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png';
+  const title = params.title || 'CityEve | إشعار جديد 🔔';
+  const body = params.body || '';
+  const icon = params.icon || 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png';
+  const tag = params.tag || ('cityeve-alert-' + Date.now());
+  const url = params.url || '/';
 
   // 1. Prefer Service Worker registration showNotification (Required for Mobile & Android lock screen)
   if ('serviceWorker' in navigator) {
@@ -326,11 +346,12 @@ export async function showTestNotification(lang: 'ar' | 'en' = 'ar'): Promise<vo
           body,
           icon,
           badge: icon,
+          image: params.image || undefined,
           vibrate: [200, 100, 200],
-          tag: 'cityeve-alert-' + Date.now(),
+          tag,
           renotify: true,
           requireInteraction: true,
-          data: { url: '/' }
+          data: { url }
         } as any);
         return;
       }
@@ -345,11 +366,29 @@ export async function showTestNotification(lang: 'ar' | 'en' = 'ar'): Promise<vo
       body,
       icon,
       badge: icon,
-      tag: 'cityeve-alert-' + Date.now()
+      tag
     } as any);
   } catch (e) {
     console.warn('Window Notification fallback note:', e);
   }
+}
+
+/**
+ * Display a NotificationItem with actual event details on the device screen
+ */
+export async function showNotificationItem(item: any, lang: 'ar' | 'en' = 'ar'): Promise<void> {
+  if (!item) return;
+  const title = lang === 'ar' ? (item.titleAr || item.titleEn) : (item.titleEn || item.titleAr);
+  const body = lang === 'ar' ? (item.messageAr || item.messageEn) : (item.messageEn || item.messageAr);
+  const eventId = item.targetEventId || item.relatedEventId;
+  const url = eventId ? `/?event=${eventId}` : '/';
+
+  await showCustomNotification({
+    title: title || 'CityEve 🔔',
+    body: body || '',
+    url,
+    tag: item.id || ('cityeve-alert-' + Date.now())
+  });
 }
 
 /**

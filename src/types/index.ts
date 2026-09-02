@@ -237,6 +237,24 @@ export interface EventBooking {
   cancelledAt?: string;
 }
 
+export interface AppAssets {
+  id?: string;
+  app_icon_url?: string;
+  app_logo_url?: string;
+  app_hero_banner_url?: string;
+  app_hero_banner_url_en?: string;
+  appNameAr?: string;
+  appNameEn?: string;
+  whatsappSupport?: string;
+  instagramUrl?: string;
+  promoTitleAr?: string;
+  promoTitleEn?: string;
+  promoSubtitleAr?: string;
+  promoSubtitleEn?: string;
+  promoBadgeAr?: string;
+  promoBadgeEn?: string;
+}
+
 export type Language = 'ar' | 'en';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type TabType = 'explore' | 'parties' | 'courses' | 'trips' | 'profile' | 'create_ad' | 'admin' | 'edit_ad_admin' | 'verification';

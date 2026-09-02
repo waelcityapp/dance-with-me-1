@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, UserCheck, User, BellRing, Smartphone, Radio } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, UserCheck, User, BellRing, Smartphone, Radio, ZoomIn } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
+import { EventImageLightboxModal } from './EventImageLightboxModal';
 import { BroadcastPushModal } from '../modals/BroadcastPushModal';
 
 interface WeeklyPromoBannerProps {
@@ -45,6 +46,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -288,7 +290,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         </div>
       )}
       {/* Media Player Container (Video/Image) */}
-      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${aspectRatioClass}`}>
+      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${isGoogleDriveUrl(promoEvent.mediaUrl) || getSafePlayableVideoUrl(promoEvent.mediaUrl) ? aspectRatioClass : ''}`}>
         {/* Paused Overlay with 'X' mark */}
         {promoEvent.isPaused && (
           <div className="absolute inset-0 z-20 bg-neutral-950/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
@@ -329,19 +331,22 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             className="h-full w-full object-cover"
           />
         ) : (
-          <img
-            src={promoEvent.mediaUrl}
-            alt={lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
-            onLoad={(e) => {
-              const img = e.currentTarget;
-              if (img.naturalHeight > img.naturalWidth) {
-                setAspectRatioClass('aspect-[9/16] max-h-[500px] sm:max-h-[600px]');
-              } else {
-                setAspectRatioClass('aspect-[16/10] sm:aspect-video');
-              }
-            }}
-            className="h-full w-full object-cover"
-          />
+          <div 
+            className="relative w-full cursor-pointer group/img overflow-hidden flex items-center justify-center bg-neutral-950"
+            onClick={() => setIsLightboxOpen(true)}
+            title={lang === 'ar' ? 'اضغط لعرض وتكبير الصورة بالكامل' : 'Click to view full image'}
+          >
+            <img
+              src={promoEvent.mediaUrl}
+              alt={lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
+              className="w-full h-auto max-h-[650px] object-contain transition-transform duration-700 group-hover:scale-[1.02] block"
+            />
+            {/* Subtle Zoom Pill Badge */}
+            <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-950/75 hover:bg-neutral-950/90 text-white text-[11px] font-bold backdrop-blur-md border border-white/15 shadow-lg transition-all transform opacity-80 group-hover/img:opacity-100 group-hover/img:scale-105">
+              <ZoomIn className="h-3.5 w-3.5 text-amber-400" />
+              <span>{lang === 'ar' ? 'تكبير الصورة' : 'Full View'}</span>
+            </div>
+          </div>
         )}
         {/* Play/Pause Button overlay */}
         {getSafePlayableVideoUrl(promoEvent.mediaUrl) && (
@@ -671,6 +676,15 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         isOpen={isBroadcastModalOpen}
         onClose={() => setIsBroadcastModalOpen(false)}
         event={promoEvent}
+      />
+
+      {/* Event Image Fullscreen Lightbox Modal */}
+      <EventImageLightboxModal
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        imageUrl={promoEvent.mediaUrl}
+        titleAr={promoEvent.titleAr}
+        titleEn={promoEvent.titleEn}
       />
     </div>
   );

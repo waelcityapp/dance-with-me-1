@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, Sparkles, UserCheck, User, BellRing, Smartphone, Radio } from 'lucide-react';
+import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, Sparkles, UserCheck, User, BellRing, Smartphone, Radio, ZoomIn } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
+import { EventImageLightboxModal } from './EventImageLightboxModal';
 import { BroadcastPushModal } from '../modals/BroadcastPushModal';
 import { logAnalyticsEvent } from '../../lib/firebase';
 
@@ -53,6 +54,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -333,7 +335,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       )}
 
       {/* Banner Media Section (Video or Image) */}
-      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${aspectRatioClass}`}>
+      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${isGoogleDriveUrl(event.mediaUrl) || getSafePlayableVideoUrl(event.mediaUrl) ? aspectRatioClass : ''}`}>
         {/* Paused Overlay with 'X' mark */}
         {event.isPaused && (
           <div className="absolute inset-0 z-20 bg-neutral-950/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
@@ -373,21 +375,23 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
         ) : (
-          <img
-            src={event.mediaUrl}
-            alt={lang === 'ar' ? event.titleAr : event.titleEn}
-            onLoad={(e) => {
-              const img = e.currentTarget;
-              if (img.naturalHeight > img.naturalWidth) {
-                setAspectRatioClass('aspect-[9/16] max-h-[500px] sm:max-h-[550px]');
-              } else {
-                setAspectRatioClass('aspect-[16/10]');
-              }
-            }}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
+          <div 
+            className="relative w-full cursor-pointer group/img overflow-hidden flex items-center justify-center bg-neutral-950"
+            onClick={() => setIsLightboxOpen(true)}
+            title={lang === 'ar' ? 'اضغط لعرض وتكبير الصورة بالكامل' : 'Click to view full image'}
+          >
+            <img
+              src={event.mediaUrl}
+              alt={lang === 'ar' ? event.titleAr : event.titleEn}
+              className="w-full h-auto max-h-[650px] object-contain transition-transform duration-700 group-hover:scale-[1.02] block"
+            />
+            {/* Subtle Zoom Pill Badge */}
+            <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-950/75 hover:bg-neutral-950/90 text-white text-[11px] font-bold backdrop-blur-md border border-white/15 shadow-lg transition-all transform opacity-80 group-hover/img:opacity-100 group-hover/img:scale-105">
+              <ZoomIn className="h-3.5 w-3.5 text-amber-400" />
+              <span>{lang === 'ar' ? 'تكبير الصورة' : 'Full View'}</span>
+            </div>
+          </div>
         )}
-        <div className="absolute inset-0 card-gradient pointer-events-none" />
       </div>
         <div className="flex flex-1 flex-col p-4 sm:p-5 relative z-10 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 transition-colors">
           {/* Content Box (Title, Price, description) */}
@@ -707,6 +711,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         isOpen={isBroadcastModalOpen}
         onClose={() => setIsBroadcastModalOpen(false)}
         event={event}
+      />
+      {/* Event Image Fullscreen Lightbox Modal */}
+      <EventImageLightboxModal
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        imageUrl={event.mediaUrl}
+        titleAr={event.titleAr}
+        titleEn={event.titleEn}
       />
     </motion.div>
   );

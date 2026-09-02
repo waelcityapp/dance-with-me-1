@@ -15,18 +15,21 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   const { lang, appAssets } = useApp();
   const isAr = lang === 'ar';
 
-  const customBannerUrl = appAssets?.app_hero_banner_url;
+  const customBannerUrlAr = appAssets?.app_hero_banner_url;
+  const customBannerUrlEn = appAssets?.app_hero_banner_url_en;
+
+  const activeBannerUrl = isAr ? customBannerUrlAr : customBannerUrlEn;
 
   // Optimize Cloudinary banner images for ultra-fast load speed (WebP/AVIF auto compression)
   const optimizedBannerSrc = React.useMemo(() => {
-    if (!customBannerUrl) return '';
-    if (customBannerUrl.includes('res.cloudinary.com') && customBannerUrl.includes('/image/upload/')) {
-      if (!customBannerUrl.includes('/f_auto') && !customBannerUrl.includes('/q_auto')) {
-        return customBannerUrl.replace('/image/upload/', '/image/upload/f_auto,q_auto,w_1400/');
+    if (!activeBannerUrl) return '';
+    if (activeBannerUrl.includes('res.cloudinary.com') && activeBannerUrl.includes('/image/upload/')) {
+      if (!activeBannerUrl.includes('/f_auto') && !activeBannerUrl.includes('/q_auto')) {
+        return activeBannerUrl.replace('/image/upload/', '/image/upload/f_auto,q_auto,w_1400/');
       }
     }
-    return customBannerUrl;
-  }, [customBannerUrl]);
+    return activeBannerUrl;
+  }, [activeBannerUrl]);
 
   const handleExplore = () => {
     if (onExploreClick) {
@@ -44,57 +47,61 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   return (
     <section 
       aria-label="CityEVE Hero Banner"
-      className="relative w-full overflow-hidden border-b border-neutral-200/80 dark:border-neutral-800/80 bg-neutral-950 text-white shadow-2xl transition-all"
+      className="relative w-full overflow-hidden bg-transparent text-white transition-all pt-2 sm:pt-3 px-3 sm:px-6"
     >
-      {/* If custom banner image is provided by admin, render it seamlessly with translucent bottom overlay */}
-      {customBannerUrl ? (
-        <div className="relative w-full max-w-7xl mx-auto overflow-hidden bg-neutral-950 min-h-[180px] sm:min-h-[280px]">
+      {/* If custom banner image is provided for current language, render it cleanly */}
+      {activeBannerUrl ? (
+        <div className="relative w-full max-w-5xl mx-auto overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-md bg-neutral-950">
           <img
-            src={optimizedBannerSrc || customBannerUrl}
-            alt="CityEVE - اكبر الحفلات والفعاليات في جيبك"
-            className="w-full h-auto object-cover max-h-[480px] sm:max-h-[540px] will-change-transform"
+            src={optimizedBannerSrc || activeBannerUrl}
+            alt={isAr ? "CityEVE - اكبر الحفلات والفعاليات في جيبك" : "CityEVE - The Biggest Parties & Events in Your Pocket"}
+            className="w-full h-auto object-cover max-h-[260px] sm:max-h-[340px] md:max-h-[380px] will-change-transform block"
             loading="eager"
             fetchPriority="high"
             decoding="async"
             referrerPolicy="no-referrer"
           />
-          {/* Light gentle bottom gradient */}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
 
-          {/* Ultra-Translucent Action Overlay Floating on Banner */}
-          <div className="absolute bottom-2 sm:bottom-3 inset-x-0 z-30 px-3 sm:px-6 flex justify-center pointer-events-none">
+          {/* Light gentle bottom gradient */}
+          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+
+          {/* Ultra-Prominent Action Overlay Floating on Banner */}
+          <div className="absolute bottom-3 sm:bottom-4 inset-x-0 z-30 px-3 sm:px-6 flex justify-center pointer-events-none">
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               type="button"
               onClick={onPostAdClick}
-              className="pointer-events-auto group relative w-full max-w-sm sm:max-w-md flex items-center justify-between py-1 px-2 sm:py-1.5 sm:px-3 rounded-xl sm:rounded-2xl bg-black/10 hover:bg-black/25 backdrop-blur-[2px] border border-white/5 hover:border-amber-400/20 shadow-none transition-all cursor-pointer overflow-hidden text-right"
+              className="pointer-events-auto group relative w-full max-w-md sm:max-w-lg md:max-w-xl flex items-center justify-between py-2 px-3 sm:py-2.5 sm:px-4 rounded-2xl sm:rounded-3xl bg-neutral-950/85 hover:bg-neutral-950/95 backdrop-blur-md border-2 border-amber-400/40 hover:border-amber-400 shadow-2xl shadow-black/80 transition-all cursor-pointer overflow-hidden text-right"
               dir={isAr ? 'rtl' : 'ltr'}
             >
-              <div className="relative z-10 flex items-center gap-2">
-                <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/90 text-neutral-950 shadow-sm group-hover:scale-105 transition-transform">
-                  <PlusCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />
+              {/* Subtle shining gradient accent */}
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-amber-500/10 opacity-60 group-hover:opacity-100 transition-opacity" />
+
+              <div className="relative z-10 flex items-center gap-2.5 sm:gap-3.5">
+                <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-neutral-950 shadow-md shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                  <PlusCircle className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
                 </div>
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <span className="text-xs sm:text-sm font-semibold text-white group-hover:text-amber-300 transition-colors drop-shadow-sm">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <span className="text-sm sm:text-base md:text-lg font-black text-white group-hover:text-amber-300 transition-colors drop-shadow-md">
                     {isAr ? 'إضافة إعلان' : 'Post Event'}
                   </span>
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-normal text-emerald-300 bg-emerald-900/30 border border-emerald-400/20 backdrop-blur-none">
-                    <span className="text-[10px]">🎁</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-400/40 shadow-inner">
+                    <span className="text-xs sm:text-sm">🎁</span>
                     <span>{isAr ? 'مجاناً حتى 1 نوفمبر' : 'Free until Nov 1st'}</span>
                   </span>
                 </div>
               </div>
 
-              <div className="relative z-10 flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/10 text-white group-hover:bg-amber-400 group-hover:text-neutral-950 transition-all shrink-0">
-                {isAr ? <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> : <ArrowRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
+              <div className="relative z-10 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 text-white group-hover:bg-amber-400 group-hover:text-neutral-950 transition-all shrink-0 shadow-sm">
+                {isAr ? <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />}
               </div>
             </motion.button>
           </div>
         </div>
       ) : (
         /* Full Dynamic High-End Canvas Banner matching the uploaded graphic - Optimized for high performance */
-        <div className="relative w-full min-h-[340px] sm:min-h-[380px] md:min-h-[420px] lg:min-h-[460px] flex items-center overflow-hidden bg-neutral-950">
+        <div className="relative w-full max-w-5xl mx-auto overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-md bg-neutral-950 min-h-[300px] sm:min-h-[340px] flex items-center">
           {/* Background Concert Crowd & Stage Lighting - Optimized size & opacity */}
           <div 
             className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 will-change-transform"

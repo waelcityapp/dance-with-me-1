@@ -248,6 +248,7 @@ export const AdminPanel: React.FC = () => {
   const [formAppIconUrl, setFormAppIconUrl] = useState('');
   const [formAppLogoUrl, setFormAppLogoUrl] = useState('');
   const [formHeroBannerUrl, setFormHeroBannerUrl] = useState('');
+  const [formHeroBannerUrlEn, setFormHeroBannerUrlEn] = useState('');
   const [formWhatsappSupport, setFormWhatsappSupport] = useState('');
   const [formInstagramUrl, setFormInstagramUrl] = useState('');
   const [formPromoTitleAr, setFormPromoTitleAr] = useState('');
@@ -260,6 +261,7 @@ export const AdminPanel: React.FC = () => {
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingHeroBanner, setIsUploadingHeroBanner] = useState(false);
+  const [isUploadingHeroBannerEn, setIsUploadingHeroBannerEn] = useState(false);
   const [localPricingConfig, setLocalPricingConfig] = useState(pricingConfig);
   const [savingPricing, setSavingPricing] = useState(false);
   useEffect(() => { setLocalPricingConfig(pricingConfig); }, [pricingConfig]);
@@ -429,6 +431,7 @@ export const AdminPanel: React.FC = () => {
       setFormAppIconUrl(appAssets.app_icon_url || '');
       setFormAppLogoUrl(appAssets.app_logo_url || '');
       setFormHeroBannerUrl(appAssets.app_hero_banner_url || '');
+      setFormHeroBannerUrlEn(appAssets.app_hero_banner_url_en || '');
       setFormWhatsappSupport(appAssets.whatsappSupport || '');
       setFormInstagramUrl(appAssets.instagramUrl || '');
       setFormPromoTitleAr(appAssets.promoTitleAr || '');
@@ -885,7 +888,7 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleUploadBrandingImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'icon' | 'logo' | 'banner') => {
+  const handleUploadBrandingImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'icon' | 'logo' | 'banner' | 'banner_en') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -898,6 +901,8 @@ export const AdminPanel: React.FC = () => {
       setIsUploadingIcon(true);
     } else if (type === 'banner') {
       setIsUploadingHeroBanner(true);
+    } else if (type === 'banner_en') {
+      setIsUploadingHeroBannerEn(true);
     } else {
       setIsUploadingLogo(true);
     }
@@ -918,6 +923,11 @@ export const AdminPanel: React.FC = () => {
              deleteFromCloudinary(formHeroBannerUrl, 'image').catch(console.error);
           }
           setFormHeroBannerUrl(url);
+        } else if (type === 'banner_en') {
+          if (formHeroBannerUrlEn && formHeroBannerUrlEn.includes('cloudinary.com') && formHeroBannerUrlEn !== appAssets?.app_hero_banner_url_en) {
+             deleteFromCloudinary(formHeroBannerUrlEn, 'image').catch(console.error);
+          }
+          setFormHeroBannerUrlEn(url);
         } else {
           // Delete old logo if it's on Cloudinary
           if (formAppLogoUrl && formAppLogoUrl.includes('cloudinary.com') && formAppLogoUrl !== appAssets?.app_logo_url) {
@@ -935,6 +945,7 @@ export const AdminPanel: React.FC = () => {
       setIsUploadingIcon(false);
       setIsUploadingLogo(false);
       setIsUploadingHeroBanner(false);
+      setIsUploadingHeroBannerEn(false);
     }
   };
 
@@ -947,6 +958,7 @@ export const AdminPanel: React.FC = () => {
       app_icon_url: formAppIconUrl.trim(),
       app_logo_url: formAppLogoUrl.trim(),
       app_hero_banner_url: formHeroBannerUrl.trim(),
+      app_hero_banner_url_en: formHeroBannerUrlEn.trim(),
       whatsappSupport: formWhatsappSupport.trim(),
       instagramUrl: formInstagramUrl.trim(),
       promoTitleAr: formPromoTitleAr.trim(),
@@ -5077,10 +5089,10 @@ export const AdminPanel: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Hero Header Banner Image URL */}
+                {/* Hero Header Banner Image URL (Arabic) */}
                 <div className="space-y-2 col-span-1 md:col-span-2">
                   <label className="text-xs font-bold text-neutral-300 block">
-                    {lang === 'ar' ? 'صورة بانر الهيدر الرئيسي (Hero Banner Image):' : 'Hero Header Banner Image URL:'}
+                    {lang === 'ar' ? 'صورة بانر الهيدر الرئيسي - عربي (Hero Banner Image AR):' : 'Hero Header Banner Image URL (Arabic):'}
                   </label>
                   <div className="flex gap-4 items-center">
                     <input
@@ -5088,14 +5100,14 @@ export const AdminPanel: React.FC = () => {
                       value={formHeroBannerUrl}
                       onChange={(e) => setFormHeroBannerUrl(e.target.value)}
                       className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-xs font-mono transition-all outline-none"
-                      placeholder="https://res.cloudinary.com/.../banner.jpg (أو اتركه فارغاً للتصميم التلقائي الذكي)"
+                      placeholder="https://res.cloudinary.com/.../banner_ar.jpg (أو اتركه فارغاً للتصميم التلقائي الذكي)"
                       dir="ltr"
                     />
                     <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
                       {isUploadingHeroBanner ? (
                         <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
                       ) : (
-                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع بانر' : 'Upload Banner'}</span>
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع بانر عربي' : 'Upload AR Banner'}</span>
                       )}
                       <input
                         type="file"
@@ -5109,14 +5121,57 @@ export const AdminPanel: React.FC = () => {
                       <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
                         <img
                           src={formHeroBannerUrl}
-                          alt="Hero Banner Preview"
+                          alt="Hero Banner Preview AR"
                           className="h-full w-full object-cover"
                         />
                       </div>
                     )}
                   </div>
                   <p className="text-[10px] text-neutral-500">
-                    {lang === 'ar' ? '💡 صورة البانر العريض التي تظهر أسفل الهيدر الرئيسي مباشرة (أكبر الحفلات والفعاليات في جيبك).' : '💡 Wide hero banner image displayed directly below the main header.'}
+                    {lang === 'ar' ? '💡 صورة البانر العريض باللغة العربية (أكبر الحفلات والفعاليات في جيبك).' : '💡 Wide hero banner image for Arabic language.'}
+                  </p>
+                </div>
+
+                {/* Hero Header Banner Image URL (English) */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'صورة بانر الهيدر الرئيسي - إنجليزي (Hero Banner Image EN - اختياري):' : 'Hero Header Banner Image URL (English - Optional):'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formHeroBannerUrlEn}
+                      onChange={(e) => setFormHeroBannerUrlEn(e.target.value)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://res.cloudinary.com/.../banner_en.jpg (اختياري - يتم ترجمته تلقائياً إن ترك فارغاً)"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingHeroBannerEn ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع بانر إنجليزي' : 'Upload EN Banner'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'banner_en')}
+                        disabled={isUploadingHeroBannerEn}
+                      />
+                    </label>
+                    {formHeroBannerUrlEn && (
+                      <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                        <img
+                          src={formHeroBannerUrlEn}
+                          alt="Hero Banner Preview EN"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 صورة البانر باللغة الإنجليزية. إذا تركتها فارغة سيتم ترجمة النص وتطبيقه تلقائياً عند اختيار الإنجليزية.' : '💡 Optional English banner image. If empty, English text will automatically overlay cleanly.'}
                   </p>
                 </div>
 

@@ -39,7 +39,8 @@ import { MODERN_FEATURED_EVENTS } from '../data/defaultEvents';
 import { 
   subscribeUserToPush, 
   unsubscribeUserFromPush, 
-  showTestNotification, 
+  showTestNotification,
+  showNotificationItem, 
   playNotificationChime,
   sendBroadcastPushNotification,
   autoRegisterDevice
@@ -610,7 +611,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (latest && !latest.read) {
           triggerPushToast(latest);
           if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            showTestNotification(lang);
+            showNotificationItem(latest, lang);
           }
         }
       }

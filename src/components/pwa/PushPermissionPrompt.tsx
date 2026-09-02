@@ -4,6 +4,10 @@ import { BellRing, X, ShieldCheck, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { subscribeUserToPush } from '../../lib/pushNotifications';
 
+const PUSH_PERM_STATUS_KEY = 'cityeve_push_permission_status';
+const PUSH_DISMISS_COUNT_KEY = 'cityeve_push_dismiss_visit_count';
+const REPROMPT_AFTER_VISITS = 4;
+
 export const PushPermissionPrompt: React.FC = () => {
   const { lang, user } = useApp();
   const [isVisible, setIsVisible] = useState(false);
@@ -13,17 +17,41 @@ export const PushPermissionPrompt: React.FC = () => {
     // Only check in browser
     if (typeof window === 'undefined') return;
 
-    // Check if permission already granted or dismissed in current session
-    const isDismissed = sessionStorage.getItem('cityeve_dismiss_push_prompt') === 'true';
-    if (isDismissed) return;
+    // 1. If system browser permission is already granted, or previously marked granted in localStorage:
+    const isBrowserGranted = 'Notification' in window && Notification.permission === 'granted';
+    const isLocallyGranted = localStorage.getItem(PUSH_PERM_STATUS_KEY) === 'granted';
+    
+    if (isBrowserGranted || isLocallyGranted) {
+      localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
+      return; // Never show again if user already allowed
+    }
 
-    const isGranted = typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted';
-    if (isGranted) return;
+    // 2. Track visit counts for the "Later" (4 visits) logic
+    // We check if this specific session has already handled the visit counter
+    const sessionCounted = sessionStorage.getItem('cityeve_visit_counted');
+    let currentVisits = parseInt(localStorage.getItem(PUSH_DISMISS_COUNT_KEY) || '0', 10);
 
-    // Show prompt after 1.2s for smooth entrance
+    if (!sessionCounted) {
+      currentVisits += 1;
+      localStorage.setItem(PUSH_DISMISS_COUNT_KEY, currentVisits.toString());
+      sessionStorage.setItem('cityeve_visit_counted', 'true');
+    }
+
+    // Check if dismissed in the current session
+    const isSessionDismissed = sessionStorage.getItem('cityeve_session_dismiss_push') === 'true';
+    if (isSessionDismissed) return;
+
+    // Check if user dismissed previously: only show if visits count has reached multiple of 4 (or first visit)
+    const wasDismissedBefore = localStorage.getItem(PUSH_PERM_STATUS_KEY) === 'dismissed_later';
+    if (wasDismissedBefore && currentVisits < REPROMPT_AFTER_VISITS) {
+      // Haven't completed 4 visits yet since dismissal
+      return;
+    }
+
+    // Show prompt smoothly after 1.5s
     const timer = setTimeout(() => {
       setIsVisible(true);
-    }, 1200);
+    }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -31,7 +59,9 @@ export const PushPermissionPrompt: React.FC = () => {
     setIsSubscribing(true);
     try {
       const res = await subscribeUserToPush(user?.id, user?.email, true);
-      if (res.success) {
+      if (res.success || ('Notification' in window && Notification.permission === 'granted')) {
+        localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
+        localStorage.removeItem(PUSH_DISMISS_COUNT_KEY);
         setIsVisible(false);
       } else if (res.message) {
         alert(res.message);
@@ -46,7 +76,10 @@ export const PushPermissionPrompt: React.FC = () => {
 
   const handleDismiss = () => {
     setIsVisible(false);
-    sessionStorage.setItem('cityeve_dismiss_push_prompt', 'true');
+    // Mark status as dismissed_later and reset counter to 0 so it reappears after 4 new visits
+    localStorage.setItem(PUSH_PERM_STATUS_KEY, 'dismissed_later');
+    localStorage.setItem(PUSH_DISMISS_COUNT_KEY, '0');
+    sessionStorage.setItem('cityeve_session_dismiss_push', 'true');
   };
 
   if (!isVisible) return null;
