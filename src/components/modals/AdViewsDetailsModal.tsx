@@ -17,9 +17,9 @@ export const AdViewsDetailsModal: React.FC<AdViewsDetailsModalProps> = ({
   event,
   onShare
 }) => {
-  const { lang } = useApp();
+  const { lang, user } = useApp();
 
-  if (!isOpen || !event) return null;
+  if (!isOpen || !event || !user?.isAdmin) return null;
 
   const isAr = lang === 'ar';
   const rawViews = event.viewsCount || 0;

@@ -30,6 +30,7 @@ import {
   Compass,
   UserCheck,
   Eye,
+  EyeOff,
   FileText,
   Edit3,
   Activity,
@@ -154,6 +155,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent ? editingEvent.styles : ['Salsa', 'Bachata']);
   const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
   const [adNumber, setAdNumber] = useState<string>(editingEvent && editingEvent.adNumber ? editingEvent.adNumber : '');
+  const [showViewsCount, setShowViewsCount] = useState<boolean>(editingEvent ? editingEvent.showViewsCount !== false : true);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -538,7 +540,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           whatsapp,
         },
         position: position !== undefined ? (Number(position) || 0) : (editingEvent.position || 0),
-        adNumber: adNumber || editingEvent.adNumber
+        adNumber: adNumber || editingEvent.adNumber,
+        showViewsCount
       };
 
       updateEvent(updatedEv);
@@ -606,6 +609,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           position: position !== undefined ? (Number(position) || 0) : 0,
           adNumber: adNumber || `ADM-${Date.now()}`,
           adType,
+          showViewsCount,
           createdByAdmin: user?.isAdmin || false,
           creatorId: user?.id,
           creatorName: user?.name
@@ -693,6 +697,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           },
           isFeatured: false,
           isWeeklyPromo: false,
+          showViewsCount,
           adType
         }}
         onBack={() => {
@@ -710,26 +715,26 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-3xl border border-blue-400/40 dark:border-amber-500/30 bg-gradient-to-r from-[#1877F2] via-[#166fe5] to-[#0c59be] dark:bg-gradient-to-r dark:from-neutral-900 dark:via-neutral-900/95 dark:to-amber-950/40 p-6 sm:p-8 shadow-2xl shadow-blue-500/20 dark:shadow-none gold-glow relative overflow-hidden mb-8 text-white"
+        className="rounded-3xl border border-[#78101F]/50 dark:border-amber-500/30 bg-gradient-to-r from-[#42030A] via-[#5B0813] to-[#78101F] dark:from-[#320207] dark:via-[#42030A] dark:to-neutral-950 p-6 sm:p-8 shadow-2xl shadow-[#42030A]/30 gold-glow relative overflow-hidden mb-8 text-white"
       >
-        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 dark:bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative z-10">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-white/20 text-white dark:bg-amber-500/15 dark:text-amber-400 border border-white/30 dark:border-amber-500/30 shadow-lg shrink-0 overflow-hidden relative backdrop-blur-sm">
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-lg shrink-0 overflow-hidden relative backdrop-blur-sm">
               {user?.avatar ? (
                 <img src={user.avatar} alt={user?.name || 'User'} className="w-full h-full object-cover" />
               ) : (
-                <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 animate-pulse" />
+                <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 animate-pulse text-amber-300" />
               )}
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight flex flex-wrap items-center gap-2">
                 <span>{lang === 'ar' ? 'أهلاً بك يا' : 'Welcome,'}</span>
-                <span className="text-amber-300 dark:text-amber-400 border-b-2 border-amber-300/40 dark:border-amber-500/40 pb-0.5">{user?.name || (lang === 'ar' ? 'عضو النادي' : 'Club Member')}</span>
+                <span className="text-amber-300 border-b-2 border-amber-300/40 pb-0.5">{user?.name || (lang === 'ar' ? 'عضو النادي' : 'Club Member')}</span>
                 <span>✨</span>
               </h2>
-              <p className="text-xs sm:text-sm text-blue-100 dark:text-neutral-300 mt-1.5 leading-relaxed max-w-xl font-medium">
+              <p className="text-xs sm:text-sm text-amber-100/90 dark:text-neutral-300 mt-1.5 leading-relaxed max-w-xl font-medium">
                 {lang === 'ar'
                   ? 'أنت الآن في صفحة إضافة إعلان جديد في منصة CityEve. قم بملء البيانات التالية لنشر فعاليتك أو دورتك التدريبية.'
                   : 'You are now creating a new ad on CityEve. Fill in the fields below to publish your event or workshop.'}
@@ -740,7 +745,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           <button
             type="button"
             onClick={handleCancelClick}
-            className="flex items-center gap-2 rounded-xl bg-white/20 hover:bg-white/30 text-white dark:bg-neutral-800/90 dark:text-neutral-300 border border-white/30 dark:border-white/10 px-4 py-2.5 text-xs font-bold hover:text-white transition-all self-end sm:self-center shrink-0 shadow-md backdrop-blur-sm"
+            className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2.5 text-xs font-bold transition-all self-end sm:self-center shrink-0 shadow-md backdrop-blur-sm"
           >
             <ArrowLeft className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
             <span>{lang === 'ar' ? 'عودة للرئيسية' : 'Back to Explore'}</span>
@@ -748,317 +753,317 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         </div>
       </motion.div>
 
-{/* Ad Type & Language Mode Selection Bar */}
-        {(!adType || isEditingAdType) ? (
-          <div className="rounded-2xl sm:rounded-3xl border border-blue-200/80 dark:border-neutral-800 bg-gradient-to-br from-[#1877F2]/10 via-[#1877F2]/5 to-blue-50/60 dark:bg-neutral-900/70 p-3.5 sm:p-5 relative shadow-xl shadow-blue-500/5 dark:shadow-lg">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#1877F2]/15 border border-[#1877F2]/30 text-[#1877F2] dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <Crown className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-black text-blue-950 dark:text-white">
-                    {lang === 'ar' ? 'نوع الإعلان المطلوب' : 'Select Ad Type'}
-                  </h3>
-                  <p className="text-[11px] text-blue-900/70 dark:text-neutral-400">
-                    {lang === 'ar' ? 'اختر مستوى الظهور والتمييز لإعلانك' : 'Choose visibility tier for your ad'}
-                  </p>
-                </div>
+      {/* Ad Type & Language Mode Selection Bar */}
+      {(!adType || isEditingAdType) ? (
+        <div className="rounded-2xl sm:rounded-3xl border border-amber-500/30 dark:border-[#78101F]/60 bg-amber-50/50 dark:bg-neutral-900 p-3.5 sm:p-5 relative shadow-xl shadow-amber-500/5 dark:shadow-lg">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <Crown className="h-4 w-4" />
               </div>
-
-              <div className="flex items-center gap-2">
-                {isLoadingPricing && (
-                  <div className="flex items-center gap-1.5 text-xs text-[#1877F2] dark:text-amber-400 font-bold shrink-0">
-                    <Sparkles className="h-3.5 w-3.5 animate-spin" />
-                    <span className="hidden sm:inline">{lang === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}</span>
-                  </div>
-                )}
-                {isEditingAdType && adType && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingAdType(false)}
-                    className="text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white bg-white/80 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                  >
-                    {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-                  </button>
-                )}
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-neutral-900 dark:text-white">
+                  {lang === 'ar' ? 'نوع الإعلان المطلوب' : 'Select Ad Type'}
+                </h3>
+                <p className="text-[11px] text-neutral-600 dark:text-neutral-300">
+                  {lang === 'ar' ? 'اختر مستوى الظهور والتمييز لإعلانك' : 'Choose visibility tier for your ad'}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-              {/* VIP Ad Card */}
-              <button
-                type="button"
-                onClick={async () => {
-                  setIsLoadingPricing(true);
-                  await loadPricingConfig();
-                  setAdType('vip');
-                  setIsEditingAdType(false);
-                  setIsLoadingPricing(false);
-                }}
-                className={`relative overflow-hidden text-start p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between cursor-pointer ${
-                  adType === 'vip' 
-                    ? 'bg-gradient-to-br from-amber-500/25 via-amber-400/15 to-[#1877F2]/10 dark:bg-gradient-to-br dark:from-amber-500/20 dark:via-amber-500/10 dark:to-transparent border-amber-500 dark:border-amber-400 ring-2 ring-amber-400/40 shadow-md shadow-amber-500/15 scale-[1.01]' 
-                    : 'bg-gradient-to-br from-[#1877F2]/5 via-white to-amber-50/40 border-amber-300/70 hover:border-amber-400 dark:bg-neutral-800/80 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:hover:border-amber-400/50 shadow-sm'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs shrink-0 font-bold">
-                        👑
-                      </span>
-                      <span className={`font-black text-sm sm:text-base ${adType === 'vip' ? 'text-amber-950 dark:text-amber-300' : 'text-neutral-900 dark:text-white'}`}>
-                        {lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Featured'}
-                      </span>
-                    </div>
-                    {adType === 'vip' ? (
-                      <CheckCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border border-neutral-400 dark:border-neutral-600 shrink-0" />
-                    )}
-                  </div>
-                  <p className={`text-[11px] sm:text-xs leading-relaxed ${adType === 'vip' ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-600 dark:text-neutral-400'}`}>
-                    {lang === 'ar' ? 'يظهر في أول 6 نتائج بالصدارة لأقصى عدد مشاهدات.' : 'Appears in the first 6 top results for maximum reach.'}
-                  </p>
+            <div className="flex items-center gap-2">
+              {isLoadingPricing && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-bold shrink-0">
+                  <Sparkles className="h-3.5 w-3.5 animate-spin" />
+                  <span className="hidden sm:inline">{lang === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}</span>
                 </div>
-                <div className="mt-2 pt-1.5 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-amber-900 dark:text-amber-300/90 bg-amber-500/20 dark:bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-400/30 dark:border-none">
-                    {lang === 'ar' ? '👑 أولوية الصدارة' : '👑 Top Priority'}
-                  </span>
-                </div>
-              </button>
-
-              {/* Standard Ad Card */}
-              <button
-                type="button"
-                onClick={async () => {
-                  setIsLoadingPricing(true);
-                  await loadPricingConfig();
-                  setAdType('standard');
-                  setIsEditingAdType(false);
-                  setIsLoadingPricing(false);
-                }}
-                className={`relative overflow-hidden text-start p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between cursor-pointer ${
-                  adType === 'standard' 
-                    ? 'bg-gradient-to-br from-[#1877F2]/25 via-[#1877F2]/15 to-indigo-100/40 dark:bg-gradient-to-br dark:from-sky-500/20 dark:via-sky-500/10 dark:to-transparent border-[#1877F2] dark:border-sky-400 ring-2 ring-[#1877F2]/30 shadow-md shadow-blue-500/15 scale-[1.01]' 
-                    : 'bg-gradient-to-br from-[#1877F2]/5 via-white to-blue-50/40 border-blue-200/80 hover:border-[#1877F2]/60 dark:bg-neutral-800/80 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:hover:border-sky-400/50 shadow-sm'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-[#1877F2]/15 text-[#1877F2] dark:bg-sky-500/20 dark:text-sky-400 flex items-center justify-center text-xs shrink-0 font-bold">
-                        ⚡
-                      </span>
-                      <span className={`font-black text-sm sm:text-base ${adType === 'standard' ? 'text-blue-950 dark:text-sky-300' : 'text-neutral-900 dark:text-white'}`}>
-                        {lang === 'ar' ? 'إعلان عادي' : 'Standard Ad'}
-                      </span>
-                    </div>
-                    {adType === 'standard' ? (
-                      <CheckCircle className="h-5 w-5 text-[#1877F2] dark:text-sky-400 shrink-0" />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border border-neutral-400 dark:border-neutral-600 shrink-0" />
-                    )}
-                  </div>
-                  <p className={`text-[11px] sm:text-xs leading-relaxed ${adType === 'standard' ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-600 dark:text-neutral-400'}`}>
-                    {lang === 'ar' ? 'يظهر بشكل قياسي في قائمة الفعاليات وفقاً للتاريخ.' : 'Appears standardly in the events list by date.'}
-                  </p>
-                </div>
-                <div className="mt-2 pt-1.5 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-blue-900 dark:text-sky-300/90 bg-[#1877F2]/15 dark:bg-sky-500/15 px-2 py-0.5 rounded-md border border-[#1877F2]/30 dark:border-none">
-                    {lang === 'ar' ? '⚡ ظهور قياسي' : '⚡ Standard'}
-                  </span>
-                </div>
-              </button>
-
-              {/* Free Ad Card */}
-              <button
-                type="button"
-                onClick={async () => {
-                  setIsLoadingPricing(true);
-                  await loadPricingConfig();
-                  setAdType('free');
-                  setSubscriptionDays(7);
-                  setIsEditingAdType(false);
-                  setIsLoadingPricing(false);
-                }}
-                className={`relative overflow-hidden text-start p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between cursor-pointer ${
-                  adType === 'free' 
-                    ? 'bg-gradient-to-br from-emerald-500/25 via-emerald-400/15 to-[#1877F2]/10 dark:bg-gradient-to-br dark:from-emerald-500/20 dark:via-emerald-500/10 dark:to-transparent border-emerald-500 dark:border-emerald-400 ring-2 ring-emerald-400/40 shadow-md shadow-emerald-500/15 scale-[1.01]' 
-                    : 'bg-gradient-to-br from-[#1877F2]/5 via-white to-emerald-50/40 border-emerald-200/80 hover:border-emerald-400 dark:bg-neutral-800/80 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:hover:border-emerald-400/50 shadow-sm'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0 font-bold">
-                        🎁
-                      </span>
-                      <span className={`font-black text-sm sm:text-base ${adType === 'free' ? 'text-emerald-950 dark:text-emerald-300' : 'text-neutral-900 dark:text-white'}`}>
-                        {lang === 'ar' ? 'إعلان مجاني' : 'Free Ad'}
-                      </span>
-                    </div>
-                    {adType === 'free' ? (
-                      <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border border-neutral-400 dark:border-neutral-600 shrink-0" />
-                    )}
-                  </div>
-                  <p className={`text-[11px] sm:text-xs leading-relaxed ${adType === 'free' ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-600 dark:text-neutral-400'}`}>
-                    {lang === 'ar' ? 'إعلان مجاني يظهر في القائمة العامة للفعاليات.' : 'Free ad listed in the general events feed.'}
-                  </p>
-                </div>
-                <div className="mt-2 pt-1.5 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-emerald-900 dark:text-emerald-300/90 bg-emerald-500/20 dark:bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-400/30 dark:border-none">
-                    {lang === 'ar' ? '⏳ إعلان 1 أسبوعياً' : '⏳ 1 per week'}
-                  </span>
-                </div>
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Sleek Compact Unified Summary Bar: Selected Ad Type AND Content Language on the SAME ROW */
-          <div className="rounded-xl sm:rounded-2xl border border-blue-200/80 dark:border-neutral-800 bg-gradient-to-r from-blue-50/90 via-white to-blue-50/90 dark:bg-neutral-900/90 shadow-sm backdrop-blur-md p-2 sm:p-2.5">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-1.5 sm:gap-3">
-              
-              {/* 1. Chosen Ad Type Display with Edit Button */}
-              <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 shrink-0">
-                    {lang === 'ar' ? 'نوع الإعلان:' : 'Ad Type:'}
-                  </span>
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-black shadow-xs ${
-                    adType === 'vip'
-                      ? 'bg-amber-500/15 border-amber-400/50 text-amber-900 dark:text-amber-300'
-                      : adType === 'standard'
-                      ? 'bg-blue-500/15 border-blue-400/50 text-[#1877F2] dark:text-sky-300'
-                      : 'bg-emerald-500/15 border-emerald-400/50 text-emerald-900 dark:text-emerald-300'
-                  }`}>
-                    <span>{adType === 'vip' ? '👑' : adType === 'standard' ? '⚡' : '🎁'}</span>
-                    <span className="truncate">
-                      {adType === 'vip' 
-                        ? (lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Featured') 
-                        : adType === 'standard' 
-                        ? (lang === 'ar' ? 'إعلان عادي' : 'Standard Ad') 
-                        : (lang === 'ar' ? 'إعلان مجاني' : 'Free Ad')}
-                    </span>
-                  </div>
-                </div>
+              )}
+              {isEditingAdType && adType && (
                 <button
                   type="button"
-                  onClick={() => setIsEditingAdType(true)}
-                  className="text-xs font-bold text-[#1877F2] dark:text-amber-400 hover:text-blue-700 dark:hover:text-amber-300 hover:underline px-2 py-0.5 rounded-md hover:bg-blue-100/60 dark:hover:bg-neutral-800 transition-colors shrink-0 cursor-pointer"
+                  onClick={() => setIsEditingAdType(false)}
+                  className="text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white bg-white/80 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+            {/* VIP Ad Card */}
+            <button
+              type="button"
+              onClick={async () => {
+                setIsLoadingPricing(true);
+                await loadPricingConfig();
+                setAdType('vip');
+                setIsEditingAdType(false);
+                setIsLoadingPricing(false);
+              }}
+              className={`relative overflow-hidden text-start p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+                adType === 'vip' 
+                  ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-400/40 shadow-md shadow-amber-500/15 scale-[1.01] dark:bg-[#5B0813]/70 dark:border-amber-400 dark:ring-amber-400/40' 
+                  : 'bg-white border-neutral-200 hover:border-amber-400 hover:bg-amber-50/30 dark:bg-neutral-900 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:hover:border-amber-400/60 shadow-sm'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs shrink-0 font-bold">
+                      👑
+                    </span>
+                    <span className={`font-black text-sm sm:text-base ${adType === 'vip' ? 'text-amber-950 dark:text-amber-300' : 'text-neutral-900 dark:text-white'}`}>
+                      {lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Featured'}
+                    </span>
+                  </div>
+                  {adType === 'vip' ? (
+                    <CheckCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full border border-neutral-400 dark:border-neutral-500 shrink-0" />
+                  )}
+                </div>
+                <p className={`text-[11px] sm:text-xs leading-relaxed ${adType === 'vip' ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                  {lang === 'ar' ? 'يظهر في أول 6 نتائج بالصدارة لأقصى عدد مشاهدات.' : 'Appears in the first 6 top results for maximum reach.'}
+                </p>
+              </div>
+              <div className="mt-2 pt-1.5 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-amber-900 dark:text-amber-300 bg-amber-500/20 dark:bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-400/30 dark:border-amber-400/40">
+                  {lang === 'ar' ? '👑 أولوية الصدارة' : '👑 Top Priority'}
+                </span>
+              </div>
+            </button>
+
+            {/* Standard Ad Card */}
+            <button
+              type="button"
+              onClick={async () => {
+                setIsLoadingPricing(true);
+                await loadPricingConfig();
+                setAdType('standard');
+                setIsEditingAdType(false);
+                setIsLoadingPricing(false);
+              }}
+              className={`relative overflow-hidden text-start p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+                adType === 'standard' 
+                  ? 'bg-[#5B0813]/10 border-[#78101F] ring-2 ring-amber-400/30 shadow-md shadow-[#42030A]/15 scale-[1.01] dark:bg-[#78101F]/70 dark:border-amber-400 dark:ring-amber-400/30' 
+                  : 'bg-white border-neutral-200 hover:border-[#78101F]/60 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:hover:border-amber-400/60 shadow-sm'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-[#5B0813]/15 text-[#5B0813] dark:bg-amber-500/20 dark:text-amber-400 flex items-center justify-center text-xs shrink-0 font-bold">
+                      ⚡
+                    </span>
+                    <span className={`font-black text-sm sm:text-base ${adType === 'standard' ? 'text-[#5B0813] dark:text-amber-300' : 'text-neutral-900 dark:text-white'}`}>
+                      {lang === 'ar' ? 'إعلان عادي' : 'Standard Ad'}
+                    </span>
+                  </div>
+                  {adType === 'standard' ? (
+                    <CheckCircle className="h-5 w-5 text-[#5B0813] dark:text-amber-400 shrink-0" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full border border-neutral-400 dark:border-neutral-500 shrink-0" />
+                  )}
+                </div>
+                <p className={`text-[11px] sm:text-xs leading-relaxed ${adType === 'standard' ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                  {lang === 'ar' ? 'يظهر بشكل قياسي في قائمة الفعاليات وفقاً للتاريخ.' : 'Appears standardly in the events list by date.'}
+                </p>
+              </div>
+              <div className="mt-2 pt-1.5 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#5B0813] dark:text-amber-300 bg-[#5B0813]/10 dark:bg-amber-500/20 px-2 py-0.5 rounded-md border border-[#78101F]/30 dark:border-amber-400/40">
+                  {lang === 'ar' ? '⚡ ظهور قياسي' : '⚡ Standard'}
+                </span>
+              </div>
+            </button>
+
+            {/* Free Ad Card */}
+            <button
+              type="button"
+              onClick={async () => {
+                setIsLoadingPricing(true);
+                await loadPricingConfig();
+                setAdType('free');
+                setSubscriptionDays(7);
+                setIsEditingAdType(false);
+                setIsLoadingPricing(false);
+              }}
+              className={`relative overflow-hidden text-start p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+                adType === 'free' 
+                  ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-400/40 shadow-md shadow-emerald-500/15 scale-[1.01] dark:bg-emerald-950/70 dark:border-emerald-400 dark:ring-emerald-400/40' 
+                  : 'bg-white border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/20 dark:bg-neutral-900 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:hover:border-emerald-400/60 shadow-sm'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0 font-bold">
+                      🎁
+                    </span>
+                    <span className={`font-black text-sm sm:text-base ${adType === 'free' ? 'text-emerald-950 dark:text-emerald-300' : 'text-neutral-900 dark:text-white'}`}>
+                      {lang === 'ar' ? 'إعلان مجاني' : 'Free Ad'}
+                    </span>
+                  </div>
+                  {adType === 'free' ? (
+                    <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full border border-neutral-400 dark:border-neutral-500 shrink-0" />
+                  )}
+                </div>
+                <p className={`text-[11px] sm:text-xs leading-relaxed ${adType === 'free' ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                  {lang === 'ar' ? 'إعلان مجاني يظهر في القائمة العامة للفعاليات.' : 'Free ad listed in the general events feed.'}
+                </p>
+              </div>
+              <div className="mt-2 pt-1.5 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-emerald-900 dark:text-emerald-300 bg-emerald-500/20 dark:bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-400/30 dark:border-emerald-400/40">
+                  {lang === 'ar' ? '⏳ إعلان 1 أسبوعياً' : '⏳ 1 per week'}
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Sleek Compact Unified Summary Bar: Selected Ad Type AND Content Language on the SAME ROW */
+        <div className="rounded-xl sm:rounded-2xl border border-amber-500/30 dark:border-[#78101F]/60 bg-amber-50/70 dark:bg-neutral-900 shadow-sm backdrop-blur-md p-2 sm:p-2.5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-1.5 sm:gap-3">
+            
+            {/* 1. Chosen Ad Type Display with Edit Button */}
+            <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 shrink-0">
+                  {lang === 'ar' ? 'نوع الإعلان:' : 'Ad Type:'}
+                </span>
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-black shadow-xs ${
+                  adType === 'vip'
+                    ? 'bg-amber-500/15 border-amber-400/50 text-amber-900 dark:text-amber-300'
+                    : adType === 'standard'
+                    ? 'bg-[#5B0813]/15 border-[#78101F]/50 text-[#5B0813] dark:text-amber-300'
+                    : 'bg-emerald-500/15 border-emerald-400/50 text-emerald-900 dark:text-emerald-300'
+                }`}>
+                  <span>{adType === 'vip' ? '👑' : adType === 'standard' ? '⚡' : '🎁'}</span>
+                  <span className="truncate">
+                    {adType === 'vip' 
+                      ? (lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Featured') 
+                      : adType === 'standard' 
+                      ? (lang === 'ar' ? 'إعلان عادي' : 'Standard Ad') 
+                      : (lang === 'ar' ? 'إعلان مجاني' : 'Free Ad')}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingAdType(true)}
+                className="text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 hover:underline px-2 py-0.5 rounded-md hover:bg-amber-100/60 dark:hover:bg-neutral-800 transition-colors shrink-0 cursor-pointer"
+              >
+                {lang === 'ar' ? 'تعديل' : 'Edit'}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-5 bg-amber-200 dark:bg-neutral-800 shrink-0" />
+            <div className="block sm:hidden w-full h-px bg-amber-100 dark:bg-neutral-800" />
+
+            {/* 2. Content Language Selector or Chosen Language Display on the EXACT SAME ROW */}
+            <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 shrink-0">
+                  {lang === 'ar' ? 'لغة المحتوى:' : 'Language:'}
+                </span>
+
+                {contentLangMode && !isEditingLangMode ? (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg border border-amber-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-black text-neutral-900 dark:text-white shadow-xs">
+                    <span>{contentLangMode === 'ar' ? '🇸🇦' : contentLangMode === 'en' ? '🇬🇧' : '🌐'}</span>
+                    <span className="truncate">
+                      {contentLangMode === 'ar' 
+                        ? (lang === 'ar' ? 'عربي فقط' : 'Arabic Only') 
+                        : contentLangMode === 'en' 
+                        ? (lang === 'ar' ? 'إنجليزي فقط' : 'English Only') 
+                        : (lang === 'ar' ? 'عربي وإنجليزي' : 'Arabic & English')}
+                    </span>
+                  </div>
+                ) : (
+                  /* Inline Language Selection Pills directly on the same line */
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setContentLangMode('ar');
+                        setPreviewLang('ar');
+                        setIsEditingLangMode(false);
+                      }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                        contentLangMode === 'ar'
+                          ? 'bg-gradient-to-r from-[#5B0813] to-[#78101F] text-amber-300 border-[#78101F] dark:bg-amber-500 dark:text-neutral-950'
+                          : 'bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-neutral-700'
+                      }`}
+                    >
+                      <span>🇸🇦</span>
+                      <span className="hidden xs:inline">{lang === 'ar' ? 'عربي فقط' : 'Arabic'}</span>
+                      <span className="xs:hidden">{lang === 'ar' ? 'عربي' : 'AR'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setContentLangMode('en');
+                        setPreviewLang('en');
+                        setIsEditingLangMode(false);
+                      }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                        contentLangMode === 'en'
+                          ? 'bg-gradient-to-r from-[#5B0813] to-[#78101F] text-amber-300 border-[#78101F] dark:bg-amber-500 dark:text-neutral-950'
+                          : 'bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-neutral-700'
+                      }`}
+                    >
+                      <span>🇬🇧</span>
+                      <span className="hidden xs:inline">{lang === 'ar' ? 'إنجليزي فقط' : 'English'}</span>
+                      <span className="xs:hidden">{lang === 'ar' ? 'إنجليزي' : 'EN'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setContentLangMode('both');
+                        setIsEditingLangMode(false);
+                      }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                        contentLangMode === 'both'
+                          ? 'bg-gradient-to-r from-[#5B0813] to-[#78101F] text-amber-300 border-[#78101F] dark:bg-amber-500 dark:text-neutral-950'
+                          : 'bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-neutral-700'
+                      }`}
+                    >
+                      <span>🌐</span>
+                      <span className="hidden xs:inline">{lang === 'ar' ? 'عربي وإنجليزي' : 'Both'}</span>
+                      <span className="xs:hidden">{lang === 'ar' ? 'كلاهما' : 'Both'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {contentLangMode && !isEditingLangMode && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingLangMode(true)}
+                  className="text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 hover:underline px-2 py-0.5 rounded-md hover:bg-amber-100/60 dark:hover:bg-neutral-800 transition-colors shrink-0 cursor-pointer"
                 >
                   {lang === 'ar' ? 'تعديل' : 'Edit'}
                 </button>
-              </div>
-
-              {/* Divider */}
-              <div className="hidden sm:block w-px h-5 bg-blue-200 dark:bg-neutral-800 shrink-0" />
-              <div className="block sm:hidden w-full h-px bg-blue-100 dark:bg-neutral-800" />
-
-              {/* 2. Content Language Selector or Chosen Language Display on the EXACT SAME ROW */}
-              <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 shrink-0">
-                    {lang === 'ar' ? 'لغة المحتوى:' : 'Language:'}
-                  </span>
-
-                  {contentLangMode && !isEditingLangMode ? (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-lg border border-blue-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-black text-blue-950 dark:text-white shadow-xs">
-                      <span>{contentLangMode === 'ar' ? '🇸🇦' : contentLangMode === 'en' ? '🇬🇧' : '🌐'}</span>
-                      <span className="truncate">
-                        {contentLangMode === 'ar' 
-                          ? (lang === 'ar' ? 'عربي فقط' : 'Arabic Only') 
-                          : contentLangMode === 'en' 
-                          ? (lang === 'ar' ? 'إنجليزي فقط' : 'English Only') 
-                          : (lang === 'ar' ? 'عربي وإنجليزي' : 'Arabic & English')}
-                      </span>
-                    </div>
-                  ) : (
-                    /* Inline Language Selection Pills directly on the same line */
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setContentLangMode('ar');
-                          setPreviewLang('ar');
-                          setIsEditingLangMode(false);
-                        }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-xs ${
-                          contentLangMode === 'ar'
-                            ? 'bg-[#1877F2] text-white border-[#1877F2]'
-                            : 'bg-white dark:bg-neutral-800 text-blue-950 dark:text-neutral-200 border-blue-200 dark:border-neutral-700 hover:border-[#1877F2] hover:bg-blue-50 dark:hover:bg-neutral-700'
-                        }`}
-                      >
-                        <span>🇸🇦</span>
-                        <span className="hidden xs:inline">{lang === 'ar' ? 'عربي فقط' : 'Arabic'}</span>
-                        <span className="xs:hidden">{lang === 'ar' ? 'عربي' : 'AR'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setContentLangMode('en');
-                          setPreviewLang('en');
-                          setIsEditingLangMode(false);
-                        }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-xs ${
-                          contentLangMode === 'en'
-                            ? 'bg-[#1877F2] text-white border-[#1877F2]'
-                            : 'bg-white dark:bg-neutral-800 text-blue-950 dark:text-neutral-200 border-blue-200 dark:border-neutral-700 hover:border-[#1877F2] hover:bg-blue-50 dark:hover:bg-neutral-700'
-                        }`}
-                      >
-                        <span>🇬🇧</span>
-                        <span className="hidden xs:inline">{lang === 'ar' ? 'إنجليزي فقط' : 'English'}</span>
-                        <span className="xs:hidden">{lang === 'ar' ? 'إنجليزي' : 'EN'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setContentLangMode('both');
-                          setIsEditingLangMode(false);
-                        }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-xs ${
-                          contentLangMode === 'both'
-                            ? 'bg-[#1877F2] text-white border-[#1877F2]'
-                            : 'bg-white dark:bg-neutral-800 text-blue-950 dark:text-neutral-200 border-blue-200 dark:border-neutral-700 hover:border-[#1877F2] hover:bg-blue-50 dark:hover:bg-neutral-700'
-                        }`}
-                      >
-                        <span>🌐</span>
-                        <span className="hidden xs:inline">{lang === 'ar' ? 'عربي وإنجليزي' : 'Both'}</span>
-                        <span className="xs:hidden">{lang === 'ar' ? 'كلاهما' : 'Both'}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {contentLangMode && !isEditingLangMode && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingLangMode(true)}
-                    className="text-xs font-bold text-[#1877F2] dark:text-amber-400 hover:text-blue-700 dark:hover:text-amber-300 hover:underline px-2 py-0.5 rounded-md hover:bg-blue-100/60 dark:hover:bg-neutral-800 transition-colors shrink-0 cursor-pointer"
-                  >
-                    {lang === 'ar' ? 'تعديل' : 'Edit'}
-                  </button>
-                )}
-              </div>
-
+              )}
             </div>
+
           </div>
-        )}
+        </div>
+      )}
 
       {adType && !contentLangMode ? (
-        <div className="p-6 sm:p-8 rounded-3xl border border-dashed border-blue-300 dark:border-neutral-700 bg-gradient-to-br from-blue-50/50 via-white to-blue-50/80 dark:bg-neutral-900/30 text-center space-y-3 shadow-md">
-          <div className="w-12 h-12 rounded-2xl bg-[#1877F2]/10 border border-[#1877F2]/20 text-[#1877F2] dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-500 flex items-center justify-center mx-auto text-xl">
+        <div className="p-6 sm:p-8 rounded-3xl border border-dashed border-amber-300 dark:border-neutral-700 bg-amber-50/70 dark:bg-neutral-900 text-center space-y-3 shadow-md">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto text-xl">
             🌐
           </div>
-          <h4 className="text-base sm:text-lg font-bold text-blue-950 dark:text-white">
+          <h4 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
             {lang === 'ar' ? 'يرجى اختيار لغة محتوى الإعلان' : 'Please Select Ad Content Language'}
           </h4>
-          <p className="text-xs sm:text-sm text-blue-900/70 dark:text-neutral-400 max-w-md mx-auto">
+          <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 max-w-md mx-auto">
             {lang === 'ar' 
               ? 'اختر لغة الإعلان من الشريط أعلاه (عربي فقط، إنجليزي فقط، أو كلاهما) لفتح حقول النموذج المخصصة.' 
               : 'Choose the ad language from the bar above (Arabic Only, English Only, or Both) to open the tailored form.'}
@@ -1196,6 +1201,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         organizerName: organizerName.trim() || user?.name || 'الإدارة'
                       },
                       likesCount: 15,
+                      viewsCount: 128,
+                      showViewsCount: showViewsCount,
                       isFeatured: false,
                       isWeeklyPromo: false,
                       position: Number(position) || 0,
@@ -1331,14 +1338,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-3xl border border-blue-200/80 dark:border-white/10 bg-gradient-to-b from-white via-blue-50/20 to-white dark:bg-neutral-900/90 shadow-2xl p-6 sm:p-8 space-y-8 backdrop-blur-xl"
+          className="rounded-3xl border border-amber-500/30 dark:border-[#78101F]/60 bg-gradient-to-b from-white via-amber-50/20 to-white dark:from-[#42030A]/60 dark:via-neutral-900/95 dark:to-neutral-950 shadow-2xl p-6 sm:p-8 space-y-8 backdrop-blur-xl"
         >
-        <div className="border-b border-blue-100 dark:border-white/10 pb-5">
-          <h3 className="text-lg font-bold text-blue-950 dark:text-white flex items-center gap-2">
-            <Tag className="h-5 w-5 text-[#1877F2] dark:text-amber-400" />
+        <div className="border-b border-amber-200/60 dark:border-white/10 pb-5">
+          <h3 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <Tag className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             <span>{lang === 'ar' ? 'اختر تصنيف الإعلان' : 'Select Ad Category'}</span>
           </h3>
-          <p className="text-xs text-blue-900/70 dark:text-neutral-400 mt-1">
+          <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
             {lang === 'ar' ? 'حدد نوع الفعالية لتظهر في القسم المناسب للمستخدمين' : 'Choose event category to appear in the correct section'}
           </p>
 
@@ -1353,10 +1360,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 key={cat.id}
                 type="button"
                 onClick={() => setCategory(cat.id as any)}
-                className={`py-3 px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center ${
+                className={`py-3 px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center cursor-pointer ${
                   category === cat.id
-                    ? 'bg-gradient-to-r from-[#1877F2] to-[#166fe5] text-white border-[#1877F2] shadow-lg shadow-blue-500/20 scale-[1.02] dark:bg-amber-500 dark:text-neutral-950 dark:border-amber-400 dark:shadow-lg dark:gold-glow'
-                    : 'bg-white text-blue-950 border-blue-200 hover:border-[#1877F2]/60 hover:bg-blue-50/50 dark:bg-neutral-950 dark:text-neutral-400 dark:border-white/10 dark:hover:border-neutral-700 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border-[#78101F] shadow-lg shadow-[#42030A]/30 scale-[1.02] dark:bg-gradient-to-r dark:from-amber-500 dark:to-amber-400 dark:text-neutral-950 dark:border-amber-400 dark:gold-glow'
+                    : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50 dark:hover:text-white'
                 }`}
               >
                 {lang === 'ar' ? cat.ar : cat.en}
@@ -1369,22 +1376,22 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
           {/* Event Code (when editing) */}
           {editingEvent?.eventRef && (
-            <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 mb-6">
-              <label className="block text-xs font-bold text-indigo-400 mb-1.5">
+            <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 mb-6">
+              <label className="block text-xs font-bold text-amber-600 dark:text-amber-400 mb-1.5">
                 {lang === 'ar' ? 'كود الحدث (الرقم المرجعي)' : 'Event Code (Reference)'}
               </label>
               <input
                 disabled
                 type="text"
                 value={editingEvent.eventRef}
-                className="w-full bg-white dark:bg-neutral-900/50 border border-indigo-500/30 rounded-xl px-4 py-2 text-indigo-600 dark:text-indigo-300 font-mono font-bold select-all focus:outline-none opacity-80 cursor-not-allowed"
+                className="w-full bg-white dark:bg-neutral-900/50 border border-amber-500/30 rounded-xl px-4 py-2 text-amber-900 dark:text-amber-300 font-mono font-bold select-all focus:outline-none opacity-80 cursor-not-allowed"
               />
             </div>
           )}
 
           {/* Title AR / EN */}
           <div className="space-y-4">
-            <h4 className="text-sm font-bold text-[#1877F2] dark:text-amber-400 font-mono tracking-wider uppercase">
+            <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
               {lang === 'ar' ? '1. عنوان الفعالية' : '1. Event Title'}
             </h4>
             
@@ -1400,7 +1407,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         type="button"
                         onClick={() => handleTranslate(titleEn, 'ar', setTitleAr, 'titleAr')}
                         disabled={!titleEn || isTranslating === 'titleAr'}
-                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-50 border border-blue-200 text-[#1877F2] hover:bg-blue-100 dark:bg-neutral-900 dark:border-neutral-800 dark:text-amber-500 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 dark:bg-neutral-900 dark:border-neutral-800 dark:text-amber-400 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {isTranslating === 'titleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                         {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
@@ -1412,7 +1419,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={titleAr}
                     onChange={e => setTitleAr(e.target.value)}
                     placeholder={lang === 'ar' ? 'مثال: سهرة سالسا وباتشاتا ملكية على السطح' : 'e.g. Royal Rooftop Salsa Social'}
-                    className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner`}
+                    className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner`}
                   />
                 </div>
               )}
@@ -1427,7 +1434,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         type="button"
                         onClick={() => handleTranslate(titleAr, 'en', setTitleEn, 'titleEn')}
                         disabled={!titleAr || isTranslating === 'titleEn'}
-                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-50 border border-blue-200 text-[#1877F2] hover:bg-blue-100 dark:bg-neutral-900 dark:border-neutral-800 dark:text-amber-500 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 dark:bg-neutral-900 dark:border-neutral-800 dark:text-amber-400 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {isTranslating === 'titleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                         {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
@@ -1439,7 +1446,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={titleEn}
                     onChange={e => setTitleEn(e.target.value)}
                     placeholder="e.g. Royal Rooftop Salsa Social"
-                    className={`w-full rounded-xl border ${urlRegex.test(titleEn) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner`}
+                    className={`w-full rounded-xl border ${urlRegex.test(titleEn) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner`}
                   />
                 </div>
               )}
@@ -1447,8 +1454,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
 
           {/* Description AR / EN */}
-          <div className="space-y-4 border-t border-blue-100 dark:border-white/5 pt-6">
-            <h4 className="text-sm font-bold text-[#1877F2] dark:text-amber-400 font-mono tracking-wider uppercase">
+          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
+            <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
               {lang === 'ar' ? '2. التفاصيل ومواعيد الحضور' : '2. Details & Schedule'}
             </h4>
             
@@ -1464,7 +1471,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         type="button"
                         onClick={() => handleTranslate(descEn, 'ar', setDescAr, 'descAr')}
                         disabled={!descEn || isTranslating === 'descAr'}
-                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-50 border border-blue-200 text-[#1877F2] hover:bg-blue-100 dark:bg-neutral-900 dark:border-neutral-800 dark:text-amber-500 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 dark:bg-neutral-900 dark:border-neutral-800 dark:text-amber-400 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {isTranslating === 'descAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                         {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
@@ -1481,10 +1488,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     }}
                     maxLength={500}
                     placeholder={lang === 'ar' ? 'تفاصيل الحفلة، أسماء المدربين، التعليمات، وقواعد اللبس (Dress Code)...' : 'Party details, instructor names, guidelines, dress code...'}
-                    className={`w-full rounded-xl border ${urlRegex.test(descAr) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner leading-relaxed`}
+                    className={`w-full rounded-xl border ${urlRegex.test(descAr) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner leading-relaxed`}
                   />
                   <div className="flex justify-between items-center mt-1 px-1">
-                    <span className={`text-[11px] transition-colors duration-200 ${500 - descAr.length <= 50 ? 'text-red-500 font-bold' : 'text-[#1877F2] dark:text-blue-400 font-medium'}`}>
+                    <span className={`text-[11px] transition-colors duration-200 ${500 - descAr.length <= 50 ? 'text-red-500 font-bold' : 'text-amber-700 dark:text-amber-400 font-medium'}`}>
                       {lang === 'ar' 
                         ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descAr.length}` 
                         : `Maximum 500 characters | Remaining: ${500 - descAr.length} characters`}
@@ -1508,7 +1515,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         type="button"
                         onClick={() => handleTranslate(descAr, 'en', setDescEn, 'descEn')}
                         disabled={!descAr || isTranslating === 'descEn'}
-                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-50 border border-blue-200 text-[#1877F2] hover:bg-blue-100 dark:bg-neutral-900 dark:border-neutral-800 dark:text-amber-500 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 dark:bg-neutral-900 dark:border-neutral-800 dark:text-amber-400 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {isTranslating === 'descEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                         {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
@@ -1525,10 +1532,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     }}
                     maxLength={500}
                     placeholder="Party details, instructor names, guidelines, dress code..."
-                    className={`w-full rounded-xl border ${urlRegex.test(descEn) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner leading-relaxed`}
+                    className={`w-full rounded-xl border ${urlRegex.test(descEn) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner leading-relaxed`}
                   />
                   <div className="flex justify-between items-center mt-1 px-1">
-                    <span className={`text-[11px] transition-colors duration-200 ${500 - descEn.length <= 50 ? 'text-red-500 font-bold' : 'text-[#1877F2] dark:text-blue-400 font-medium'}`}>
+                    <span className={`text-[11px] transition-colors duration-200 ${500 - descEn.length <= 50 ? 'text-red-500 font-bold' : 'text-amber-700 dark:text-amber-400 font-medium'}`}>
                       {lang === 'ar' 
                         ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - descEn.length}` 
                         : `Maximum 500 characters | Remaining: ${500 - descEn.length} characters`}
@@ -1545,16 +1552,16 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
 
           {/* Section 3: Media Only */}
-          <div className="space-y-4 border-t border-blue-100 dark:border-white/5 pt-6">
-            <h4 className="text-sm font-bold text-[#1877F2] dark:text-amber-400 font-mono tracking-wider uppercase">
+          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
+            <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
               {lang === 'ar' ? '3. الوسائط فقط' : '3. Media Only'}
             </h4>
 
-            <div className="space-y-4 bg-white dark:bg-neutral-950/60 p-4 sm:p-5 rounded-2xl border border-blue-200/80 dark:border-neutral-800/80 shadow-sm">
+            <div className="space-y-4 bg-white dark:bg-neutral-950/60 p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800/80 shadow-sm">
               <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
                 <span>{lang === 'ar' ? 'نوع وسائط البانر (فيديو / صورة):' : 'Banner Media Type (Video / Image):'}</span>
                 {mediaType === 'video' && (
-                  <span className="text-[11px] font-mono bg-blue-500/10 text-[#1877F2] dark:bg-amber-500/20 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-blue-500/30 dark:border-amber-500/30">
+                  <span className="text-[11px] font-mono bg-amber-500/15 text-[#78101F] dark:bg-amber-500/20 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-500/30">
                     {lang === 'ar' ? '⚡ يضاف 20% لقيمة الاشتراك للإعلان الفيديو' : '⚡ +20% surcharge for video ads'}
                   </span>
                 )}
@@ -1565,10 +1572,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 <button
                   type="button"
                   onClick={() => setMediaType('image')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs sm:text-sm font-bold border transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer ${
                     mediaType === 'image' 
-                      ? 'bg-gradient-to-r from-[#1877F2] to-[#166fe5] text-white border-[#1877F2] shadow-md dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500' 
-                      : 'bg-blue-50/50 text-blue-950 border-blue-200 hover:bg-blue-100 dark:bg-neutral-900 dark:text-neutral-400 dark:border-neutral-800 dark:hover:text-white'
+                      ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border-[#78101F] shadow-md dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500' 
+                      : 'bg-amber-50/40 text-neutral-800 border-neutral-200 hover:bg-amber-50 dark:bg-neutral-900 dark:text-neutral-400 dark:border-neutral-800 dark:hover:text-white'
                   }`}
                 >
                   <ImageIcon className="h-4 w-4 text-amber-400" />
@@ -1577,10 +1584,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 <button
                   type="button"
                   onClick={() => setMediaType('video')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs sm:text-sm font-bold border transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer ${
                     mediaType === 'video' 
-                      ? 'bg-gradient-to-r from-[#1877F2] to-[#166fe5] text-white border-[#1877F2] shadow-md dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500' 
-                      : 'bg-blue-50/50 text-blue-950 border-blue-200 hover:bg-blue-100 dark:bg-neutral-900 dark:text-neutral-400 dark:border-neutral-800 dark:hover:text-white'
+                      ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border-[#78101F] shadow-md dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500' 
+                      : 'bg-amber-50/40 text-neutral-800 border-neutral-200 hover:bg-amber-50 dark:bg-neutral-900 dark:text-neutral-400 dark:border-neutral-800 dark:hover:text-white'
                   }`}
                 >
                   <Video className="h-4 w-4 text-amber-400" />
@@ -1600,16 +1607,16 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
-                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-blue-50/60 dark:bg-neutral-900/90 border border-blue-200 dark:border-neutral-800 hover:border-[#1877F2] hover:bg-blue-100/70 dark:hover:bg-neutral-800 transition-all text-left group cursor-pointer shadow-sm"
+                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-amber-50/40 dark:bg-neutral-900/90 border border-neutral-200 dark:border-neutral-800 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-neutral-800 transition-all text-left group cursor-pointer shadow-sm"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1877F2]/10 text-[#1877F2] dark:bg-amber-500/15 dark:text-amber-400 border border-blue-200 dark:border-amber-500/30 group-hover:scale-110 transition-transform shadow">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-[#78101F] dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/30 group-hover:scale-110 transition-transform shadow">
                       <Camera className="h-5 w-5" />
                     </div>
                     <div>
-                      <span className="block text-xs sm:text-sm font-bold text-blue-950 dark:text-white group-hover:text-[#1877F2] dark:group-hover:text-amber-300 transition-colors">
+                      <span className="block text-xs sm:text-sm font-bold text-neutral-900 dark:text-white group-hover:text-[#78101F] dark:group-hover:text-amber-300 transition-colors">
                         {lang === 'ar' ? 'التقاط من الكاميرا' : 'Capture from Camera'}
                       </span>
-                      <span className="block text-[11px] text-blue-900/60 dark:text-neutral-400 font-mono mt-0.5">
+                      <span className="block text-[11px] text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">
                         {lang === 'ar' ? 'تصوير مباشر الآن' : 'Take photo/video now'}
                       </span>
                     </div>
@@ -1619,16 +1626,16 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-blue-50/60 dark:bg-neutral-900/90 border border-blue-200 dark:border-neutral-800 hover:border-[#1877F2] hover:bg-blue-100/70 dark:hover:bg-neutral-800 transition-all text-left group cursor-pointer shadow-sm"
+                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-amber-50/40 dark:bg-neutral-900/90 border border-neutral-200 dark:border-neutral-800 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-neutral-800 transition-all text-left group cursor-pointer shadow-sm"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1877F2]/10 text-[#1877F2] dark:bg-amber-500/15 dark:text-amber-400 border border-blue-200 dark:border-amber-500/30 group-hover:scale-110 transition-transform shadow">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-[#78101F] dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/30 group-hover:scale-110 transition-transform shadow">
                       <FolderOpen className="h-5 w-5" />
                     </div>
                     <div>
-                      <span className="block text-xs sm:text-sm font-bold text-blue-950 dark:text-white group-hover:text-[#1877F2] dark:group-hover:text-amber-300 transition-colors">
+                      <span className="block text-xs sm:text-sm font-bold text-neutral-900 dark:text-white group-hover:text-[#78101F] dark:group-hover:text-amber-300 transition-colors">
                         {lang === 'ar' ? 'ملف من الموبايل أو الكمبيوتر' : 'File from Mobile / PC'}
                       </span>
-                      <span className="block text-[11px] text-blue-900/60 dark:text-neutral-400 font-mono mt-0.5">
+                      <span className="block text-[11px] text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">
                         {lang === 'ar' ? 'اختر من الاستوديو أو الملفات' : 'Select gallery or folder'}
                       </span>
                     </div>
@@ -1654,10 +1661,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
                 {/* Uploaded File Confirmation / Preview & Progress */}
                 {isUploadingMedia && (
-                  <div className="mt-3 p-4 rounded-2xl bg-blue-50 dark:bg-neutral-900 border border-blue-300 dark:border-amber-500/30 space-y-3 animate-pulse shadow-lg">
-                    <div className="flex items-center justify-between text-xs font-bold text-[#1877F2] dark:text-amber-400">
+                  <div className="mt-3 p-4 rounded-2xl bg-amber-50 dark:bg-neutral-900 border border-amber-300 dark:border-amber-500/30 space-y-3 animate-pulse shadow-lg">
+                    <div className="flex items-center justify-between text-xs font-bold text-[#78101F] dark:text-amber-400">
                       <div className="flex items-center gap-2">
-                        <span className="h-4.5 w-4.5 rounded-full border-2 border-[#1877F2] dark:border-amber-500 border-t-transparent animate-spin inline-block shrink-0" />
+                        <span className="h-4.5 w-4.5 rounded-full border-2 border-[#78101F] dark:border-amber-500 border-t-transparent animate-spin inline-block shrink-0" />
                         <span>
                           {lang === 'ar' 
                             ? `جاري الرفع والتحميل: ${uploadProgress}%` 
@@ -1667,13 +1674,13 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       <span className="font-mono text-xs">{uploadProgress}%</span>
                     </div>
                     {/* Glowing Progress bar track */}
-                    <div className="w-full h-2.5 bg-blue-200 dark:bg-neutral-950 rounded-full overflow-hidden border border-blue-300/30 dark:border-white/5">
+                    <div className="w-full h-2.5 bg-amber-200 dark:bg-neutral-950 rounded-full overflow-hidden border border-amber-300/30 dark:border-white/5">
                       <div 
-                        className="h-full bg-gradient-to-r from-[#1877F2] via-blue-500 to-sky-400 dark:from-amber-600 dark:via-amber-500 dark:to-amber-300 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(24,119,242,0.5)]"
+                        className="h-full bg-gradient-to-r from-[#78101F] via-amber-600 to-amber-400 dark:from-amber-600 dark:via-amber-500 dark:to-amber-300 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(120,16,31,0.5)]"
                         style={{ width: `${uploadProgress || 5}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-blue-900/70 dark:text-neutral-400 leading-relaxed font-sans">
+                    <p className="text-[10px] text-neutral-600 dark:text-neutral-400 leading-relaxed font-sans">
                       {mediaType === 'image' 
                         ? (lang === 'ar' 
                             ? '⚡ تم ضغط وتحسين الصورة تلقائياً بالكامل في المتصفح لتوفير الباقة والرفع الفوري!' 
@@ -1713,8 +1720,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
                 {/* Helpful native video compressor tip */}
                 {mediaType === 'video' && !isUploadingMedia && (
-                  <div className="p-3 bg-blue-50/80 dark:bg-amber-500/5 border border-blue-200 dark:border-amber-500/10 rounded-xl text-[11px] text-blue-950 dark:text-neutral-400 space-y-1 font-sans animate-fade-in mt-1">
-                    <span className="font-bold text-[#1877F2] dark:text-amber-400">💡 {lang === 'ar' ? 'نصيحة ذهبية لسرعة فائقة:' : 'Golden speed tip:'}</span>
+                  <div className="p-3 bg-amber-50/60 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/10 rounded-xl text-[11px] text-neutral-800 dark:text-neutral-400 space-y-1 font-sans animate-fade-in mt-1">
+                    <span className="font-bold text-[#78101F] dark:text-amber-400">💡 {lang === 'ar' ? 'نصيحة ذهبية لسرعة فائقة:' : 'Golden speed tip:'}</span>
                     <p className="leading-relaxed">
                       {lang === 'ar'
                         ? 'لرفع الفيديوهات من الموبايل بسرعة البرق، يُنصح دائماً بأن لا تزيد مدة الفيديو عن 15 ثانية وأن يكون حجمه صغيراً. يمكنك ضغطه في ثوانٍ بمجرد إرساله لنفسك على الواتساب ثم حفظه، حيث يقوم واتساب بضغط الفيديوهات تلقائياً لنسبة تزيد عن 90% مع الحفاظ على وضوحها التام!'
@@ -1749,8 +1756,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
               {/* Visual Media Preview */}
               {mediaUrl && (
-                <div className="mt-3 relative rounded-2xl overflow-hidden border border-blue-300 dark:border-amber-500/30 bg-white dark:bg-neutral-900/90 p-2 shadow-xl">
-                  <div className="text-[11px] font-mono text-[#1877F2] dark:text-amber-400 mb-2 flex items-center justify-between px-1">
+                <div className="mt-3 relative rounded-2xl overflow-hidden border border-amber-300 dark:border-amber-500/30 bg-white dark:bg-neutral-900/90 p-2 shadow-xl">
+                  <div className="text-[11px] font-mono text-[#78101F] dark:text-amber-400 mb-2 flex items-center justify-between px-1">
                     <span>{lang === 'ar' ? '👁️ معاينة الوسائط المختارة:' : '👁️ Media Preview:'}</span>
                     <button
                       type="button"
@@ -1758,21 +1765,21 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         setMediaUrl('');
                         setUploadedFileName(null);
                       }}
-                      className="text-neutral-400 hover:text-rose-400 text-xs transition-colors flex items-center gap-1"
+                      className="text-neutral-400 hover:text-rose-400 text-xs transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <X className="h-3.5 w-3.5" />
                       <span>{lang === 'ar' ? 'حذف' : 'Clear'}</span>
                     </button>
                   </div>
                   {mediaType === 'image' ? (
-                    <img src={mediaUrl} alt="Ad Preview" className="w-full h-44 sm:h-56 object-contain rounded-xl bg-neutral-100 dark:bg-neutral-950 border border-blue-100 dark:border-white/5" />
+                    <img src={mediaUrl} alt="Ad Preview" className="w-full h-44 sm:h-56 object-contain rounded-xl bg-neutral-100 dark:bg-neutral-950 border border-amber-100 dark:border-white/5" />
                   ) : (
                     <div className="relative group/vidpreview">
-                      <video src={getSafePlayableVideoUrl(mediaUrl)} controls className="w-full h-44 sm:h-56 object-contain rounded-xl bg-neutral-100 dark:bg-neutral-950 border border-blue-100 dark:border-white/5" />
+                      <video src={getSafePlayableVideoUrl(mediaUrl)} controls className="w-full h-44 sm:h-56 object-contain rounded-xl bg-neutral-100 dark:bg-neutral-950 border border-amber-100 dark:border-white/5" />
                       <button
                         type="button"
                         onClick={() => setIsFullscreenVideoOpen(true)}
-                        className="absolute top-2 right-2 z-10 flex h-8 px-2.5 items-center justify-center gap-1.5 rounded-full bg-neutral-950/80 text-white border border-neutral-800 hover:bg-[#1877F2] dark:hover:bg-amber-500 hover:text-white dark:hover:text-neutral-950 transition-all shadow-lg backdrop-blur-md text-[10px] font-semibold"
+                        className="absolute top-2 right-2 z-10 flex h-8 px-2.5 items-center justify-center gap-1.5 rounded-full bg-neutral-950/80 text-white border border-neutral-800 hover:bg-[#78101F] dark:hover:bg-amber-500 hover:text-white dark:hover:text-neutral-950 transition-all shadow-lg backdrop-blur-md text-[10px] font-semibold"
                         title={lang === 'ar' ? 'معاينة بملء الشاشة' : 'View Full Screen'}
                       >
                         <Maximize2 className="h-3.5 w-3.5" />
@@ -1795,11 +1802,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
 
           {/* Section 4: Dance Styles */}
-          <div className="space-y-4 border-t border-blue-100 dark:border-white/5 pt-6">
-            <h4 className="text-sm font-bold text-[#1877F2] dark:text-amber-400 font-mono tracking-wider uppercase">
+          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
+            <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
               {lang === 'ar' ? '4. أنماط الرقص المتضمنة' : '4. Included Dance Styles'}
             </h4>
-            <div className="bg-white dark:bg-neutral-950/60 p-4 sm:p-5 rounded-2xl border border-blue-200/80 dark:border-neutral-800/80 space-y-2 shadow-sm">
+            <div className="bg-white dark:bg-neutral-950/60 p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800/80 space-y-2 shadow-sm">
               <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200">
                 {lang === 'ar' ? 'اختر نمط أو أكثر لسهولة تصنيف الإعلان والوصول إليه:' : 'Select one or more styles for easy filtering:'}
               </label>
@@ -1809,10 +1816,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     key={s}
                     type="button"
                     onClick={() => toggleStyle(s)}
-                    className={`rounded-xl px-3.5 py-2 text-xs font-mono transition-all flex items-center gap-1.5 ${
+                    className={`rounded-xl px-3.5 py-2 text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
                       selectedStyles.includes(s)
-                        ? 'bg-gradient-to-r from-[#1877F2] to-[#166fe5] text-white border border-[#1877F2] font-extrabold shadow-md scale-105 dark:bg-amber-500 dark:text-neutral-950 dark:border-amber-400 dark:gold-glow'
-                        : 'bg-blue-50/50 text-blue-950 border border-blue-200 hover:border-[#1877F2] hover:bg-blue-100/60 dark:bg-neutral-950 dark:text-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-700 dark:hover:text-white'
+                        ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border border-[#78101F] font-extrabold shadow-md scale-105 dark:bg-amber-500 dark:text-neutral-950 dark:border-amber-400 dark:gold-glow'
+                        : 'bg-amber-50/40 text-neutral-800 border border-neutral-200 hover:border-amber-400 hover:bg-amber-50/60 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50 dark:hover:text-white'
                     }`}
                   >
                     <Music className="h-3 w-3 shrink-0" />
@@ -1824,27 +1831,27 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
 
           {/* Date, Price, Contact & Location */}
-          <div className="space-y-4 border-t border-blue-100 dark:border-white/5 pt-6">
-            <h4 className="text-sm font-bold text-[#1877F2] dark:text-amber-400 font-mono tracking-wider uppercase">
+          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
+            <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
               {lang === 'ar' ? '5. الموعد، التذاكر، والموقع' : '5. Date, Tickets & Venue'}
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                  <Calendar className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                   <span>{lang === 'ar' ? 'تاريخ الفعالية' : 'Event Date'}</span>
                 </label>
                 <input
                   type="date"
                   value={eventDate}
                   onChange={e => setEventDate(e.target.value)}
-                  className={`w-full rounded-xl border ${mapsUrlError ? 'border-red-500 bg-red-950/20' : 'border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm font-mono outline-none transition-colors shadow-inner`}
+                  className={`w-full rounded-xl border ${mapsUrlError ? 'border-red-500 bg-red-950/20' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm font-mono outline-none transition-colors shadow-inner`}
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <DollarSign className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                  <DollarSign className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                   <span>{lang === 'ar' ? 'سعر التذكرة / الاشتراك' : 'Ticket / Course Price'}</span>
                 </label>
                 {contentLangMode === 'both' ? (
@@ -1854,14 +1861,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       value={priceAr}
                       onChange={e => setPriceAr(e.target.value)}
                       placeholder="250 ج.م"
-                      className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
+                      className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
                     />
                     <input
                       type="text"
                       value={priceEn}
                       onChange={e => setPriceEn(e.target.value)}
                       placeholder="250 EGP"
-                      className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
+                      className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
                     />
                   </div>
                 ) : contentLangMode === 'ar' ? (
@@ -1870,7 +1877,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={priceAr}
                     onChange={e => setPriceAr(e.target.value)}
                     placeholder="250 ج.م"
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
                   />
                 ) : (
                   <input
@@ -1878,20 +1885,20 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={priceEn}
                     onChange={e => setPriceEn(e.target.value)}
                     placeholder="250 EGP"
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
                   />
                 )}
               </div>
             </div>
 
             {/* Special Expiration Notice Box */}
-            <div className="rounded-2xl bg-blue-50 border border-blue-200 dark:bg-amber-500/10 dark:border-amber-500/30 p-4 flex items-start gap-3">
-              <Clock className="h-5 w-5 text-[#1877F2] dark:text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+            <div className="rounded-2xl bg-amber-50 border border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/30 p-4 flex items-start gap-3">
+              <Clock className="h-5 w-5 text-[#78101F] dark:text-amber-400 shrink-0 mt-0.5 animate-pulse" />
               <div className="text-xs space-y-1">
-                <span className="font-bold text-[#1877F2] dark:text-amber-300 block">
+                <span className="font-bold text-[#78101F] dark:text-amber-300 block">
                   {lang === 'ar' ? '⚡ قاعدة انتهاء ظهور الإعلان:' : '⚡ Ad Auto-Expiration Rule:'}
                 </span>
-                <p className="text-blue-950 dark:text-neutral-300 leading-relaxed font-medium">
+                <p className="text-neutral-800 dark:text-neutral-300 leading-relaxed font-medium">
                   {lang === 'ar' 
                     ? `ينتهي ظهور هذا الإعلان في مساء يوم الحدث الموافق (${formatExpirationNotice()}) أو بانتهاء مدة الاشتراك المحجوزة أيهما أقرب.`
                     : `This ad will expire on the evening of the event date (${formatExpirationNotice()}) or at the end of your booked subscription duration.`}
@@ -1903,28 +1910,28 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               {(contentLangMode === 'ar' || contentLangMode === 'both') && (
                 <div>
                   <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                    <MapPin className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? 'اسم المكان / الأستوديو (بالعربية)' : 'Venue Name (Arabic)'}</span>
                   </label>
                   <input
                     type="text"
                     value={locationNameAr}
                     onChange={e => setLocationNameAr(e.target.value)}
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
               )}
               {(contentLangMode === 'en' || contentLangMode === 'both') && (
                 <div>
                   <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                    <MapPin className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? 'اسم المكان / الأستوديو (بالإنجليزية)' : 'Venue Name (English)'}</span>
                   </label>
                   <input
                     type="text"
                     value={locationNameEn}
                     onChange={e => setLocationNameEn(e.target.value)}
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
               )}
@@ -1934,7 +1941,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               {(contentLangMode === 'ar' || contentLangMode === 'both') && (
                 <div>
                   <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-500" />
+                    <MapPin className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? 'العنوان بالتفصيل (بالعربية)' : 'Detailed Address (Arabic)'}</span>
                   </label>
                   <input
@@ -1942,14 +1949,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={addressAr}
                     onChange={e => setAddressAr(e.target.value)}
                     placeholder={lang === 'ar' ? 'مثال: العين السخنة، البحر الأحمر' : 'e.g. Ain Sokhna, Red Sea'}
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
               )}
               {(contentLangMode === 'en' || contentLangMode === 'both') && (
                 <div>
                   <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-500" />
+                    <MapPin className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? 'العنوان بالتفصيل (بالإنجليزية)' : 'Detailed Address (English)'}</span>
                   </label>
                   <input
@@ -1957,7 +1964,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={addressEn}
                     onChange={e => setAddressEn(e.target.value)}
                     placeholder={lang === 'ar' ? 'مثال: Ain Sokhna, Red Sea' : 'e.g. Ain Sokhna, Red Sea'}
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
               )}
@@ -1966,8 +1973,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             <div className={`grid grid-cols-1 ${contentLangMode === 'both' ? 'sm:grid-cols-2' : ''} gap-4 pt-2`}>
               {(contentLangMode === 'ar' || contentLangMode === 'both') && (
                 <div>
-                  <label className="block text-xs font-semibold text-[#1877F2] dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                  <label className="block text-xs font-semibold text-[#78101F] dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? '📍 المحافظة (بالعربية) - مثل: القاهرة' : 'Governorate (Arabic)'}</span>
                   </label>
                   <input
@@ -1975,14 +1982,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={governorateAr}
                     onChange={e => setGovernorateAr(e.target.value)}
                     placeholder="مثال: القاهرة"
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-400 py-3 px-4 text-xs sm:text-sm outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-400 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
               )}
               {(contentLangMode === 'en' || contentLangMode === 'both') && (
                 <div>
-                  <label className="block text-xs font-semibold text-[#1877F2] dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                  <label className="block text-xs font-semibold text-[#78101F] dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? '📍 المحافظة (بالإنجليزية)' : 'Governorate (English)'}</span>
                   </label>
                   <input
@@ -1990,7 +1997,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={governorateEn}
                     onChange={e => setGovernorateEn(e.target.value)}
                     placeholder="e.g. Cairo"
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-400 py-3 px-4 text-xs sm:text-sm outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-400 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
               )}
@@ -1999,8 +2006,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             <div className={`grid grid-cols-1 ${contentLangMode === 'both' ? 'sm:grid-cols-2' : ''} gap-4 pt-2`}>
               {(contentLangMode === 'ar' || contentLangMode === 'both') && (
                 <div>
-                  <label className="block text-xs font-semibold text-[#1877F2] dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                  <label className="block text-xs font-semibold text-[#78101F] dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? '📍 المنطقة / الحي (بالعربية) - مثل: الزمالك' : 'Area / District (Arabic)'}</span>
                   </label>
                   <input
@@ -2008,14 +2015,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={areaAr}
                     onChange={e => setAreaAr(e.target.value)}
                     placeholder="مثال: الزمالك"
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-400 py-3 px-4 text-xs sm:text-sm outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-400 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
               )}
               {(contentLangMode === 'en' || contentLangMode === 'both') && (
                 <div>
-                  <label className="block text-xs font-semibold text-[#1877F2] dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                  <label className="block text-xs font-semibold text-[#78101F] dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? '📍 المنطقة / الحي (بالإنجليزية)' : 'Area / District (English)'}</span>
                   </label>
                   <input
@@ -2023,7 +2030,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={areaEn}
                     onChange={e => setAreaEn(e.target.value)}
                     placeholder="e.g. Zamalek"
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-400 py-3 px-4 text-xs sm:text-sm outline-none"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-400 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
               )}
@@ -2031,7 +2038,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
             <div className="pt-2">
               <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                <Compass className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400 animate-pulse" />
+                <Compass className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400 animate-pulse" />
                 <span>{lang === 'ar' ? 'رابط موقع جوجل ماب (Google Maps Link)' : 'Google Maps Location Link'}</span>
               </label>
               <input
@@ -2039,7 +2046,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 value={googleMapsUrl}
                 onChange={e => setGoogleMapsUrl(e.target.value)}
                 placeholder={lang === 'ar' ? 'ضع هنا رابط موقع الحدث من خرائط جوجل ماب' : 'Paste Google Maps location link here'}
-                className={`w-full rounded-xl border ${mapsUrlError ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm font-mono outline-none transition-colors shadow-inner`}
+                className={`w-full rounded-xl border ${mapsUrlError ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm font-mono outline-none transition-colors shadow-inner`}
               />
               {mapsUrlError && (
                 <p className="mt-2 text-xs font-bold text-red-500 flex items-center gap-1">
@@ -2047,7 +2054,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   {lang === 'ar' ? 'هذا الرابط غير صحيح. يجب أن يكون رابطاً رسمياً من خرائط جوجل.' : 'Invalid link. Must be an official Google Maps link.'}
                 </p>
               )}
-              <p className="mt-1.5 text-[11px] text-blue-900/70 dark:text-neutral-400 leading-relaxed font-sans">
+              <p className="mt-1.5 text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed font-sans">
                 {lang === 'ar'
                   ? '💡 انسخ رابط الموقع الجغرافي من تطبيق Google Maps وضعه هنا، ليتيح للزوار الانتقال الفوري لمكانك بضغطة زر واحدة!'
                   : '💡 Simply copy and paste the Google Maps location share link here, so attendees can navigate to your event instantly!'}
@@ -2057,7 +2064,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             <div className="pt-2 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                  <UserCheck className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                  <UserCheck className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                   <span>{lang === 'ar' ? 'اسم المنظم أو الجهة المنظمة' : 'Organizer / Academy Name'}</span>
                 </label>
                 <input
@@ -2065,14 +2072,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   value={organizerName}
                   onChange={e => setOrganizerName(e.target.value)}
                   placeholder={lang === 'ar' ? 'أدخل اسم المنظم أو الأكاديمية...' : 'e.g. DWM Dance Academy'}
-                  className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
+                  className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-[#1877F2] dark:text-amber-400" />
+                    <Phone className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
                     <span>{lang === 'ar' ? 'رقم الهاتف للاستفسار' : 'Contact Phone'}</span>
                   </label>
                   <input
@@ -2080,7 +2087,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                     dir="ltr"
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none text-left"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none text-left"
                   />
                 </div>
                 <div>
@@ -2093,29 +2100,74 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={whatsapp}
                     onChange={e => setWhatsapp(e.target.value)}
                     dir="ltr"
-                    className="w-full rounded-xl border border-blue-200 bg-white text-neutral-900 focus:border-[#1877F2] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none text-left"
+                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none text-left"
                   />
+                </div>
+              </div>
+
+              {/* Views Count Privacy Setting */}
+              <div className="pt-2">
+                <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-900/50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-blue-500 shrink-0" />
+                      <span>{lang === 'ar' ? 'إظهار زر وعدد المشاهدات لجمهور التطبيق' : 'Show Views Count Button to App Users'}</span>
+                    </label>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-xl">
+                      {lang === 'ar'
+                        ? 'عند التفعيل (ON)، سيظهر زر وعداد المشاهدات لجميع مستخدمي التطبيق على بطاقة الإعلان. عند الإيقاف (OFF)، سيتم إخفاء العداد عن الجمهور وسيبقى متاحاً لك وللإدارة فقط.'
+                        : 'When ON, the views counter badge is shown to all users on your ad card. When OFF, it is hidden from the public and visible only to you and the admin.'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowViewsCount(true)}
+                      className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        showViewsCount
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 font-extrabold'
+                          : 'bg-white dark:bg-neutral-950 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:text-neutral-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-blue-300 animate-pulse"></span>
+                      <span>ON ({lang === 'ar' ? 'إظهار' : 'Show'})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowViewsCount(false)}
+                      className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        !showViewsCount
+                          ? 'bg-red-600 text-white shadow-md shadow-red-600/20 font-extrabold'
+                          : 'bg-white dark:bg-neutral-950 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:text-neutral-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                      <span>OFF ({lang === 'ar' ? 'إخفاء' : 'Hide'})</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* SECTION 6: Subscription Plan & Dynamic Calculation */}
-          <div className="space-y-4 border-t border-blue-100 dark:border-white/5 pt-6">
-            <h4 className="text-sm font-bold text-[#1877F2] dark:text-amber-400 font-mono tracking-wider uppercase flex items-center justify-between">
+          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
+            <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase flex items-center justify-between">
               <span>{lang === 'ar' ? '6. نظام ومدة الاشتراك (Ad Subscription Plan)' : '6. Ad Subscription Plan'}</span>
-              <span className="text-xs text-blue-900/60 dark:text-neutral-400 font-sans font-normal">
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 font-sans font-normal">
                 {lang === 'ar' ? 'أقل مدة اشتراك أسبوع (7 أيام)' : 'Min. 1 Week (7 Days)'}
               </span>
             </h4>
 
-            <div className="rounded-3xl bg-white dark:bg-neutral-950/90 border border-blue-200/80 dark:border-neutral-800 p-5 sm:p-6 space-y-5 shadow-sm">
+            <div className="rounded-3xl bg-white dark:bg-neutral-950/90 border border-neutral-200 dark:border-neutral-800 p-5 sm:p-6 space-y-5 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <label className="block text-xs sm:text-sm font-bold text-blue-950 dark:text-white mb-1">
+                  <label className="block text-xs sm:text-sm font-bold text-neutral-900 dark:text-white mb-1">
                     {lang === 'ar' ? `اختر مدة اشتراك الإعلان (${adType === 'vip' ? 'مميز' : adType === 'free' ? 'مجاني' : 'عادي'}) (بالأيام):` : `Select Ad Duration (${adType === 'vip' ? 'VIP' : adType === 'free' ? 'Free' : 'Standard'}) (in Days):`}
                   </label>
-                  <p className="text-xs text-blue-900/70 dark:text-neutral-400">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">
                     {adType === 'free'
                       ? (lang === 'ar' ? 'الإعلان مجاني بالكامل لمدة تصل إلى 7 أيام.' : 'Ad is completely free for up to 7 days.')
                       : (lang === 'ar'
@@ -2124,18 +2176,18 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 bg-blue-50 dark:bg-neutral-900 border border-blue-200 dark:border-neutral-700 p-1.5 rounded-2xl self-start sm:self-center shrink-0">
+                <div className="flex items-center gap-3 bg-amber-50/50 dark:bg-neutral-900 border border-amber-200 dark:border-neutral-700 p-1.5 rounded-2xl self-start sm:self-center shrink-0">
                   <button
                     type="button"
                     onClick={() => setSubscriptionDays(Math.max(7, subscriptionDays - 1))}
                     disabled={subscriptionDays <= 7}
-                    className="h-10 w-10 rounded-xl bg-white dark:bg-neutral-800 hover:bg-blue-100 dark:hover:bg-neutral-700 text-blue-950 dark:text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-blue-200 dark:border-transparent"
+                    className="h-10 w-10 rounded-xl bg-white dark:bg-neutral-800 hover:bg-amber-100 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-amber-200 dark:border-transparent cursor-pointer"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
                   <div className="px-4 text-center">
-                    <span className="text-base sm:text-lg font-mono font-extrabold text-[#1877F2] dark:text-amber-400">{subscriptionDays}</span>
-                    <span className="text-xs text-blue-900/60 dark:text-neutral-400 block font-mono">{lang === 'ar' ? 'أيام' : 'Days'}</span>
+                    <span className="text-base sm:text-lg font-mono font-extrabold text-[#78101F] dark:text-amber-400">{subscriptionDays}</span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400 block font-mono">{lang === 'ar' ? 'أيام' : 'Days'}</span>
                   </div>
                   <button
                     type="button"
@@ -2144,7 +2196,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       setSubscriptionDays(subscriptionDays + 1);
                     }}
                     disabled={adType === 'free' && subscriptionDays >= 7}
-                    className="h-10 w-10 rounded-xl bg-gradient-to-r from-[#1877F2] to-[#166fe5] text-white hover:brightness-110 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 dark:text-amber-300 dark:border dark:border-amber-500/30 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="h-10 w-10 rounded-xl bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 dark:text-amber-300 dark:border dark:border-amber-500/30 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -2152,21 +2204,21 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               </div>
 
               {/* Pricing Breakdown Card */}
-              <div className="rounded-2xl bg-blue-50/50 dark:bg-neutral-900/80 border border-blue-200/60 dark:border-white/5 p-4 space-y-2.5 text-xs sm:text-sm font-medium">
-                <div className="flex justify-between items-center text-blue-950 dark:text-neutral-300">
+              <div className="rounded-2xl bg-amber-50/30 dark:bg-neutral-900/80 border border-amber-200/50 dark:border-white/5 p-4 space-y-2.5 text-xs sm:text-sm font-medium">
+                <div className="flex justify-between items-center text-neutral-800 dark:text-neutral-300">
                   <span>{lang === 'ar' ? 'تكلفة الأسبوع الأساسي (7 أيام):' : 'Base 7-Day Fee:'}</span>
                   <span className="font-mono font-bold">{pricing.basePrice} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
                 </div>
 
                 {pricing.extraDays > 0 && (
-                  <div className="flex justify-between items-center text-blue-950 dark:text-neutral-300">
+                  <div className="flex justify-between items-center text-neutral-800 dark:text-neutral-300">
                     <span>{lang === 'ar' ? `تكلفة الأيام الإضافية (${pricing.extraDays} يوم × ${pricing.extraDayRate} ج.م):` : `Extra Days (${pricing.extraDays} days × ${pricing.extraDayRate} EGP):`}</span>
                     <span className="font-mono font-bold">+{pricing.extraPrice} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
                   </div>
                 )}
 
                 {pricing.videoSurcharge > 0 && (
-                  <div className="flex justify-between items-center text-[#1877F2] dark:text-amber-300 py-1 border-t border-blue-200 dark:border-white/5 font-semibold">
+                  <div className="flex justify-between items-center text-[#78101F] dark:text-amber-300 py-1 border-t border-amber-200/60 dark:border-white/5 font-semibold">
                     <span className="flex items-center gap-1.5">
                       <Video className="h-3.5 w-3.5" />
                       <span>{lang === 'ar' ? `إضافة إعلان فيديو (+${pricing.videoSurchargePercentage}% على القيمة):` : `Video Surcharge (+${pricing.videoSurchargePercentage}% of subtotal):`}</span>
@@ -2175,9 +2227,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   </div>
                 )}
 
-                <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-amber-500/20 text-base sm:text-lg font-extrabold text-[#1877F2] dark:text-amber-400">
+                <div className="flex justify-between items-center pt-2 border-t border-amber-200 dark:border-amber-500/20 text-base sm:text-lg font-extrabold text-[#78101F] dark:text-amber-400">
                   <span>{lang === 'ar' ? 'إجمالي قيمة اشتراك الإعلان:' : 'Total Ad Subscription Fee:'}</span>
-                  <span className="font-mono bg-[#1877F2]/10 border border-[#1877F2]/30 text-[#1877F2] dark:bg-amber-500/15 dark:border-amber-500/30 dark:text-amber-400 px-3 py-1 rounded-xl">
+                  <span className="font-mono bg-amber-500/10 border border-amber-500/30 text-[#78101F] dark:bg-amber-500/15 dark:border-amber-500/30 dark:text-amber-400 px-3 py-1 rounded-xl">
                     {pricing.total} {lang === 'ar' ? 'جنيه مصري (EGP)' : 'EGP'}
                   </span>
                 </div>
@@ -2187,17 +2239,17 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
           {/* Ad Placement Number & Ad Identifier - Admin Only */}
           {(user?.isAdmin || isAdminUnlocked) && (
-            <div className="space-y-6 border-t border-blue-100 dark:border-white/5 pt-6 animate-fadeIn">
+            <div className="space-y-6 border-t border-amber-200/60 dark:border-white/5 pt-6 animate-fadeIn">
               <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-[#1877F2] dark:text-amber-500" />
-                <h4 className="text-sm font-black text-[#1877F2] dark:text-amber-400 font-mono tracking-wider uppercase">
+                <Lock className="h-4 w-4 text-[#78101F] dark:text-amber-500" />
+                <h4 className="text-sm font-black text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
                   {lang === 'ar' ? 'إعدادات الإدارة (خاصة بك فقط)' : 'Admin Settings (Private)'}
                 </h4>
               </div>
 
               <div className="grid grid-cols-1 gap-4">
                 {/* Ad Number Field */}
-                <div className="rounded-2xl bg-white dark:bg-neutral-950 p-5 border border-blue-200/80 dark:border-neutral-800/80 space-y-2">
+                <div className="rounded-2xl bg-white dark:bg-neutral-950 p-5 border border-neutral-200 dark:border-neutral-800/80 space-y-2">
                   <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-300 mb-1">
                     {lang === 'ar' ? 'رقم الإعلان (المعرف)' : 'Ad Reference Number'}
                   </label>
@@ -2206,9 +2258,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={adNumber}
                     onChange={e => setAdNumber(e.target.value)}
                     placeholder={lang === 'ar' ? 'مثال: DWM-2026-001' : 'e.g. DWM-2026-001'}
-                    className="w-full rounded-xl border border-blue-200 bg-blue-50/30 text-neutral-900 dark:border-neutral-800 dark:bg-neutral-900 py-3 px-4 text-xs sm:text-sm dark:text-white outline-none focus:border-[#1877F2] dark:focus:border-amber-500 transition-colors shadow-inner font-mono"
+                    className="w-full rounded-xl border border-neutral-200 bg-amber-50/20 text-neutral-900 dark:border-neutral-800 dark:bg-neutral-900 py-3 px-4 text-xs sm:text-sm dark:text-white outline-none focus:border-[#78101F] dark:focus:border-amber-500 transition-colors shadow-inner font-mono"
                   />
-                  <p className="text-[10px] text-blue-900/60 dark:text-neutral-500 leading-tight">
+                  <p className="text-[10px] text-neutral-500 leading-tight">
                     {lang === 'ar' ? '💡 رقم المعرف الخاص بالإعلان للمراجعة.' : '💡 Unique identifier for this ad.'}
                   </p>
                 </div>
@@ -2217,22 +2269,22 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           )}
 
           {/* SECTION 7: Terms & Conditions Agreement & Checkbox */}
-          <div className="space-y-4 border-t border-blue-100 dark:border-white/5 pt-6">
-            <h4 className="text-sm font-bold text-[#1877F2] dark:text-amber-400 font-mono tracking-wider uppercase flex items-center justify-between">
+          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
+            <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase flex items-center justify-between">
               <span>{lang === 'ar' ? '7. اتفاقية الاستخدام والشروط والأحكام الخاصة بمنصة "Dance with me"' : '7. Terms & Conditions of "Dance with me" Platform'}</span>
             </h4>
 
             {/* Simplified Terms Summary / Trigger */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-950/90 border border-blue-200/80 dark:border-neutral-800/80 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-950/90 border border-neutral-200 dark:border-neutral-800/80 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-blue-500/10 dark:bg-amber-500/10 flex items-center justify-center border border-blue-500/20 dark:border-amber-500/20">
-                  <ShieldCheck className="h-5 w-5 text-[#1877F2] dark:text-amber-500" />
+                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <ShieldCheck className="h-5 w-5 text-[#78101F] dark:text-amber-500" />
                 </div>
                 <div>
-                  <p className="font-bold text-blue-950 dark:text-white mb-0.5">
+                  <p className="font-bold text-neutral-900 dark:text-white mb-0.5">
                     {lang === 'ar' ? 'مراجعة شروط النشر' : 'Review Publishing Terms'}
                   </p>
-                  <p className="text-[10px] text-blue-900/60 dark:text-neutral-400 font-mono">
+                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-mono">
                     {lang === 'ar' ? 'يرجى قراءة الشروط لضمان قبول إعلانك' : 'Please read the terms to ensure ad approval'}
                   </p>
                 </div>
@@ -2241,7 +2293,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               <button
                 type="button"
                 onClick={() => setShowTermsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-50 dark:bg-neutral-900 border border-blue-200 dark:border-neutral-700 hover:border-[#1877F2] hover:bg-blue-100 dark:hover:bg-neutral-800 text-[#1877F2] dark:text-amber-400 text-xs font-bold transition-all group"
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-50 dark:bg-neutral-900 border border-amber-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-100 dark:hover:bg-neutral-800 text-[#78101F] dark:text-amber-400 text-xs font-bold transition-all group cursor-pointer"
               >
                 <span>{lang === 'ar' ? 'عرض شروط النشر كاملة' : 'View Full Publishing Terms'}</span>
                 {lang === 'ar' ? <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> : <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />}
@@ -2251,22 +2303,22 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             {/* Checkbox */}
             <label 
               onClick={() => setAgreedToTerms(!agreedToTerms)}
-              className="flex items-start gap-3.5 p-4 rounded-2xl bg-white dark:bg-neutral-950/90 border border-blue-200/80 dark:border-neutral-800/80 hover:border-[#1877F2]/60 dark:hover:border-amber-500/40 cursor-pointer transition-all select-none shadow-sm"
+              className="flex items-start gap-3.5 p-4 rounded-2xl bg-white dark:bg-neutral-950/90 border border-neutral-200 dark:border-neutral-800/80 hover:border-amber-500/60 dark:hover:border-amber-500/40 cursor-pointer transition-all select-none shadow-sm"
             >
               <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition-all ${
                 agreedToTerms 
-                  ? 'bg-gradient-to-r from-[#1877F2] to-[#166fe5] border-[#1877F2] text-white shadow-md dark:bg-amber-500 dark:border-amber-400 dark:text-neutral-950 dark:gold-glow' 
-                  : 'bg-blue-50 dark:bg-neutral-900 border-blue-200 dark:border-neutral-700 text-transparent'
+                  ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] border-[#78101F] text-amber-300 shadow-md dark:bg-amber-500 dark:border-amber-400 dark:text-neutral-950 dark:gold-glow' 
+                  : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 text-transparent'
               }`}>
                 <Check className="h-4 w-4 stroke-[3]" />
               </div>
-              <div className="text-xs sm:text-sm leading-relaxed text-blue-950 dark:text-neutral-200">
-                <span className="font-bold text-blue-950 dark:text-white block mb-1">
+              <div className="text-xs sm:text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
+                <span className="font-bold text-neutral-900 dark:text-white block mb-1">
                   {lang === 'ar'
                     ? 'أقر بأنني اطلعت على جميع الشروط والأحكام الخاصة بالنشر على منصة Dance with me، وأتعهد بالالتزام بها وبكافة التشريعات والقوانين والأعراف المتبعة في جمهورية مصر العربية، وأوافق عليها جميعاً دون أي تحفظ.'
                     : 'I acknowledge that I have read all the terms and conditions for publishing on the Dance with me platform, commit to abide by them and all laws and customs observed in the Arab Republic of Egypt, and agree to all of them without reservation.'}
                 </span>
-                <span className="text-blue-900/70 dark:text-neutral-400 text-xs block mt-1">
+                <span className="text-neutral-500 dark:text-neutral-400 text-xs block mt-1">
                   {lang === 'ar'
                     ? `تنويه: الإعلان ينتهي مساء يوم الحدث (${formatExpirationNotice()})، وإجمالي المطلوب دفعه هو (${pricing.total} ج.م).`
                     : `Notice: This ad expires on the evening of the event date (${formatExpirationNotice()}), with a total payable amount of (${pricing.total} EGP).`}
@@ -2314,11 +2366,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     hasUrlViolation
                       ? 'hidden pointer-events-none'
                       : agreedToTerms
-                      ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
+                      ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 shadow-2xl border-amber-400/40 cursor-pointer'
                       : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
                   }`}
                 >
-                  <Sparkles className={`h-5 w-5 shrink-0 ${agreedToTerms && !isUploadingMedia ? 'fill-current animate-pulse-slow text-neutral-950' : 'text-neutral-600'}`} />
+                  <Sparkles className={`h-5 w-5 shrink-0 ${agreedToTerms && !isUploadingMedia ? 'fill-current animate-pulse-slow text-amber-300' : 'text-neutral-600'}`} />
                   <span>
                     {isUploadingMedia
                       ? (lang === 'ar' ? 'جاري الحفظ والرفع...' : 'Saving & Uploading...')
@@ -2342,11 +2394,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     hasUrlViolation
                       ? 'hidden pointer-events-none'
                       : agreedToTerms
-                      ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
+                      ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 shadow-2xl border-amber-400/40 cursor-pointer'
                       : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
                   }`}
                 >
-                  <Eye className={`h-5 w-5 shrink-0 ${agreedToTerms ? 'text-neutral-950' : 'text-neutral-600'}`} />
+                  <Eye className={`h-5 w-5 shrink-0 ${agreedToTerms ? 'text-amber-300' : 'text-neutral-600'}`} />
                   <span>
                     {lang === 'ar' ? 'معاينة الإعلان وتدقيق البيانات' : 'Preview Ad & Verify Details'}
                   </span>
@@ -2355,7 +2407,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </div>
             
             {!agreedToTerms && (
-              <p className="mt-3 text-center text-xs text-amber-400/80 font-medium">
+              <p className="mt-3 text-center text-xs text-amber-700 dark:text-amber-400/80 font-medium">
                 {lang === 'ar' 
                   ? '⚠️ يرجى الموافقة على الشروط والأحكام أعلاه لتفعيل زر معاينة الإعلان'
                   : '⚠️ Please agree to the publishing terms and conditions above to unlock the next step'}

@@ -117,11 +117,11 @@ const AppContent: React.FC = () => {
         onOpenInstallModal={() => setIsInstallOpen(true)}
       />
 
-      {/* Top Facebook Blue Canvas with Curved Oval Bottom Edge */}
+      {/* Top Hero Canvas with Curved Oval Bottom Edge */}
       {(!activeTab || activeTab === 'explore') && (
         <div className="relative w-full">
-          {/* Blue Curved Hero Section */}
-          <div className="w-full bg-[#1877F2] dark:bg-neutral-950 rounded-b-[32px] sm:rounded-b-[48px] md:rounded-b-[56px] shadow-lg shadow-blue-600/15 pb-8 sm:pb-10 transition-colors duration-200">
+          {/* Curved Hero Section matching logo velvet burgundy base with slightly lighter, luminous gradient */}
+          <div className="w-full bg-gradient-to-b from-[#6B0D18] via-[#5C0913] to-[#48040C] border-b border-[#8C1626]/60 rounded-b-[32px] sm:rounded-b-[48px] md:rounded-b-[56px] shadow-2xl shadow-black/60 pb-8 sm:pb-10 transition-colors duration-200">
             <MainHeroHeaderBanner
               onExploreClick={() => {
                 const el = document.getElementById('search-section') || document.getElementById('events-feed');
@@ -297,12 +297,14 @@ const AppContent: React.FC = () => {
           }
         }}
       />
-      <AdViewsDetailsModal
-        isOpen={!!selectedViewsEvent}
-        event={selectedViewsEvent}
-        onClose={() => setSelectedViewsEvent(null)}
-        onShare={(ev) => setSelectedShareEvent(ev)}
-      />
+      {user?.isAdmin && (
+        <AdViewsDetailsModal
+          isOpen={!!selectedViewsEvent}
+          event={selectedViewsEvent}
+          onClose={() => setSelectedViewsEvent(null)}
+          onShare={(ev) => setSelectedShareEvent(ev)}
+        />
+      )}
       <AttendeeCheckinHandler />
     </div>
   );

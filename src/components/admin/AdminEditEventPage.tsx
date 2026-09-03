@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Check, Image as ImageIcon, Video, Calendar as CalendarIcon, 
   MapPin, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, UploadCloud, AlertCircle,
-  Languages, Loader2
+  Languages, Loader2, Eye, EyeOff
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
@@ -87,6 +87,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
   const [adType, setAdType] = useState<'vip' | 'standard'>(editingEvent?.adType || 'standard');
   const [isFeatured, setIsFeatured] = useState<boolean>(editingEvent?.isFeatured || false);
   const [showBookingButton, setShowBookingButton] = useState<boolean>(editingEvent?.showBookingButton !== false);
+  const [showViewsCount, setShowViewsCount] = useState<boolean>(editingEvent?.showViewsCount !== false);
   const [bookingSubtextAr, setBookingSubtextAr] = useState<string>(editingEvent?.bookingSubtextAr || '');
   const [bookingSubtextEn, setBookingSubtextEn] = useState<string>(editingEvent?.bookingSubtextEn || '');
 
@@ -132,6 +133,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
     setAdType(editingEvent.adType || 'standard');
     setIsFeatured(editingEvent.isFeatured || false);
     setShowBookingButton(editingEvent.showBookingButton !== false);
+    setShowViewsCount(editingEvent.showViewsCount !== false);
     setBookingSubtextAr(editingEvent.bookingSubtextAr || '');
     setBookingSubtextEn(editingEvent.bookingSubtextEn || '');
   }, [editingEvent, onCancel]);
@@ -254,6 +256,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         adType,
         isFeatured,
         showBookingButton,
+        showViewsCount,
         bookingSubtextAr: bookingSubtextAr.trim(),
         bookingSubtextEn: bookingSubtextEn.trim()
       };
@@ -656,6 +659,51 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Ad Views Count Toggle Setting */}
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/60 p-4 sm:p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h5 className="text-xs sm:text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-blue-500 shrink-0" />
+                  <span>{lang === 'ar' ? 'إظهار عداد المشاهدات لمستخدمي التطبيق' : 'Show Views Count to App Users'}</span>
+                </h5>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                  {lang === 'ar'
+                    ? 'عند اختيار (أون) يظهر زر المشاهدات مع العداد لكافة مستخدمي التطبيق. عند (أوف) يتم إخفاء العداد عن الجمهور ويبقى متاحاً لك وللإدارة فقط.'
+                    : 'Toggle whether the views counter badge is publicly visible to users or private for admin/organizer.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowViewsCount(true)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    showViewsCount
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 font-extrabold'
+                      : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-800 hover:text-neutral-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-blue-300 animate-pulse"></span>
+                  <span>ON ({lang === 'ar' ? 'مفعّل' : 'Show'})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowViewsCount(false)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    !showViewsCount
+                      ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 font-extrabold'
+                      : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-800 hover:text-neutral-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                  <span>OFF ({lang === 'ar' ? 'معطّل' : 'Hide'})</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Styles */}

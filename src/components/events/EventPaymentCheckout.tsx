@@ -317,35 +317,35 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
               initial={{ opacity: 0, scale: 0.8, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              className="w-full max-w-lg rounded-3xl border-2 border-amber-500/50 bg-neutral-950 p-6 sm:p-8 shadow-2xl gold-glow text-center relative overflow-hidden"
+              className="w-full max-w-lg rounded-3xl border-2 border-amber-500/50 bg-white dark:bg-neutral-950 p-6 sm:p-8 shadow-2xl text-center relative overflow-hidden"
             >
               <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-[#78101F]/20 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-amber-300 text-neutral-950 shadow-xl gold-glow">
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 shadow-xl border border-amber-400/40">
                 <CheckCircle className="h-10 w-10 stroke-[2.5]" />
               </div>
 
-              <h3 className="text-xl sm:text-2xl font-extrabold text-white mb-3 tracking-tight">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white mb-3 tracking-tight">
                 {lang === 'ar' ? 'تم استلام طلب إعلانك بنجاح!' : 'Ad Submission Received!'}
               </h3>
 
-              <div className="rounded-2xl bg-amber-500/15 border border-amber-500/40 p-4.5 my-5 text-sm sm:text-base font-bold text-amber-300 leading-relaxed shadow-inner">
+              <div className="rounded-2xl bg-amber-500/15 border border-amber-500/40 p-4.5 my-5 text-sm sm:text-base font-bold text-[#78101F] dark:text-amber-300 leading-relaxed shadow-inner">
                 {lang === 'ar' ? (
-                  <span>سوف تتلقى إشعاراً على حسابك الخاص بالفاتورة رقم <strong className="font-mono text-white bg-black/40 px-2 py-0.5 rounded border border-amber-500/30 inline-block mt-1">{invoiceNumber}</strong></span>
+                  <span>سوف تتلقى إشعاراً على حسابك الخاص بالفاتورة رقم <strong className="font-mono text-neutral-900 dark:text-white bg-amber-100 dark:bg-black/40 px-2 py-0.5 rounded border border-amber-500/30 inline-block mt-1">{invoiceNumber}</strong></span>
                 ) : (
-                  <span>You will receive a notification on your account regarding invoice <strong className="font-mono text-white bg-black/40 px-2 py-0.5 rounded border border-amber-500/30 inline-block mt-1">{invoiceNumber}</strong></span>
+                  <span>You will receive a notification on your account regarding invoice <strong className="font-mono text-neutral-900 dark:text-white bg-amber-100 dark:bg-black/40 px-2 py-0.5 rounded border border-amber-500/30 inline-block mt-1">{invoiceNumber}</strong></span>
                 )}
               </div>
 
-              <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed mb-6">
+              <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed mb-6">
                 {lang === 'ar'
                   ? 'تم إرفاق إيصال الدفع ومراجعة الفاتورة. يتم مراجعة الإعلان من قبل فريق الإدارة وتفعيله خلال 1 إلى 24 ساعة كحد أقصى.'
                   : 'Your payment receipt has been attached. The ad is now under review and will go live within 1 to 24 hours.'}
               </p>
 
-              <div className="flex items-center justify-center gap-2 text-xs font-mono text-neutral-400 mb-6 bg-neutral-900/80 py-2.5 px-4 rounded-xl border border-white/5">
-                <Clock className="h-4 w-4 text-amber-400 shrink-0" />
+              <div className="flex items-center justify-center gap-2 text-xs font-mono text-neutral-600 dark:text-neutral-400 mb-6 bg-neutral-100 dark:bg-neutral-900/80 py-2.5 px-4 rounded-xl border border-neutral-200 dark:border-white/5">
+                <Clock className="h-4 w-4 text-[#78101F] dark:text-amber-400 shrink-0" />
                 <span>{lang === 'ar' ? 'وقت المراجعة المتوقع: 1 - 24 ساعة' : 'Estimated review time: 1 - 24 hours'}</span>
               </div>
 
@@ -353,7 +353,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={onSuccessComplete}
-                className="w-full rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 py-4 px-6 text-base font-extrabold text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-xl gold-glow transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full rounded-2xl bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] py-4 px-6 text-base font-extrabold text-amber-300 hover:brightness-110 shadow-xl border border-amber-400/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="h-5 w-5 fill-current" />
                 <span>{lang === 'ar' ? 'متابعة والعودة للرئيسية' : 'Continue & Return Home'}</span>
@@ -367,24 +367,24 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-3xl border border-amber-500/40 bg-gradient-to-b from-neutral-900 via-neutral-900/95 to-neutral-950 p-6 sm:p-8 shadow-2xl gold-glow space-y-7 relative overflow-hidden"
+        className="rounded-3xl border border-amber-500/30 dark:border-amber-500/30 bg-gradient-to-b from-white via-amber-50/20 to-white dark:from-[#42030A]/60 dark:via-neutral-900/95 dark:to-neutral-950 p-6 sm:p-8 shadow-2xl space-y-7 relative overflow-hidden"
       >
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-5 relative z-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-white/10 pb-5 relative z-10">
           <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-neutral-950 shadow-lg gold-glow shrink-0">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 shadow-lg border border-amber-400/30 shrink-0">
               <FileText className="h-6 w-6 stroke-[2.5]" />
             </div>
             <div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-white flex items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
                 <span>{lang === 'ar' ? 'صفحة الدفع للمعاينة وتأكيد الإعلان' : 'Payment Review & Checkout'}</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#5B0813] to-[#78101F] text-amber-300 border border-amber-400/40 font-mono font-bold">
                   VIP
                 </span>
               </h3>
-              <p className="text-xs text-amber-400/80 font-medium mt-0.5">
+              <p className="text-xs text-[#78101F] dark:text-amber-400/90 font-bold mt-0.5">
                 {lang === 'ar' ? 'قم بمراجعة ملخص الفاتورة وإرفاق إيصال التحويل البنكي' : 'Review invoice summary and upload transfer receipt'}
               </p>
             </div>
@@ -392,7 +392,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
 
           <button
             onClick={onBack}
-            className="flex items-center gap-2 rounded-xl bg-neutral-800/90 px-4 py-2.5 text-xs font-bold text-neutral-300 hover:bg-neutral-700 hover:text-white transition-all border border-neutral-700/60 self-end sm:self-center shrink-0 cursor-pointer"
+            className="flex items-center gap-2 rounded-xl bg-neutral-100 dark:bg-neutral-800/90 px-4 py-2.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 hover:text-neutral-950 dark:hover:text-white transition-all border border-neutral-200 dark:border-neutral-700/60 self-end sm:self-center shrink-0 cursor-pointer"
           >
             <ArrowLeft className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
             <span>{lang === 'ar' ? 'الرجوع لتعديل الإعلان' : 'Back to Edit Ad'}</span>
@@ -400,65 +400,65 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
         </div>
 
         {/* Invoice Summary Box (شكل الفاتورة باختصار) */}
-        <div className="rounded-2xl bg-neutral-950/90 border border-neutral-800/80 p-5 sm:p-6 space-y-4 shadow-xl relative z-10">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="rounded-2xl bg-amber-50/50 dark:bg-neutral-950/90 border border-amber-200/70 dark:border-neutral-800/80 p-5 sm:p-6 space-y-4 shadow-xl relative z-10">
+          <div className="flex items-center justify-between border-b border-amber-200/60 dark:border-white/10 pb-3">
             <div className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-amber-400" />
-              <h4 className="text-sm sm:text-base font-extrabold text-white">
+              <FileCheck className="h-5 w-5 text-[#78101F] dark:text-amber-400" />
+              <h4 className="text-sm sm:text-base font-extrabold text-neutral-900 dark:text-white">
                 {lang === 'ar' ? 'شكل الفاتورة باختصار (Invoice Summary)' : 'Invoice Summary'}
               </h4>
             </div>
-            <div className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/30">
+            <div className="text-xs font-mono font-bold text-[#78101F] dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-300 dark:border-amber-500/30">
               {invoiceNumber || 'DWM-INV-XXXX'}
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             {/* Advertiser Name */}
-            <div className="p-3.5 rounded-xl bg-neutral-900/60 border border-white/5 space-y-1">
-              <span className="text-[11px] text-neutral-400 flex items-center gap-1.5 font-medium">
-                <User className="h-3.5 w-3.5 text-amber-400/80" />
+            <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-900/60 border border-amber-100 dark:border-white/5 space-y-1 shadow-sm">
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 font-medium">
+                <User className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400/80" />
                 <span>{lang === 'ar' ? 'اسم المعلن:' : 'Advertiser Name:'}</span>
               </span>
-              <span className="text-sm font-bold text-white block truncate">
+              <span className="text-sm font-bold text-neutral-900 dark:text-white block truncate">
                 {advertiserName}
               </span>
             </div>
 
             {/* Reference Invoice Number */}
-            <div className="p-3.5 rounded-xl bg-neutral-900/60 border border-white/5 space-y-1">
-              <span className="text-[11px] text-neutral-400 flex items-center gap-1.5 font-medium">
-                <FileText className="h-3.5 w-3.5 text-amber-400/80" />
+            <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-900/60 border border-amber-100 dark:border-white/5 space-y-1 shadow-sm">
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 font-medium">
+                <FileText className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400/80" />
                 <span>{lang === 'ar' ? 'رقم الفاتورة المرجعي:' : 'Reference Invoice #:'}</span>
               </span>
-              <span className="text-sm font-mono font-extrabold text-amber-400 block">
+              <span className="text-sm font-mono font-extrabold text-[#78101F] dark:text-amber-400 block">
                 {invoiceNumber || 'DWM-INV-XXXX'}
               </span>
             </div>
 
             {/* Ad Duration */}
-            <div className="p-3.5 rounded-xl bg-neutral-900/60 border border-white/5 space-y-1">
-              <span className="text-[11px] text-neutral-400 flex items-center gap-1.5 font-medium">
-                <Calendar className="h-3.5 w-3.5 text-amber-400/80" />
+            <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-900/60 border border-amber-100 dark:border-white/5 space-y-1 shadow-sm">
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 font-medium">
+                <Calendar className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400/80" />
                 <span>{lang === 'ar' ? 'مدة الإعلان:' : 'Ad Duration:'}</span>
               </span>
-              <span className="text-sm font-bold text-white block">
+              <span className="text-sm font-bold text-neutral-900 dark:text-white block">
                 {pricing.days} {lang === 'ar' ? 'أيام' : 'Days'} 
-                <span className="text-xs font-normal text-neutral-400 block mt-0.5">{expirationNotice}</span>
+                <span className="text-xs font-normal text-neutral-500 dark:text-neutral-400 block mt-0.5">{expirationNotice}</span>
               </span>
             </div>
 
             {/* Media Type */}
-            <div className="p-3.5 rounded-xl bg-neutral-900/60 border border-white/5 space-y-1">
-              <span className="text-[11px] text-neutral-400 flex items-center gap-1.5 font-medium">
+            <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-900/60 border border-amber-100 dark:border-white/5 space-y-1 shadow-sm">
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 font-medium">
                 {mediaType === 'video' ? (
-                  <Video className="h-3.5 w-3.5 text-amber-400/80" />
+                  <Video className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400/80" />
                 ) : (
-                  <ImageIcon className="h-3.5 w-3.5 text-amber-400/80" />
+                  <ImageIcon className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400/80" />
                 )}
                 <span>{lang === 'ar' ? 'نوع الوسائط المستخدمة:' : 'Media Types Used:'}</span>
               </span>
-              <span className="text-sm font-bold text-white block">
+              <span className="text-sm font-bold text-neutral-900 dark:text-white block">
                 {mediaType === 'video' 
                   ? (lang === 'ar' ? 'فيديو ترويجي (Video)' : 'Promotional Video')
                   : (lang === 'ar' ? 'صورة وبوستر (Image)' : 'Event Banner Image')}
@@ -467,25 +467,25 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
           </div>
 
           {/* Price Breakdown */}
-          <div className="mt-4 pt-4 border-t border-white/10 space-y-2 text-xs sm:text-sm">
-            <div className="flex justify-between items-center text-neutral-300">
+          <div className="mt-4 pt-4 border-t border-amber-200/60 dark:border-white/10 space-y-2 text-xs sm:text-sm">
+            <div className="flex justify-between items-center text-neutral-700 dark:text-neutral-300">
               <span>{lang === 'ar' ? `تكلفة مدة الاشتراك (${pricing.days} أيام):` : `Subscription cost (${pricing.days} days):`}</span>
               <span className="font-mono font-semibold">{pricing.subtotal} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
             </div>
 
             {pricing.videoSurcharge > 0 && (
-              <div className="flex justify-between items-center text-amber-300">
+              <div className="flex justify-between items-center text-[#78101F] dark:text-amber-300 font-bold">
                 <span>{lang === 'ar' ? 'رسوم إضافة وسائط فيديو (+20%):' : 'Video media surcharge (+20%):'}</span>
                 <span className="font-mono font-semibold">+{pricing.videoSurcharge} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
               </div>
             )}
 
-            <div className="flex justify-between items-center pt-3 border-t border-white/10 text-base sm:text-lg font-black text-amber-400">
+            <div className="flex justify-between items-center pt-3 border-t border-amber-200/60 dark:border-white/10 text-base sm:text-lg font-black text-neutral-900 dark:text-amber-400">
               <span className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
+                <DollarSign className="h-5 w-5 text-[#78101F] dark:text-amber-400" />
                 <span>{lang === 'ar' ? 'إجمالي التكلفة المطلوب سدادها:' : 'Total Cost Payable:'}</span>
               </span>
-              <span className="font-mono bg-gradient-to-r from-amber-500 to-amber-400 text-neutral-950 px-3.5 py-1 rounded-xl shadow-md font-extrabold">
+              <span className="font-mono bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 px-3.5 py-1.5 rounded-xl shadow-md font-extrabold border border-amber-400/30">
                 {pricing.total} {lang === 'ar' ? 'ج.م' : 'EGP'}
               </span>
             </div>
@@ -494,14 +494,14 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
 
         {/* Mobile Number Input Section */}
         <div className="space-y-2.5 relative z-10">
-          <label className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
+          <label className="flex items-center justify-between text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
             <span className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-amber-400" />
+              <Phone className="h-4 w-4 text-[#78101F] dark:text-amber-400" />
               <span>{lang === 'ar' ? 'رقم الموبايل للتواصل ومتابعة الفاتورة:' : 'Mobile Number for Invoice Follow-up:'}</span>
-              <span className="text-red-400">*</span>
+              <span className="text-red-500">*</span>
             </span>
             {phone && !isPhoneValid && (
-              <span className="text-xs text-red-400 font-medium">
+              <span className="text-xs text-red-500 font-medium">
                 {lang === 'ar' ? '⚠️ أضف رقم موبايل صحيح (10 أرقام على الأقل)' : '⚠️ Enter a valid phone number (10+ digits)'}
               </span>
             )}
@@ -512,22 +512,22 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder={lang === 'ar' ? 'مثال: 01012345678' : 'e.g., 01012345678'}
-              className={`w-full rounded-2xl bg-neutral-950/90 border px-4 py-3.5 text-sm font-mono text-white placeholder-neutral-600 focus:outline-none transition-all ${
+              className={`w-full rounded-2xl bg-white dark:bg-neutral-950/90 border px-4 py-3.5 text-sm font-mono text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none transition-all shadow-sm ${
                 !phone 
-                  ? 'border-neutral-800 focus:border-amber-500' 
+                  ? 'border-neutral-300 dark:border-neutral-800 focus:border-amber-500' 
                   : isPhoneValid 
-                    ? 'border-emerald-500/60 focus:border-emerald-400 bg-emerald-950/10' 
-                    : 'border-red-500/60 focus:border-red-400'
+                    ? 'border-emerald-500/60 focus:border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/10' 
+                    : 'border-red-500/60 focus:border-red-400 bg-red-50/50 dark:bg-red-950/10'
               }`}
             />
             {isPhoneValid && (
-              <div className="absolute top-1/2 -translate-y-1/2 left-4 rtl:left-auto rtl:right-4 text-emerald-400 flex items-center gap-1 text-xs font-bold">
+              <div className="absolute top-1/2 -translate-y-1/2 left-4 rtl:left-auto rtl:right-4 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 text-xs font-bold">
                 <Check className="h-4 w-4 stroke-[3]" />
                 <span>{lang === 'ar' ? 'صحيح' : 'Valid'}</span>
               </div>
             )}
           </div>
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
             {lang === 'ar' 
               ? 'سيتم استخدام هذا الرقم للتواصل معك عبر واتساب أو الهاتف في حال وجود استفسار بخصوص إيصال الدفع.' 
               : 'This number will be used to contact you via WhatsApp or phone regarding your payment receipt.'}
@@ -536,24 +536,24 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
 
         {/* Important Payment Instructions Box */}
         {pricing.total > 0 && (
-          <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-600/15 border-2 border-amber-500/50 p-5 text-neutral-200 space-y-3.5 shadow-xl relative z-10">
-            <div className="flex items-center gap-2.5 text-amber-400 font-extrabold text-sm sm:text-base">
+          <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-[#78101F]/15 dark:from-amber-500/15 dark:via-neutral-950 dark:to-[#42030A]/30 border-2 border-amber-500/40 dark:border-amber-500/50 p-5 text-neutral-800 dark:text-neutral-200 space-y-3.5 shadow-xl relative z-10">
+            <div className="flex items-center gap-2.5 text-[#78101F] dark:text-amber-400 font-extrabold text-sm sm:text-base">
               <ShieldCheck className="h-5 w-5 shrink-0" />
               <span>{lang === 'ar' ? 'تعليمات الدفع الهامة:' : 'Important Payment Instructions:'}</span>
             </div>
-            <p className="text-sm sm:text-base leading-relaxed text-neutral-100 font-medium">
+            <p className="text-sm sm:text-base leading-relaxed text-neutral-900 dark:text-neutral-100 font-medium">
               {lang === 'ar' ? (
                 <span>
-                  يرجى تسديد المبلغ المطلوب (<strong className="text-amber-300 font-mono font-bold">{pricing.total} ج.م</strong>) عن طريق التحويل انستاباي (InstaPay) او فودافون كاش على الرقم{' '}
-                  <strong className="font-mono text-amber-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-amber-500/40 inline-flex items-center gap-1.5 mx-1 font-bold select-all">
+                  يرجى تسديد المبلغ المطلوب (<strong className="text-[#78101F] dark:text-amber-300 font-mono font-bold">{pricing.total} ج.م</strong>) عن طريق التحويل انستاباي (InstaPay) او فودافون كاش على الرقم{' '}
+                  <strong className="font-mono text-neutral-950 dark:text-amber-300 bg-amber-100 dark:bg-neutral-950 px-2.5 py-1 rounded-lg border border-amber-400/60 dark:border-amber-500/40 inline-flex items-center gap-1.5 mx-1 font-bold select-all">
                     01010764256
                   </strong>{' '}
                   مع ارفاق صورة واضحة لايصال الدفع فى الخانة المبينة هنا.
                 </span>
               ) : (
                 <span>
-                  Please pay the required amount (<strong className="text-amber-300 font-mono font-bold">{pricing.total} EGP</strong>) via InstaPay or Vodafone Cash transfer to the number{' '}
-                  <strong className="font-mono text-amber-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-amber-500/40 inline-flex items-center gap-1.5 mx-1 font-bold select-all">
+                  Please pay the required amount (<strong className="text-[#78101F] dark:text-amber-300 font-mono font-bold">{pricing.total} EGP</strong>) via InstaPay or Vodafone Cash transfer to the number{' '}
+                  <strong className="font-mono text-neutral-950 dark:text-amber-300 bg-amber-100 dark:bg-neutral-950 px-2.5 py-1 rounded-lg border border-amber-400/60 dark:border-amber-500/40 inline-flex items-center gap-1.5 mx-1 font-bold select-all">
                     01010764256
                   </strong>{' '}
                   and attach a clear image of the payment receipt in the field indicated below.
@@ -565,7 +565,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
               <button
                 type="button"
                 onClick={handleCopyPhone}
-                className="flex items-center gap-2 rounded-xl bg-amber-500 text-neutral-950 hover:bg-amber-400 px-4 py-2 text-xs font-extrabold transition-all shadow-md gold-glow cursor-pointer"
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 px-4 py-2 text-xs font-extrabold transition-all shadow-md border border-amber-400/40 cursor-pointer"
               >
                 {copied ? (
                   <>
@@ -580,7 +580,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
                 )}
               </button>
 
-              <div className="flex items-center gap-2 text-xs text-amber-300/80 font-mono">
+              <div className="flex items-center gap-2 text-xs text-[#78101F] dark:text-amber-300/80 font-mono font-bold">
                 <span>🟢 InstaPay</span>
                 <span>•</span>
                 <span>🔴 Vodafone Cash</span>
@@ -592,14 +592,14 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
         {/* Upload Receipt Image Dropzone (إمكانية رفع الصورة) */}
         {pricing.total > 0 && (
           <div className="space-y-2.5 relative z-10">
-            <label className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
+            <label className="flex items-center justify-between text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
               <span className="flex items-center gap-2">
-                <Upload className="h-4 w-4 text-amber-400" />
+                <Upload className="h-4 w-4 text-[#78101F] dark:text-amber-400" />
                 <span>{lang === 'ar' ? 'إرفاق صورة واضحة لإيصال الدفع (سكرين شوت التحويل):' : 'Upload Clear Image of Payment Receipt:'}</span>
-                <span className="text-red-400">*</span>
+                <span className="text-red-500">*</span>
               </span>
               {receiptImage && (
-                <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                   <Check className="h-3.5 w-3.5 stroke-[3]" />
                   <span>{lang === 'ar' ? 'تم الرفع' : 'Uploaded'}</span>
                 </span>
@@ -612,10 +612,10 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 bg-neutral-950/60 hover:bg-neutral-950 ${
+                  className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 bg-amber-50/20 dark:bg-neutral-950/60 hover:bg-amber-50/40 dark:hover:bg-neutral-950 shadow-sm ${
                     isDragging 
                       ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
-                      : 'border-neutral-700 hover:border-amber-500/60'
+                      : 'border-amber-300/70 dark:border-neutral-700 hover:border-amber-500'
                   }`}
                 >
                   <input
@@ -626,14 +626,14 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
                     id="receipt-upload-input"
                   />
                   <label htmlFor="receipt-upload-input" className="cursor-pointer flex flex-col items-center gap-3 w-full">
-                    <div className="h-16 w-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg group-hover:scale-110 transition-transform">
+                    <div className="h-16 w-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[#78101F] dark:text-amber-400 shadow-lg group-hover:scale-110 transition-transform">
                       <Upload className="h-8 w-8 animate-bounce" />
                     </div>
                     <div>
-                      <span className="text-sm sm:text-base font-bold text-white block">
+                      <span className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white block">
                         {lang === 'ar' ? 'اضغط لاختيار صورة الإيصال أو اسحب الملف هنا' : 'Click to upload receipt image or drag file here'}
                       </span>
-                      <span className="text-xs text-neutral-400 mt-1 block font-mono">
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 block font-mono">
                         {lang === 'ar' ? 'يدعم صور PNG, JPG, JPEG (صورة واضحة لعملية التحويل)' : 'Supports PNG, JPG, JPEG (Clear screenshot of transfer)'}
                       </span>
                     </div>
@@ -641,7 +641,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-neutral-400">
+                  <label className="text-[11px] font-black text-neutral-600 dark:text-neutral-400">
                     {lang === 'ar' ? 'أو أدخل رابط الإيصال مباشرة (URL):' : 'Or enter receipt URL directly:'}
                   </label>
                   <input
@@ -649,29 +649,29 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
                     value={receiptImage || ''}
                     onChange={(e) => setReceiptImage(e.target.value)}
                     placeholder="https://example.com/receipt.jpg"
-                    className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono"
+                    className="w-full bg-white dark:bg-neutral-900/50 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono"
                     dir="ltr"
                   />
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-amber-500/40 bg-neutral-950 p-4 space-y-3">
+              <div className="rounded-2xl border border-amber-500/40 bg-white dark:bg-neutral-950 p-4 space-y-3 shadow-md">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold">
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                     <CheckCircle className="h-4 w-4 stroke-[2.5]" />
                     <span>{lang === 'ar' ? 'تم إرفاق صورة إيصال الدفع بنجاح' : 'Payment receipt attached successfully'}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setReceiptImage(null)}
-                    className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-xl border border-red-500/30 transition-colors"
+                    className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-xl border border-red-500/30 transition-colors cursor-pointer"
                   >
                     <X className="h-3.5 w-3.5" />
                     <span>{lang === 'ar' ? 'حذف وتغيير الصورة' : 'Remove & Change'}</span>
                   </button>
                 </div>
 
-                <div className="relative max-h-80 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900 flex items-center justify-center">
+                <div className="relative max-h-80 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center">
                   <img src={receiptImage} alt="Payment Receipt Preview" className="max-h-80 w-auto object-contain" />
                 </div>
               </div>
@@ -689,20 +689,20 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
             onClick={handleSubmitReview}
             className={`w-full rounded-2xl py-4.5 px-6 text-base sm:text-lg font-extrabold transition-all flex items-center justify-center gap-3 border ${
               isFormValid
-                ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-2xl gold-glow border-amber-300/40 cursor-pointer'
+                ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 shadow-2xl border-amber-400/40 cursor-pointer'
                 : 'bg-neutral-800 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
             }`}
           >
             {isSubmitting ? (
               <div className="flex flex-col items-center gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-neutral-950 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-amber-300 border-t-transparent rounded-full animate-spin" />
                   <span>{lang === 'ar' ? 'جاري إرسال الإعلان وإيصال الدفع...' : 'Submitting Ad & Receipt...'}</span>
                 </div>
                 {uploadProgress > 0 && uploadProgress < 100 && (
                   <div className="w-full max-w-xs h-1.5 bg-black/20 rounded-full mt-2 overflow-hidden">
                     <div 
-                      className="h-full bg-neutral-950 transition-all duration-300" 
+                      className="h-full bg-amber-300 transition-all duration-300" 
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -710,7 +710,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
               </div>
             ) : (
               <>
-                <Sparkles className={`h-6 w-6 shrink-0 ${isFormValid ? 'fill-current animate-spin-slow text-neutral-950' : 'text-neutral-600'}`} />
+                <Sparkles className={`h-6 w-6 shrink-0 ${isFormValid ? 'fill-current animate-spin-slow text-amber-300' : 'text-neutral-600'}`} />
                 <span>
                   {lang === 'ar'
                     ? `إرسال الإعلان إلى المراجعة (${pricing.total} ج.م)`
@@ -721,8 +721,8 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
           </motion.button>
 
           {!isFormValid && (
-            <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 flex items-center justify-center gap-2 text-xs text-red-300 font-medium text-center">
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+            <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 flex items-center justify-center gap-2 text-xs text-red-600 dark:text-red-300 font-medium text-center">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-500 dark:text-red-400" />
               <span>
                 {lang === 'ar'
                   ? '⚠️ لتفعيل زر "إرسال الإعلان إلى المراجعة"، يرجى إدخال رقم موبايل صحيح وإرفاق صورة إيصال الدفع'
@@ -731,8 +731,8 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
             </div>
           )}
 
-          <div className="rounded-xl bg-neutral-950/80 border border-neutral-800/80 p-3.5 flex items-center justify-center gap-2.5 text-xs text-neutral-300 text-center font-medium">
-            <Clock className="h-4 w-4 text-amber-400 shrink-0" />
+          <div className="rounded-xl bg-amber-50/60 dark:bg-neutral-950/80 border border-amber-200 dark:border-neutral-800/80 p-3.5 flex items-center justify-center gap-2.5 text-xs text-neutral-700 dark:text-neutral-300 text-center font-medium">
+            <Clock className="h-4 w-4 text-[#78101F] dark:text-amber-400 shrink-0" />
             <span>
               {lang === 'ar'
                 ? 'يتم مراجعة الاعلان خلال 1 الى 24 ساعة من ارسال الايصال'

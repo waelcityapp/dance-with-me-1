@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, UserCheck, User, BellRing, Smartphone, Radio, ZoomIn } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Trash2, Edit, Pause, Play, Maximize2, Eye, EyeOff, Crown, UserCheck, User, BellRing, Smartphone, Radio, ZoomIn } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -124,8 +124,8 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
 
   return (
     <div id={`event-${promoEvent.id}`} className="relative mb-8 overflow-hidden rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-xl dark:shadow-[0_25px_55px_rgba(0,0,0,0.8)] hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-2xl dark:hover:shadow-[0_35px_70px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 gold-glow-lg transition-all duration-300">
-      {/* Absolute Vertical Red Accent Line */}
-      <div className="absolute left-0 top-0 bottom-0 w-[5px] z-30 bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.6)]" />
+      {/* Absolute Vertical Accent Line matching Main Banner */}
+      <div className="absolute start-0 top-0 bottom-0 w-1.5 z-30 bg-gradient-to-b from-[#5B0813] via-[#8B1528] to-[#5B0813] border-e border-amber-400/50 shadow-[0_0_12px_rgba(120,16,31,0.7)]" />
 
       {/* Top Header Labeling to mark beginning of the ad container */}
       <div className="px-4 py-2.5 flex items-center justify-between text-[11px] font-black tracking-wide uppercase border-b bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-amber-500/20 text-amber-700 dark:text-amber-400 select-none shrink-0" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
@@ -141,8 +141,8 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
       {/* Top Badge floating exactly at the image/video boundary */}
       <div className="absolute top-[40px] -translate-y-1/2 inset-x-2.5 z-30 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-1.5 pointer-events-auto">
-          <div className="flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-lg backdrop-blur-md animate-pulse border border-red-500">
-            <Sparkles className="h-2.5 w-2.5 fill-current" />
+          <div className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] px-2.5 py-0.5 text-[10px] font-bold text-amber-300 shadow-lg backdrop-blur-md border border-amber-400/40">
+            <Sparkles className="h-2.5 w-2.5 fill-current text-amber-300" />
             <span>{lang === 'ar' ? (appAssets?.promoBadgeAr || 'فيديو الأسبوع الحصري') : (appAssets?.promoBadgeEn || 'Weekly Featured Video')}</span>
           </div>
           {user?.isAdmin && (
@@ -564,18 +564,63 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 mt-auto flex-wrap">
           {/* Contact Actions */}
           <div className="flex items-center gap-1.5">
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setSelectedViewsEvent(promoEvent);
-              }}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-3 sm:px-4 text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:border-blue-500/40 transition-all cursor-pointer active:scale-95 shadow-sm"
-              title={lang === 'ar' ? 'انقر لعرض تفاصيل وإحصائيات مشاهدات الإعلان 📊' : 'Click to view ad views analytics 📊'}
-            >
-              <Eye className="h-4 w-4 shrink-0" />
-              <span className="font-mono">{promoEvent.viewsCount || 0}</span>
-            </button>
+            {(() => {
+              const isAdmin = !!user?.isAdmin;
+              const isViewsVisible = promoEvent.showViewsCount !== false;
+              
+              if (!isViewsVisible && !isAdmin) return null;
+
+              if (isAdmin) {
+                return (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedViewsEvent(promoEvent);
+                    }}
+                    className={`flex h-10 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-sm ${
+                      !isViewsVisible
+                        ? 'bg-neutral-500/10 hover:bg-neutral-500/20 text-neutral-500 dark:text-neutral-400 border border-dashed border-neutral-400/40 hover:border-neutral-400/60'
+                        : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:border-blue-500/40'
+                    }`}
+                    title={
+                      !isViewsVisible
+                        ? (lang === 'ar' ? '🔒 عداد المشاهدات مخفي عن الجمهور (مرئي للإدارة فقط) - انقر لعرض تقرير الإحصائيات 📊' : '🔒 Views count is hidden from users (Admin only) - Click for analytics 📊')
+                        : (lang === 'ar' ? 'انقر لعرض تفاصيل وإحصائيات مشاهدات الإعلان (خاص بالإدارة) 📊' : 'Click to view ad views analytics (Admin only) 📊')
+                    }
+                  >
+                    {!isViewsVisible ? (
+                      <EyeOff className="h-4 w-4 shrink-0 text-neutral-500 dark:text-neutral-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 shrink-0" />
+                    )}
+                    <span className="text-[11px] sm:text-xs font-bold">
+                      {lang === 'ar' ? 'عدد المشاهدات' : 'Views'}
+                    </span>
+                    <span className="font-mono font-black">{promoEvent.viewsCount || 0}</span>
+                    {!isViewsVisible && (
+                      <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 leading-none">
+                        {lang === 'ar' ? 'مخفي' : 'Hidden'}
+                      </span>
+                    )}
+                  </button>
+                );
+              }
+
+              // Regular public display badge (without admin analytics modal trigger)
+              return (
+                <div
+                  className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-sm select-none"
+                  title={lang === 'ar' ? `عدد المشاهدات: ${promoEvent.viewsCount || 0}` : `Views: ${promoEvent.viewsCount || 0}`}
+                >
+                  <Eye className="h-4 w-4 shrink-0 text-blue-500" />
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                    {lang === 'ar' ? 'عدد المشاهدات' : 'Views'}
+                  </span>
+                  <span className="font-mono font-black text-blue-600 dark:text-blue-400">{promoEvent.viewsCount || 0}</span>
+                </div>
+              );
+            })()}
             {/* Direct Call Button */}
             <button
               onClick={(e) => {

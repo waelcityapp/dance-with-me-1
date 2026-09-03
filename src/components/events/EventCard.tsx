@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Eye, Crown, Sparkles, UserCheck, User, BellRing, Smartphone, Radio, ZoomIn } from 'lucide-react';
+import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Eye, EyeOff, Crown, Sparkles, UserCheck, User, BellRing, Smartphone, Radio, ZoomIn } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
@@ -159,9 +159,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       }`}
     >
 
-      {/* Absolute Vertical Red Accent Line */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[5px] z-30 ${
-        isExpired ? 'bg-red-800' : 'bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.6)]'
+      {/* Absolute Vertical Accent Line matching the Main Banner Color */}
+      <div className={`absolute start-0 top-0 bottom-0 w-1.5 z-30 ${
+        isExpired 
+          ? 'bg-neutral-700 dark:bg-neutral-800' 
+          : displayAdType === 'vip'
+            ? 'bg-gradient-to-b from-[#5B0813] via-[#8B1528] to-[#5B0813] border-e border-amber-400/50 shadow-[0_0_12px_rgba(120,16,31,0.7)]'
+            : 'bg-gradient-to-b from-[#5B0813] via-[#78101F] to-[#5B0813] border-e border-[#78101F]/60 shadow-[0_0_8px_rgba(91,8,19,0.5)]'
       }`} />
 
       {/* Topmost accent border line */}
@@ -545,20 +549,64 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 mt-auto flex-wrap">
           {/* Contact Actions */}
           <div className="flex items-center gap-1.5">
-            {(!hideAdminControls || user?.isAdmin || (user?.id && event.creatorUserId === user.id)) && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setSelectedViewsEvent(event);
-                }}
-                className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-3 sm:px-4 text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:border-blue-500/40 transition-all cursor-pointer active:scale-95 shadow-sm"
-                title={lang === 'ar' ? 'انقر لعرض تفاصيل وإحصائيات مشاهدات الإعلان 📊' : 'Click to view ad views analytics 📊'}
-              >
-                <Eye className="h-4 w-4 shrink-0" />
-                <span className="font-mono">{event.viewsCount || 0}</span>
-              </button>
-            )}
+            {(() => {
+              const isAdmin = !!user?.isAdmin;
+              const isViewsVisible = event.showViewsCount !== false;
+              
+              if (!isViewsVisible && !isAdmin) return null;
+              if (hideAdminControls && !isAdmin && !isViewsVisible) return null;
+
+              if (isAdmin) {
+                return (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedViewsEvent(event);
+                    }}
+                    className={`flex h-10 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-sm ${
+                      !isViewsVisible
+                        ? 'bg-neutral-500/10 hover:bg-neutral-500/20 text-neutral-500 dark:text-neutral-400 border border-dashed border-neutral-400/40 hover:border-neutral-400/60'
+                        : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:border-blue-500/40'
+                    }`}
+                    title={
+                      !isViewsVisible
+                        ? (lang === 'ar' ? '🔒 عداد المشاهدات مخفي عن الجمهور (مرئي للإدارة فقط) - انقر لعرض تقرير الإحصائيات 📊' : '🔒 Views count is hidden from users (Admin only) - Click for analytics 📊')
+                        : (lang === 'ar' ? 'انقر لعرض تفاصيل وإحصائيات مشاهدات الإعلان (خاص بالإدارة) 📊' : 'Click to view ad views analytics (Admin only) 📊')
+                    }
+                  >
+                    {!isViewsVisible ? (
+                      <EyeOff className="h-4 w-4 shrink-0 text-neutral-500 dark:text-neutral-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 shrink-0" />
+                    )}
+                    <span className="text-[11px] sm:text-xs font-bold">
+                      {lang === 'ar' ? 'عدد المشاهدات' : 'Views'}
+                    </span>
+                    <span className="font-mono font-black">{event.viewsCount || 0}</span>
+                    {!isViewsVisible && (
+                      <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 leading-none">
+                        {lang === 'ar' ? 'مخفي' : 'Hidden'}
+                      </span>
+                    )}
+                  </button>
+                );
+              }
+
+              // Regular public display badge (without admin analytics modal trigger)
+              return (
+                <div
+                  className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-sm select-none"
+                  title={lang === 'ar' ? `عدد المشاهدات: ${event.viewsCount || 0}` : `Views: ${event.viewsCount || 0}`}
+                >
+                  <Eye className="h-4 w-4 shrink-0 text-blue-500" />
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                    {lang === 'ar' ? 'عدد المشاهدات' : 'Views'}
+                  </span>
+                  <span className="font-mono font-black text-blue-600 dark:text-blue-400">{event.viewsCount || 0}</span>
+                </div>
+              );
+            })()}
             <button
               onClick={(e) => {
                 e.preventDefault();

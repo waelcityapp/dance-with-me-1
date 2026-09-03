@@ -106,6 +106,7 @@ export interface DanceEvent {
   contact: ContactInfo;
   likesCount: number;
   viewsCount?: number;
+  showViewsCount?: boolean;
   isFeatured?: boolean;
   isWeeklyPromo?: boolean;
   isExpiredBy15DaysRule?: boolean; // Calculated or manually overridden

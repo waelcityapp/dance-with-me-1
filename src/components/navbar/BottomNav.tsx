@@ -40,7 +40,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenPersonalNotification
 
   return (
     <nav className="fixed bottom-0 inset-x-0 flex justify-center z-[100] pointer-events-none">
-      <div className="w-full sm:max-w-[520px] h-16 rounded-t-3xl border-t border-x sm:border border-neutral-200 dark:border-neutral-800/80 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-xl flex items-center justify-around px-2 sm:px-4 shadow-2xl pointer-events-auto relative">
+      <div className="w-full sm:max-w-[520px] h-16 rounded-t-3xl border-t border-x sm:border border-neutral-200 dark:border-[#78101F]/50 bg-white/95 dark:bg-[#42030A]/95 backdrop-blur-xl flex items-center justify-around px-2 sm:px-4 shadow-2xl pointer-events-auto relative">
         
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -60,8 +60,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenPersonalNotification
                   transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                   className={`relative flex items-center justify-center transition-colors duration-200 ${
                     isActive
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:group-hover:text-white'
+                      ? 'text-amber-500 dark:text-amber-400'
+                      : 'text-neutral-500 hover:text-neutral-900 dark:text-[#E8D3C0]/70 dark:group-hover:text-white'
                   }`}
                 >
                   {isProfile && user ? (
@@ -70,7 +70,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenPersonalNotification
                         src={user.avatar || DEFAULT_NEUTRAL_AVATAR}
                         alt={user.name || 'User Avatar'}
                         className={`h-5 w-5 sm:h-6 sm:w-6 rounded-full object-cover transition-all ${
-                          isActive ? 'border-2 border-amber-500 shadow-md' : 'border border-neutral-300 dark:border-neutral-600'
+                          isActive ? 'border-2 border-amber-400 shadow-md' : 'border border-neutral-300 dark:border-[#78101F]'
                         }`}
                       />
                     </div>
@@ -82,7 +82,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenPersonalNotification
                   className={`text-[10px] sm:text-[11px] font-bold transition-colors duration-200 text-center leading-tight whitespace-nowrap max-w-[68px] truncate block ${
                     isActive
                       ? 'text-amber-600 dark:text-amber-400 font-black'
-                      : 'text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white'
+                      : 'text-neutral-600 dark:text-[#E8D3C0]/70 group-hover:text-neutral-900 dark:group-hover:text-white'
                   }`}
                 >
                   {lang === 'ar' ? tab.labelAr : tab.labelEn}

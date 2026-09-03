@@ -342,6 +342,7 @@ export const AdminPanel: React.FC = () => {
   const [adminIsWeeklyPromo, setAdminIsWeeklyPromo] = useState(false);
   const [adminIsFeatured, setAdminIsFeatured] = useState(true);
   const [adminShowBookingButton, setAdminShowBookingButton] = useState(true);
+  const [adminShowViewsCount, setAdminShowViewsCount] = useState(true);
   const [adminBookingSubtextAr, setAdminBookingSubtextAr] = useState('');
   const [adminBookingSubtextEn, setAdminBookingSubtextEn] = useState('');
   const [adminEventsFilter, setAdminEventsFilter] = useState<'all' | 'empty' | 'paused' | 'active' | 'available'>('all');
@@ -380,6 +381,7 @@ export const AdminPanel: React.FC = () => {
         if (typeof draft.adminIsFeatured !== 'undefined') setAdminIsFeatured(draft.adminIsFeatured);
         if (typeof draft.adminIsWeeklyPromo !== 'undefined') setAdminIsWeeklyPromo(draft.adminIsWeeklyPromo);
         if (typeof draft.adminShowBookingButton !== 'undefined') setAdminShowBookingButton(draft.adminShowBookingButton);
+        if (typeof draft.adminShowViewsCount !== 'undefined') setAdminShowViewsCount(draft.adminShowViewsCount);
         if (draft.adminBookingSubtextAr) setAdminBookingSubtextAr(draft.adminBookingSubtextAr);
         if (draft.adminBookingSubtextEn) setAdminBookingSubtextEn(draft.adminBookingSubtextEn);
       }
@@ -391,14 +393,14 @@ export const AdminPanel: React.FC = () => {
       adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
       adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
       adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGovernorateAr, adminGovernorateEn, adminAreaAr, adminAreaEn, adminGoogleMapsUrl,
-      adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminBookingSubtextAr, adminBookingSubtextEn
+      adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminShowViewsCount, adminBookingSubtextAr, adminBookingSubtextEn
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [
     adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
     adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
     adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGovernorateAr, adminGovernorateEn, adminAreaAr, adminAreaEn, adminGoogleMapsUrl,
-    adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminBookingSubtextAr, adminBookingSubtextEn
+    adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminShowViewsCount, adminBookingSubtextAr, adminBookingSubtextEn
   ]);
 
   
@@ -771,6 +773,7 @@ export const AdminPanel: React.FC = () => {
         isWeeklyPromo: !!adminIsWeeklyPromo,
         position: adminPosition ? (Number(adminPosition) || 999999) : 999999,
         showBookingButton: adminShowBookingButton,
+        showViewsCount: adminShowViewsCount,
         bookingSubtextAr: adminBookingSubtextAr.trim(),
         bookingSubtextEn: adminBookingSubtextEn.trim()
       };
@@ -6452,6 +6455,51 @@ export const AdminPanel: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Ad Views Count Toggle Setting */}
+                  <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h5 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
+                          <Eye className="w-4 h-4 text-blue-400 shrink-0" />
+                          <span>{lang === 'ar' ? 'إظهار عداد المشاهدات لمستخدمي التطبيق' : 'Show Views Count to App Users'}</span>
+                        </h5>
+                        <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                          {lang === 'ar'
+                            ? 'عند اختيار (أون) يظهر زر المشاهدات مع العداد لكافة مستخدمي التطبيق. عند (أوف) يتم إخفاء العداد عن الجمهور ويبقى متاحاً لك وللإدارة فقط.'
+                            : 'Toggle whether the views counter badge is publicly visible to users or private for admin/organizer.'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setAdminShowViewsCount(true)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            adminShowViewsCount
+                              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 font-extrabold'
+                              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-blue-300 animate-pulse"></span>
+                          <span>ON ({lang === 'ar' ? 'مفعّل' : 'Show'})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAdminShowViewsCount(false)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            !adminShowViewsCount
+                              ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 font-extrabold'
+                              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                          <span>OFF ({lang === 'ar' ? 'معطّل' : 'Hide'})</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Section 4: Location details */}
@@ -6906,6 +6954,7 @@ export const AdminPanel: React.FC = () => {
                             priceAr: adminPriceAr.trim() || '250 ج.م',
                             priceEn: adminPriceEn.trim() || '250 EGP',
                             showBookingButton: adminShowBookingButton,
+                            showViewsCount: adminShowViewsCount,
                             location: {
                               nameAr: adminLocationNameAr.trim() || 'أستوديو الرقص - الزمالك',
                               nameEn: adminLocationNameEn.trim() || 'Dance Studio - Zamalek',

@@ -218,7 +218,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               } ${
                 isSelected
                   ? `bg-white dark:bg-neutral-900 ${cat.activeBorder} ${cat.activeShadow} text-neutral-950 dark:text-white shadow-md`
-                  : 'bg-white/80 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700 hover:text-neutral-950 dark:hover:text-white shadow-sm'
+                  : 'bg-white/80 dark:bg-neutral-900/80 border-neutral-200 dark:border-neutral-700/80 text-neutral-700 dark:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-950 dark:hover:text-white shadow-sm'
               }`}
             >
               <div className="flex items-center gap-2 overflow-hidden">
@@ -232,7 +232,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                 </span>
               </div>
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-mono font-bold shrink-0 transition-colors ${
-                isSelected ? cat.activeBadge : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-400'
+                isSelected ? cat.activeBadge : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
               }`}>
                 {count}
               </span>
@@ -302,7 +302,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                 className={`rounded-xl px-2.5 py-1 text-xs font-mono font-bold whitespace-nowrap transition-all border cursor-pointer ${
                   selectedStyleFilter === style
                     ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-sm'
-                    : 'bg-white dark:bg-neutral-950 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:text-neutral-900 dark:hover:text-white shadow-xs'
+                    : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white shadow-xs'
                 }`}
               >
                 {style === 'all' ? (lang === 'ar' ? 'كل الأنماط' : 'All Styles') : `#${getStyleLabel(style, lang)}`}

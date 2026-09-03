@@ -326,7 +326,7 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
           <div className="sticky bottom-0 z-20 flex items-center gap-3 p-4 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-800">
             <button
               onClick={handleBookClick}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-neutral-950 font-black text-sm sm:text-base shadow-xl shadow-amber-500/20 hover:opacity-95 transition-all cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 font-black text-sm sm:text-base shadow-xl border border-amber-400/40 hover:brightness-110 transition-all cursor-pointer"
             >
               <Ticket className="h-5 w-5" />
               <span>{lang === 'ar' ? 'احجز تذكرتك الآن' : 'Book Your Ticket Now'}</span>

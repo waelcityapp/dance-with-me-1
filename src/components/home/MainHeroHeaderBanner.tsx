@@ -86,9 +86,9 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                   <span className="text-sm sm:text-base md:text-lg font-black text-white group-hover:text-amber-300 transition-colors drop-shadow-md">
                     {isAr ? 'إضافة إعلان' : 'Post Event'}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-400/40 shadow-inner">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold text-[#F5E6D8] bg-[#500610]/90 border border-[#D4AF37]/60 shadow-md">
                     <span className="text-xs sm:text-sm">🎁</span>
-                    <span>{isAr ? 'مجاناً حتى 1 نوفمبر' : 'Free until Nov 1st'}</span>
+                    <span className="text-amber-300">{isAr ? 'مجاناً حتى 1 نوفمبر' : 'Free until Nov 1st'}</span>
                   </span>
                 </div>
               </div>

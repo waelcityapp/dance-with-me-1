@@ -2480,14 +2480,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
                         editAccountTier === 'free'
                           ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400'
-                          : 'border-white/5 bg-neutral-950 text-neutral-400 hover:border-white/20'
+                          : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-emerald-400/50 hover:text-white'
                       }`}
                     >
                       <div className="text-xs font-bold mb-0.5 flex items-center justify-center gap-1">
                         <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
                         {lang === 'ar' ? 'مجاني' : 'Free'}
                       </div>
-                      <div className="text-[10px] text-neutral-400">{lang === 'ar' ? 'حساب عادي' : 'Standard'}</div>
+                      <div className="text-[10px] text-neutral-300">{lang === 'ar' ? 'حساب عادي' : 'Standard'}</div>
                     </button>
 
                     {/* Featured */}
@@ -2497,14 +2497,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
                         editAccountTier === 'featured'
                           ? 'border-sky-400 bg-sky-500/15 text-sky-300 ring-1 ring-sky-400'
-                          : 'border-white/5 bg-neutral-950 text-neutral-400 hover:border-white/20'
+                          : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-sky-400/50 hover:text-white'
                       }`}
                     >
                       <div className="text-xs font-bold mb-0.5 flex items-center justify-center gap-1">
                         <Sparkles className="h-3.5 w-3.5 text-sky-400" />
                         {lang === 'ar' ? 'مميز' : 'Featured'}
                       </div>
-                      <div className="text-[10px] text-neutral-400">{lang === 'ar' ? 'حساب مميز' : 'Featured'}</div>
+                      <div className="text-[10px] text-neutral-300">{lang === 'ar' ? 'حساب مميز' : 'Featured'}</div>
                     </button>
 
                     {/* VIP */}
@@ -2514,7 +2514,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
                         editAccountTier === 'vip'
                           ? 'border-amber-400 bg-amber-500/15 text-amber-300 gold-glow ring-1 ring-amber-400'
-                          : 'border-white/5 bg-neutral-950 text-neutral-400 hover:border-white/20'
+                          : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-amber-400/50 hover:text-white'
                       }`}
                     >
                       <div className="text-xs font-bold mb-0.5 flex items-center justify-center gap-1">
