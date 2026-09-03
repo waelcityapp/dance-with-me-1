@@ -545,10 +545,11 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         )}
 
-        {/* Action Buttons Bar: Phone, WhatsApp, Share, Like, Book */}
-        <div className="flex items-center justify-between gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 mt-auto flex-wrap">
-          {/* Contact Actions */}
-          <div className="flex items-center gap-1.5">
+        {/* Action Buttons Bar: Views & Icons on Row 1, Full-width Book Now on Row 2 */}
+        <div className="pt-3.5 sm:pt-4 border-t border-neutral-200 dark:border-neutral-800 mt-auto space-y-2.5">
+          {/* Row 1: Views Counter + All Action Icons (Phone, WhatsApp, Share, Like) */}
+          <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full">
+            {/* Views Counter Badge */}
             {(() => {
               const isAdmin = !!user?.isAdmin;
               const isViewsVisible = event.showViewsCount !== false;
@@ -564,7 +565,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                       e.stopPropagation();
                       setSelectedViewsEvent(event);
                     }}
-                    className={`flex h-10 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-sm ${
+                    className={`flex h-10 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0 ${
                       !isViewsVisible
                         ? 'bg-neutral-500/10 hover:bg-neutral-500/20 text-neutral-500 dark:text-neutral-400 border border-dashed border-neutral-400/40 hover:border-neutral-400/60'
                         : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:border-blue-500/40'
@@ -578,7 +579,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                     {!isViewsVisible ? (
                       <EyeOff className="h-4 w-4 shrink-0 text-neutral-500 dark:text-neutral-400" />
                     ) : (
-                      <Eye className="h-4 w-4 shrink-0" />
+                      <Eye className="h-4 w-4 shrink-0 text-blue-500" />
                     )}
                     <span className="text-[11px] sm:text-xs font-bold">
                       {lang === 'ar' ? 'عدد المشاهدات' : 'Views'}
@@ -596,7 +597,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               // Regular public display badge (without admin analytics modal trigger)
               return (
                 <div
-                  className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-sm select-none"
+                  className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-2xs select-none shrink-0"
                   title={lang === 'ar' ? `عدد المشاهدات: ${event.viewsCount || 0}` : `Views: ${event.viewsCount || 0}`}
                 >
                   <Eye className="h-4 w-4 shrink-0 text-blue-500" />
@@ -607,104 +608,112 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 </div>
               );
             })()}
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                if (!user) {
-                  openGuestAlert('contact');
-                  return;
-                }
-                logAnalyticsEvent('clicks_phone');
-                window.location.href = `tel:${event.contact.phone}`;
-              }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all font-bold cursor-pointer"
-              title={lang === 'ar' ? `اتصال: ${event.contact.phone}` : `Call: ${event.contact.phone}`}
-            >
-              <Phone className="h-4 w-4" />
-            </button>
 
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                if (!user) {
-                  openGuestAlert('contact');
-                  return;
-                }
-                logAnalyticsEvent('clicks_whatsapp');
-                const url = `https://wa.me/${event.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، استفسار بخصوص: ${event.titleAr}` : `Hello, inquiry about: ${event.titleEn}`)}`;
-                window.open(url, '_blank', 'noopener,noreferrer');
-              }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-neutral-900 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-200 dark:border-neutral-800 transition-all font-bold cursor-pointer"
-              title={lang === 'ar' ? 'واتساب للمنظم' : 'WhatsApp Organizer'}
-            >
-              <MessageCircle className="h-4 w-4" />
-            </button>
+            {/* Action Icons Group: Phone, WhatsApp, Share, Like */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ms-auto">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!user) {
+                    openGuestAlert('contact');
+                    return;
+                  }
+                  logAnalyticsEvent('clicks_phone');
+                  window.location.href = `tel:${event.contact.phone}`;
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all font-bold cursor-pointer shrink-0"
+                title={lang === 'ar' ? `اتصال: ${event.contact.phone}` : `Call: ${event.contact.phone}`}
+              >
+                <Phone className="h-4 w-4" />
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!user) {
+                    openGuestAlert('contact');
+                    return;
+                  }
+                  logAnalyticsEvent('clicks_whatsapp');
+                  const url = `https://wa.me/${event.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، استفسار بخصوص: ${event.titleAr}` : `Hello, inquiry about: ${event.titleEn}`)}`;
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-neutral-900 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-200 dark:border-neutral-800 transition-all font-bold cursor-pointer shrink-0"
+                title={lang === 'ar' ? 'واتساب للمنظم' : 'WhatsApp Organizer'}
+              >
+                <MessageCircle className="h-4 w-4" />
+              </button>
+
+              {/* Share */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onOpenShare(event)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all cursor-pointer shrink-0"
+                title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share'}
+              >
+                <Share2 className="h-4 w-4" />
+              </motion.button>
+
+              {/* Like / Remove from Favorites */}
+              {isFavoritesTab ? (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    toggleLikeEvent(event.id);
+                  }}
+                  className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border border-red-500/30 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white transition-all cursor-pointer shrink-0"
+                  title={lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from Favorites'}
+                >
+                  <Trash2 className="h-4 w-4 text-red-500 group-hover:text-white" />
+                  <span>{lang === 'ar' ? 'إزالة' : 'Remove'}</span>
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={(e) => toggleLikeEvent(event.id, e.currentTarget)}
+                  className={`flex h-10 items-center gap-1.5 rounded-xl px-2.5 sm:px-3 text-xs font-bold border transition-all cursor-pointer shrink-0 ${
+                    isLiked
+                      ? 'bg-red-600 text-white border-red-500 shadow-md'
+                      : 'bg-neutral-100 dark:bg-neutral-900 text-red-500 hover:bg-red-600 hover:text-white border-neutral-200 dark:border-neutral-700'
+                  }`}
+                >
+                  <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                  <span className="font-mono">{String(event.likesCount || 0)}</span>
+                </motion.button>
+              )}
+            </div>
           </div>
 
-          {/* Social & Booking Actions */}
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Share */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onOpenShare(event)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all cursor-pointer"
-              title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share'}
-            >
-              <Share2 className="h-4 w-4" />
-            </motion.button>
+          {/* Row 2: Book Now & Price/Promo Subtext (Full Width) */}
+          {event.showBookingButton !== false && (() => {
+            const rawSubtext = lang === 'ar'
+              ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn)
+              : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr);
+            const cleanSubtext = rawSubtext && String(rawSubtext).trim() !== '0' ? String(rawSubtext).trim() : null;
 
-            {/* Like / Remove from Favorites */}
-            {isFavoritesTab ? (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  toggleLikeEvent(event.id);
-                }}
-                className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border border-red-500/30 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white transition-all cursor-pointer"
-                title={lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from Favorites'}
-              >
-                <Trash2 className="h-4 w-4 text-red-500 group-hover:text-white" />
-                <span>{lang === 'ar' ? 'إزالة' : 'Remove'}</span>
-              </motion.button>
-            ) : (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => toggleLikeEvent(event.id, e.currentTarget)}
-                className={`flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-bold border transition-all cursor-pointer ${
-                  isLiked
-                    ? 'bg-red-600 text-white border-red-500 shadow-md'
-                    : 'bg-neutral-100 dark:bg-neutral-900 text-red-500 hover:bg-red-600 hover:text-white border-neutral-200 dark:border-neutral-700'
-                }`}
-              >
-                <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                <span className="font-mono">{String(event.likesCount || 0)}</span>
-              </motion.button>
-            )}
-
-            {/* Book Now & Price/Promo Subtext */}
-            {event.showBookingButton !== false && (
-              <div className="flex flex-col items-center gap-1 shrink-0">
+            return (
+              <div className="w-full flex flex-col items-center gap-1 pt-0.5">
                 <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => bookTicket(event.id)}
-                  className="flex h-10 items-center justify-center rounded-xl px-6 sm:px-8 min-w-[120px] sm:min-w-[140px] text-xs font-bold transition-all bg-amber-500 text-neutral-950 hover:bg-amber-400 shadow-lg cursor-pointer"
+                  className="w-full flex h-11 items-center justify-center rounded-xl px-4 text-sm font-black transition-all bg-amber-500 text-neutral-950 hover:bg-amber-400 active:scale-[0.99] shadow-sm hover:shadow-md cursor-pointer"
                 >
                   <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
                 </motion.button>
-                {(event.bookingSubtextAr || event.bookingSubtextEn || event.priceAr || event.priceEn) && (
-                  <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-700 dark:text-amber-400 text-center max-w-[160px] sm:max-w-[200px] leading-tight break-words" title={lang === 'ar' ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn) : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr)}>
-                    {lang === 'ar' ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn) : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr)}
+                {cleanSubtext && (
+                  <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-400 text-center max-w-full leading-tight break-words" title={cleanSubtext}>
+                    {cleanSubtext}
                   </span>
                 )}
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
       </div>
 

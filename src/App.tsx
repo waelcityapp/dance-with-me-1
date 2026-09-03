@@ -141,12 +141,12 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Why Book Container - Overlapping the curved oval blue edge */}
-          <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 -mt-8 sm:-mt-10 relative z-10">
+          <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 -mt-7 sm:-mt-8 relative z-10">
             <motion.div
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => setIsWhyBookOpen(true)}
-              className="relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-xl shadow-neutral-900/15 dark:shadow-black/40"
+              className="relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-md shadow-neutral-900/10 dark:shadow-black/30"
             >
               {/* Continuous subtle spinning gradient */}
               <div 
@@ -157,23 +157,23 @@ const AppContent: React.FC = () => {
               />
               
               {/* Inner Content */}
-              <div className="relative flex items-center justify-between bg-white dark:bg-neutral-900 rounded-[14px] p-3.5 sm:p-4 w-full h-full shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 group-hover:rotate-6 transition-transform">
-                    <Sparkles className="h-5 w-5" />
+              <div className="relative flex items-center justify-between bg-white dark:bg-neutral-900 rounded-[14px] py-2 sm:py-2.5 px-3 sm:px-4 w-full h-full shadow-xs">
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 group-hover:rotate-6 transition-transform">
+                    <Sparkles className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm sm:text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-500 dark:from-red-400 dark:to-amber-400">
+                  <div className="text-right min-w-0">
+                    <span className="block text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-500 dark:from-red-400 dark:to-amber-400 truncate">
                       {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
                     </span>
-                    <span className="block text-[11px] sm:text-xs text-neutral-600 dark:text-neutral-400 font-medium mt-0.5">
+                    <span className="block text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 font-medium leading-tight truncate">
                       {lang === 'ar' ? 'اكتشف مميزات التذاكر الفورية والخصومات الحصرية' : 'Discover instant tickets & exclusive discounts'}
                     </span>
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
-                  {lang === 'ar' ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+                <div className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all shrink-0 ms-2">
+                  {lang === 'ar' ? <ArrowLeft className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
                 </div>
               </div>
             </motion.div>
@@ -182,7 +182,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Main Body Content */}
-      <main className={`flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 pb-24 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-6 sm:pt-7' : 'pt-5'}`}>
+      <main className={`flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 pb-24 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-2.5 sm:pt-3' : 'pt-4'}`}>
         {activeTab === 'verification' ? (
           <VerificationView />
         ) : activeTab === 'about_us' ? (

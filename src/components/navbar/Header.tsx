@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#78101F]/50 bg-gradient-to-r from-[#4E040D] via-[#5E0713] to-[#4E040D] backdrop-blur-xl transition-all duration-300 shadow-2xl text-white">
-      <div className="mx-auto flex items-center justify-between max-w-6xl px-3 sm:px-6 h-16 gap-2">
+      <div className="mx-auto flex items-center justify-between max-w-6xl px-3 sm:px-6 h-16 gap-2 relative">
         {/* Brand Logo & Title */}
         <div 
           className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none group shrink-0"
@@ -128,20 +128,23 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Tools & Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-
-          {/* About Us Button */}
-          {onOpenAboutUs && (
+        {/* Center: About Us Button with White Text */}
+        {onOpenAboutUs && (
+          <div className="flex items-center justify-center mx-auto px-1">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onOpenAboutUs}
-              className="flex items-center justify-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-neutral-950 transition-all cursor-pointer text-[10px] sm:text-xs font-black whitespace-nowrap"
+              className="flex items-center justify-center px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/25 hover:border-white/40 text-white transition-all cursor-pointer text-xs sm:text-sm font-bold whitespace-nowrap shadow-xs backdrop-blur-sm"
+              title={lang === 'ar' ? 'عن التطبيق والمنصة' : 'About Platform'}
             >
-              {lang === 'ar' ? 'من نحن' : 'About Us'}
+              <span className="text-white drop-shadow-xs">{lang === 'ar' ? 'من نحن' : 'About Us'}</span>
             </motion.button>
-          )}
+          </div>
+        )}
+
+        {/* Right Tools & Actions */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
 
           {/* Language Switcher Pill */}
           <div className="flex items-center rounded-xl border border-[#78101F]/60 bg-[#3D0309]/90 p-0.5 text-xs text-white">
