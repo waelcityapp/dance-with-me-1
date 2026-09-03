@@ -11,12 +11,14 @@ interface HeaderProps {
   onOpenNotifications: () => void;
   onOpenAuth: () => void;
   onOpenInstallModal?: () => void;
+  onOpenAboutUs?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   onOpenNotifications, 
   onOpenAuth, 
-  onOpenInstallModal 
+  onOpenInstallModal,
+  onOpenAboutUs
 }) => {
   const { 
     lang, setLang, 
@@ -128,6 +130,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Tools & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+
+          {/* About Us Button */}
+          {onOpenAboutUs && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onOpenAboutUs}
+              className="flex items-center justify-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-neutral-950 transition-all cursor-pointer text-[10px] sm:text-xs font-black whitespace-nowrap"
+            >
+              {lang === 'ar' ? 'من نحن' : 'About Us'}
+            </motion.button>
+          )}
 
           {/* Language Switcher Pill */}
           <div className="flex items-center rounded-xl border border-[#78101F]/60 bg-[#3D0309]/90 p-0.5 text-xs text-white">

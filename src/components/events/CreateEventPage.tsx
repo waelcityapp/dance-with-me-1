@@ -1349,12 +1349,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             {lang === 'ar' ? 'حدد نوع الفعالية لتظهر في القسم المناسب للمستخدمين' : 'Choose event category to appear in the correct section'}
           </p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 mt-4">
             {[
               { id: 'party', ar: 'حفلة وسهرة', en: 'Party & Social' },
               { id: 'course', ar: 'دورة وكورس', en: 'Dance Course' },
               { id: 'trip', ar: 'رحلة ومعسكر', en: 'Camp & Trip' },
-              { id: 'exhibition', ar: 'معارض ومؤتمرات', en: 'Exhibitions & Conferences' }
+              { id: 'exhibition', ar: 'معارض ومؤتمرات', en: 'Exhibitions' },
+              { id: 'services', ar: 'شركات و خدمات مكملة', en: 'Services' },
+              { id: 'jobs', ar: 'وظائف فى نفس المجال', en: 'Jobs' }
             ].map((cat) => (
               <button
                 key={cat.id}

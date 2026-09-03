@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceEvent, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
+import { getSubcategoriesForCategory, SubCategoryItem } from '../../data/categoriesConfig';
 import { EventCard } from '../events/EventCard';
 import { WeeklyPromoBanner } from '../events/WeeklyPromoBanner';
-import { Sparkles, Music, GraduationCap, Palmtree, Building2, PlusCircle, Filter, Search, Clock, CheckCircle, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, X, Crown, Gift, Star, ArrowLeft, ArrowRight, WifiOff, Loader2, RefreshCw } from 'lucide-react';
+import { Sparkles, Music, GraduationCap, Palmtree, Building2, Store, Briefcase, PlusCircle, Filter, Search, Clock, CheckCircle, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, X, Crown, Gift, Star, ArrowLeft, ArrowRight, WifiOff, Loader2, RefreshCw, Layers, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { logAnalyticsEvent } from '../../lib/firebase';
+import { CategoriesExplorerModal } from '../modals/CategoriesExplorerModal';
 
 interface HomeFeedProps {
   onOpenMap: (event: DanceEvent) => void;
@@ -21,12 +23,23 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const [visibleCount, setVisibleCount] = useState(5);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [showWhyBookModal, setShowWhyBookModal] = useState(false);
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
 
   // Reset pagination when category, search, or style filter changes
   useEffect(() => {
     setVisibleCount(5);
   }, [selectedCategory, searchQuery, selectedStyleFilter]);
+
+  // Reset subcategory filter when main category changes
+  useEffect(() => {
+    setSelectedStyleFilter('all');
+  }, [selectedCategory]);
+
+  // Dynamic Subcategories based on selected category
+  const subcategories = useMemo(() => {
+    return getSubcategoriesForCategory(selectedCategory);
+  }, [selectedCategory]);
 
   // Scroll instantly to specific event from URL if present
   useEffect(() => {
@@ -119,9 +132,19 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       const matchAddress = (ev.location?.addressAr || '').toLowerCase().includes(q) || (ev.location?.addressEn || '').toLowerCase().includes(q);
       if (!matchTitle && !matchDesc && !matchLoc && !matchOrganizer && !matchGov && !matchArea && !matchAddress) return false;
     }
-    // Style filter check
-    if (selectedStyleFilter !== 'all' && !ev.styles.includes(selectedStyleFilter as DanceStyle)) {
-      return false;
+    // Subcategory / Style filter check
+    if (selectedStyleFilter !== 'all') {
+      const selectedSubcat = subcategories.find(s => s.id === selectedStyleFilter);
+      const matchesDirect = ev.styles.includes(selectedStyleFilter as DanceStyle);
+      const matchesAlias = selectedSubcat?.aliases?.some(alias => ev.styles.includes(alias as DanceStyle));
+      const matchesKeyword = selectedSubcat && (
+        (ev.titleAr || '').includes(selectedSubcat.labelAr) ||
+        (ev.descriptionAr || '').includes(selectedSubcat.labelAr) ||
+        (ev.titleEn || '').toLowerCase().includes(selectedSubcat.labelEn.toLowerCase())
+      );
+      if (!matchesDirect && !matchesAlias && !matchesKeyword) {
+        return false;
+      }
     }
     return true;
   });
@@ -191,20 +214,65 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       activeBadge: 'bg-rose-500 text-white',
       iconColor: 'text-rose-400',
       iconBg: 'bg-rose-500/15'
+    },
+    { 
+      id: 'services', 
+      labelAr: 'شركات و خدمات مكملة', 
+      labelEn: 'Services & Suppliers', 
+      icon: Store,
+      activeBorder: 'border-amber-500',
+      activeShadow: 'shadow-lg shadow-amber-500/15',
+      activeBadge: 'bg-amber-600 text-white',
+      iconColor: 'text-amber-500',
+      iconBg: 'bg-amber-500/15'
+    },
+    { 
+      id: 'jobs', 
+      labelAr: 'وظائف فى نفس المجال', 
+      labelEn: 'Event Jobs', 
+      icon: Briefcase,
+      activeBorder: 'border-teal-500',
+      activeShadow: 'shadow-lg shadow-teal-500/15',
+      activeBadge: 'bg-teal-600 text-white',
+      iconColor: 'text-teal-400',
+      iconBg: 'bg-teal-500/15'
     }
   ];
 
   const styleChips: string[] = ['all', ...ALL_DANCE_STYLES];
 
   return (
-    <div className="space-y-6 pb-16">
-      {/* Category Tabs (Clean Single-Language + Distinct Primary Icons) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+    <div className="space-y-3.5 sm:space-y-4 pb-16">
+      {/* Top Banner with Main Categories Explorer Button */}
+      <div className="flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-500/30 shadow-xs">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-neutral-950 shadow-sm shrink-0">
+            <LayoutGrid className="h-4 w-4 stroke-[2.5]" />
+          </div>
+          <div>
+            <span className="text-xs sm:text-sm font-black text-neutral-900 dark:text-white block leading-tight">
+              {lang === 'ar' ? 'الأقسام الرئيسية ودليل الفعاليات' : 'Main Categories & Event Directory'}
+            </span>
+            <span className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 block leading-tight">
+              {lang === 'ar' ? 'تصفح كل الأقسام والتصنيفات الفرعية الـ 12 بنقرة واحدة' : 'Explore all sections & 12+ subcategories in one click'}
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowCategoriesModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-xs hover:shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+          <span>{lang === 'ar' ? 'الأقسام الرئيسية' : 'Main Categories'}</span>
+        </button>
+      </div>
+
+      {/* Category Tabs (Horizontally Scrollable) */}
+      <div className="flex overflow-x-auto gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {categories.map((cat, index) => {
           const Icon = cat.icon;
           const isSelected = selectedCategory === cat.id;
           const count = activeEvents.filter(ev => cat.id === 'all' || ev.category === cat.id).length;
-          const isLastOnMobile = index === categories.length - 1;
 
           return (
             <button
@@ -213,26 +281,24 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                 setSelectedCategory(cat.id);
                 logAnalyticsEvent(`category_${cat.id}`);
               }}
-              className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                isLastOnMobile ? 'col-span-2 sm:col-span-1' : ''
-              } ${
+              className={`shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full border transition-all duration-200 cursor-pointer ${
                 isSelected
-                  ? `bg-white dark:bg-neutral-900 ${cat.activeBorder} ${cat.activeShadow} text-neutral-950 dark:text-white shadow-md`
-                  : 'bg-white/80 dark:bg-neutral-900/80 border-neutral-200 dark:border-neutral-700/80 text-neutral-700 dark:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-950 dark:hover:text-white shadow-sm'
+                  ? `bg-white dark:bg-neutral-900 ${cat.activeBorder} ${cat.activeShadow} text-neutral-950 dark:text-white shadow-xs ring-1 ring-amber-500/30`
+                  : 'bg-white/90 dark:bg-neutral-900/90 border-neutral-200 dark:border-neutral-700/80 text-neutral-700 dark:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-950 dark:hover:text-white shadow-2xs'
               }`}
             >
-              <div className="flex items-center gap-2 overflow-hidden">
-                <div className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl shrink-0 transition-colors ${
+              <div className="flex items-center gap-1.5">
+                <div className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full shrink-0 transition-colors ${
                   isSelected ? `${cat.activeBadge}` : `${cat.iconBg} ${cat.iconColor}`
                 }`}>
-                  <Icon className="h-4 w-4 stroke-[2.2]" />
+                  <Icon className="h-3.5 w-3.5 stroke-[2.2]" />
                 </div>
-                <span className="text-xs sm:text-sm font-bold truncate">
+                <span className="whitespace-nowrap text-[11px] sm:text-xs font-bold leading-tight">
                   {lang === 'ar' ? cat.labelAr : cat.labelEn}
                 </span>
               </div>
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-mono font-bold shrink-0 transition-colors ${
-                isSelected ? cat.activeBadge : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-mono font-bold shrink-0 transition-colors ml-1 ${
+                isSelected ? cat.activeBadge : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
               }`}>
                 {count}
               </span>
@@ -242,7 +308,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       </div>
 
       {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
-      <div id="search-section" className="rounded-3xl border-2 border-amber-500/40 bg-white/95 dark:bg-neutral-900/90 p-4 sm:p-5 shadow-xl dark:shadow-2xl backdrop-blur-md space-y-3.5 my-2 transition-colors">
+      <div id="search-section" className="rounded-2xl border-2 border-amber-500/40 bg-white/95 dark:bg-neutral-900/90 p-3 sm:p-4 shadow-lg dark:shadow-xl backdrop-blur-md space-y-3 transition-colors">
         <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800/80 pb-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <h3 className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400 flex items-center gap-2">
@@ -283,31 +349,42 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
             )}
           </div>
 
-          {/* Style Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
-            <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 shrink-0 mr-1 flex items-center gap-1">
-              <Filter className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
-              <span>{lang === 'ar' ? 'التصنيف بحسب الرقصة:' : 'Style filter:'}</span>
+          {/* Subcategories Filter Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar">
+            <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 shrink-0 mr-1 flex items-center gap-1">
+              <Layers className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+              <span>{lang === 'ar' ? 'التصنيف الفرعي:' : 'Subcategory:'}</span>
             </span>
-            {styleChips.map(style => (
-              <button
-                key={style}
-                onClick={() => {
-                  setSelectedStyleFilter(style);
-                  if (style !== 'all') {
-                    const normalized = style.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-                    logAnalyticsEvent(`style_${normalized}`);
-                  }
-                }}
-                className={`rounded-xl px-2.5 py-1 text-xs font-mono font-bold whitespace-nowrap transition-all border cursor-pointer ${
-                  selectedStyleFilter === style
-                    ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-sm'
-                    : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white shadow-xs'
-                }`}
-              >
-                {style === 'all' ? (lang === 'ar' ? 'كل الأنماط' : 'All Styles') : `#${getStyleLabel(style, lang)}`}
-              </button>
-            ))}
+            <button
+              onClick={() => setSelectedStyleFilter('all')}
+              className={`rounded-xl px-3 py-1 text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                selectedStyleFilter === 'all'
+                  ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-sm font-extrabold'
+                  : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white shadow-xs'
+              }`}
+            >
+              {lang === 'ar' ? 'الكل' : 'All'}
+            </button>
+            {subcategories.map(sub => {
+              const isSelected = selectedStyleFilter === sub.id;
+              const subLabel = lang === 'ar' ? sub.labelAr : sub.labelEn;
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => {
+                    setSelectedStyleFilter(sub.id);
+                    logAnalyticsEvent(`subcat_${sub.id}`);
+                  }}
+                  className={`rounded-xl px-3 py-1 text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-sm font-extrabold'
+                      : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white shadow-xs'
+                  }`}
+                >
+                  {subLabel}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -519,6 +596,31 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           </div>
         )}
       </AnimatePresence>
+
+      {/* Main Categories Explorer Directory Modal */}
+      <CategoriesExplorerModal
+        isOpen={showCategoriesModal}
+        onClose={() => setShowCategoriesModal(false)}
+        selectedCategory={selectedCategory}
+        onSelectCategory={(cat) => {
+          setSelectedCategory(cat);
+          logAnalyticsEvent(`explore_cat_${cat}`);
+        }}
+        selectedSubcategory={selectedStyleFilter}
+        onSelectSubcategory={(subId) => {
+          setSelectedStyleFilter(subId);
+          logAnalyticsEvent(`explore_sub_${subId}`);
+        }}
+        eventsCountMap={{
+          all: activeEvents.length,
+          party: activeEvents.filter(e => e.category === 'party').length,
+          course: activeEvents.filter(e => e.category === 'course').length,
+          trip: activeEvents.filter(e => e.category === 'trip').length,
+          exhibition: activeEvents.filter(e => e.category === 'exhibition').length,
+          services: activeEvents.filter(e => e.category === 'services').length,
+          jobs: activeEvents.filter(e => e.category === 'jobs').length,
+        }}
+      />
     </div>
   );
 };

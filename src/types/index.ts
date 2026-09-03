@@ -1,4 +1,4 @@
-export type DanceCategory = 'all' | 'party' | 'course' | 'trip' | 'exhibition';
+export type DanceCategory = 'all' | 'party' | 'course' | 'trip' | 'exhibition' | 'services' | 'jobs';
 
 export type DanceStyle = 
   | 'Salsa' 
@@ -93,7 +93,7 @@ export interface DanceEvent {
   titleEn: string;
   descriptionAr: string;
   descriptionEn: string;
-  category: 'party' | 'course' | 'trip' | 'exhibition';
+  category: 'party' | 'course' | 'trip' | 'exhibition' | 'services' | 'jobs';
   styles: DanceStyle[];
   mediaType: 'video' | 'image';
   mediaUrl: string;

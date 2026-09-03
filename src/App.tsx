@@ -27,6 +27,7 @@ import { AdViewsDetailsModal } from './components/modals/AdViewsDetailsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { MainHeroHeaderBanner } from './components/home/MainHeroHeaderBanner';
 import { WhyBookModal } from './components/modals/WhyBookModal';
+import { AboutUsPage } from './components/about/AboutUsPage';
 import { Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DanceEvent } from './types';
@@ -115,10 +116,14 @@ const AppContent: React.FC = () => {
         onOpenNotifications={() => setIsNotifOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenInstallModal={() => setIsInstallOpen(true)}
+        onOpenAboutUs={() => {
+          setActiveTab('about_us');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
       />
 
       {/* Top Hero Canvas with Curved Oval Bottom Edge */}
-      {(!activeTab || activeTab === 'explore') && (
+      {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
         <div className="relative w-full">
           {/* Curved Hero Section matching logo velvet burgundy base with slightly lighter, luminous gradient */}
           <div className="w-full bg-gradient-to-b from-[#6B0D18] via-[#5C0913] to-[#48040C] border-b border-[#8C1626]/60 rounded-b-[32px] sm:rounded-b-[48px] md:rounded-b-[56px] shadow-2xl shadow-black/60 pb-8 sm:pb-10 transition-colors duration-200">
@@ -177,9 +182,11 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Main Body Content */}
-      <main className={`flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 pb-24 ${(!activeTab || activeTab === 'explore') ? 'pt-6 sm:pt-7' : 'pt-5'}`}>
+      <main className={`flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 pb-24 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-6 sm:pt-7' : 'pt-5'}`}>
         {activeTab === 'verification' ? (
           <VerificationView />
+        ) : activeTab === 'about_us' ? (
+          <AboutUsPage />
         ) : (
           <>
             {activeTab === 'profile' && (
@@ -220,7 +227,7 @@ const AppContent: React.FC = () => {
                 }}
               />
             )}
-            {activeTab !== 'profile' && activeTab !== 'create_ad' && activeTab !== 'admin' && activeTab !== 'edit_ad_admin' && (
+            {activeTab !== 'profile' && activeTab !== 'create_ad' && activeTab !== 'admin' && activeTab !== 'edit_ad_admin' && activeTab !== 'about_us' && (
               <HomeFeed
                 onOpenMap={(ev) => setSelectedMapEvent(ev)}
                 onOpenShare={(ev) => setSelectedShareEvent(ev)}
