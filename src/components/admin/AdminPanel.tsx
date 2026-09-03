@@ -52,7 +52,7 @@ import {
   Bell,
   Smartphone,
   Globe,
-  Maximize2, Minimize2, Languages, Loader2 } from 'lucide-react';
+  Maximize2, Minimize2, Languages, Loader2, LayoutDashboard } from 'lucide-react';
 import { QrCode, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdSubmission, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle, AccountTier } from '../../types';
@@ -120,7 +120,7 @@ export const AdminPanel: React.FC = () => {
   const [bookingsSearch, setBookingsSearch] = useState('');
   const [rejectionReasonMap, setRejectionReasonMap] = useState<Record<string, string>>({});
   const [selectedBookingReceipt, setSelectedBookingReceipt] = useState<string | null>(null);
-  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | 'pricing' | 'analytics' | 'create_ad_admin' | 'bookings' | null>(null);
+  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | 'pricing' | 'analytics' | 'create_ad_admin' | 'bookings' | 'send_notifications' | null>(null);
   const [dbSubTab, setDbSubTab] = useState<'events' | 'submissions' | 'notifications' | 'schema'>('events');
   const [selectedJsonDoc, setSelectedJsonDoc] = useState<{ id: string; title: string; data: any } | null>(null);
   const [qrEventDoc, setQrEventDoc] = useState<{ id: string; title: string } | null>(null);
@@ -1827,15 +1827,126 @@ export const AdminPanel: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Persistent Admin Quick Navigation Tabs (Pills) */}
+      <div className="mb-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md p-1.5 shadow-sm sticky top-14 sm:top-18 z-30 transition-all">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5 px-0.5" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          {[
+            {
+              id: null,
+              label: lang === 'ar' ? 'الرئيسية' : 'Overview',
+              icon: LayoutDashboard,
+              badge: null,
+            },
+            {
+              id: 'submissions',
+              label: lang === 'ar' ? 'طلبات الإعلانات' : 'Ads Submissions',
+              icon: Crown,
+              badge: submissions.filter(s => s.status === 'pending').length || null,
+              badgeColor: 'bg-amber-500 text-neutral-950',
+            },
+            {
+              id: 'bookings',
+              label: lang === 'ar' ? 'حجوزات التذاكر' : 'Bookings',
+              icon: Ticket,
+              badge: bookings.filter(b => b.status === 'pending').length || null,
+              badgeColor: 'bg-emerald-500 text-neutral-950',
+            },
+            {
+              id: 'create_ad_admin',
+              label: lang === 'ar' ? 'إنشاء إعلان' : 'Create Ad',
+              icon: Plus,
+              badge: null,
+            },
+            {
+              id: 'users',
+              label: lang === 'ar' ? 'المستخدمين' : 'Users',
+              icon: Users,
+              badge: allUsers.length > 0 ? allUsers.length : null,
+              badgeColor: 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+            },
+            {
+              id: 'support',
+              label: lang === 'ar' ? 'الدعم والمقترحات' : 'Support',
+              icon: MessageSquare,
+              badge: supportMessages.filter(m => !m.reply).length || null,
+              badgeColor: 'bg-emerald-500 text-neutral-950',
+            },
+            {
+              id: 'analytics',
+              label: lang === 'ar' ? 'الإحصائيات' : 'Analytics',
+              icon: BarChart3,
+              badge: null,
+            },
+            {
+              id: 'database',
+              label: lang === 'ar' ? 'قاعدة البيانات' : 'Database',
+              icon: Database,
+              badge: null,
+            },
+            {
+              id: 'pricing',
+              label: lang === 'ar' ? 'الأسعار' : 'Pricing',
+              icon: DollarSign,
+              badge: null,
+            },
+            {
+              id: 'branding',
+              label: lang === 'ar' ? 'الهوية والشعارات' : 'Branding',
+              icon: Sparkles,
+              badge: null,
+            },
+            {
+              id: 'security',
+              label: lang === 'ar' ? 'الأمان والاختراق' : 'Security',
+              icon: ShieldAlert,
+              badge: null,
+            },
+            {
+              id: 'send_notifications',
+              label: lang === 'ar' ? 'إرسال تنبيه' : 'Alerts',
+              icon: Bell,
+              badge: null,
+            },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = adminSection === tab.id;
+            return (
+              <button
+                key={tab.id || 'overview'}
+                onClick={() => {
+                  setAdminSection(tab.id as any);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                  isActive
+                    ? 'bg-amber-500 text-neutral-950 shadow-sm font-black'
+                    : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+              >
+                <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'stroke-[2.5]' : 'opacity-70'}`} />
+                <span className="whitespace-nowrap">{tab.label}</span>
+                {tab.badge !== null && (
+                  <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full leading-tight ${
+                    isActive ? 'bg-neutral-950 text-amber-400' : (tab.badgeColor || 'bg-amber-500 text-neutral-950')
+                  }`}>
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Main Admin Section View Header or welcome dashboard menu */}
       {adminSection !== null ? (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-md dark:shadow-xl mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors"
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-5 shadow-xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-colors"
         >
-          <div className="flex items-center gap-4">
-            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
+          <div className="flex items-center gap-3.5">
+            <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 shadow-inner ${
               adminSection === 'submissions' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400' :
               adminSection === 'database' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-500 dark:text-blue-400' :
               adminSection === 'support' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400' :
@@ -1845,43 +1956,52 @@ export const AdminPanel: React.FC = () => {
               adminSection === 'analytics' ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 dark:text-cyan-400' :
               adminSection === 'create_ad_admin' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 dark:text-indigo-400' :
               adminSection === 'bookings' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400' :
+              adminSection === 'send_notifications' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400' :
               'bg-purple-500/10 border border-purple-500/30 text-purple-500 dark:text-purple-400'
             }`}>
-              {adminSection === 'submissions' && <Crown className="h-6 w-6" />}
-              {adminSection === 'database' && <Database className="h-6 w-6 animate-pulse" />}
-              {adminSection === 'support' && <MessageSquare className="h-6 w-6" />}
-              {adminSection === 'users' && <Users className="h-6 w-6" />}
-              {adminSection === 'security' && <ShieldAlert className="h-6 w-6" />}
-              {adminSection === 'branding' && <Sparkles className="h-6 w-6 animate-pulse" />}
-              {adminSection === 'pricing' && <DollarSign className="h-6 w-6" />}
-              {adminSection === 'analytics' && <BarChart3 className="h-6 w-6" />}
-              {adminSection === 'create_ad_admin' && <FilePlus className="h-6 w-6 animate-pulse" />}
-              {adminSection === 'bookings' && <FileText className="h-6 w-6" />}
+              {adminSection === 'submissions' && <Crown className="h-5 w-5" />}
+              {adminSection === 'database' && <Database className="h-5 w-5 animate-pulse" />}
+              {adminSection === 'support' && <MessageSquare className="h-5 w-5" />}
+              {adminSection === 'users' && <Users className="h-5 w-5" />}
+              {adminSection === 'security' && <ShieldAlert className="h-5 w-5" />}
+              {adminSection === 'branding' && <Sparkles className="h-5 w-5 animate-pulse" />}
+              {adminSection === 'pricing' && <DollarSign className="h-5 w-5" />}
+              {adminSection === 'analytics' && <BarChart3 className="h-5 w-5" />}
+              {adminSection === 'create_ad_admin' && <FilePlus className="h-5 w-5 animate-pulse" />}
+              {adminSection === 'bookings' && <FileText className="h-5 w-5" />}
+              {adminSection === 'send_notifications' && <Bell className="h-5 w-5" />}
             </div>
             <div>
-              <h2 className="text-xl font-black text-neutral-900 dark:text-white">
-                {adminSection === 'submissions' && (lang === 'ar' ? '📋 مراجعة طلبات الإعلانات VIP' : '📋 VIP Ad Submissions')}
-                {adminSection === 'database' && (lang === 'ar' ? '🗄️ مستكشف قاعدة البيانات المباشر (Firestore)' : '🗄️ Live Database Inspector (Firestore)')}
-                {adminSection === 'support' && (lang === 'ar' ? '💬 صندوق رسائل ومقترحات التطبيق' : '💬 Support Messages & Feedback')}
-                {adminSection === 'users' && (lang === 'ar' ? '👥 إدارة ومراقبة مستخدمي التطبيق' : '👥 App Users Management')}
-                {adminSection === 'security' && (lang === 'ar' ? '🔒 إدارة الأمان وجدار الحماية وسجلات الاختراق' : '🔒 Security Firewall & Violation Logs')}
-                {adminSection === 'branding' && (lang === 'ar' ? '🎨 هوية التطبيق وتطوير المظهر والشعارات' : '🎨 App Identity & Visual Branding')}
-                {adminSection === 'pricing' && (lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices')}
-                {adminSection === 'analytics' && (lang === 'ar' ? '📊 إحصائيات زوار الموقع الحقيقيين واهتمام الجمهور' : '📊 Real-time Analytics & Audience Interest')}
-                {adminSection === 'create_ad_admin' && (lang === 'ar' ? '➕ إنشاء إعلان / حفلة جديدة فوراً بواسطة الإدارة' : '➕ Create & Publish Event Immediately (Admin)')}
-                {adminSection === 'bookings' && (lang === 'ar' ? '🎟️ مراجعة وتأكيد حجوزات التذاكر والحفلات' : '🎟️ Review & Confirm Ticket Bookings')}
-              </h2>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black text-neutral-900 dark:text-white">
+                  {adminSection === 'submissions' && (lang === 'ar' ? 'مراجعة طلبات الإعلانات VIP' : 'VIP Ad Submissions')}
+                  {adminSection === 'database' && (lang === 'ar' ? 'مستكشف قاعدة البيانات المباشر' : 'Live Database Inspector')}
+                  {adminSection === 'support' && (lang === 'ar' ? 'صندوق رسائل ومقترحات التطبيق' : 'Support Messages & Feedback')}
+                  {adminSection === 'users' && (lang === 'ar' ? 'إدارة ومراقبة مستخدمي التطبيق' : 'App Users Management')}
+                  {adminSection === 'security' && (lang === 'ar' ? 'إدارة الأمان وجدار الحماية' : 'Security Firewall & Logs')}
+                  {adminSection === 'branding' && (lang === 'ar' ? 'هوية التطبيق والشعارات' : 'App Identity & Assets')}
+                  {adminSection === 'pricing' && (lang === 'ar' ? 'التحكم في أسعار الإعلانات' : 'Manage Ad Prices')}
+                  {adminSection === 'analytics' && (lang === 'ar' ? 'إحصائيات زوار الموقع والتفاعل' : 'Real-time Analytics')}
+                  {adminSection === 'create_ad_admin' && (lang === 'ar' ? 'إنشاء إعلان / حفلة جديدة فوراً' : 'Create & Publish Event (Admin)')}
+                  {adminSection === 'bookings' && (lang === 'ar' ? 'مراجعة وتأكيد حجوزات التذاكر' : 'Ticket Bookings Panel')}
+                  {adminSection === 'send_notifications' && (lang === 'ar' ? 'إرسال التنبيهات لجميع الأعضاء' : 'Broadcast Push Alerts')}
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-bold text-[10px] hidden sm:inline-block">
+                  SECTION
+                </span>
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
                 {adminSection === 'submissions' && (lang === 'ar' ? 'مراجعة وتفعيل الإعلانات الفاخرة وتتبع إيصالات التحويل البنكي.' : 'Manage premium ad campaigns, analyze bank receipts, and activate VIP slots.')}
                 {adminSection === 'database' && (lang === 'ar' ? 'استعراض البيانات والفعاليات والإشعارات وحذف المخلفات بشكل مباشر.' : 'Real-time viewer of live Firestore collections, schemas, and events.')}
                 {adminSection === 'support' && (lang === 'ar' ? 'التواصل المباشر وحل المشاكل التقنية للأعضاء وإرسال الردود الرسمية.' : 'Read user feedback and inquiries directly and send notifications.')}
                 {adminSection === 'users' && (lang === 'ar' ? 'البحث عن الحسابات بالأرقام السرية أو الإيميل، تجميد أو حذف الأعضاء.' : 'Audit member profiles, passwords, registration dates, suspend or delete records.')}
-                {adminSection === 'security' && (lang === 'ar' ? 'تغيير العبارة السرية، مراقبة محاولات الاختراق، عناوين الـ IP للمهاجمين، وإعداد بلاغات أمنية.' : 'Update VIP secret code, monitor unauthorized access logs, block IPs, and prepare security reports.')}
-                {adminSection === 'branding' && (lang === 'ar' ? 'تعديل وتخصيص أسماء التطبيق وشعاراته وأيقوناته وروابط الاتصال بقاعدة البيانات في الوقت الفعلي.' : 'Modify app names, icons, brand logos, support contact phone, and other static assets.')}
-                {adminSection === 'pricing' && (lang === 'ar' ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم، مع تحديد نسبة الزيادة الخاصة بإعلانات الفيديو.' : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge percentage.')}
-                {adminSection === 'analytics' && (lang === 'ar' ? 'تحليل حركة المرور الحية، واهتمامات الراقصين بالأنماط المختلفة، ونسب استخدام أزرار التواصل والخريطة.' : 'Live traffic insights, style-specific popularity heatmaps, and call-to-action click rates.')}
-                {adminSection === 'create_ad_admin' && (lang === 'ar' ? 'نموذج لوحة الإدارة المتكامل لإنشاء ونشر الفعاليات وتثبيتها وتحديد ترتيب ظهورها مباشرة دون انتظار أو دفع.' : 'Admin panel integrated form to compose, publish, pin, and prioritize events directly in real-time.')}
-                {adminSection === 'bookings' && (lang === 'ar' ? 'لوحة المسؤولين للتحقق من إيصالات تحويل فودافون كاش ومطابقة المبالغ وإصدار أكواد الدخول والباركود للحضور.' : 'Verify transfer receipts, match paid amounts, and activate barcodes/entry keys for guests.')}
+                {adminSection === 'security' && (lang === 'ar' ? 'تغيير العبارة السرية، مراقبة محاولات الاختراق، عناوين الـ IP للمهاجمين.' : 'Update VIP secret code, monitor unauthorized access logs, and block IPs.')}
+                {adminSection === 'branding' && (lang === 'ar' ? 'تعديل وتخصيص أسماء التطبيق وشعاراته وأيقوناته وروابط الاتصال.' : 'Modify app names, icons, brand logos, support contact phone, and other static assets.')}
+                {adminSection === 'pricing' && (lang === 'ar' ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم.' : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge.')}
+                {adminSection === 'analytics' && (lang === 'ar' ? 'تحليل حركة المرور الحية، واهتمامات الراقصين بالأنماط المختلفة.' : 'Live traffic insights, style-specific popularity heatmaps, and click rates.')}
+                {adminSection === 'create_ad_admin' && (lang === 'ar' ? 'نموذج لوحة الإدارة المتكامل لإنشاء ونشر الفعاليات وتثبيتها وتحديد ترتيب ظهورها.' : 'Admin panel integrated form to compose, publish, pin, and prioritize events directly.')}
+                {adminSection === 'bookings' && (lang === 'ar' ? 'التحقق من إيصالات تحويل فودافون كاش وإنستاباي ومطابقة المبالغ وإصدار الباركود.' : 'Verify transfer receipts, match paid amounts, and activate barcodes/entry keys.')}
+                {adminSection === 'send_notifications' && (lang === 'ar' ? 'إرسال إشعار فوري في جرس التنبيهات لجميع أعضاء التطبيق.' : 'Broadcast real-time push alert to the notification bell for all members.')}
               </p>
             </div>
           </div>
@@ -1891,63 +2011,61 @@ export const AdminPanel: React.FC = () => {
               setAdminSection(null);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="flex items-center gap-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700/60 px-4 py-2.5 text-xs font-bold text-neutral-800 dark:text-neutral-200 transition-all cursor-pointer self-start sm:self-center shrink-0 shadow-xs"
+            className="flex items-center gap-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700/60 px-3.5 py-2 text-xs font-bold text-neutral-800 dark:text-neutral-200 transition-all cursor-pointer self-start sm:self-center shrink-0 shadow-xs"
           >
-            <ArrowLeft className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
-            <span>{lang === 'ar' ? 'الرجوع للوحة التحكم الرئيسية' : 'Back to Admin Dashboard'}</span>
+            <ArrowLeft className={`h-3.5 w-3.5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+            <span>{lang === 'ar' ? 'الرجوع للمركز الرئيسي' : 'Back to Overview'}</span>
           </button>
         </motion.div>
       ) : (
-        <div className="space-y-8 animate-fadeIn">
-          {/* Top Banner */}
+        <div className="space-y-6 animate-fadeIn">
+          {/* Executive Top Banner */}
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-3xl border-2 border-amber-500/50 bg-white dark:bg-neutral-900 dark:bg-gradient-to-r dark:from-neutral-900 dark:via-neutral-900/95 dark:to-amber-950/40 p-6 sm:p-8 shadow-lg dark:shadow-2xl gold-glow relative overflow-hidden transition-colors"
+            className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-neutral-900 via-neutral-900 to-amber-950/30 p-4 sm:p-5 shadow-md relative overflow-hidden transition-all text-white"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-neutral-950 shadow-lg gold-glow shrink-0">
-                  <Crown className="h-8 w-8 stroke-[2.5]" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-neutral-950 shadow-md shrink-0">
+                  <Crown className="h-6 w-6 stroke-[2.5]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-                      {lang === 'ar' ? 'لوحة تحكم ومراجعة الإعلانات الفاخرة' : 'VIP Ads Admin Panel'}
+                    <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                      {lang === 'ar' ? 'مركز قيادة لوحة التحكم' : 'Executive Admin Dashboard'}
                     </h2>
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-neutral-950 font-black text-xs">
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500 text-neutral-950 font-black text-[10px] uppercase">
                       ADMIN
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 font-medium mt-1">
+                  <p className="text-xs text-neutral-300 font-medium mt-0.5">
                     {lang === 'ar' 
-                      ? 'مراجعة وتفعيل إعلانات وفواتير المدربين والمنظمين المشتركين، وإشعارهم فورياً عبر فايبر بيز وواتساب.' 
-                      : 'Review and approve VIP event submissions and invoices from instructors and organizers.'}
+                      ? 'إدارة متكاملة لاعتماد الإعلانات، تأكيد حجوزات التذاكر، مراقبة المستخدمين، والأمان' 
+                      : 'Integrated management for ad approvals, ticket bookings, user audit, and security'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap">
+              <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0 flex-wrap justify-end">
                 <button
                   onClick={handleAssignAllAdsToAdmin}
                   disabled={cleaningUp}
-                  className="flex items-center gap-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-neutral-800 border border-purple-300 dark:border-purple-500/30 px-3.5 py-2.5 text-xs font-bold text-purple-700 dark:text-purple-300 hover:border-purple-500 transition-all cursor-pointer shadow-xs"
+                  className="flex items-center gap-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-purple-500/30 px-3 py-2 text-xs font-bold text-purple-300 transition-all cursor-pointer shadow-xs"
                   title="نقل جميع الإعلانات الحالية لملفك الشخصي (أدمن)"
                 >
-                  <User className={`h-4 w-4 ${cleaningUp ? 'animate-spin' : ''}`} />
+                  <User className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
                   <span>{cleaningUp ? (lang === 'ar' ? 'جاري النقل...' : 'Transferring...') : (lang === 'ar' ? 'نقل الإعلانات لي' : 'Assign to Me')}</span>
                 </button>
 
                 <button
                   onClick={handleCleanUpClutter}
                   disabled={cleaningUp}
-                  className="flex items-center gap-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-neutral-800 border border-red-300 dark:border-red-500/30 px-3.5 py-2.5 text-xs font-bold text-red-700 dark:text-red-300 hover:border-red-500 transition-all cursor-pointer shadow-xs"
+                  className="flex items-center gap-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-red-500/30 px-3 py-2 text-xs font-bold text-red-300 transition-all cursor-pointer shadow-xs"
                   title="حذف الإعلانات المكررة وبدون صور لتقليل الزحمة"
                 >
-                  <Trash2 className={`h-4 w-4 ${cleaningUp ? 'animate-spin' : ''}`} />
-                  <span>{cleaningUp ? (lang === 'ar' ? 'جاري التنظيف...' : 'Cleaning...') : (lang === 'ar' ? '🧹 تنظيف الزحمة والمكرر' : '🧹 Clean Clutter')}</span>
+                  <Trash2 className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
+                  <span>{cleaningUp ? (lang === 'ar' ? 'تنظيف الزحمة' : 'Clean Clutter') : (lang === 'ar' ? '🧹 تنظيف الزحمة' : '🧹 Clean Clutter')}</span>
                 </button>
 
                 <button
@@ -1955,425 +2073,328 @@ export const AdminPanel: React.FC = () => {
                     setActiveTab('explore');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800/90 dark:hover:bg-neutral-700 px-4 py-2.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all border border-neutral-300 dark:border-neutral-700/60 shadow-xs cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 px-3.5 py-2 text-xs font-bold text-neutral-200 hover:text-white transition-all border border-neutral-700/60 shadow-xs cursor-pointer"
                 >
-                  <ArrowLeft className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
-                  <span>{lang === 'ar' ? 'الرجوع للرئيسية' : 'Return to Explore'}</span>
+                  <ArrowLeft className={`h-3.5 w-3.5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                  <span>{lang === 'ar' ? 'الرئيسية' : 'Explore'}</span>
                 </button>
               </div>
             </div>
           </motion.div>
 
-          {/* Stats Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 text-center shadow-xs">
-              <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-bold">{lang === 'ar' ? 'إجمالي طلبات الإعلانات' : 'Total Ad Submissions'}</span>
-              <span className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 block font-mono">{submissions.length}</span>
+          {/* Interactive KPI Quick Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3.5">
+            <div 
+              onClick={() => { setAdminSection('submissions'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/80 hover:border-amber-500 dark:hover:border-amber-500/60 p-3 sm:p-3.5 text-center shadow-xs cursor-pointer group transition-all"
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                <span>{lang === 'ar' ? 'طلبات إعلانات معلقة' : 'Pending Ads'}</span>
+                <Crown className="h-3.5 w-3.5 text-amber-500 opacity-80 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                  {submissions.filter(s => s.status === 'pending').length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium">/ {submissions.length}</span>
+              </div>
             </div>
-            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 text-center shadow-xs">
-              <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-bold">{lang === 'ar' ? 'المستخدمين المسجلين' : 'Registered Users'}</span>
-              <span className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">{allUsers.length}</span>
+
+            <div 
+              onClick={() => { setAdminSection('bookings'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/80 hover:border-emerald-500 dark:hover:border-emerald-500/60 p-3 sm:p-3.5 text-center shadow-xs cursor-pointer group transition-all"
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                <span>{lang === 'ar' ? 'حجوزات تذاكر معلقة' : 'Pending Bookings'}</span>
+                <Ticket className="h-3.5 w-3.5 text-emerald-500 opacity-80 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  {bookings.filter(b => b.status === 'pending').length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium">/ {bookings.length}</span>
+              </div>
             </div>
-            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 text-center shadow-xs">
-              <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-bold">{lang === 'ar' ? 'الرسائل المعلقة' : 'Unreplied Support'}</span>
-              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">
-                {supportMessages.filter(m => !m.reply).length}
-              </span>
+
+            <div 
+              onClick={() => { setAdminSection('support'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/80 hover:border-cyan-500 dark:hover:border-cyan-500/60 p-3 sm:p-3.5 text-center shadow-xs cursor-pointer group transition-all"
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                <span>{lang === 'ar' ? 'رسائل دعم معلقة' : 'Unreplied Support'}</span>
+                <MessageSquare className="h-3.5 w-3.5 text-cyan-500 opacity-80 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-cyan-600 dark:text-cyan-400 font-mono">
+                  {supportMessages.filter(m => !m.reply).length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium">/ {supportMessages.length}</span>
+              </div>
             </div>
-            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 text-center shadow-xs">
-              <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-bold">{lang === 'ar' ? 'الفعاليات بقاعدة البيانات' : 'Total Database Events'}</span>
-              <span className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block font-mono">{events.length}</span>
+
+            <div 
+              onClick={() => { setAdminSection('database'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/80 hover:border-blue-500 dark:hover:border-blue-500/60 p-3 sm:p-3.5 text-center shadow-xs cursor-pointer group transition-all"
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                <span>{lang === 'ar' ? 'فعاليات بالقاعدة' : 'Live Events'}</span>
+                <Database className="h-3.5 w-3.5 text-blue-500 opacity-80 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                  {events.length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium">{lang === 'ar' ? 'فعالية' : 'events'}</span>
+              </div>
             </div>
           </div>
 
+          {/* Urgent Attention Banner (If pending items exist) */}
+          {(submissions.some(s => s.status === 'pending') || bookings.some(b => b.status === 'pending') || supportMessages.some(m => !m.reply)) && (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-50/70 dark:bg-amber-500/10 p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-extrabold text-amber-950 dark:text-amber-200">
+                    {lang === 'ar' ? 'تنبيه: لديك عناصر معلقة تتطلب الإجراء الآن' : 'Attention: Pending items require your review'}
+                  </h4>
+                  <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                    {lang === 'ar' 
+                      ? `${submissions.filter(s => s.status === 'pending').length} إعلان معلق • ${bookings.filter(b => b.status === 'pending').length} حجز تذاكر معلق • ${supportMessages.filter(m => !m.reply).length} رسالة دعم`
+                      : `${submissions.filter(s => s.status === 'pending').length} pending ads • ${bookings.filter(b => b.status === 'pending').length} pending bookings • ${supportMessages.filter(m => !m.reply).length} unreplied support`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {submissions.some(s => s.status === 'pending') && (
+                  <button
+                    onClick={() => { setAdminSection('submissions'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-neutral-950 text-xs font-black transition-colors cursor-pointer shadow-xs"
+                  >
+                    {lang === 'ar' ? 'مراجعة الإعلانات ➔' : 'Review Ads ➔'}
+                  </button>
+                )}
+                {bookings.some(b => b.status === 'pending') && (
+                  <button
+                    onClick={() => { setAdminSection('bookings'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors cursor-pointer shadow-xs"
+                  >
+                    {lang === 'ar' ? 'مراجعة الحجوزات ➔' : 'Review Bookings ➔'}
+                  </button>
+                )}
+                {supportMessages.some(m => !m.reply) && (
+                  <button
+                    onClick={() => { setAdminSection('support'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black transition-colors cursor-pointer shadow-xs"
+                  >
+                    {lang === 'ar' ? 'صندوق الدعم ➔' : 'Support Inbox ➔'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {usersError && (
-            <div className="rounded-2xl border border-red-500/30 bg-red-50 dark:bg-red-500/10 p-4 text-red-900 dark:text-red-200 text-xs sm:text-sm space-y-2 shadow-xs">
+            <div className="rounded-2xl border border-red-500/30 bg-red-50 dark:bg-red-500/10 p-3.5 text-red-900 dark:text-red-200 text-xs space-y-1.5 shadow-xs">
               <p className="font-bold flex items-center gap-2">
-                <AlertCircle className="h-4.5 w-4.5 text-red-500 shrink-0" />
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
                 <span>
                   {lang === 'ar' 
                     ? '⚠️ تنبيه قاعدة البيانات: فشل تحميل قائمة المستخدمين بسبب صلاحيات الوصول!' 
                     : '⚠️ Database Warning: Failed to load user profiles due to permissions!'}
                 </span>
               </p>
-              <p className="opacity-90 leading-relaxed text-xs sm:text-sm">
+              <p className="opacity-90 text-[11px] leading-relaxed">
                 {lang === 'ar'
-                  ? 'لم يستجب خادم Firebase بعرض بيانات الأعضاء لأنك غير مسجل الدخول ببريد المسؤول المعتمد (waelvts@gmail.com) في نظام التوثيق. يرجى الانتقال إلى قسم "حسابي" وتسجيل الدخول ببريد المسؤول أولاً وتفعيل حسابك.'
-                  : 'Firebase rejected reading the users collection because your session is not authenticated as the designated admin email (waelvts@gmail.com) in Firebase Auth. Please navigate to the "Account" tab and sign in using the admin email.'}
+                  ? 'لم يستجب خادم Firebase بعرض بيانات الأعضاء لأنك غير مسجل الدخول ببريد المسؤول المعتمد (waelvts@gmail.com) في نظام التوثيق. يرجى الانتقال إلى قسم "حسابي" وتسجيل الدخول ببريد المسؤول أولاً.'
+                  : 'Firebase rejected reading the users collection because your session is not authenticated as the designated admin email (waelvts@gmail.com). Please sign in using the admin email.'}
               </p>
-              <p className="text-[10px] opacity-70 font-mono select-text">{usersError}</p>
             </div>
           )}
 
-          {/* Categories Grid Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Card 1: Submissions */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('submissions');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-amber-500 dark:hover:border-amber-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                    <Crown className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-black font-mono">
-                    {submissions.filter(s => s.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '📋 مراجعة طلبات الإعلانات' : '📋 VIP Ad Submissions'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'اعتماد وتفعيل إعلانات VIP، مراجعة إيصالات الدفع، إرسال إشعارات التفعيل التلقائية.'
-                    : 'Approve or decline premium advertisement slots, review bank transfer documents, and notify advertisers.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-amber-600 dark:text-amber-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
+          {/* Compact Modern Dashboard Grid (11 Modules) */}
+          <div>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="text-xs sm:text-sm font-black text-neutral-900 dark:text-white uppercase tracking-wider">
+                {lang === 'ar' ? 'أقسام ووحدات التحكم' : 'Control Modules'}
+              </h3>
+              <span className="text-[11px] font-bold text-neutral-400">
+                11 {lang === 'ar' ? 'وحدة متكاملة' : 'Modules'}
+              </span>
+            </div>
 
-            {/* Card 2: Bookings Management (Ticket reservations) */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('bookings');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-emerald-500 dark:hover:border-emerald-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                    <FileText className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-black font-mono">
-                    {bookings.filter(b => b.status === 'pending').length} {lang === 'ar' ? 'معلق' : 'Pending'}
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '🎟️ إدارة وحجوزات التذاكر' : '🎟️ Ticket Bookings Panel'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'التحقق من تحويلات فودافون كاش ومطابقة الإيصالات، وتأكيد حجز التذاكر وإصدار الباركود وكود الدخول للحضور.'
-                    : 'Match Instapay/Vodafone Cash receipts, activate attendee tickets, and issue check-in gate barcodes.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-emerald-600 dark:text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+              {[
+                {
+                  id: 'submissions',
+                  title: lang === 'ar' ? 'طلبات الإعلانات VIP' : 'VIP Ad Submissions',
+                  desc: lang === 'ar' ? 'اعتماد الإعلانات وفحص الإيصالات' : 'Approve ads & check receipts',
+                  icon: Crown,
+                  color: 'amber',
+                  badge: submissions.filter(s => s.status === 'pending').length > 0 
+                    ? `${submissions.filter(s => s.status === 'pending').length} ${lang === 'ar' ? 'معلق' : 'Pending'}` 
+                    : null,
+                  badgeType: 'amber'
+                },
+                {
+                  id: 'bookings',
+                  title: lang === 'ar' ? 'حجوزات التذاكر' : 'Ticket Bookings',
+                  desc: lang === 'ar' ? 'مطابقة إيصالات فودافون كاش وتأكيد الباركود' : 'Match receipts & issue barcodes',
+                  icon: Ticket,
+                  color: 'emerald',
+                  badge: bookings.filter(b => b.status === 'pending').length > 0 
+                    ? `${bookings.filter(b => b.status === 'pending').length} ${lang === 'ar' ? 'معلق' : 'Pending'}` 
+                    : null,
+                  badgeType: 'emerald'
+                },
+                {
+                  id: 'create_ad_admin',
+                  title: lang === 'ar' ? 'إنشاء إعلان فوري' : 'Create Event (Admin)',
+                  desc: lang === 'ar' ? 'نشر مباشر وتثبيت وترتيب الفعاليات' : 'Instant publish & pin order',
+                  icon: Plus,
+                  color: 'indigo',
+                  badge: 'ADMIN',
+                  badgeType: 'indigo'
+                },
+                {
+                  id: 'users',
+                  title: lang === 'ar' ? 'مستخدمي التطبيق' : 'App Users Audit',
+                  desc: lang === 'ar' ? 'بحث بالحسابات، تجميد وحذف الأعضاء' : 'Search profiles & suspend users',
+                  icon: Users,
+                  color: 'purple',
+                  badge: allUsers.length > 0 ? `${allUsers.length} ${lang === 'ar' ? 'عضو' : 'Users'}` : null,
+                  badgeType: 'purple'
+                },
+                {
+                  id: 'support',
+                  title: lang === 'ar' ? 'رسائل ومقترحات الدعم' : 'Support Inbox',
+                  desc: lang === 'ar' ? 'الرد على الأعضاء وإرسال التنبيهات' : 'Reply & send system alerts',
+                  icon: MessageSquare,
+                  color: 'cyan',
+                  badge: supportMessages.filter(m => !m.reply).length > 0 
+                    ? `${supportMessages.filter(m => !m.reply).length} ${lang === 'ar' ? 'جديد' : 'New'}` 
+                    : null,
+                  badgeType: 'cyan'
+                },
+                {
+                  id: 'analytics',
+                  title: lang === 'ar' ? 'الإحصائيات والتفاعل' : 'Real-time Analytics',
+                  desc: lang === 'ar' ? 'زوار الموقع واهتمامات الجمهور' : 'Traffic, styles interest, clicks',
+                  icon: BarChart3,
+                  color: 'teal',
+                  badge: 'LIVE',
+                  badgeType: 'teal'
+                },
+                {
+                  id: 'database',
+                  title: lang === 'ar' ? 'مستكشف قاعدة البيانات' : 'Database Inspector',
+                  desc: lang === 'ar' ? 'مستندات Firestore الحية وتعديلها' : 'Inspect & export Firestore collections',
+                  icon: Database,
+                  color: 'blue',
+                  badge: 'FIRESTORE',
+                  badgeType: 'blue'
+                },
+                {
+                  id: 'pricing',
+                  title: lang === 'ar' ? 'أسعار الإعلانات' : 'Manage Ad Prices',
+                  desc: lang === 'ar' ? 'تعديل أسعار الإعلانات الأسبوعية واليومية' : 'Configure ad rates & video surcharges',
+                  icon: DollarSign,
+                  color: 'emerald',
+                  badge: 'CONFIG',
+                  badgeType: 'neutral'
+                },
+                {
+                  id: 'branding',
+                  title: lang === 'ar' ? 'الهوية والشعارات' : 'Visual Branding',
+                  desc: lang === 'ar' ? 'اسم التطبيق، الشعار، وأيقونات العرض' : 'App title, logos, assets',
+                  icon: Sparkles,
+                  color: 'pink',
+                  badge: 'ASSETS',
+                  badgeType: 'pink'
+                },
+                {
+                  id: 'security',
+                  title: lang === 'ar' ? 'الأمان وجدار الحماية' : 'Security & Firewall',
+                  desc: lang === 'ar' ? 'تعديل العبارة السرية وسجلات الاختراق' : 'Secret phrase & attack logs',
+                  icon: ShieldAlert,
+                  color: 'red',
+                  badge: 'SECURE',
+                  badgeType: 'red'
+                },
+                {
+                  id: 'send_notifications',
+                  title: lang === 'ar' ? 'إرسال تنبيه عام' : 'Broadcast Push',
+                  desc: lang === 'ar' ? 'إشعار فوري لجميع الأعضاء بالجرس' : 'Instant bell push to all members',
+                  icon: Bell,
+                  color: 'amber',
+                  badge: 'PUSH',
+                  badgeType: 'amber'
+                },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.id}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => {
+                      setAdminSection(item.id as any);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-amber-500/70 dark:hover:border-amber-400/60 bg-white dark:bg-neutral-900 p-3 sm:p-3.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group h-auto min-h-[96px] sm:min-h-[108px]"
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        item.color === 'amber' ? 'bg-amber-500/10 text-amber-500' :
+                        item.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-500' :
+                        item.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-500' :
+                        item.color === 'purple' ? 'bg-purple-500/10 text-purple-500' :
+                        item.color === 'cyan' ? 'bg-cyan-500/10 text-cyan-500' :
+                        item.color === 'teal' ? 'bg-teal-500/10 text-teal-500' :
+                        item.color === 'blue' ? 'bg-blue-500/10 text-blue-500' :
+                        item.color === 'pink' ? 'bg-pink-500/10 text-pink-500' :
+                        'bg-red-500/10 text-red-500'
+                      }`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
 
-            {/* Card 3: Database */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('database');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-blue-500 dark:hover:border-blue-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-blue-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                    <Database className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 text-[10px] font-black font-mono">
-                    LIVE
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '🗄️ مستكشف قاعدة البيانات' : '🗄️ Live Database Inspector'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'استعراض مستندات ومجموعات Firestore الحية، تعديل وحذف البيانات يدوياً وتصدير النسخ الاحتياطية.'
-                    : 'Inspect live Firestore collections directly, modify data, delete duplicate records, and download backups.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-blue-600 dark:text-blue-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
+                      {item.badge && (
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md leading-tight ${
+                          item.badgeType === 'amber' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono' :
+                          item.badgeType === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono' :
+                          item.badgeType === 'indigo' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300' :
+                          item.badgeType === 'purple' ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 font-mono' :
+                          item.badgeType === 'cyan' ? 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-mono' :
+                          item.badgeType === 'teal' ? 'bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300' :
+                          item.badgeType === 'blue' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300' :
+                          item.badgeType === 'pink' ? 'bg-pink-100 dark:bg-pink-500/20 text-pink-800 dark:text-pink-300' :
+                          item.badgeType === 'red' ? 'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300' :
+                          'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
 
-            {/* Card 4: Support */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('support');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-emerald-500 dark:hover:border-emerald-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                    <MessageSquare className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-black font-mono">
-                    {supportMessages.filter(m => !m.reply).length} {lang === 'ar' ? 'معلق' : 'Unreplied'}
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '💬 رسائل ومقترحات التطبيق' : '💬 Support Messages & Feedback'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'قراءة استفسارات المستخدمين والرد عليها، وإرسال تنبيهات رسمية تظهر مباشرة في حساباتهم.'
-                    : 'Read community feedback, respond to inquiries, and notify users of official system updates.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-emerald-600 dark:text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
+                    <div className="mt-2">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-neutral-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                        {item.title}
+                      </h4>
+                      <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                        {item.desc}
+                      </p>
+                    </div>
 
-            {/* Card 5: Users */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('users');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-purple-500 dark:hover:border-purple-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-purple-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
-                    <Users className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 text-xs font-black font-mono">
-                    {allUsers.length} {lang === 'ar' ? 'مستخدم' : 'Users'}
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '👥 مستخدمي التطبيق' : '👥 App Users Management'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'مراقبة حسابات الأعضاء والبحث المتقدم بالرمز السري أو الاسم مع إمكانية التجميد والحذف.'
-                    : 'Monitor registered users, search details instantly by email/password, suspend access or delete.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-purple-600 dark:text-purple-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
-
-            {/* Card 6: Security Firewall */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('security');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-red-500 dark:hover:border-red-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-red-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-red-500/10 rounded-full blur-3xl group-hover:bg-red-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
-                    <ShieldAlert className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300 text-xs font-black font-mono">
-                    SECURE
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '🔒 الأمان وسجلات الاختراق' : '🔒 Security & Hack Attempts'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'تعديل الرقم السري الثنائي للوحة، مراقبة محاولات الاختراق، عناوين الـ IP للأجهزة لعمل البلاغات.'
-                    : 'Manage firewall access codes, check blocked hacker IPs, locations, and copy reports.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-red-600 dark:text-red-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
-
-            {/* Card 7: Branding & App Assets */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('branding');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-pink-500 dark:hover:border-pink-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-pink-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-pink-500/10 rounded-full blur-3xl group-hover:bg-pink-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-600 dark:text-pink-400 shrink-0">
-                    <Sparkles className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-pink-100 dark:bg-pink-500/20 text-pink-800 dark:text-pink-300 text-xs font-black font-mono">
-                    ASSETS
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '🎨 هوية التطبيق والشعارات' : '🎨 App Identity & Assets'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'التحكم باسم التطبيق، شعار الهوية (Logo)، أيقونة العرض، روابط الدعم المباشرة وتطوير المظهر.'
-                    : 'Manage application title, branding logos, visual icons, custom social links, and contact settings.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-pink-600 dark:text-pink-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
-
-            {/* Card 8: Pricing Config */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('pricing');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-emerald-500 dark:hover:border-emerald-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                    <DollarSign className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-black font-mono">
-                    PRICES
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم، مع تحديد نسبة الزيادة الخاصة بإعلانات الفيديو.'
-                    : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge percentage.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-emerald-600 dark:text-emerald-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
-
-            {/* Card 9: Live App Analytics & Traffic */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('analytics');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-cyan-500 dark:hover:border-cyan-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-cyan-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shrink-0">
-                    <BarChart3 className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 border border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 text-xs font-black font-mono">
-                      📲 {analyticsCounters.pwa_installs || 0} {lang === 'ar' ? 'تثبيت' : 'Installs'}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 text-xs font-black font-mono hidden sm:inline-block">
-                      REALTIME
-                    </span>
-                  </div>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '📊 إحصائيات زوار الموقع واهتمام الجمهور' : '📊 Realtime Analytics & Interest'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'مراقبة عدد الزوار الفعليين، مشاهدات الأقسام، واهتمام الجمهور بكل رقصة (سالسا، باتشاتا، إلخ) وتتبع النقرات بشكل حي مجاني.'
-                    : 'Track actual site visitors, active session metrics, style interests (Salsa, Bachata) and contact button click rates in real-time, 100% free.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-cyan-600 dark:text-cyan-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
-
-            {/* Card 10: Create Event / Ad (Admin) */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('create_ad_admin');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-indigo-500 dark:hover:border-indigo-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-indigo-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                    <FilePlus className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 text-xs font-black font-mono">
-                    ADMIN ONLY
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '➕ إنشاء إعلان بواسطة الإدارة' : '➕ Create Event (Admin Mode)'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'إنشاء ونشر الفعاليات الفورية مع التحكم في ترتيب الظهور (الترتيب الرقمي) لتثبيت وعرض أي إعلان أولاً.'
-                    : 'Compose and publish active events instantly. Define exact custom display priority (numerical order) to pin ads.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-indigo-600 dark:text-indigo-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
-
-            {/* Card 11: Send Notifications */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              onClick={() => {
-                setAdminSection('send_notifications');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 hover:border-amber-500 dark:hover:border-amber-400 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group flex flex-col justify-between h-64"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                    <Bell className="h-6 w-6 stroke-[2]" />
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-black font-mono">
-                    PUSH
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mt-4">
-                  {lang === 'ar' ? '🔔 إرسال الإشعارات والتنبيهات' : '🔔 Send Notifications & Alerts'}
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'إرسال إشعارات عامة لجميع المستخدمين وحذف الإشعارات القديمة.'
-                    : 'Send general notifications to all users and delete old notifications.'}
-                </p>
-              </div>
-              <div className="flex items-center justify-end text-xs font-black text-amber-600 dark:text-amber-400 gap-1 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
-                <span>{lang === 'ar' ? 'دخول القسم ➔' : 'Enter Section ➔'}</span>
-              </div>
-            </motion.div>
+                    <div className="mt-1 flex items-center justify-end text-[10px] font-black text-amber-600 dark:text-amber-400 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span>{lang === 'ar' ? 'فتح ➔' : 'Open ➔'}</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

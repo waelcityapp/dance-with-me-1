@@ -28,9 +28,9 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { MainHeroHeaderBanner } from './components/home/MainHeroHeaderBanner';
 import { WhyBookModal } from './components/modals/WhyBookModal';
 import { AboutUsPage } from './components/about/AboutUsPage';
-import { Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowLeft, ArrowRight, Crown, Shield } from 'lucide-react';
 import { motion } from 'motion/react';
-import { DanceEvent } from './types';
+import { DanceEvent, AccountTier } from './types';
 
 import { AdminEditEventPage } from './components/admin/AdminEditEventPage';
 import { VerificationView } from './components/verification/VerificationView';
@@ -53,7 +53,9 @@ const AppContent: React.FC = () => {
     activePushToast,
     setActivePushToast,
     selectedViewsEvent,
-    setSelectedViewsEvent
+    setSelectedViewsEvent,
+    isAdminUnlocked,
+    setIsAdminLockModalOpen
   } = useApp();
 
   // Handle hardware / browser back button on mobile
@@ -121,6 +123,38 @@ const AppContent: React.FC = () => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
+
+      {/* Admin Quick Action Strip Between Header and Banner */}
+      {(user?.isAdmin || user?.email === 'waelvts@gmail.com') && (
+        <div className="w-full bg-[#2A0206] border-b border-amber-500/30 px-3 sm:px-6 py-2 shadow-inner z-20">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+              </span>
+              <span className="text-xs font-bold text-[#F5E6D8] truncate">
+                {lang === 'ar' ? 'وضع المسؤول مفعّل' : 'Admin Mode Enabled'}
+              </span>
+            </div>
+            
+            <button
+              onClick={() => {
+                if (isAdminUnlocked) {
+                  setActiveTab('admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  setIsAdminLockModalOpen(true);
+                }
+              }}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-neutral-950 text-xs sm:text-sm font-black shadow-md hover:shadow-amber-500/20 active:scale-95 transition-all cursor-pointer border border-amber-300"
+            >
+              <Crown className="h-4 w-4 stroke-[2.5]" />
+              <span>{lang === 'ar' ? 'لوحة التحكم والإدارة' : 'Admin Control Panel'}</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Top Hero Canvas with Curved Oval Bottom Edge */}
       {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
