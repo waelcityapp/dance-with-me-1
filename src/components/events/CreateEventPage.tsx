@@ -41,7 +41,9 @@ import {
   Loader2,
   Globe,
   Gift,
-  Zap
+  Zap,
+  Store,
+  Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AdSubmission, DanceEvent } from '../../types';
@@ -1349,28 +1351,76 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             {lang === 'ar' ? 'حدد نوع الفعالية لتظهر في القسم المناسب للمستخدمين' : 'Choose event category to appear in the correct section'}
           </p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 mt-4">
-            {[
-              { id: 'party', ar: 'حفلة وسهرة', en: 'Party & Social' },
-              { id: 'course', ar: 'دورة وكورس', en: 'Dance Course' },
-              { id: 'trip', ar: 'رحلة ومعسكر', en: 'Camp & Trip' },
-              { id: 'exhibition', ar: 'معارض ومؤتمرات', en: 'Exhibitions' },
-              { id: 'services', ar: 'شركات و خدمات مكملة', en: 'Services' },
-              { id: 'jobs', ar: 'وظائف فى نفس المجال', en: 'Jobs' }
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setCategory(cat.id as any)}
-                className={`py-3 px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center cursor-pointer ${
-                  category === cat.id
-                    ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border-[#78101F] shadow-lg shadow-[#42030A]/30 scale-[1.02] dark:bg-gradient-to-r dark:from-amber-500 dark:to-amber-400 dark:text-neutral-950 dark:border-amber-400 dark:gold-glow'
-                    : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50 dark:hover:text-white'
-                }`}
-              >
-                {lang === 'ar' ? cat.ar : cat.en}
-              </button>
-            ))}
+          <div className="space-y-4 mt-4">
+            {/* Pillar 1: Main Events & Activities */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-black text-neutral-800 dark:text-neutral-200">
+                <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                <span>{lang === 'ar' ? 'البند 1: الاقسام الرئيسية و الفاعليات' : '1. Main Events & Activities'}</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: 'party', ar: 'حفلة وسهرة', en: 'Party & Social' },
+                  { id: 'course', ar: 'دورة وكورس', en: 'Dance Course' },
+                  { id: 'trip', ar: 'رحلة ومعسكر', en: 'Camp & Trip' },
+                  { id: 'exhibition', ar: 'معارض ومؤتمرات', en: 'Exhibitions' },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCategory(cat.id as any)}
+                    className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center cursor-pointer ${
+                      category === cat.id
+                        ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border-[#78101F] shadow-lg scale-[1.02] dark:bg-amber-500 dark:text-neutral-950 dark:border-amber-400 font-black'
+                        : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50'
+                    }`}
+                  >
+                    {lang === 'ar' ? cat.ar : cat.en}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Pillar 2 & 3: Services & Jobs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-dashed border-amber-200/60 dark:border-neutral-800">
+              {/* Pillar 2 */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-black text-amber-700 dark:text-amber-400">
+                  <Store className="w-3.5 h-3.5" />
+                  <span>{lang === 'ar' ? 'البند 2: خدمات و شركات مكملة' : '2. Services & Suppliers'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCategory('services')}
+                  className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center cursor-pointer ${
+                    category === 'services'
+                      ? 'bg-amber-500 text-neutral-950 border-amber-500 shadow-md font-black scale-[1.01]'
+                      : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80'
+                  }`}
+                >
+                  {lang === 'ar' ? 'شركات و خدمات مكملة للفعاليات' : 'Complementary Services & Suppliers'}
+                </button>
+              </div>
+
+              {/* Pillar 3 */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-black text-teal-600 dark:text-teal-400">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>{lang === 'ar' ? 'البند 3: التوظيف فى نفس المجال' : '3. Event Jobs & Gigs'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCategory('jobs')}
+                  className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center cursor-pointer ${
+                    category === 'jobs'
+                      ? 'bg-teal-500 text-white border-teal-500 shadow-md font-black scale-[1.01]'
+                      : 'bg-white text-neutral-800 border-neutral-200 hover:border-teal-400 hover:bg-teal-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80'
+                  }`}
+                >
+                  {lang === 'ar' ? 'وظائف وفرص عمل فى مجال الفعاليات' : 'Jobs & Careers in Events'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

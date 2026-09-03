@@ -25,7 +25,8 @@ import {
   Check, 
   ArrowRight,
   Flame,
-  LayoutGrid
+  LayoutGrid,
+  Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -211,34 +212,88 @@ export const CategoriesExplorerModal: React.FC<CategoriesExplorerModalProps> = (
           </button>
         </div>
 
-        {/* Category Tabs (Top Selector) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 p-3 bg-neutral-100/60 dark:bg-neutral-950/30 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
-          {categories.map((cat) => {
-            const Icon = cat.icon;
-            const isTabActive = activeTab === cat.id;
-            const shortLabelAr = cat.id === 'party' ? 'الحفلات' : cat.id === 'course' ? 'الكورسات' : cat.id === 'trip' ? 'الرحلات' : cat.id === 'exhibition' ? 'المعارض' : cat.id === 'services' ? 'شركات و خدمات مكملة' : 'وظائف فى نفس المجال';
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveTab(cat.id)}
-                className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-2xl transition-all border text-center cursor-pointer ${
-                  isTabActive
-                    ? `${cat.activeBg} shadow-md scale-[1.02] border-transparent`
-                    : 'bg-white dark:bg-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-200/80 dark:border-neutral-700/50 hover:border-neutral-300 dark:hover:border-neutral-600 shadow-xs'
-                }`}
-              >
-                <div className="flex items-center gap-1">
-                  <Icon className={`h-3.5 w-3.5 shrink-0 ${isTabActive ? '' : 'text-amber-500 dark:text-amber-400'}`} />
-                  <span className="text-[11px] sm:text-xs font-bold leading-tight line-clamp-1">
-                    {isAr ? shortLabelAr : cat.titleEn.split(' ')[0]}
-                  </span>
-                </div>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${isTabActive ? 'bg-black/20 text-current' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}>
-                  {cat.count} {isAr ? 'إعلان' : 'ads'}
-                </span>
-              </button>
-            );
-          })}
+        {/* 3 Pillars Selector */}
+        <div className="p-3 bg-neutral-100/70 dark:bg-neutral-950/40 border-b border-neutral-100 dark:border-neutral-800 space-y-2.5 shrink-0">
+          <div className="grid grid-cols-3 gap-2">
+            {/* Pillar 1 */}
+            <button
+              onClick={() => {
+                if (activeTab === 'services' || activeTab === 'jobs') {
+                  setActiveTab('party');
+                }
+              }}
+              className={`flex items-center justify-center gap-1.5 p-2 sm:p-2.5 rounded-xl transition-all border text-center cursor-pointer ${
+                activeTab !== 'services' && activeTab !== 'jobs'
+                  ? 'bg-amber-500 text-neutral-950 font-black border-amber-500 shadow-sm'
+                  : 'bg-white dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300 border-neutral-200/80 dark:border-neutral-700/50 hover:bg-neutral-50'
+              }`}
+            >
+              <Calendar className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-[11px] sm:text-xs font-black truncate">
+                {isAr ? 'الاقسام الرئيسية و الفاعليات' : 'Events & Activities'}
+              </span>
+            </button>
+
+            {/* Pillar 2 */}
+            <button
+              onClick={() => setActiveTab('services')}
+              className={`flex items-center justify-center gap-1.5 p-2 sm:p-2.5 rounded-xl transition-all border text-center cursor-pointer ${
+                activeTab === 'services'
+                  ? 'bg-amber-500 text-neutral-950 font-black border-amber-500 shadow-sm'
+                  : 'bg-white dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300 border-neutral-200/80 dark:border-neutral-700/50 hover:bg-neutral-50'
+              }`}
+            >
+              <Store className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-[11px] sm:text-xs font-black truncate">
+                {isAr ? 'خدمات و شركات مكملة' : 'Services & Suppliers'}
+              </span>
+            </button>
+
+            {/* Pillar 3 */}
+            <button
+              onClick={() => setActiveTab('jobs')}
+              className={`flex items-center justify-center gap-1.5 p-2 sm:p-2.5 rounded-xl transition-all border text-center cursor-pointer ${
+                activeTab === 'jobs'
+                  ? 'bg-teal-500 text-white font-black border-teal-500 shadow-sm'
+                  : 'bg-white dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300 border-neutral-200/80 dark:border-neutral-700/50 hover:bg-neutral-50'
+              }`}
+            >
+              <Briefcase className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-[11px] sm:text-xs font-black truncate">
+                {isAr ? 'التوظيف فى نفس المجال' : 'Jobs & Careers'}
+              </span>
+            </button>
+          </div>
+
+          {/* Sub tabs for Events when Pillar 1 is active */}
+          {activeTab !== 'services' && activeTab !== 'jobs' && (
+            <div className="grid grid-cols-4 gap-1.5 pt-1">
+              {categories.filter(c => ['party', 'course', 'trip', 'exhibition'].includes(c.id)).map((cat) => {
+                const Icon = cat.icon;
+                const isTabActive = activeTab === cat.id;
+                const shortLabelAr = cat.id === 'party' ? 'الحفلات' : cat.id === 'course' ? 'الكورسات' : cat.id === 'trip' ? 'الرحلات' : 'المعارض';
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveTab(cat.id)}
+                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg transition-all border text-center cursor-pointer ${
+                      isTabActive
+                        ? `${cat.activeBg} shadow-xs border-transparent`
+                        : 'bg-white/80 dark:bg-neutral-800/40 text-neutral-700 dark:text-neutral-300 border-neutral-200/60 dark:border-neutral-700/40 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <Icon className="h-3 w-3 shrink-0" />
+                    <span className="text-[10px] sm:text-xs font-bold truncate">
+                      {isAr ? shortLabelAr : cat.titleEn.split(' ')[0]}
+                    </span>
+                    <span className="text-[9px] font-mono opacity-80">
+                      ({cat.count})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Active Section Description & Subcategories List */}

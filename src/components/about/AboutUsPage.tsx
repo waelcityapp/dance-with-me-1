@@ -15,7 +15,14 @@ import {
   ShieldCheck,
   Building2,
   Briefcase,
-  Wrench
+  Wrench,
+  Users,
+  Mic,
+  Camera,
+  Layers,
+  Award,
+  Compass,
+  CheckCircle2
 } from 'lucide-react';
 
 export const AboutUsPage: React.FC = () => {
@@ -89,102 +96,293 @@ export const AboutUsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Categories */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-black text-neutral-900 dark:text-white px-2">
-          {lang === 'ar' ? 'الأقسام الرئيسية والفرعية' : 'Main & Sub Categories'}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* 3 Core Pillars Section */}
+      <div className="space-y-6 pt-2">
+        <div className="px-2">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs uppercase tracking-wider mb-1">
+            <Layers className="w-4 h-4" />
+            <span>{lang === 'ar' ? 'هيكلة المنصة والمنظومة' : 'Platform Ecosystem'}</span>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">
+            {lang === 'ar' ? 'ركائز المنصة ومجالاتها الرئيسية' : 'Core Platform Pillars'}
+          </h3>
+          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium mt-1">
+            {lang === 'ar' 
+              ? 'تغطي منصة CityEve منظومة متكاملة من 3 ركائز تجمع الجمهور، مقدمي الخدمات، وسوق العمل.' 
+              : 'CityEve covers an integrated 3-pillar ecosystem connecting audiences, service providers, and talent.'}
+          </p>
+        </div>
+
+        <div className="space-y-6">
           
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-red-500/10 text-red-500">
-                <Music className="w-5 h-5" />
+          {/* Pillar 1: Core Events & Entertainment */}
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 sm:p-7 shadow-sm border border-neutral-200 dark:border-neutral-800 relative overflow-hidden transition-all duration-300 hover:shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-4">
+                <div className="p-3.5 rounded-2xl bg-[#78101F]/10 dark:bg-[#78101F]/20 text-[#78101F] dark:text-red-400 shrink-0">
+                  <Calendar className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400">
+                      {lang === 'ar' ? 'الركيزة الأولى' : 'Pillar 1'}
+                    </span>
+                    <span className="text-xs font-semibold text-neutral-400">
+                      {lang === 'ar' ? 'للجمهور والزوار' : 'For Audiences'}
+                    </span>
+                  </div>
+                  <h4 className="text-lg sm:text-xl font-black text-neutral-900 dark:text-white mt-1">
+                    {lang === 'ar' ? 'الفعاليات والأنشطة الترفيهية والتعليمية' : 'Events, Entertainment & Education'}
+                  </h4>
+                </div>
               </div>
-              <h4 className="font-bold text-neutral-900 dark:text-white text-lg">
-                {lang === 'ar' ? 'الحفلات والسهرات' : 'Parties & Nightlife'}
-              </h4>
             </div>
-            <ul className="text-sm text-neutral-600 dark:text-neutral-400 font-medium space-y-2 list-disc list-inside">
-              <li>{lang === 'ar' ? 'حفلات لاتيني (سالسا، باتشاتا، كيزومبا)' : 'Latin Parties (Salsa, Bachata, Kizomba)'}</li>
-              <li>{lang === 'ar' ? 'حفلات عربي وشرقي' : 'Arabic & Oriental Parties'}</li>
-              <li>{lang === 'ar' ? 'سهرات ليلية عامة' : 'General Nightlife'}</li>
-            </ul>
+
+            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium my-4 leading-relaxed">
+              {lang === 'ar'
+                ? 'الوجهة المركزية لاكتشاف وحجز مختلف التجارب الحية في مصر مع إمكانية استعراض المواعيد، المواقع، وتأكيد التذاكر.'
+                : 'The central hub for discovering and booking various live experiences in Egypt with schedules, venues, and ticket confirmations.'}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-red-500/10 text-red-500 shrink-0 mt-0.5">
+                  <Music className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'الحفلات والسهرات' : 'Parties & Nightlife'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'حفلات لاتيني (سالسا، باتشاتا، كيزومبا)، حفلات شرقية وغربية، وسهرات مميزة.' : 'Latin parties (Salsa, Bachata, Kizomba), oriental & western nights, and DJ events.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 shrink-0 mt-0.5">
+                  <GraduationCap className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'الكورسات وورش العمل' : 'Courses & Workshops'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'تعليم الرقص بجميع المستويات، ورش الفنون والإبداع، وتدريبات اللياقة والموسيقى.' : 'Dance lessons for all levels, art & creativity workshops, fitness, and music.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0 mt-0.5">
+                  <Plane className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'الرحلات والمهرجانات' : 'Trips & Festivals'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'رحلات الرقص السياحية، معسكرات التخييم والسفاري، والمهرجانات الكبرى الدولية والمحلية.' : 'Dance getaway trips, safari camps, and major national and international festivals.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500 shrink-0 mt-0.5">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'المعارض والمؤتمرات' : 'Exhibitions & Conferences'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'معارض الفنون والتجارة، معارض المنتجات، ومؤتمرات الأعمال والتواصل المهني.' : 'Art & trade expos, cultural fairs, and business networking conferences.'}
+                  </p>
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
-                <GraduationCap className="w-5 h-5" />
+          {/* Pillar 2: Complementary Services & B2B Solutions */}
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 sm:p-7 shadow-sm border border-neutral-200 dark:border-neutral-800 relative overflow-hidden transition-all duration-300 hover:shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-row sm:items-center justify-between gap-4 pb-5 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-4">
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                  <Wrench className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400">
+                      {lang === 'ar' ? 'الركيزة الثانية' : 'Pillar 2'}
+                    </span>
+                    <span className="text-xs font-semibold text-neutral-400">
+                      {lang === 'ar' ? 'للمنظمين وأصحاب الأعمال' : 'For Organizers & Vendors'}
+                    </span>
+                  </div>
+                  <h4 className="text-lg sm:text-xl font-black text-neutral-900 dark:text-white mt-1">
+                    {lang === 'ar' ? 'الخدمات والشركات المكملة لصناعة الفعاليات' : 'Complementary Services & Vendors'}
+                  </h4>
+                </div>
               </div>
-              <h4 className="font-bold text-neutral-900 dark:text-white text-lg">
-                {lang === 'ar' ? 'الكورسات وورش العمل' : 'Courses & Workshops'}
-              </h4>
             </div>
-            <ul className="text-sm text-neutral-600 dark:text-neutral-400 font-medium space-y-2 list-disc list-inside">
-              <li>{lang === 'ar' ? 'كورسات تعليم الرقص بجميع أنواعه' : 'Dance learning courses of all types'}</li>
-              <li>{lang === 'ar' ? 'ورش عمل فنية وثقافية' : 'Artistic & Cultural workshops'}</li>
-            </ul>
+
+            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium my-4 leading-relaxed">
+              {lang === 'ar'
+                ? 'توفير حلقة وصل مباشرة بين منظمي الفعاليات والشركات المتخصصة في تقديم حلول لوجستية وتقنية متكاملة لإنجاح أي حدث.'
+                : 'Direct connection bridging event organizers with specialized vendors offering logistical and technical event solutions.'}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 shrink-0 mt-0.5">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'المقرات وتأجير القاعات' : 'Venues & Halls Rentals'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'استوديوهات رقص وتدريب مجهزة، قاعات احتفالات ومؤتمرات، ومساحات مفتوحة.' : 'Equipped dance & training studios, banquet halls, and open-air event spaces.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500 shrink-0 mt-0.5">
+                  <Mic className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'المعدات والصوتيات والإضاءة' : 'Sound, Lighting & Equipment'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'تأجير أجهزة الصوت، هندسة الإضاءة، الشاشات العملاقة، وتجهيزات المسارح.' : 'Pro audio sound systems, stage lighting rigs, LED screens, and DJ booth rentals.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500 shrink-0 mt-0.5">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'الميديا والتصوير الاحترافي' : 'Media, Video & Photography'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'تغطية فوتوغرافية وفيديو سينمائي، تصوير درون جوي، وصناعة ريلز دعائية.' : 'Cinematic video coverage, photography, drone shots, and viral event reels.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-teal-500/10 text-teal-500 shrink-0 mt-0.5">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'الضيافة وتنظيم الحشود واللوجستيات' : 'Catering, Ushers & Logistics'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'خدمات البوفيه والمشروبات، بوابات الترحيب بالضيوف، وتنسيق الدخول.' : 'Catering, reception welcoming staff, crowd management, and gate control.'}
+                  </p>
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
-                <Plane className="w-5 h-5" />
+          {/* Pillar 3: Jobs & Careers in the Field */}
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 sm:p-7 shadow-sm border border-neutral-200 dark:border-neutral-800 relative overflow-hidden transition-all duration-300 hover:shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-4">
+                <div className="p-3.5 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 shrink-0">
+                  <Briefcase className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400">
+                      {lang === 'ar' ? 'الركيزة الثالثة' : 'Pillar 3'}
+                    </span>
+                    <span className="text-xs font-semibold text-neutral-400">
+                      {lang === 'ar' ? 'للمحترفين والباحثين عن عمل' : 'For Talents & Job Seekers'}
+                    </span>
+                  </div>
+                  <h4 className="text-lg sm:text-xl font-black text-neutral-900 dark:text-white mt-1">
+                    {lang === 'ar' ? 'التوظيف وسوق العمل المتخصص في صناعة الفعاليات' : 'Jobs & Careers in Event Industry'}
+                  </h4>
+                </div>
               </div>
-              <h4 className="font-bold text-neutral-900 dark:text-white text-lg">
-                {lang === 'ar' ? 'الرحلات والمهرجانات' : 'Trips & Festivals'}
-              </h4>
             </div>
-            <ul className="text-sm text-neutral-600 dark:text-neutral-400 font-medium space-y-2 list-disc list-inside">
-              <li>{lang === 'ar' ? 'رحلات الرقص والسفر' : 'Dance Trips & Travel'}</li>
-              <li>{lang === 'ar' ? 'مهرجانات دولية ومحلية' : 'Local & International Festivals'}</li>
-            </ul>
-          </div>
 
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-neutral-900 dark:text-white text-lg">
-                {lang === 'ar' ? 'المعارض والمؤتمرات' : 'Exhibitions & Conferences'}
-              </h4>
-            </div>
-            <ul className="text-sm text-neutral-600 dark:text-neutral-400 font-medium space-y-2 list-disc list-inside">
-              <li>{lang === 'ar' ? 'معارض تجارية وفنية' : 'Commercial & Art Exhibitions'}</li>
-              <li>{lang === 'ar' ? 'مؤتمرات أعمال متخصصة' : 'Specialized Business Conferences'}</li>
-            </ul>
-          </div>
+            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium my-4 leading-relaxed">
+              {lang === 'ar'
+                ? 'تمكين المواهب والكوادر المهنية من العثور على فرص عمل وتعاون مع أكاديميات الفنون ومنظمي الحفلات والمهرجانات.'
+                : 'Empowering specialized talents to find job vacancies and collaborations with arts academies and event organizers.'}
+            </p>
 
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
-                <Wrench className="w-5 h-5" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500 shrink-0 mt-0.5">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'مدربون وفنانون واستعراضيون' : 'Instructors, Artists & Performers'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'فرص عمل لمدربي الرقص والموسيقى، عازفين، دي جي (DJs)، وفرق استعراضية.' : 'Vacancies for dance/music instructors, live musicians, DJs, and performing acts.'}
+                  </p>
+                </div>
               </div>
-              <h4 className="font-bold text-neutral-900 dark:text-white text-lg">
-                {lang === 'ar' ? 'الخدمات' : 'Services'}
-              </h4>
-            </div>
-            <ul className="text-sm text-neutral-600 dark:text-neutral-400 font-medium space-y-2 list-disc list-inside">
-              <li>{lang === 'ar' ? 'تأجير قاعات ومعدات' : 'Halls & Equipment Rentals'}</li>
-              <li>{lang === 'ar' ? 'خدمات التصوير والتنظيم' : 'Photography & Organizing'}</li>
-            </ul>
-          </div>
 
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-500">
-                <Briefcase className="w-5 h-5" />
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 shrink-0 mt-0.5">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'فرق الأمن والتنظيم الميداني' : 'Security Staff & Gate Ushers'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'طلب مسؤولي تذاكر، فاحصي QR Code، أفراد أمن وحراسة، ومنظمي استعلامات.' : 'Openings for ticket checkers, QR inspectors, security personnel, and reception coordinators.'}
+                  </p>
+                </div>
               </div>
-              <h4 className="font-bold text-neutral-900 dark:text-white text-lg">
-                {lang === 'ar' ? 'الوظائف' : 'Jobs'}
-              </h4>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0 mt-0.5">
+                  <Compass className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'مهندسو الصوت والإضاءة والتقنيين' : 'Sound & Light Technicians'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'فرص للمتخصصين في تشغيل غرف التحكم بالصوت، برمجة أجهزة الليزر والإضاءة المسرحية.' : 'Roles for audio console operators, stage lighting engineers, and video wall techs.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'تسويق وإدارة علاقات الفعاليات' : 'Event Marketing & PR Managers'}
+                  </h5>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                    {lang === 'ar' ? 'إدارة السوشيال ميديا للمناسبات، منسقو الرعاة (Sponsorships)، ومديرو المبيعات.' : 'Social media managers, sponsorship coordinators, and ticketing sales associates.'}
+                  </p>
+                </div>
+              </div>
+
             </div>
-            <ul className="text-sm text-neutral-600 dark:text-neutral-400 font-medium space-y-2 list-disc list-inside">
-              <li>{lang === 'ar' ? 'فرص عمل في مجال الفعاليات' : 'Job opportunities in Events'}</li>
-              <li>{lang === 'ar' ? 'مطلوب مدربين وفنانين' : 'Instructors & Artists wanted'}</li>
-            </ul>
           </div>
 
         </div>
