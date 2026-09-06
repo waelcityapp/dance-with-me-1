@@ -1,8 +1,25 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import webpush from "web-push";
 import { v2 as cloudinary } from "cloudinary";
+import { initializeApp, getApps } from "firebase/app";
+import { getFirestore, doc, getDoc, collection, getDocs } from "firebase/firestore";
+
+// Initialize Firebase SDK on server for reliable event metadata & SEO without 429 quota limits
+let db: any = null;
+try {
+  const cfgRaw = fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf-8");
+  const cfg = JSON.parse(cfgRaw);
+  const fbApp = !getApps().length ? initializeApp(cfg) : getApps()[0];
+  db = getFirestore(fbApp);
+} catch (e) {
+  console.warn("Server Firebase initialization note:", e);
+}
+
+// In-memory cache for event metadata to ensure instant (1ms) crawler responses
+const eventOgCache = new Map<string, { title: string; desc: string; image: string; time: number }>();
 
 // Helper to extract Cloudinary public_id from URL
 function extractCloudinaryPublicId(url: string): string | null {
@@ -299,8 +316,8 @@ async function startServer() {
 
   app.get(["/api/og-event", "/e/:eventId", "/event/:eventId"], async (req, res) => {
     const eventId = (req.query.event || req.params.eventId) as string;
-    let title = "CityEve | سيتي إيف - أهم تطبيق لجميع أنواع الحفلات في مصر";
-    let description = "منصتك الأولى لمعرفة وحجز أحدث الحفلات، الكورسات، ورحلات الرقص في مصر.";
+    let title = "CityEve | سيتي إيف - أهم تطبيق لجميع أنواع الفعاليات والحفلات في مصر";
+    let description = "منصتك الأولى لمعرفة وحجز أحدث الحفلات، الكورسات، المعارض، والخدمات في مصر.";
     let image = "https://res.cloudinary.com/dynasmcaj/image/upload/w_1200,h_630,c_fill,q_auto,f_jpg/fbyjfjq8equle5pl7kwz.png";
     const appIcon = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
     const host = (req.headers['x-forwarded-host'] || req.headers.host || 'cityeve.online') as string;
@@ -308,36 +325,72 @@ async function startServer() {
     const targetUrl = `${proto}://${host}/?event=${eventId || ''}`;
     const pageUrl = eventId ? `${proto}://${host}/e/${eventId}` : targetUrl;
 
+    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    const isBot = /whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|slackbot|linkedinbot|pinterest|skypeuripreview|discordbot|googlebot|bingbot|applebot|yandex/i.test(userAgent);
+
+    // If human visitor directly clicking a link (not social crawler), redirect them to the app view immediately
+    if (!isBot && eventId) {
+      return res.redirect(302, targetUrl);
+    }
+
+    // Direct query params fallback (for instant meta generation)
+    const queryTitle = (req.query.t || req.query.title) as string;
+    const queryDesc = (req.query.d || req.query.desc) as string;
+    const queryImg = (req.query.img || req.query.image) as string;
+
+    if (queryTitle) title = `${queryTitle} | CityEve سيتي إيف`;
+    if (queryDesc) description = queryDesc.substring(0, 220);
+    if (queryImg) image = queryImg;
+
     if (eventId) {
-      try {
-        const fbRes = await fetch(`https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events/${eventId}`);
-        if (fbRes.ok) {
-          const fbData: any = await fbRes.json();
-          if (fbData && fbData.fields) {
-            const rawTitle = fbData.fields.titleAr?.stringValue || fbData.fields.titleEn?.stringValue;
-            const rawDesc = fbData.fields.descriptionAr?.stringValue || fbData.fields.descriptionEn?.stringValue;
-            const rawImg = fbData.fields.mediaUrl?.stringValue || fbData.fields.thumbnailUrl?.stringValue;
+      const cached = eventOgCache.get(eventId);
+      if (cached && (Date.now() - cached.time < 1000 * 60 * 30)) {
+        title = cached.title;
+        description = cached.desc;
+        image = cached.image;
+      } else if (db) {
+        try {
+          const snap = await getDoc(doc(db, "events", eventId));
+          if (snap.exists()) {
+            const data: any = snap.data();
+            const rawTitle = data.titleAr || data.titleEn;
+            const rawDesc = data.descriptionAr || data.descriptionEn;
+            const rawPrice = data.priceAr || data.priceEn;
+            const rawLocation = data.location?.nameAr || data.location?.nameEn;
+            const rawImg = data.thumbnailUrl || data.mediaUrl;
 
             if (rawTitle) title = `${rawTitle} | CityEve سيتي إيف`;
-            if (rawDesc) description = rawDesc.substring(0, 200).replace(/[\r\n]+/g, ' ');
-            if (rawImg && rawImg.trim().length > 0) {
+            if (rawDesc) {
+              const cleanDesc = rawDesc.replace(/[\r\n]+/g, ' ').substring(0, 200).trim();
+              const locationSnippet = rawLocation ? ` 📍 ${rawLocation}` : '';
+              const priceSnippet = rawPrice ? ` 💰 ${rawPrice}` : '';
+              description = `${cleanDesc}${locationSnippet}${priceSnippet}`.trim();
+            }
+
+            if (rawImg && typeof rawImg === 'string' && rawImg.trim().length > 0) {
               let processedImg = rawImg.trim();
               if (processedImg.includes('cloudinary.com')) {
-                // Add CityEve subtle watermark logo badge in south_east corner
+                // Cloudinary video transformation: take frame 1s, 1200x630, with CityEve watermark
                 if (processedImg.includes('/video/upload/')) {
                   processedImg = processedImg
                     .replace('/video/upload/', '/video/upload/w_1200,h_630,c_fill,so_1,q_auto,f_jpg/l_fbyjfjq8equle5pl7kwz,w_180,g_south_east,x_24,y_24,o_90/')
                     .replace(/\.(mp4|mov|webm|avi|m4v)$/i, '.jpg');
                 } else if (processedImg.includes('/image/upload/')) {
-                  processedImg = processedImg.replace('/image/upload/', '/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/l_fbyjfjq8equle5pl7kwz,w_180,g_south_east,x_24,y_24,o_90/');
+                  // Cloudinary image transformation: 1200x630, with CityEve watermark
+                  processedImg = processedImg.replace(
+                    '/image/upload/',
+                    '/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/l_fbyjfjq8equle5pl7kwz,w_180,g_south_east,x_24,y_24,o_90/'
+                  );
                 }
               }
               image = processedImg;
             }
+
+            eventOgCache.set(eventId, { title, desc: description, image, time: Date.now() });
           }
+        } catch (dbErr) {
+          console.error('Error fetching event in Express OG handler via Firebase SDK:', dbErr);
         }
-      } catch (e) {
-        console.error('Error fetching event in Express OG handler:', e);
       }
     }
 
@@ -366,7 +419,8 @@ async function startServer() {
       "organizer": {
         "@type": "Organization",
         "name": "CityEve | سيتي إيف",
-        "url": "https://cityeve.online/"
+        "url": "https://cityeve.online",
+        "logo": appIcon
       }
     });
 
@@ -385,6 +439,7 @@ async function startServer() {
   <link rel="shortcut icon" href="${appIcon}" />
   <link rel="apple-touch-icon" href="${appIcon}" />
 
+  <!-- Open Graph / WhatsApp / Facebook -->
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="CityEve | سيتي إيف" />
   <meta property="og:url" content="${pageUrl}" />
@@ -392,15 +447,25 @@ async function startServer() {
   <meta property="og:description" content="${safeDesc}" />
   <meta property="og:image" content="${image}" />
   <meta property="og:image:secure_url" content="${image}" />
+  <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  
+  <meta property="og:image:alt" content="${safeTitle}" />
+  <meta property="og:locale" content="ar_EG" />
+
+  <!-- WhatsApp Fallback and Image Links -->
+  <link rel="image_src" href="${image}" />
+  <meta itemprop="name" content="${safeTitle}" />
+  <meta itemprop="description" content="${safeDesc}" />
+  <meta itemprop="image" content="${image}" />
+
+  <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@CityEveOnline" />
   <meta name="twitter:title" content="${safeTitle}" />
   <meta name="twitter:description" content="${safeDesc}" />
   <meta name="twitter:image" content="${image}" />
-  <meta itemprop="image" content="${image}" />
-  
+
   <script type="application/ld+json">
   ${eventJsonLd}
   </script>
@@ -409,10 +474,10 @@ async function startServer() {
 </head>
 <body style="background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
   <div style="text-align:center;padding:20px;">
-    <h2>جاري تحويلك إلى الإعلان...</h2>
-    <p><a href="${targetUrl}" style="color:#f59e0b;">اضغط هنا للانتقال فوراً</a></p>
+    <h2>جاري تحويلك إلى الإعلان على منصة سيتي إيف...</h2>
+    <p><a href="${targetUrl}" style="color:#f59e0b;font-weight:bold;text-decoration:none;">اضغط هنا للانتقال فوراً</a></p>
   </div>
-  <script>window.location.href = "${targetUrl}";</script>
+  <script>window.location.replace("${targetUrl}");</script>
 </body>
 </html>`;
 
@@ -424,12 +489,12 @@ async function startServer() {
   // Proxy /api/events for SEO / External Crawlers
   app.get("/api/events", async (req, res) => {
     try {
-      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events");
-      if (fbRes.ok) {
-        const data = await fbRes.json();
-        return res.json(data);
+      if (db) {
+        const snap = await getDocs(collection(db, "events"));
+        const events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        return res.json({ events });
       }
-      return res.status(500).json({ error: "Failed to fetch from Firestore" });
+      return res.status(500).json({ error: "Database not initialized" });
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
@@ -444,26 +509,24 @@ async function startServer() {
       const now = new Date().toISOString();
 
       let eventUrls = '';
-      try {
-        const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events");
-        if (fbRes.ok) {
-          const data: any = await fbRes.json();
-          if (data && data.documents && Array.isArray(data.documents)) {
-            eventUrls = data.documents.map((doc: any) => {
-              const id = doc.name.split('/').pop();
-              const updateTime = doc.updateTime || now;
-              return `
+      if (db) {
+        try {
+          const snap = await getDocs(collection(db, "events"));
+          eventUrls = snap.docs.map(docSnap => {
+            const id = docSnap.id;
+            const data: any = docSnap.data();
+            const updateTime = data.uploadDate || now;
+            return `
   <url>
     <loc>${baseUrl}/e/${id}</loc>
     <lastmod>${updateTime}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`;
-            }).join('');
-          }
+          }).join('');
+        } catch (err) {
+          console.error('Error querying events for sitemap:', err);
         }
-      } catch (err) {
-        console.error('Error querying events for sitemap:', err);
       }
 
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>

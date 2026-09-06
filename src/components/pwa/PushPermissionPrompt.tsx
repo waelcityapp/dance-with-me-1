@@ -17,36 +17,21 @@ export const PushPermissionPrompt: React.FC = () => {
     // Only check in browser
     if (typeof window === 'undefined') return;
 
-    // 1. If system browser permission is already granted, or previously marked granted in localStorage:
-    const isBrowserGranted = 'Notification' in window && Notification.permission === 'granted';
-    const isLocallyGranted = localStorage.getItem(PUSH_PERM_STATUS_KEY) === 'granted';
+    // 1. Check if user already allowed/denied system browser permission, or marked as granted/allowed in localStorage
+    const isBrowserGranted = typeof Notification !== 'undefined' && (Notification.permission === 'granted' || Notification.permission === 'denied');
+    const isLocallyGranted = localStorage.getItem(PUSH_PERM_STATUS_KEY) === 'granted' || 
+                            localStorage.getItem(PUSH_PERM_STATUS_KEY) === 'dismissed_later' ||
+                            localStorage.getItem('cityeve_push_user_allowed') === 'true';
     
     if (isBrowserGranted || isLocallyGranted) {
       localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
-      return; // Never show again if user already allowed
-    }
-
-    // 2. Track visit counts for the "Later" (4 visits) logic
-    // We check if this specific session has already handled the visit counter
-    const sessionCounted = sessionStorage.getItem('cityeve_visit_counted');
-    let currentVisits = parseInt(localStorage.getItem(PUSH_DISMISS_COUNT_KEY) || '0', 10);
-
-    if (!sessionCounted) {
-      currentVisits += 1;
-      localStorage.setItem(PUSH_DISMISS_COUNT_KEY, currentVisits.toString());
-      sessionStorage.setItem('cityeve_visit_counted', 'true');
+      localStorage.setItem('cityeve_push_user_allowed', 'true');
+      return; // Never show again
     }
 
     // Check if dismissed in the current session
     const isSessionDismissed = sessionStorage.getItem('cityeve_session_dismiss_push') === 'true';
     if (isSessionDismissed) return;
-
-    // Check if user dismissed previously: only show if visits count has reached multiple of 4 (or first visit)
-    const wasDismissedBefore = localStorage.getItem(PUSH_PERM_STATUS_KEY) === 'dismissed_later';
-    if (wasDismissedBefore && currentVisits < REPROMPT_AFTER_VISITS) {
-      // Haven't completed 4 visits yet since dismissal
-      return;
-    }
 
     // Show prompt smoothly after 1.5s
     const timer = setTimeout(() => {
@@ -57,15 +42,16 @@ export const PushPermissionPrompt: React.FC = () => {
 
   const handleEnable = async () => {
     setIsSubscribing(true);
+    // Mark permanently in localStorage immediately so it never shows up again on next reload
+    localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
+    localStorage.setItem('cityeve_push_user_allowed', 'true');
+    localStorage.removeItem(PUSH_DISMISS_COUNT_KEY);
+
     try {
-      const res = await subscribeUserToPush(user?.id, user?.email, true);
-      if (res.success || ('Notification' in window && Notification.permission === 'granted')) {
-        localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
-        localStorage.removeItem(PUSH_DISMISS_COUNT_KEY);
-        setIsVisible(false);
-      } else if (res.message) {
-        alert(res.message);
+      if (typeof Notification !== 'undefined' && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        await Notification.requestPermission();
       }
+      await subscribeUserToPush(user?.id, user?.email, true);
     } catch (err) {
       console.warn('Push subscribe prompt note:', err);
     } finally {
@@ -76,9 +62,8 @@ export const PushPermissionPrompt: React.FC = () => {
 
   const handleDismiss = () => {
     setIsVisible(false);
-    // Mark status as dismissed_later and reset counter to 0 so it reappears after 4 new visits
-    localStorage.setItem(PUSH_PERM_STATUS_KEY, 'dismissed_later');
-    localStorage.setItem(PUSH_DISMISS_COUNT_KEY, '0');
+    localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
+    localStorage.setItem('cityeve_push_user_allowed', 'true');
     sessionStorage.setItem('cityeve_session_dismiss_push', 'true');
   };
 

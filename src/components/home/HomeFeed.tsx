@@ -48,10 +48,24 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       const urlParams = new URLSearchParams(window.location.search);
       const eventId = urlParams.get('event');
       if (eventId) {
+        const found = activeEvents.find(ev => ev.id === eventId);
+        if (found) {
+          // Switch to matching category if needed so the event is never hidden by filters
+          if (found.category === 'services') {
+            if (selectedCategory !== 'services') setSelectedCategory('services');
+          } else if (found.category === 'jobs') {
+            if (selectedCategory !== 'jobs') setSelectedCategory('jobs');
+          } else if (selectedCategory === 'services' || selectedCategory === 'jobs') {
+            setSelectedCategory('all');
+          }
+          if (selectedStyleFilter !== 'all') setSelectedStyleFilter('all');
+          if (searchQuery) setSearchQuery('');
+        }
+
         const index = activeEvents.findIndex(ev => ev.id === eventId);
         if (index !== -1) {
           if (index >= visibleCount) {
-            setVisibleCount(index + 5);
+            setVisibleCount(index + 10);
           }
           setHighlightedEventId(eventId);
 
@@ -61,16 +75,17 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
             if (el) {
               const y = el.getBoundingClientRect().top + window.scrollY - 100;
               window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-            } else if (attempts < 15) {
+            } else if (attempts < 20) {
               attempts++;
-              requestAnimationFrame(scrollToTarget);
+              setTimeout(scrollToTarget, 80);
             }
           };
-          scrollToTarget();
+          // Slight delay to allow DOM render
+          setTimeout(scrollToTarget, 100);
 
           const timer = setTimeout(() => {
             setHighlightedEventId(null);
-          }, 4000);
+          }, 6000);
           return () => clearTimeout(timer);
         }
       }

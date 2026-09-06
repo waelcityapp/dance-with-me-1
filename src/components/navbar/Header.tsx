@@ -95,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#78101F]/50 bg-gradient-to-r from-[#4E040D] via-[#5E0713] to-[#4E040D] backdrop-blur-xl transition-all duration-300 shadow-2xl text-white">
+    <header className="sticky top-0 z-50 w-full border-b border-[#D4AF37]/40 bg-[#FBF3E2] backdrop-blur-xl transition-all duration-300 shadow-md text-[#42030A]">
       <div className="mx-auto flex items-center justify-between max-w-6xl px-3 sm:px-6 h-16 gap-2 relative">
         {/* Brand Logo & Title */}
         <div 
@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.div 
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.95 }}
-            className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl overflow-hidden border border-[#D4AF37]/50 shadow-md bg-[#42030A] shrink-0"
+            className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl overflow-hidden border border-[#D4AF37] shadow-sm bg-[#FBF3E2] shrink-0"
           >
             <img 
               src={appAssets?.app_icon_url || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"} 
@@ -117,40 +117,40 @@ export const Header: React.FC<HeaderProps> = ({
           
           <div className="flex flex-col justify-center">
             <div className="flex items-center gap-1.5">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <h1 className="font-sans text-lg sm:text-xl font-black tracking-tight text-white leading-none drop-shadow-sm">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+              <h1 className="font-sans text-lg sm:text-xl font-black tracking-tight text-[#42030A] leading-none">
                 {appAssets?.appNameEn || appAssets?.appNameAr || "CityEve"}
               </h1>
             </div>
-            <span className="font-mono text-[9px] text-[#E8D3C0] font-bold tracking-wider leading-tight mt-0.5">
+            <span className="font-mono text-[9px] text-[#78101F] font-bold tracking-wider leading-tight mt-0.5">
               {lang === 'ar' ? 'دليل الفعاليات والسهرات' : 'Events & Nightlife'}
             </span>
           </div>
         </div>
 
-        {/* Center: About Us Button with White Text */}
+        {/* Center: About Us Button */}
         {onOpenAboutUs && (
-          <div className="flex items-center justify-center mx-auto px-1">
+          <div className="hidden md:flex items-center justify-center mx-auto px-1">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onOpenAboutUs}
-              className="flex items-center justify-center px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/25 hover:border-white/40 text-white transition-all cursor-pointer text-xs sm:text-sm font-bold whitespace-nowrap shadow-xs backdrop-blur-sm"
+              className="flex items-center justify-center px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-[#42030A]/10 hover:bg-[#42030A]/15 border border-[#42030A]/30 text-[#42030A] transition-all cursor-pointer text-xs sm:text-sm font-black whitespace-nowrap shadow-xs backdrop-blur-sm"
               title={lang === 'ar' ? 'عن التطبيق والمنصة' : 'About Platform'}
             >
-              <span className="text-white drop-shadow-xs">{lang === 'ar' ? 'من نحن' : 'About Us'}</span>
+              <span className="text-[#42030A] font-bold">{lang === 'ar' ? 'من نحن' : 'About Us'}</span>
             </motion.button>
           </div>
         )}
 
         {/* Right Tools & Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 ms-auto">
 
           {/* Language Switcher Pill */}
-          <div className="flex items-center rounded-xl border border-[#78101F]/60 bg-[#3D0309]/90 p-0.5 text-xs text-white">
+          <div className="flex items-center rounded-xl border border-[#D4AF37]/60 bg-[#42030A] p-0.5 text-xs text-white shadow-sm">
             <button
               onClick={() => setLang('ar')}
-              className={`px-2.5 py-1 rounded-lg transition-all font-black text-[11px] sm:text-xs cursor-pointer ${
+              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all font-black text-[11px] sm:text-xs cursor-pointer ${
                 lang === 'ar'
                   ? 'bg-amber-400 text-neutral-950 shadow-sm'
                   : 'text-[#E8D3C0] hover:text-white'
@@ -160,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
             <button
               onClick={() => setLang('en')}
-              className={`px-2.5 py-1 rounded-lg transition-all font-black text-[11px] sm:text-xs cursor-pointer ${
+              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all font-black text-[11px] sm:text-xs cursor-pointer ${
                 lang === 'en'
                   ? 'bg-amber-400 text-neutral-950 shadow-sm'
                   : 'text-[#E8D3C0] hover:text-white'
@@ -175,13 +175,13 @@ export const Header: React.FC<HeaderProps> = ({
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
             onClick={onOpenNotifications}
-            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#78101F]/60 bg-[#3D0309]/90 text-[#F5E6D8] hover:text-white transition-all cursor-pointer shadow-sm"
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#D4AF37]/60 bg-[#42030A] text-amber-200 hover:text-white transition-all cursor-pointer shadow-sm shrink-0"
             aria-label="Notifications"
             title={lang === 'ar' ? 'الإشعارات' : 'Notifications'}
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="h-4.5 w-4.5" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 end-1.5 flex h-2 w-2 rounded-full bg-red-400 animate-ping" />
+              <span className="absolute top-1.5 end-1.5 flex h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[#42030A] animate-ping" />
             )}
           </motion.button>
 
@@ -191,17 +191,17 @@ export const Header: React.FC<HeaderProps> = ({
               whileHover={{ scale: 1.06 }}
               whileTap={{ scale: 0.94 }}
               onClick={() => setShowToolsMenu(prev => !prev)}
-              className={`group flex h-9 w-9 items-center justify-center rounded-xl border transition-all cursor-pointer shadow-sm ${
+              className={`group flex h-10 w-10 items-center justify-center rounded-xl border transition-all cursor-pointer shadow-md shrink-0 ${
                 showToolsMenu 
                   ? 'border-amber-400 bg-amber-400 text-neutral-950 shadow-lg shadow-amber-500/20' 
-                  : 'border-[#78101F]/60 bg-[#3D0309]/90 text-[#F5E6D8] hover:text-white hover:border-amber-500/50'
+                  : 'border-[#D4AF37] bg-[#42030A] text-amber-300 hover:text-white hover:bg-[#52040D] hover:border-amber-300'
               }`}
               title={lang === 'ar' ? 'الإعدادات والأدوات' : 'Settings & Tools'}
             >
               {showToolsMenu ? (
-                <X className="h-4 w-4 stroke-[2.5]" />
+                <X className="h-5 w-5 stroke-[2.5]" />
               ) : (
-                <Settings className="h-4 w-4 stroke-[2.2] transition-transform duration-300 group-hover:rotate-45" />
+                <Settings className="h-5 w-5 stroke-[2.2] transition-transform duration-300 group-hover:rotate-45" />
               )}
             </motion.button>
 
@@ -452,27 +452,6 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </AnimatePresence>
           </div>
-
-          {/* Admin Direct Button (if unlocked) */}
-          {user?.isAdmin && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (isAdminUnlocked) {
-                  setActiveTab('admin');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                  setIsAdminLockModalOpen(true);
-                }
-              }}
-              className="flex items-center gap-1 h-9 px-2.5 rounded-xl border border-amber-400 bg-gradient-to-r from-amber-400 to-yellow-400 text-neutral-950 font-black text-xs shadow-md gold-glow cursor-pointer"
-              title={lang === 'ar' ? 'لوحة إدارة التطبيق' : 'Admin Panel'}
-            >
-              <Crown className="h-3.5 w-3.5 stroke-[2.5]" />
-              <span className="hidden sm:inline">{lang === 'ar' ? 'الإدارة' : 'Admin'}</span>
-            </motion.button>
-          )}
         </div>
       </div>
     </header>

@@ -67,6 +67,9 @@ const AppContent: React.FC = () => {
     if (urlParams.get('verify')) {
       setActiveTab('verification');
     }
+    if (urlParams.get('event')) {
+      setActiveTab('explore');
+    }
     if (
       urlParams.get('install') || 
       urlParams.get('pwa') || 
@@ -159,8 +162,8 @@ const AppContent: React.FC = () => {
       {/* Top Hero Canvas with Curved Oval Bottom Edge */}
       {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
         <div className="relative w-full">
-          {/* Curved Hero Section matching logo velvet burgundy base with slightly lighter, luminous gradient */}
-          <div className="w-full bg-gradient-to-b from-[#6B0D18] via-[#5C0913] to-[#48040C] border-b border-[#8C1626]/60 rounded-b-[32px] sm:rounded-b-[48px] md:rounded-b-[56px] shadow-2xl shadow-black/60 pb-8 sm:pb-10 transition-colors duration-200">
+          {/* Curved Hero Section starting with header beige (#FBF3E2) and fading downwards */}
+          <div className="w-full bg-gradient-to-b from-[#FBF3E2] via-[#8C1626] to-transparent dark:to-neutral-950/0 border-b border-[#D4AF37]/30 rounded-b-[32px] sm:rounded-b-[48px] md:rounded-b-[56px] shadow-xl pb-8 sm:pb-10 transition-colors duration-200">
             <MainHeroHeaderBanner
               onExploreClick={() => {
                 const el = document.getElementById('search-section') || document.getElementById('events-feed');
