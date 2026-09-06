@@ -277,93 +277,62 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const styleChips: string[] = ['all', ...ALL_DANCE_STYLES];
 
   return (
-    <div className="space-y-3.5 sm:space-y-4 pb-16">
-      {/* 3 Core Pillars Navigation Bar */}
-      <div className="rounded-3xl border border-neutral-200/90 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 p-2.5 sm:p-3.5 shadow-sm space-y-2.5">
-        
-        {/* Interactive Bar / Button */}
-        <div className="w-full">
-          {/* Main Toggle Card / Container */}
-          <div className="w-full p-2.5 sm:p-3 rounded-2xl bg-neutral-50/90 dark:bg-neutral-800/60 border border-neutral-200/80 dark:border-neutral-700/60 transition-all text-right">
-            {/* Top Row: Title on the right + Full Directory button on the left (in same line) */}
-            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-              {/* Title & Icon (clickable to toggle pillars) */}
-              <button
-                type="button"
-                onClick={() => setIsPillarsOpen(prev => !prev)}
-                className="flex items-center gap-1.5 sm:gap-2 min-w-0 text-right cursor-pointer group flex-1"
-              >
-                <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-neutral-950 transition-colors shrink-0">
-                  <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-                <div className="flex items-center gap-1 min-w-0">
-                  <span className="text-[11px] sm:text-sm font-black text-neutral-800 dark:text-neutral-200 whitespace-nowrap">
-                    {lang === 'ar' ? 'أقسام المنصة الرئيسية (3 بنود)' : 'Platform Pillars (3 Domains)'}
-                  </span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 transition-transform duration-200 shrink-0 ${isPillarsOpen ? 'rotate-180 text-amber-500' : ''}`} />
-                </div>
-              </button>
+    <div className="space-y-2 sm:space-y-2.5 pb-12">
+      {/* Sleek Collapsed Categories Directory Bar */}
+      <div className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 p-1.5 sm:p-2 shadow-xs">
+        {/* Main Bar Row (Clean & Compact Default State) */}
+        <div className="flex items-center justify-between gap-2">
+          
+          {/* Main "دليل الأقسام" Button */}
+          <button
+            type="button"
+            onClick={() => setIsPillarsOpen(prev => !prev)}
+            className="flex items-center gap-1.5 py-1.5 px-3 sm:px-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-neutral-950 font-black text-xs shadow-xs hover:shadow-sm transition-all cursor-pointer shrink-0 border border-amber-300/60 group"
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-neutral-950 group-hover:scale-110 transition-transform" />
+            <span>{lang === 'ar' ? 'دليل الأقسام' : 'Categories Directory'}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPillarsOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-              {/* Full Directory Button - very compact to maximize space for title on mobile */}
-              <button
-                type="button"
-                onClick={() => setShowCategoriesModal(true)}
-                className="flex items-center gap-1 py-1 px-1.5 sm:px-2.5 sm:py-1.5 text-[10px] sm:text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 rounded-lg sm:rounded-xl border border-amber-500/30 transition-all cursor-pointer shrink-0"
-                title={lang === 'ar' ? 'دليل الأقسام الشامل' : 'Full Directory'}
-              >
-                <LayoutGrid className="w-3 h-3 text-amber-500 shrink-0" />
-                <span className="whitespace-nowrap font-bold">
-                  {lang === 'ar' ? 'دليل الأقسام' : 'Directory'}
-                </span>
-              </button>
-            </div>
-
-            {/* Middle Row: 3 Pillars Subtitle for guidance */}
-            <div className="text-[10px] sm:text-[11px] text-neutral-400 dark:text-neutral-500 truncate leading-tight mt-1.5 pe-1">
-              {lang === 'ar' 
-                ? '1. الفاعليات • 2. الخدمات المكملة • 3. التوظيف' 
-                : '1. Events • 2. Services • 3. Careers'}
-            </div>
-
-            {/* Bottom Row: Selected Pillar on the right + 'Choose Pillar' toggle button on the left */}
-            <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/50">
-              <div className="text-[10px] sm:text-[11px] font-bold text-amber-700 dark:text-amber-400 truncate flex items-center gap-1 min-w-0">
-                <span className="text-neutral-500 dark:text-neutral-400 font-normal shrink-0">{lang === 'ar' ? 'القسم المختار:' : 'Selected:'}</span>
-                <span className="underline decoration-amber-400/60 underline-offset-2 truncate">
-                  {activePillar === 'events' && (lang === 'ar' ? 'الاقسام الرئيسية و الفاعليات' : 'Main Events & Activities')}
-                  {activePillar === 'services' && (lang === 'ar' ? 'خدمات و شركات مكملة' : 'Services & Suppliers')}
-                  {activePillar === 'jobs' && (lang === 'ar' ? 'التوظيف فى نفس المجال' : 'Jobs & Careers')}
-                </span>
-              </div>
-
-              {/* Choose Pillar Button */}
-              <button
-                type="button"
-                onClick={() => setIsPillarsOpen(prev => !prev)}
-                className={`text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-xl transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
-                  isPillarsOpen
-                    ? 'bg-amber-500 text-neutral-950 font-black shadow-xs'
-                    : 'bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:border-amber-400'
-                }`}
-              >
-                <span>{isPillarsOpen ? (lang === 'ar' ? 'إغلاق' : 'Close') : (lang === 'ar' ? 'اختر القسم' : 'Choose Pillar')}</span>
-                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isPillarsOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
-          </div>
+          {/* Quick Toggle / Close Action Button */}
+          <button
+            type="button"
+            onClick={() => setIsPillarsOpen(prev => !prev)}
+            className="flex items-center gap-1 py-1.5 px-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-100/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 text-[11px] font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all cursor-pointer shrink-0"
+          >
+            <span>{isPillarsOpen ? (lang === 'ar' ? 'إغلاق ✕' : 'Close ✕') : (lang === 'ar' ? 'تصفح الأقسام' : 'Browse Categories')}</span>
+            {!isPillarsOpen && <ChevronDown className="w-3 h-3 text-neutral-500" />}
+          </button>
         </div>
 
-        {/* 3 Main Pillars Cards/Buttons (Visible when toggled open) */}
+        {/* Expanded Directory Content Panel */}
         <AnimatePresence>
           {isPillarsOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden pt-1"
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="overflow-hidden pt-3 border-t border-neutral-200/80 dark:border-neutral-800 mt-2.5 space-y-3"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pb-1">
+              {/* Header inside drawer with close button */}
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5 text-xs font-black text-neutral-900 dark:text-white">
+                  <Layers className="w-4 h-4 text-amber-500" />
+                  <span>{lang === 'ar' ? 'أقسام المنصة الرئيسية' : 'Platform Pillars'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPillarsOpen(false)}
+                  className="flex items-center gap-1 py-1 px-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-red-600 dark:text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>{lang === 'ar' ? 'إغلاق الدليل' : 'Close'}</span>
+                </button>
+              </div>
+
+              {/* 3 Main Pillars Cards/Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 
                 {/* Pillar 1: Main Events & Activities */}
                 <button
@@ -500,178 +469,190 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                 </button>
 
               </div>
+
+              {/* Sub-Navigation Chips for Events */}
+              {activePillar === 'events' && (
+                <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">
+                      {lang === 'ar' ? 'تصفح حسب نوع الفعالية:' : 'Browse by event type:'}
+                    </span>
+                  </div>
+                  <div className="flex overflow-x-auto gap-1.5 pb-1 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    {categories.filter(c => ['all', 'party', 'course', 'trip', 'exhibition'].includes(c.id)).map((cat) => {
+                      const Icon = cat.icon;
+                      const isSelected = selectedCategory === cat.id;
+                      const count = activeEvents.filter(ev => cat.id === 'all' ? (!ev.category || ['party', 'course', 'trip', 'exhibition'].includes(ev.category)) : ev.category === cat.id).length;
+
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setSelectedCategory(cat.id);
+                            setIsPillarsOpen(false);
+                            logAnalyticsEvent(`category_${cat.id}`);
+                          }}
+                          className={`shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer text-xs font-bold ${
+                            isSelected
+                              ? `bg-white dark:bg-neutral-900 ${cat.activeBorder} ${cat.activeShadow} text-neutral-950 dark:text-white ring-1 ring-amber-500/30 shadow-xs`
+                              : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700/80 text-neutral-700 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-600'
+                          }`}
+                        >
+                          <div className={`flex h-5 w-5 items-center justify-center rounded-full shrink-0 ${
+                            isSelected ? cat.activeBadge : `${cat.iconBg} ${cat.iconColor}`
+                          }`}>
+                            <Icon className="h-3 w-3 stroke-[2.2]" />
+                          </div>
+                          <span>{lang === 'ar' ? cat.labelAr : cat.labelEn}</span>
+                          <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                            isSelected ? 'bg-black/20 text-current' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
+                          }`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* When Services Pillar is active: display services subcategories */}
+              {activePillar === 'services' && (
+                <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/80 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-600 dark:text-amber-400 px-1">
+                    <Store className="w-3.5 h-3.5" />
+                    <span>{lang === 'ar' ? 'تخصصات وخدمات الشركات المكملة:' : 'Services Specializations:'}</span>
+                  </div>
+                  <div className="flex overflow-x-auto gap-1.5 pb-1 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    <button
+                      onClick={() => {
+                        setSelectedStyleFilter('all');
+                        setIsPillarsOpen(false);
+                      }}
+                      className={`shrink-0 snap-start px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+                        selectedStyleFilter === 'all'
+                          ? 'bg-amber-500 text-neutral-950 border-amber-500 font-black shadow-xs'
+                          : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
+                      }`}
+                    >
+                      {lang === 'ar' ? 'الكل في الخدمات' : 'All Services'}
+                    </button>
+                    {subcategories.map(sub => (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          setSelectedStyleFilter(sub.id);
+                          setIsPillarsOpen(false);
+                        }}
+                        className={`shrink-0 snap-start px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+                          selectedStyleFilter === sub.id
+                            ? 'bg-amber-500 text-neutral-950 border-amber-500 font-black shadow-xs'
+                            : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
+                        }`}
+                      >
+                        {lang === 'ar' ? sub.labelAr : sub.labelEn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* When Jobs Pillar is active: display jobs subcategories */}
+              {activePillar === 'jobs' && (
+                <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/80 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-teal-600 dark:text-teal-400 px-1">
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>{lang === 'ar' ? 'مجالات وتخصصات التوظيف في الفعاليات:' : 'Job Roles & Specializations:'}</span>
+                  </div>
+                  <div className="flex overflow-x-auto gap-1.5 pb-1 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    <button
+                      onClick={() => {
+                        setSelectedStyleFilter('all');
+                        setIsPillarsOpen(false);
+                      }}
+                      className={`shrink-0 snap-start px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+                        selectedStyleFilter === 'all'
+                          ? 'bg-teal-500 text-white border-teal-500 font-black shadow-xs'
+                          : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
+                      }`}
+                    >
+                      {lang === 'ar' ? 'الكل في الوظائف' : 'All Jobs'}
+                    </button>
+                    {subcategories.map(sub => (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          setSelectedStyleFilter(sub.id);
+                          setIsPillarsOpen(false);
+                        }}
+                        className={`shrink-0 snap-start px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+                          selectedStyleFilter === sub.id
+                            ? 'bg-teal-500 text-white border-teal-500 font-black shadow-xs'
+                            : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
+                        }`}
+                      >
+                        {lang === 'ar' ? sub.labelAr : sub.labelEn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Sub-Navigation for Pillar 1 (When in Events Pillar) */}
-        {activePillar === 'events' && (
-          <div className="pt-1.5 border-t border-neutral-100 dark:border-neutral-800/80 space-y-1.5">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">
-                {lang === 'ar' ? 'تصفح حسب نوع الفعالية:' : 'Browse by event type:'}
-              </span>
-            </div>
-            <div className="flex overflow-x-auto gap-1.5 pb-1 -mx-2.5 px-2.5 sm:mx-0 sm:px-0 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {categories.filter(c => ['all', 'party', 'course', 'trip', 'exhibition'].includes(c.id)).map((cat) => {
-                const Icon = cat.icon;
-                const isSelected = selectedCategory === cat.id;
-                const count = activeEvents.filter(ev => cat.id === 'all' ? (!ev.category || ['party', 'course', 'trip', 'exhibition'].includes(ev.category)) : ev.category === cat.id).length;
-
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setSelectedCategory(cat.id);
-                      logAnalyticsEvent(`category_${cat.id}`);
-                    }}
-                    className={`shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer text-xs font-bold ${
-                      isSelected
-                        ? `bg-white dark:bg-neutral-900 ${cat.activeBorder} ${cat.activeShadow} text-neutral-950 dark:text-white ring-1 ring-amber-500/30 shadow-xs`
-                        : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700/80 text-neutral-700 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-600'
-                    }`}
-                  >
-                    <div className={`flex h-5 w-5 items-center justify-center rounded-full shrink-0 ${
-                      isSelected ? cat.activeBadge : `${cat.iconBg} ${cat.iconColor}`
-                    }`}>
-                      <Icon className="h-3 w-3 stroke-[2.2]" />
-                    </div>
-                    <span>{lang === 'ar' ? cat.labelAr : cat.labelEn}</span>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                      isSelected ? 'bg-black/20 text-current' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
-                    }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* When Services Pillar is active: display services subcategories */}
-        {activePillar === 'services' && (
-          <div className="pt-1.5 border-t border-neutral-100 dark:border-neutral-800/80 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-600 dark:text-amber-400 px-1">
-              <Store className="w-3.5 h-3.5" />
-              <span>{lang === 'ar' ? 'تخصصات وخدمات الشركات المكملة:' : 'Services Specializations:'}</span>
-            </div>
-            <div className="flex overflow-x-auto gap-1.5 pb-1 -mx-2.5 px-2.5 sm:mx-0 sm:px-0 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              <button
-                onClick={() => setSelectedStyleFilter('all')}
-                className={`shrink-0 snap-start px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
-                  selectedStyleFilter === 'all'
-                    ? 'bg-amber-500 text-neutral-950 border-amber-500 font-black shadow-xs'
-                    : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
-                }`}
-              >
-                {lang === 'ar' ? 'الكل في الخدمات' : 'All Services'}
-              </button>
-              {subcategories.map(sub => (
-                <button
-                  key={sub.id}
-                  onClick={() => setSelectedStyleFilter(sub.id)}
-                  className={`shrink-0 snap-start px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
-                    selectedStyleFilter === sub.id
-                      ? 'bg-amber-500 text-neutral-950 border-amber-500 font-black shadow-xs'
-                      : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
-                  }`}
-                >
-                  {lang === 'ar' ? sub.labelAr : sub.labelEn}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* When Jobs Pillar is active: display jobs subcategories */}
-        {activePillar === 'jobs' && (
-          <div className="pt-1.5 border-t border-neutral-100 dark:border-neutral-800/80 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-teal-600 dark:text-teal-400 px-1">
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>{lang === 'ar' ? 'مجالات وتخصصات التوظيف في الفعاليات:' : 'Job Roles & Specializations:'}</span>
-            </div>
-            <div className="flex overflow-x-auto gap-1.5 pb-1 -mx-2.5 px-2.5 sm:mx-0 sm:px-0 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              <button
-                onClick={() => setSelectedStyleFilter('all')}
-                className={`shrink-0 snap-start px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
-                  selectedStyleFilter === 'all'
-                    ? 'bg-teal-500 text-white border-teal-500 font-black shadow-xs'
-                    : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
-                }`}
-              >
-                {lang === 'ar' ? 'الكل في الوظائف' : 'All Jobs'}
-              </button>
-              {subcategories.map(sub => (
-                <button
-                  key={sub.id}
-                  onClick={() => setSelectedStyleFilter(sub.id)}
-                  className={`shrink-0 snap-start px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
-                    selectedStyleFilter === sub.id
-                      ? 'bg-teal-500 text-white border-teal-500 font-black shadow-xs'
-                      : 'bg-neutral-50 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
-                  }`}
-                >
-                  {lang === 'ar' ? sub.labelAr : sub.labelEn}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
       </div>
 
       {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
-      <div id="search-section" className="rounded-2xl border-2 border-amber-500/40 bg-white/95 dark:bg-neutral-900/90 p-2 sm:p-3 shadow-md backdrop-blur-md space-y-2 transition-colors">
-        <div className="flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800/80 pb-1.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-amber-500 dark:text-amber-400 animate-pulse shrink-0" />
+      <div id="search-section" className="rounded-2xl border-2 border-amber-500/40 bg-white/95 dark:bg-neutral-900/90 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
+        <div className="flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800/80 pb-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h3 className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 animate-pulse shrink-0" />
               <span>{lang === 'ar' ? 'أحدث الإعلانات والفاعليات' : 'Latest Announcements & Events'}</span>
             </h3>
             {selectedCategory !== 'all' && (
-              <span className="text-[11px] sm:text-xs font-black text-neutral-950 bg-white border border-white/90 shadow-xs px-2.5 py-0.5 rounded-lg tracking-tight transition-transform transform active:scale-95 inline-flex items-center justify-center">
+              <span className="text-[10px] font-black text-neutral-950 bg-white border border-white/90 shadow-2xs px-2 py-0.2 rounded-md tracking-tight transition-transform transform active:scale-95 inline-flex items-center justify-center">
                 {categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}
               </span>
             )}
           </div>
-          <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-[11px] sm:text-xs font-mono font-bold text-amber-600 dark:text-amber-400 shadow-2xs shrink-0">
+          <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.2 text-[10px] sm:text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 shadow-2xs shrink-0">
             {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
           </span>
         </div>
 
         {/* Prominent Search Bar Input */}
-        <div className="space-y-1.5 sm:space-y-2">
-          <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-950 border-2 border-amber-500/60 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 rounded-xl sm:rounded-2xl px-3 py-0.5 sm:py-1 shadow-xs transition-all">
-            <Search className="h-4 w-4 text-amber-500 dark:text-amber-400 shrink-0" />
+        <div className="space-y-1">
+          <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-950 border-2 border-amber-500/60 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 rounded-xl px-2.5 py-0.5 shadow-2xs transition-all">
+            <Search className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               dir={lang === 'ar' ? 'rtl' : 'ltr'}
               placeholder={lang === 'ar' ? 'ابحث عن حفلة، كورس، موقع، منظم، محافظة، منطقة، أو اسم مدرب...' : 'Search for party, course, venue, organizer, governorate, area, instructor...'}
-              className="w-full bg-transparent py-1.5 px-2 text-xs sm:text-sm text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none font-medium"
+              className="w-full bg-transparent py-1 px-1.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none font-medium"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="shrink-0 p-1 text-neutral-500 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                className="shrink-0 p-0.5 text-neutral-500 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-xs font-bold transition-colors cursor-pointer"
                 title={lang === 'ar' ? 'مسح البحث' : 'Clear search'}
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" />
               </button>
             )}
           </div>
 
           {/* Subcategories Filter Chips */}
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar">
-            <span className="text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 shrink-0 mr-0.5 flex items-center gap-1">
-              <Layers className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+          <div className="flex items-center gap-1 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar">
+            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 shrink-0 mr-0.5 flex items-center gap-0.5">
+              <Layers className="h-3 w-3 text-amber-500 dark:text-amber-400" />
               <span>{lang === 'ar' ? 'التصنيف الفرعي:' : 'Subcategory:'}</span>
             </span>
             <button
               onClick={() => setSelectedStyleFilter('all')}
-              className={`rounded-lg sm:rounded-xl px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+              className={`rounded-lg px-2 py-0.5 text-[10px] sm:text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
                 selectedStyleFilter === 'all'
                   ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-2xs font-extrabold'
                   : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white shadow-2xs'
@@ -689,7 +670,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
                     setSelectedStyleFilter(sub.id);
                     logAnalyticsEvent(`subcat_${sub.id}`);
                   }}
-                  className={`rounded-lg sm:rounded-xl px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                  className={`rounded-lg px-2 py-0.5 text-[10px] sm:text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
                     isSelected
                       ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-2xs font-extrabold'
                       : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white shadow-2xs'

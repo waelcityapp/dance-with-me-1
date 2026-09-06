@@ -178,7 +178,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Why Book Container - Overlapping the curved oval blue edge */}
-          <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 -mt-7 sm:-mt-8 relative z-10">
+          <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 -mt-8 sm:-mt-9 relative z-10">
             <motion.div
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
@@ -194,23 +194,23 @@ const AppContent: React.FC = () => {
               />
               
               {/* Inner Content */}
-              <div className="relative flex items-center justify-between bg-white dark:bg-neutral-900 rounded-[14px] py-2 sm:py-2.5 px-3 sm:px-4 w-full h-full shadow-xs">
+              <div className="relative flex items-center justify-between bg-white dark:bg-neutral-900 rounded-[14px] py-1.5 sm:py-2 px-2.5 sm:px-3.5 w-full h-full shadow-xs">
                 <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 group-hover:rotate-6 transition-transform">
-                    <Sparkles className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+                  <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 group-hover:rotate-6 transition-transform">
+                    <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </div>
                   <div className="text-right min-w-0">
-                    <span className="block text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-500 dark:from-red-400 dark:to-amber-400 truncate">
+                    <span className="block text-[11px] sm:text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-500 dark:from-red-400 dark:to-amber-400 truncate">
                       {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
                     </span>
-                    <span className="block text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 font-medium leading-tight truncate">
+                    <span className="block text-[10px] sm:text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-tight truncate">
                       {lang === 'ar' ? 'اكتشف مميزات التذاكر الفورية والخصومات الحصرية' : 'Discover instant tickets & exclusive discounts'}
                     </span>
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all shrink-0 ms-2">
-                  {lang === 'ar' ? <ArrowLeft className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                <div className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all shrink-0 ms-2">
+                  {lang === 'ar' ? <ArrowLeft className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
                 </div>
               </div>
             </motion.div>
@@ -219,7 +219,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Main Body Content */}
-      <main className={`flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 pb-24 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-2.5 sm:pt-3' : 'pt-4'}`}>
+      <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-1.5 sm:pt-2' : 'pt-2.5'}`}>
         {activeTab === 'verification' ? (
           <VerificationView />
         ) : activeTab === 'about_us' ? (

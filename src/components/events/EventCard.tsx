@@ -397,21 +397,21 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         )}
       </div>
-        <div className="flex flex-1 flex-col p-4 sm:p-5 relative z-10 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 transition-colors">
+        <div className="flex flex-1 flex-col p-2.5 sm:p-3.5 relative z-10 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 transition-colors">
           {/* Content Box (Title, Price, description) */}
-          <div className="mb-4">
-            <h3 className="mb-2 text-base sm:text-lg font-black tracking-tight text-neutral-900 dark:text-white line-clamp-2 leading-snug">
+          <div className="mb-2.5">
+            <h3 className="mb-1 text-xs sm:text-sm font-black tracking-tight text-neutral-900 dark:text-white line-clamp-2 leading-snug">
               {lang === 'ar' ? event.titleAr : event.titleEn}
             </h3>
             {/* Price Badge */}
             {(event.priceAr || event.priceEn) && (
-              <div className="mb-3 inline-block rounded-lg bg-amber-500/10 px-2.5 py-1 border border-amber-500/30">
-                <span className="text-xs font-black tracking-wide text-amber-700 dark:text-amber-400">
+              <div className="mb-2 inline-block rounded-md bg-amber-500/10 px-2 py-0.5 border border-amber-500/30">
+                <span className="text-[11px] font-black tracking-wide text-amber-700 dark:text-amber-400">
                   {lang === 'ar' ? event.priceAr : event.priceEn}
                 </span>
               </div>
             )}
-          <p className={`text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-2'}`}>
+          <p className={`text-[11px] sm:text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-2'}`}>
             {lang === 'ar' ? (event.descriptionAr || event.descriptionEn) : (event.descriptionEn || event.descriptionAr)}
           </p>
           {((lang === 'ar' ? (event.descriptionAr || event.descriptionEn) : (event.descriptionEn || event.descriptionAr)) || '').length > 120 && (
@@ -421,7 +421,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 e.preventDefault();
                 setIsDescExpanded(!isDescExpanded);
               }}
-              className="mt-1.5 text-[11px] sm:text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/20 hover:border-amber-500/40"
+              className="mt-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/20 hover:border-amber-500/40"
             >
               <span>
                 {isDescExpanded 
@@ -434,7 +434,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         </div>
 
         {/* Date, Organizer & Location Details */}
-        <div className="space-y-2 mb-4 rounded-2xl bg-white dark:bg-neutral-950 p-3.5 border border-neutral-200 dark:border-neutral-800 text-xs shadow-xs transition-colors">
+        <div className="space-y-1 mb-2.5 rounded-xl bg-white dark:bg-neutral-950 p-2 sm:p-2.5 border border-neutral-200 dark:border-neutral-800 text-[11px] sm:text-xs shadow-2xs transition-colors">
           {/* Event Date */}
           <div className="flex items-center gap-2.5 text-neutral-950 dark:text-neutral-200">
             <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -546,7 +546,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         )}
 
         {/* Action Buttons Bar: Views & Icons on Row 1, Full-width Book Now on Row 2 */}
-        <div className="pt-3.5 sm:pt-4 border-t border-neutral-200 dark:border-neutral-800 mt-auto space-y-2.5">
+        <div className="pt-2 sm:pt-2.5 border-t border-neutral-200 dark:border-neutral-800 mt-auto space-y-2">
           {/* Row 1: Views Counter + All Action Icons (Phone, WhatsApp, Share, Like) */}
           <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full">
             {/* Views Counter Badge */}
