@@ -114,6 +114,7 @@ export const AdminPanel: React.FC = () => {
   const [cleaningUp, setCleaningUp] = useState(false);
   const [auditingEvents, setAuditingEvents] = useState(false);
   const [previewingOldEvents, setPreviewingOldEvents] = useState(false);
+  const [deletingUndatedEvents, setDeletingUndatedEvents] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'archived'>('pending');
   const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'replied'>('pending');
@@ -1160,6 +1161,107 @@ export const AdminPanel: React.FC = () => {
       alert(lang === 'ar' ? 'تعذر تنفيذ المعاينة.' : 'Cleanup preview failed.');
     } finally {
       setPreviewingOldEvents(false);
+    }
+  };
+
+  // Permanently remove only event records with no clear creation/upload date.
+  const handleDeleteUndatedEvents = async () => {
+    setDeletingUndatedEvents(true);
+    try {
+      const { collection, getDocs, query, where } = await import('firebase/firestore');
+      const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
+      const protectedEventId = 'ev-adm-1784396981315';
+      const eventsSnapshot = await getDocs(collection(db, 'events'));
+      const candidates = eventsSnapshot.docs
+        .map((eventDoc) => ({ id: eventDoc.id, data: eventDoc.data() as any }))
+        .filter(({ id, data }) => {
+          if (id === protectedEventId) return false;
+          const dateValue = data.uploadDate || data.createdAt || data.created_at || '';
+          return !dateValue || Number.isNaN(new Date(dateValue).getTime());
+        });
+
+      if (candidates.length === 0) {
+        alert(lang === 'ar' ? 'لم يتم العثور على سجلات بلا تاريخ واضح.' : 'No undated records were found.');
+        return;
+      }
+
+      const confirmed = await triggerConfirm(
+        lang === 'ar'
+          ? 'سيتم حذف ' + candidates.length + ' سجلًا بلا تاريخ واضح نهائيًا، مع الحجوزات والوسائط المرتبطة. الإعلان الحالي سيبقى محفوظًا. هل تريد المتابعة؟'
+          : 'Permanently delete ' + candidates.length + ' undated records with their bookings and media? The current event will be preserved. Continue?'
+      );
+      if (!confirmed) return;
+
+      let deletedEvents = 0;
+      let deletedSubmissions = 0;
+      let skipped = 0;
+      const candidateIds = new Set(candidates.map((candidate) => candidate.id));
+
+      const deleteMediaList = async (items: Array<[string | undefined, 'image' | 'video']>) => {
+        const seen = new Set<string>();
+        for (const [url, resourceType] of items) {
+          if (!url || seen.has(url)) continue;
+          seen.add(url);
+          if (!(await deleteFromCloudinary(url, resourceType))) return false;
+        }
+        return true;
+      };
+
+      for (const candidate of candidates) {
+        const bookingSnapshot = await getDocs(query(collection(db, 'bookings'), where('eventId', '==', candidate.id)));
+        const bookingMedia: Array<[string | undefined, 'image' | 'video']> = [];
+        bookingSnapshot.forEach((bookingDoc) => {
+          const booking = bookingDoc.data() as any;
+          bookingMedia.push([booking.receiptImage || booking.receiptUrl, 'image']);
+        });
+
+        const mediaOk = await deleteMediaList([
+          [candidate.data.mediaUrl, candidate.data.mediaType || 'image'],
+          [candidate.data.thumbnailUrl, 'image'],
+          ...bookingMedia
+        ]);
+
+        if (!mediaOk) {
+          skipped += 1;
+          continue;
+        }
+
+        await deleteEventFromFirestore(candidate.id);
+        for (const bookingDoc of bookingSnapshot.docs) {
+          await deleteBookingFromFirestore(bookingDoc.id);
+        }
+        deletedEvents += 1;
+      }
+
+      const submissionsSnapshot = await getDocs(collection(db, 'ad_submissions'));
+      for (const submissionDoc of submissionsSnapshot.docs) {
+        const submission = submissionDoc.data() as any;
+        const eventId = submission.eventData?.id;
+        if (!eventId || !candidateIds.has(eventId)) continue;
+
+        const mediaOk = await deleteMediaList([
+          [submission.mediaUrl, submission.mediaType || 'image'],
+          [submission.eventData?.mediaUrl, submission.eventData?.mediaType || submission.mediaType || 'image'],
+          [submission.eventData?.thumbnailUrl, 'image'],
+          [submission.receiptImage || submission.receiptUrl, 'image']
+        ]);
+        if (!mediaOk) {
+          skipped += 1;
+          continue;
+        }
+
+        await deleteAdSubmissionFromFirestore(submission.id || submissionDoc.id);
+        deletedSubmissions += 1;
+      }
+
+      alert(lang === 'ar'
+        ? 'اكتمل الحذف: ' + deletedEvents + ' فعالية و' + deletedSubmissions + ' سجل إعلان. تم الاحتفاظ بـ' + skipped + ' سجلًا لأن حذف وسائطه لم ينجح.'
+        : 'Deletion complete: ' + deletedEvents + ' events and ' + deletedSubmissions + ' ad records. Kept ' + skipped + ' records because their media could not be deleted.');
+    } catch (error) {
+      console.error('Undated event deletion failed:', error);
+      alert(lang === 'ar' ? 'حدث خطأ ولم تكتمل العملية.' : 'The deletion did not complete.');
+    } finally {
+      setDeletingUndatedEvents(false);
     }
   };
 
@@ -2344,6 +2446,16 @@ export const AdminPanel: React.FC = () => {
                 >
                   <Trash2 className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
                   <span>{cleaningUp ? (lang === 'ar' ? 'تنظيف الزحمة' : 'Clean Clutter') : (lang === 'ar' ? '🧹 تنظيف الزحمة' : '🧹 Clean Clutter')}</span>
+                </button>
+
+                <button
+                  onClick={handleDeleteUndatedEvents}
+                  disabled={deletingUndatedEvents || cleaningUp || previewingOldEvents}
+                  className="flex items-center gap-1.5 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-500/60 px-3 py-2 text-xs font-black text-red-200 transition-all cursor-pointer shadow-xs"
+                  title="Permanently delete only records without a clear creation date"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>{deletingUndatedEvents ? (lang === 'ar' ? 'جاري حذف بلا تاريخ...' : 'Deleting undated...') : (lang === 'ar' ? '⚠️ حذف بلا تاريخ واضح' : '⚠️ Delete Undated')}</span>
                 </button>
 
                 <button
