@@ -20,6 +20,7 @@ try {
 
 export default async function handler(req, res) {
   const eventId = req.query.event || req.query.eventId;
+  const requestedLang = req.query.lang === 'en' ? 'en' : 'ar';
 
   // Default fallback values (CityEve brand)
   let title = "CityEve | سيتي إيف - أهم تطبيق لجميع أنواع الحفلات في مصر";
@@ -131,12 +132,17 @@ export default async function handler(req, res) {
           ? { ...found, ...found.eventData }
           : found;
 
-        const rawTitle = firstText(event.titleAr, event.titleEn, found.titleAr, found.titleEn);
-        const rawDesc = firstText(event.descriptionAr, event.descriptionEn, found.descriptionAr, found.descriptionEn);
+        const rawTitle = requestedLang === 'en'
+          ? firstText(event.titleEn, event.titleAr, found.titleEn, found.titleAr)
+          : firstText(event.titleAr, event.titleEn, found.titleAr, found.titleEn);
+        const rawDesc = requestedLang === 'en'
+          ? firstText(event.descriptionEn, event.descriptionAr, found.descriptionEn, found.descriptionAr)
+          : firstText(event.descriptionAr, event.descriptionEn, found.descriptionAr, found.descriptionEn);
         const rawDate = firstText(event.eventDate, event.date, event.startDate, found.eventDate, found.date);
         const rawLocation = firstText(
-          event.location?.nameAr, event.location?.nameEn, event.locationAr, event.locationEn,
-          found.locationAr, found.locationEn
+          ...(requestedLang === 'en'
+            ? [event.location?.nameEn, event.location?.nameAr, event.locationEn, event.locationAr, found.locationEn, found.locationAr]
+            : [event.location?.nameAr, event.location?.nameEn, event.locationAr, event.locationEn, found.locationAr, found.locationEn])
         );
 
         // Keep the event image as the large preview image.
