@@ -1069,6 +1069,20 @@ export const AdminPanel: React.FC = () => {
       const latest = records.slice(0, 12);
       const placeholderCount = records.filter((record) => record.placeholder).length;
       const emptyCount = records.filter((record) => record.isEmpty).length;
+      const now = Date.now();
+      const recentHour = records.filter((record) => {
+        const time = new Date(record.timestamp || 0).getTime();
+        return time > 0 && now - time <= 60 * 60 * 1000;
+      }).length;
+      const recentDay = records.filter((record) => {
+        const time = new Date(record.timestamp || 0).getTime();
+        return time > 0 && now - time <= 24 * 60 * 60 * 1000;
+      }).length;
+      const adminIdCount = records.filter((record) => record.id.startsWith('ev-adm-')).length;
+      const standardIdCount = records.filter((record) => record.id.startsWith('ev-')).length;
+      const latestTimestamp = latest[0]?.timestamp
+        ? new Date(latest[0].timestamp).toLocaleString('ar-EG')
+        : 'بدون تاريخ';
       const lines = latest.map((record, index) => {
         const date = record.timestamp ? new Date(record.timestamp).toLocaleString('ar-EG') : 'بدون تاريخ';
         return (index + 1) + ') ' + date + ' | ' + record.id + ' | ' + String(record.title).slice(0, 35) + ' | المصدر: ' + record.source;
@@ -1077,12 +1091,20 @@ export const AdminPanel: React.FC = () => {
       const reportAr = 'فحص مباشر من Firestore:\n'
         + 'الإجمالي: ' + records.length + '\n'
         + 'الخانات الفارغة: ' + emptyCount + '\n'
-        + 'العناوين الافتراضية: ' + placeholderCount + '\n\n'
+        + 'العناوين الافتراضية: ' + placeholderCount + '\n'
+        + 'خلال آخر ساعة: ' + recentHour + '\n'
+        + 'خلال آخر 24 ساعة: ' + recentDay + '\n'
+        + 'معرّفات الإدارة ev-adm: ' + adminIdCount + '\n'
+        + 'أحدث وقت إنشاء: ' + latestTimestamp + '\n\n'
         + 'أحدث السجلات:\n' + (lines.join('\n') || 'لا توجد سجلات');
       const reportEn = 'Direct Firestore audit:\n'
         + 'Total: ' + records.length + '\n'
         + 'Empty slots: ' + emptyCount + '\n'
-        + 'Placeholder titles: ' + placeholderCount + '\n\n'
+        + 'Placeholder titles: ' + placeholderCount + '\n'
+        + 'Created in last hour: ' + recentHour + '\n'
+        + 'Created in last 24 hours: ' + recentDay + '\n'
+        + 'Admin IDs ev-adm: ' + adminIdCount + '\n'
+        + 'Latest creation time: ' + latestTimestamp + '\n\n'
         + 'Latest records:\n' + (lines.join('\n') || 'No records found');
       alert(lang === 'ar' ? reportAr : reportEn);
     } catch (error) {
