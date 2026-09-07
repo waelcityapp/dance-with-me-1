@@ -31,5 +31,11 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cleanup-archived-ads",
+      "schedule": "30 2 * * *"
+    }
   ]
 }
