@@ -124,6 +124,8 @@ export interface DanceEvent {
   createdByAdmin?: boolean;
   creatorId?: string;
   creatorName?: string;
+  /** Only approved/published events should be included in search engine sitemaps. */
+  seoIndexable?: boolean;
 }
 
 export type AccountTier = 'free' | 'featured' | 'vip';
