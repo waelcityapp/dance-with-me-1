@@ -112,6 +112,7 @@ export const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [cleaningUp, setCleaningUp] = useState(false);
+  const [auditingEvents, setAuditingEvents] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'archived'>('pending');
   const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'replied'>('pending');
@@ -1043,6 +1044,52 @@ export const AdminPanel: React.FC = () => {
       console.error(e);
     } finally {
       setCleaningUp(false);
+    }
+  };
+
+  // Read-only audit: inspect the newest Firestore event records before any cleanup.
+  const handleAuditRecentEvents = async () => {
+    setAuditingEvents(true);
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const snapshot = await getDocs(collection(db, 'events'));
+      const records = snapshot.docs.map((eventDoc) => {
+        const data = eventDoc.data() as any;
+        const timestamp = data.createdAt || data.created_at || data.uploadDate || data.upload_date || data.updatedAt || data.updated_at || '';
+        return {
+          id: eventDoc.id,
+          title: data.titleAr || data.titleEn || '(بدون عنوان)',
+          timestamp,
+          source: data.createdSource || data.source || data.createdBy || data.creatorId || data.advertiserId || 'غير محدد',
+          isEmpty: data.isEmpty === true,
+          placeholder: data.titleAr === 'فعالية جديدة' || data.titleEn === 'New Event'
+        };
+      }).sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+
+      const latest = records.slice(0, 12);
+      const placeholderCount = records.filter((record) => record.placeholder).length;
+      const emptyCount = records.filter((record) => record.isEmpty).length;
+      const lines = latest.map((record, index) => {
+        const date = record.timestamp ? new Date(record.timestamp).toLocaleString('ar-EG') : 'بدون تاريخ';
+        return (index + 1) + ') ' + date + ' | ' + record.id + ' | ' + String(record.title).slice(0, 35) + ' | المصدر: ' + record.source;
+      });
+
+      const reportAr = 'فحص مباشر من Firestore:\n'
+        + 'الإجمالي: ' + records.length + '\n'
+        + 'الخانات الفارغة: ' + emptyCount + '\n'
+        + 'العناوين الافتراضية: ' + placeholderCount + '\n\n'
+        + 'أحدث السجلات:\n' + (lines.join('\n') || 'لا توجد سجلات');
+      const reportEn = 'Direct Firestore audit:\n'
+        + 'Total: ' + records.length + '\n'
+        + 'Empty slots: ' + emptyCount + '\n'
+        + 'Placeholder titles: ' + placeholderCount + '\n\n'
+        + 'Latest records:\n' + (lines.join('\n') || 'No records found');
+      alert(lang === 'ar' ? reportAr : reportEn);
+    } catch (error) {
+      console.error('Recent event audit failed:', error);
+      alert(lang === 'ar' ? 'تعذر تنفيذ الفحص المباشر.' : 'Direct audit failed.');
+    } finally {
+      setAuditingEvents(false);
     }
   };
 
@@ -2227,6 +2274,16 @@ export const AdminPanel: React.FC = () => {
                 >
                   <Trash2 className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
                   <span>{cleaningUp ? (lang === 'ar' ? 'تنظيف الزحمة' : 'Clean Clutter') : (lang === 'ar' ? '🧹 تنظيف الزحمة' : '🧹 Clean Clutter')}</span>
+                </button>
+
+                <button
+                  onClick={handleAuditRecentEvents}
+                  disabled={auditingEvents || cleaningUp}
+                  className="flex items-center gap-1.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-500/60 px-3 py-2 text-xs font-black text-sky-200 transition-all cursor-pointer shadow-xs"
+                  title="Read-only audit of the newest Firestore event records"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span>{auditingEvents ? (lang === 'ar' ? 'جاري الفحص...' : 'Auditing...') : (lang === 'ar' ? '🔎 فحص آخر الفعاليات' : '🔎 Audit Recent Events')}</span>
                 </button>
 
                 <button
