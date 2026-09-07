@@ -1050,6 +1050,15 @@ export const AdminPanel: React.FC = () => {
   const handlePurgeUnverifiedAds = async () => {
     const unverifiedEvents = events.filter((event) => event.seoIndexable !== true);
     const verifiedEvents = events.length - unverifiedEvents.length;
+
+    // Safety stop: never allow a mass deletion when the verification marker is missing.
+    if (verifiedEvents === 0) {
+      alert(lang === 'ar'
+        ? 'تم إيقاف العملية لحمايتك: النظام لم يجد أي إعلان موثق في القائمة الحالية. لم يتم حذف أي شيء.'
+        : 'Operation stopped for safety: no verified ads were found in the current list. Nothing was deleted.');
+      return;
+    }
+
     const confirmed = await triggerConfirm(
       lang === 'ar'
         ? `سيتم الإبقاء على ${verifiedEvents} إعلان موثق فقط، وحذف ${unverifiedEvents.length} إعلانًا غير موثق نهائيًا مع الحجوزات والوسائط المرتبطة. هل تريد المتابعة؟`
