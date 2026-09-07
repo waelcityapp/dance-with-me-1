@@ -3,7 +3,6 @@ import { DanceEvent } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { X, Share2, Copy, Check, MessageCircle, Send, MapPin, Calendar, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { formatDate } from '../../utils/dateUtils';
 
 interface ShareModalProps {
   event: DanceEvent | null;
@@ -32,9 +31,6 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
 
   const locationName = stripLegacyRepoLinks(isArabic ? event.location?.nameAr || '' : event.location?.nameEn || '');
   const locationText = locationName ? `📍 ${locationName}` : '';
-  const dateText = event.eventDate ? `📅 ${formatDate(event.eventDate, lang)}` : '';
-  const priceText = isArabic ? (event.priceAr ? `💰 ${stripLegacyRepoLinks(event.priceAr)}` : '') : (event.priceEn ? `💰 ${stripLegacyRepoLinks(event.priceEn)}` : '');
-
   // Concise, professional share text. WhatsApp supplies the image preview,
   // title, description, favicon, and domain separately.
   const whatsappMessage = [
