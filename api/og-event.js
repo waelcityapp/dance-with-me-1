@@ -21,11 +21,20 @@ try {
 export default async function handler(req, res) {
   const eventId = req.query.event || req.query.eventId;
   const requestedLang = req.query.lang === 'en' ? 'en' : 'ar';
-  const siteName = requestedLang === 'en' ? 'CityEve' : 'CityEve | سيتي إيف';
+  const isEnglish = requestedLang === 'en';
+  const siteName = isEnglish ? 'CityEve' : 'CityEve | سيتي إيف';
+  const documentLang = isEnglish ? 'en' : 'ar';
+  const documentDir = isEnglish ? 'ltr' : 'rtl';
+  const ogLocale = isEnglish ? 'en_US' : 'ar_EG';
+  const alternateOgLocale = isEnglish ? 'ar_EG' : 'en_US';
 
-  // Default fallback values (CityEve brand)
-  let title = "CityEve | سيتي إيف - أهم تطبيق لجميع أنواع الحفلات في مصر";
-  let description = "منصتك الأولى لمعرفة وحجز أحدث الحفلات، الكورسات، ورحلات الرقص في مصر.";
+  // Localized default fallback values (CityEve brand)
+  let title = isEnglish
+    ? "CityEve - Egypt Events, Parties and Activities"
+    : "CityEve | سيتي إيف - أهم منصة لجميع أنواع الفعاليات والحفلات في مصر";
+  let description = isEnglish
+    ? "Discover and book the latest events, parties, courses, exhibitions and activities in Egypt on CityEve."
+    : "منصتك الأولى لمعرفة وحجز أحدث الفعاليات والحفلات والكورسات والمعارض في مصر عبر CityEve.";
   let image = "https://res.cloudinary.com/dynasmcaj/image/upload/w_1200,h_630,c_fill,q_auto,f_jpg/fbyjfjq8equle5pl7kwz.png";
   const appIcon = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
   const appIconSmall = "https://res.cloudinary.com/dynasmcaj/image/upload/w_64,h_64,c_fill,g_auto,q_auto,f_png/fbyjfjq8equle5pl7kwz.png";
@@ -34,8 +43,19 @@ export default async function handler(req, res) {
 
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'cityeve.online';
   const proto = req.headers['x-forwarded-proto'] || 'https';
-  const targetUrl = `${proto}://${host}/?event=${eventId || ''}${requestedLang === 'en' ? '&lang=en' : ''}`;
-  const pageUrl = eventId ? `${proto}://${host}/e/${eventId}` : targetUrl;
+  const canonicalBase = 'https://cityeve.online';
+  const encodedEventId = eventId ? encodeURIComponent(eventId) : '';
+  const localizedQuery = isEnglish ? '?lang=en' : '';
+  const targetUrl = eventId
+    ? `${proto}://${host}/?event=${encodedEventId}${isEnglish ? '&lang=en' : ''}`
+    : `${proto}://${host}/${localizedQuery}`;
+  const arabicPageUrl = eventId
+    ? `${canonicalBase}/e/${encodedEventId}`
+    : canonicalBase;
+  const englishPageUrl = eventId
+    ? `${canonicalBase}/e/${encodedEventId}?lang=en`
+    : `${canonicalBase}/?lang=en`;
+  const pageUrl = isEnglish ? englishPageUrl : arabicPageUrl;
 
   // Convert Firestore REST values into normal JavaScript values, including nested maps/arrays.
   const fromFirestoreValue = (value) => {
@@ -169,7 +189,9 @@ export default async function handler(req, res) {
   // Clean strings for HTML attributes
   const safeTitle = title.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeDesc = description.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const keywords = "CityEve, سيتي إيف, حفلات مصر, معارض مصر, مؤتمرات مصر, معارض القاهرة, حفلات لاتيني في مصر, سالسا مصر, باتشاتا مصر, كيزومبا, سهرات ليلية, حجز تذاكر حفلات, حجز مؤتمرات, فعاليات مصر, Salsa Egypt, Cairo Nightlife, Egypt Events, Egypt Exhibitions, Cairo Conferences";
+  const keywords = isEnglish
+    ? "CityEve, cityeve.online, Egypt events, Cairo events, Egypt parties, Cairo nightlife, salsa Egypt, bachata Egypt, kizomba Egypt, Egypt exhibitions, Egypt conferences, event booking Egypt"
+    : "CityEve, سيتي إيف, cityeve.online, فعاليات مصر, حفلات مصر, معارض مصر, مؤتمرات مصر, حفلات القاهرة, سهرات القاهرة, سالسا مصر, باتشاتا مصر, كيزومبا, حجز فعاليات مصر";
 
   const eventJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -192,13 +214,14 @@ export default async function handler(req, res) {
     },
     "organizer": {
       "@type": "Organization",
-      "name": "CityEve | سيتي إيف",
+      "name": siteName,
       "url": "https://cityeve.online/"
-    }
+    },
+    "inLanguage": documentLang
   });
 
   const html = `<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="${documentLang}" dir="${documentDir}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -207,6 +230,9 @@ export default async function handler(req, res) {
   <meta name="keywords" content="${keywords}" />
   <meta name="robots" content="index, follow, max-image-preview:large" />
   <link rel="canonical" href="${pageUrl}" />
+  <link rel="alternate" hreflang="ar" href="${arabicPageUrl}" />
+  <link rel="alternate" hreflang="en" href="${englishPageUrl}" />
+  <link rel="alternate" hreflang="x-default" href="${arabicPageUrl}" />
 
   <!-- App Logo / Favicon links for WhatsApp & browser crawlers -->
   <link rel="icon" type="image/png" href="${appIconSmall}" />
@@ -216,6 +242,8 @@ export default async function handler(req, res) {
   <!-- Open Graph / WhatsApp / Facebook -->
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="${siteName}" />
+  <meta property="og:locale" content="${ogLocale}" />
+  <meta property="og:locale:alternate" content="${alternateOgLocale}" />
   <meta property="og:logo" content="${appIconSmall}" />
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:title" content="${safeTitle}" />
@@ -243,8 +271,8 @@ export default async function handler(req, res) {
 </head>
 <body style="background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
   <div style="text-align:center;padding:20px;">
-    <h2>جاري تحويلك إلى الإعلان...</h2>
-    <p><a href="${targetUrl}" style="color:#f59e0b;">اضغط هنا للانتقال فوراً</a></p>
+    <h2>${isEnglish ? 'Redirecting to the event...' : 'جاري تحويلك إلى الإعلان...'}</h2>
+    <p><a href="${targetUrl}" style="color:#f59e0b;">${isEnglish ? 'Click here to continue' : 'اضغط هنا للانتقال فوراً'}</a></p>
   </div>
   <script>window.location.href = "${targetUrl}";</script>
 </body>
