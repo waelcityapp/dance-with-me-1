@@ -113,6 +113,7 @@ export const AdminPanel: React.FC = () => {
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [cleaningUp, setCleaningUp] = useState(false);
   const [auditingEvents, setAuditingEvents] = useState(false);
+  const [previewingOldEvents, setPreviewingOldEvents] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'archived'>('pending');
   const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'replied'>('pending');
@@ -1112,6 +1113,53 @@ export const AdminPanel: React.FC = () => {
       alert(lang === 'ar' ? 'تعذر تنفيذ الفحص المباشر.' : 'Direct audit failed.');
     } finally {
       setAuditingEvents(false);
+    }
+  };
+
+  // Read-only preview for the requested 15-day cleanup. This never deletes data.
+  const handlePreviewOldEventsCleanup = async () => {
+    setPreviewingOldEvents(true);
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const protectedEventId = 'ev-adm-1784396981315';
+      const cutoff = Date.now() - (15 * 24 * 60 * 60 * 1000);
+      const snapshot = await getDocs(collection(db, 'events'));
+      const records = snapshot.docs.map((eventDoc) => ({
+        id: eventDoc.id,
+        data: eventDoc.data() as any
+      }));
+
+      const oldRecords = records.filter(({ id, data }) => {
+        if (id === protectedEventId) return false;
+        const rawDate = data.uploadDate || data.createdAt || data.created_at || '';
+        const timestamp = new Date(rawDate).getTime();
+        return timestamp > 0 && timestamp < cutoff;
+      });
+      const missingDate = records.filter(({ id, data }) => {
+        if (id === protectedEventId) return false;
+        const rawDate = data.uploadDate || data.createdAt || data.created_at || '';
+        return !rawDate || Number.isNaN(new Date(rawDate).getTime());
+      });
+      const protectedFound = records.some(({ id }) => id === protectedEventId);
+
+      alert(lang === 'ar'
+        ? 'معاينة فقط بدون حذف:\n'
+          + 'إجمالي السجلات: ' + records.length + '\n'
+          + 'الأقدم من 15 يومًا: ' + oldRecords.length + '\n'
+          + 'بدون تاريخ واضح (لن تُحذف): ' + missingDate.length + '\n'
+          + 'الإعلان المحمي موجود: ' + (protectedFound ? 'نعم' : 'لا') + '\n\n'
+          + 'لم يتم حذف أي سجل أو وسيط.'
+        : 'Preview only — nothing deleted:\n'
+          + 'Total records: ' + records.length + '\n'
+          + 'Older than 15 days: ' + oldRecords.length + '\n'
+          + 'Missing/invalid date (will not be deleted): ' + missingDate.length + '\n'
+          + 'Protected event found: ' + (protectedFound ? 'yes' : 'no') + '\n\n'
+          + 'No records or media were deleted.');
+    } catch (error) {
+      console.error('Old events cleanup preview failed:', error);
+      alert(lang === 'ar' ? 'تعذر تنفيذ المعاينة.' : 'Cleanup preview failed.');
+    } finally {
+      setPreviewingOldEvents(false);
     }
   };
 
@@ -2296,6 +2344,16 @@ export const AdminPanel: React.FC = () => {
                 >
                   <Trash2 className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
                   <span>{cleaningUp ? (lang === 'ar' ? 'تنظيف الزحمة' : 'Clean Clutter') : (lang === 'ar' ? '🧹 تنظيف الزحمة' : '🧹 Clean Clutter')}</span>
+                </button>
+
+                <button
+                  onClick={handlePreviewOldEventsCleanup}
+                  disabled={previewingOldEvents || cleaningUp}
+                  className="flex items-center gap-1.5 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/60 px-3 py-2 text-xs font-black text-cyan-200 transition-all cursor-pointer shadow-xs"
+                  title="Preview records older than 15 days without deleting anything"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span>{previewingOldEvents ? (lang === 'ar' ? 'جاري المعاينة...' : 'Previewing...') : (lang === 'ar' ? '🧾 معاينة الأقدم من 15 يومًا' : '🧾 Preview 15-Day Cleanup')}</span>
                 </button>
 
                 <button
