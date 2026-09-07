@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   let description = "منصتك الأولى لمعرفة وحجز أحدث الحفلات، الكورسات، ورحلات الرقص في مصر.";
   let image = "https://res.cloudinary.com/dynasmcaj/image/upload/w_1200,h_630,c_fill,q_auto,f_jpg/fbyjfjq8equle5pl7kwz.png";
   const appIcon = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
+  const appIconSmall = "https://res.cloudinary.com/dynasmcaj/image/upload/w_64,h_64,c_fill,g_auto,q_auto,f_png/fbyjfjq8equle5pl7kwz.png";
   let eventDate = new Date().toISOString();
   let locationName = "Cairo, Egypt";
 
@@ -78,50 +79,45 @@ export default async function handler(req, res) {
 
   if (eventId) {
     try {
-      const fbRes = await fetch(
-        `https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events/${encodeURIComponent(eventId)}`
-      );
+      const collections = ['events', 'ad_submissions'];
+      let found = null;
 
-      if (fbRes.ok) {
+      for (const collectionName of collections) {
+        if (found) break;
+        const url = 'https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/' + collectionName + '/' + encodeURIComponent(eventId);
+        const fbRes = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        if (!fbRes.ok) continue;
         const fbData = await fbRes.json();
-        if (fbData?.fields) {
-          const found = fromFirestoreFields(fbData.fields);
-          const event = found.eventData && typeof found.eventData === 'object'
-            ? { ...found, ...found.eventData }
-            : found;
+        if (fbData && fbData.fields) found = fromFirestoreFields(fbData.fields);
+      }
 
-          const rawTitle = firstText(event.titleAr, event.titleEn, found.titleAr, found.titleEn);
-          const rawDesc = firstText(
-            event.descriptionAr,
-            event.descriptionEn,
-            found.descriptionAr,
-            found.descriptionEn
-          );
-          const rawDate = firstText(event.eventDate, event.date, event.startDate, found.eventDate, found.date);
-          const rawLocation = firstText(
-            event.location?.nameAr,
-            event.location?.nameEn,
-            event.locationAr,
-            event.locationEn,
-            found.locationAr,
-            found.locationEn
-          );
+      if (found) {
+        const event = found.eventData && typeof found.eventData === 'object'
+          ? { ...found, ...found.eventData }
+          : found;
 
-          // Required image priority:
-          // 1) thumbnailUrl, 2) mediaUrl only when it is an image, 3) branded fallback.
-          const thumbnail = firstText(event.thumbnailUrl, found.thumbnailUrl);
-          const media = firstText(event.mediaUrl, found.mediaUrl);
-          const rawImg = thumbnail || (isImageUrl(media) ? media : '');
+        const rawTitle = firstText(event.titleAr, event.titleEn, found.titleAr, found.titleEn);
+        const rawDesc = firstText(event.descriptionAr, event.descriptionEn, found.descriptionAr, found.descriptionEn);
+        const rawDate = firstText(event.eventDate, event.date, event.startDate, found.eventDate, found.date);
+        const rawLocation = firstText(
+          event.location?.nameAr, event.location?.nameEn, event.locationAr, event.locationEn,
+          found.locationAr, found.locationEn
+        );
 
-          if (rawTitle) title = `${rawTitle} | CityEve سيتي إيف`;
-          if (rawDesc) description = rawDesc.replace(/[\r\n]+/g, ' ').substring(0, 220).trim();
-          if (rawDate) eventDate = rawDate;
-          if (rawLocation) locationName = rawLocation;
-          if (rawImg) image = formatPreviewImage(rawImg);
-        }
+        // Keep the event image as the large preview image.
+        // Priority: thumbnailUrl, then mediaUrl only when it is an image.
+        const thumbnail = firstText(event.thumbnailUrl, found.thumbnailUrl);
+        const media = firstText(event.mediaUrl, found.mediaUrl);
+        const rawImg = thumbnail || (isImageUrl(media) ? media : '');
+
+        if (rawTitle) title = stripLegacyRepoLinks(rawTitle) + ' | CityEve سيتي إيف';
+        if (rawDesc) description = stripLegacyRepoLinks(rawDesc).replace(/[\r\n]+/g, ' ').substring(0, 220).trim();
+        if (rawDate) eventDate = rawDate;
+        if (rawLocation) locationName = stripLegacyRepoLinks(rawLocation);
+        if (rawImg) image = formatPreviewImage(rawImg);
       }
     } catch (e) {
-      console.error('Error fetching event from Firestore:', e);
+      console.error('Error fetching event preview from Firestore:', e);
     }
   }
 
@@ -171,13 +167,14 @@ export default async function handler(req, res) {
   <link rel="canonical" href="${pageUrl}" />
 
   <!-- App Logo / Favicon links for WhatsApp & browser crawlers -->
-  <link rel="icon" type="image/png" href="${appIcon}" />
-  <link rel="shortcut icon" href="${appIcon}" />
-  <link rel="apple-touch-icon" href="${appIcon}" />
+  <link rel="icon" type="image/png" href="${appIconSmall}" />
+  <link rel="shortcut icon" href="${appIconSmall}" />
+  <link rel="apple-touch-icon" href="${appIconSmall}" />
 
   <!-- Open Graph / WhatsApp / Facebook -->
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="CityEve | سيتي إيف" />
+  <meta property="og:logo" content="${appIconSmall}" />
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:title" content="${safeTitle}" />
   <meta property="og:description" content="${safeDesc}" />
