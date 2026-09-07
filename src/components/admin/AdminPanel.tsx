@@ -1202,6 +1202,8 @@ export const AdminPanel: React.FC = () => {
         for (const [url, resourceType] of items) {
           if (!url || seen.has(url)) continue;
           seen.add(url);
+          // Only Cloudinary assets need a remote deletion call.
+          if (!url.includes('res.cloudinary.com') && !url.includes('cloudinary.com')) continue;
           if (!(await deleteFromCloudinary(url, resourceType))) return false;
         }
         return true;
@@ -1308,6 +1310,8 @@ export const AdminPanel: React.FC = () => {
         for (const [url, resourceType] of items) {
           if (!url || seen.has(url)) continue;
           seen.add(url);
+          // Only Cloudinary assets need a remote deletion call.
+          if (!url.includes('res.cloudinary.com') && !url.includes('cloudinary.com')) continue;
           if (!(await deleteFromCloudinary(url, resourceType))) return false;
         }
         return true;
