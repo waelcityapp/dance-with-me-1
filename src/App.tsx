@@ -39,6 +39,7 @@ import { AttendeeCheckinHandler } from './components/verification/AttendeeChecki
 const AppContent: React.FC = () => {
   const { 
     lang, 
+    setLang,
     activeTab, 
     setActiveTab, 
     user, 
@@ -64,6 +65,10 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     // Check if initial URL contains verification code parameter or install trigger
     const urlParams = new URLSearchParams(window.location.search);
+    const requestedLang = urlParams.get('lang');
+    if (requestedLang === 'ar' || requestedLang === 'en') {
+      setLang(requestedLang);
+    }
     if (urlParams.get('verify')) {
       setActiveTab('verification');
     }
@@ -78,7 +83,7 @@ const AppContent: React.FC = () => {
     ) {
       setIsInstallOpen(true);
     }
-  }, [setActiveTab]);
+  }, [setActiveTab, setLang]);
 
   useEffect(() => {
     const handlePopState = () => {
