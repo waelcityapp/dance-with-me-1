@@ -1046,6 +1046,94 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
+  // One-time cleanup: keep only explicitly approved/indexable events.
+  const handlePurgeUnverifiedAds = async () => {
+    const unverifiedEvents = events.filter((event) => event.seoIndexable !== true);
+    const verifiedEvents = events.length - unverifiedEvents.length;
+    const confirmed = await triggerConfirm(
+      lang === 'ar'
+        ? `سيتم الإبقاء على ${verifiedEvents} إعلان موثق فقط، وحذف ${unverifiedEvents.length} إعلانًا غير موثق نهائيًا مع الحجوزات والوسائط المرتبطة. هل تريد المتابعة؟`
+        : `Only ${verifiedEvents} verified ads will remain. Permanently delete ${unverifiedEvents.length} unverified ads, related bookings, and media?`
+    );
+    if (!confirmed) return;
+
+    setCleaningUp(true);
+    let deletedEvents = 0;
+    let deletedSubmissions = 0;
+    let skipped = 0;
+
+    try {
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
+      const candidateIds = new Set(unverifiedEvents.map((event) => event.id));
+
+      const deleteMediaList = async (items: Array<[string | undefined, 'image' | 'video']>) => {
+        const seen = new Set<string>();
+        for (const [url, resourceType] of items) {
+          if (!url || seen.has(url)) continue;
+          seen.add(url);
+          if (!(await deleteFromCloudinary(url, resourceType))) return false;
+        }
+        return true;
+      };
+
+      for (const event of unverifiedEvents) {
+        const bookingSnap = await getDocs(query(collection(db, 'bookings'), where('eventId', '==', event.id)));
+        const bookingMedia: Array<[string | undefined, 'image' | 'video']> = [];
+        bookingSnap.forEach((bookingDoc) => {
+          const booking = bookingDoc.data() as any;
+          bookingMedia.push([booking.receiptImage || booking.receiptUrl, 'image']);
+        });
+
+        const mediaOk = await deleteMediaList([
+          [event.mediaUrl, event.mediaType || 'image'],
+          [event.thumbnailUrl, 'image'],
+          ...bookingMedia
+        ]);
+
+        if (!mediaOk) {
+          skipped += 1;
+          continue;
+        }
+
+        await deleteEventFromFirestore(event.id);
+        for (const bookingDoc of bookingSnap.docs) {
+          await deleteBookingFromFirestore(bookingDoc.id);
+        }
+        deletedEvents += 1;
+      }
+
+      for (const submission of submissions) {
+        const submissionEventId = submission.eventData?.id;
+        const isUnverifiedSubmission = !submission.eventData?.seoIndexable || (submissionEventId && candidateIds.has(submissionEventId));
+        if (!isUnverifiedSubmission) continue;
+
+        const mediaOk = await deleteMediaList([
+          [submission.mediaUrl, submission.mediaType || 'image'],
+          [submission.eventData?.mediaUrl, submission.eventData?.mediaType || submission.mediaType || 'image'],
+          [submission.eventData?.thumbnailUrl, 'image'],
+          [submission.receiptImage, 'image']
+        ]);
+        if (!mediaOk) {
+          skipped += 1;
+          continue;
+        }
+
+        await deleteAdSubmissionFromFirestore(submission.id);
+        deletedSubmissions += 1;
+      }
+
+      alert(lang === 'ar'
+        ? `اكتمل التنظيف: حُذف ${deletedEvents} فعالية و${deletedSubmissions} سجل إعلان. تم الاحتفاظ بـ ${skipped} سجلًا لأن حذف وسائطه لم ينجح بعد.`
+        : `Cleanup complete: deleted ${deletedEvents} events and ${deletedSubmissions} ad records. Kept ${skipped} records because their media could not be deleted yet.`);
+    } catch (error) {
+      console.error('Unverified ads purge failed:', error);
+      alert(lang === 'ar' ? 'حدث خطأ. لم يتم إكمال التنظيف.' : 'Cleanup failed before completion.');
+    } finally {
+      setCleaningUp(false);
+    }
+  };
+
   const handleReorderAds = async () => {
     const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من إعادة ترتيب كل الإعلانات لتبدأ من 20 (مع الاحتفاظ بالبانر رقم 1)؟' : 'Are you sure you want to reorder all ads to start from 20 (keeping banner #1)?');
     if (!confirmed) return;
@@ -2122,6 +2210,16 @@ export const AdminPanel: React.FC = () => {
                 >
                   <Trash2 className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
                   <span>{cleaningUp ? (lang === 'ar' ? 'تنظيف الزحمة' : 'Clean Clutter') : (lang === 'ar' ? '🧹 تنظيف الزحمة' : '🧹 Clean Clutter')}</span>
+                </button>
+
+                <button
+                  onClick={handlePurgeUnverifiedAds}
+                  disabled={cleaningUp}
+                  className="flex items-center gap-1.5 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-500/60 px-3 py-2 text-xs font-black text-red-200 transition-all cursor-pointer shadow-xs"
+                  title="Keep only explicitly approved ads and permanently remove the rest"
+                >
+                  <Trash2 className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
+                  <span>{cleaningUp ? (lang === 'ar' ? 'جاري الحذف...' : 'Deleting...') : (lang === 'ar' ? '⚠️ حذف غير الموثق' : '⚠️ Purge Unverified')}</span>
                 </button>
 
                 <button
