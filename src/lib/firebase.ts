@@ -38,13 +38,16 @@ export const resolvedFirebaseConfig = {
   measurementId: (import.meta as any).env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfig.measurementId,
 };
 
-export const databaseId = (import.meta as any).env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId;
+// CityEve data must stay in the project's primary Firestore database.
+// Do not allow AI Studio or deployment environment variables to redirect the app
+// to a separate named database inside the same Firebase project.
+export const databaseId = '(default)';
 
 // Initialize Firebase App gracefully
 const app = !getApps().length ? initializeApp(resolvedFirebaseConfig) : getApps()[0];
 
-// Initialize Firestore Database with specific database ID or default if '(default)'
-export const db = databaseId && databaseId !== '(default)' ? getFirestore(app, databaseId) : getFirestore(app);
+// Always use CityEve's primary Firestore database.
+export const db = getFirestore(app);
 
 /**
  * Recursively removes keys with `undefined` values from an object or array so Firestore setDoc/updateDoc doesn't fail.
