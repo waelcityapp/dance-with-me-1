@@ -22,7 +22,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
   const isArabic = lang === 'ar';
   const shareTitle = stripLegacyRepoLinks(isArabic ? event.titleAr : event.titleEn);
   // Versioned share URL prevents WhatsApp/Facebook from reusing an old preview cache.
-  const shareUrl = `https://cityeve.online/e/${event.id}?v=2`;
+  const shareUrl = `https://cityeve.online/e/${event.id}`;
 
   const descSnippet = stripLegacyRepoLinks(isArabic ? event.descriptionAr : event.descriptionEn || '')
     .replace(/[\r\n]+/g, ' ')
