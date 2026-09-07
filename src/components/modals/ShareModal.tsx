@@ -20,7 +20,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
   const shareTitle = isArabic ? event.titleAr : event.titleEn;
   const shareUrl = `https://cityeve.online/e/${event.id}`;
 
-  const descSnippet = (isArabic ? event.descriptionAr : event.descriptionEn || '')
+  const stripLegacyRepoLinks = (value: string) => value
+    .replace(/https?:\\/\\/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'"\`\\])\\]]*/gi, '')
+    .replace(/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'"\`\\])\\]]*/gi, '');
+
+  const descSnippet = stripLegacyRepoLinks(isArabic ? event.descriptionAr : event.descriptionEn || '')
     .replace(/[\r\n]+/g, ' ')
     .slice(0, 150)
     .trim();
