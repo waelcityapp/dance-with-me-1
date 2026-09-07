@@ -35,10 +35,16 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
   const dateText = event.eventDate ? `📅 ${formatDate(event.eventDate, lang)}` : '';
   const priceText = isArabic ? (event.priceAr ? `💰 ${stripLegacyRepoLinks(event.priceAr)}` : '') : (event.priceEn ? `💰 ${stripLegacyRepoLinks(event.priceEn)}` : '');
 
-  // Clean, elegant WhatsApp message formatted for high conversion and clear link preview
-  const whatsappMessage = isArabic
-    ? `🎟️ *${event.titleAr}*\n\n📝 ${descSnippet}${descSnippet.length >= 150 ? '...' : ''}\n\n${locationText ? locationText + '\n' : ''}${dateText ? dateText + '\n' : ''}${priceText ? priceText + '\n' : ''}\n🔗 *تفاصيل الفعالية والحجز عبر منصة سيتي إيف:*\n${shareUrl}\n\n✨ منصة سيتي إيف | CityEve`
-    : `🎟️ *${event.titleEn}*\n\n📝 ${descSnippet}${descSnippet.length >= 150 ? '...' : ''}\n\n${locationText ? locationText + '\n' : ''}${dateText ? dateText + '\n' : ''}${priceText ? priceText + '\n' : ''}\n🔗 *Event details and booking on CityEve:*\n${shareUrl}\n\n✨ CityEve Platform`;
+  // Concise, professional share text. WhatsApp supplies the image preview,
+  // title, description, favicon, and domain separately.
+  const whatsappMessage = [
+    shareTitle,
+    '',
+    descSnippet + (descSnippet.length >= 150 ? '...' : ''),
+    '',
+    isArabic ? 'تفاصيل الفعالية والحجز عبر منصة CityEve:' : 'Event details and booking on CityEve:',
+    shareUrl
+  ].join('\\n');
 
   const handleCopy = () => {
     try {
