@@ -21,6 +21,7 @@ try {
 export default async function handler(req, res) {
   const eventId = req.query.event || req.query.eventId;
   const requestedLang = req.query.lang === 'en' ? 'en' : 'ar';
+  const siteName = requestedLang === 'en' ? 'CityEve' : 'CityEve | سيتي إيف';
 
   // Default fallback values (CityEve brand)
   let title = "CityEve | سيتي إيف - أهم تطبيق لجميع أنواع الحفلات في مصر";
@@ -151,7 +152,7 @@ export default async function handler(req, res) {
         const media = firstText(event.mediaUrl, found.mediaUrl);
         const rawImg = thumbnail || (isImageUrl(media) ? media : '');
 
-        if (rawTitle) title = stripLegacyRepoLinks(rawTitle) + ' | CityEve سيتي إيف';
+        if (rawTitle) title = stripLegacyRepoLinks(rawTitle) + (requestedLang === 'en' ? ' | CityEve' : ' | CityEve سيتي إيف');
         if (rawDesc) description = stripLegacyRepoLinks(rawDesc).replace(/[\r\n]+/g, ' ').substring(0, 220).trim();
         if (rawDate) eventDate = rawDate;
         if (rawLocation) locationName = stripLegacyRepoLinks(rawLocation);
@@ -214,7 +215,7 @@ export default async function handler(req, res) {
 
   <!-- Open Graph / WhatsApp / Facebook -->
   <meta property="og:type" content="article" />
-  <meta property="og:site_name" content="CityEve | سيتي إيف" />
+  <meta property="og:site_name" content="${siteName}" />
   <meta property="og:logo" content="${appIconSmall}" />
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:title" content="${safeTitle}" />
