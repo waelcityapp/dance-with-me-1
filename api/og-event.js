@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       processedImg = processedImg
         .replace(/([?&])w=\d+/i, '$1w=1200')
         .replace(/([?&])h=\d+/i, '$1h=630');
-      if (!/[?&]w=/i.test(processedImg)) processedImg += \`${separator}w=1200\`;
+      if (!/[?&]w=/i.test(processedImg)) processedImg += `${separator}w=1200`;
       if (!/[?&]h=/i.test(processedImg)) processedImg += '&h=630';
       if (!/[?&]fit=/i.test(processedImg)) processedImg += '&fit=crop';
     }
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
   if (eventId) {
     try {
       const fbRes = await fetch(
-        \`https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events/\${encodeURIComponent(eventId)}\`
+        `https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events/${encodeURIComponent(eventId)}`
       );
 
       if (fbRes.ok) {
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
           const media = firstText(event.mediaUrl, found.mediaUrl);
           const rawImg = thumbnail || (isImageUrl(media) ? media : '');
 
-          if (rawTitle) title = \`${rawTitle} | CityEve سيتي إيف\`;
+          if (rawTitle) title = `${rawTitle} | CityEve سيتي إيف`;
           if (rawDesc) description = rawDesc.replace(/[\r\n]+/g, ' ').substring(0, 220).trim();
           if (rawDate) eventDate = rawDate;
           if (rawLocation) locationName = rawLocation;
