@@ -69,6 +69,11 @@ const appendPublicEvent = (eventUrls, eventId, event) => {
 const isPublicEvent = (event) => {
   if (!event || typeof event !== 'object') return false;
 
+  // Do not expose legacy, demo, or AI-generated records to search engines
+  // unless they carry an explicit indexing/administrative approval marker.
+  const explicitlyApproved = event.seoIndexable === true || event.createdByAdmin === true;
+  if (!explicitlyApproved) return false;
+
   if (event.isPublished === false || event.published === false || event.approved === false) {
     return false;
   }
