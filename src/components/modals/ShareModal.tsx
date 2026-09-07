@@ -16,23 +16,23 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
 
   if (!event) return null;
 
-  const isArabic = lang === 'ar';
-  const shareTitle = isArabic ? event.titleAr : event.titleEn;
-  const shareUrl = `https://cityeve.online/e/${event.id}`;
-
   const stripLegacyRepoLinks = (value: string) => value
     .replace(/https?:\\/\\/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'"\`\\])\\]]*/gi, '')
     .replace(/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'"\`\\])\\]]*/gi, '');
+
+  const isArabic = lang === 'ar';
+  const shareTitle = stripLegacyRepoLinks(isArabic ? event.titleAr : event.titleEn);
+  const shareUrl = `https://cityeve.online/e/${event.id}`;
 
   const descSnippet = stripLegacyRepoLinks(isArabic ? event.descriptionAr : event.descriptionEn || '')
     .replace(/[\r\n]+/g, ' ')
     .slice(0, 150)
     .trim();
 
-  const locationName = isArabic ? event.location?.nameAr : event.location?.nameEn;
+  const locationName = stripLegacyRepoLinks(isArabic ? event.location?.nameAr || '' : event.location?.nameEn || '');
   const locationText = locationName ? `📍 ${locationName}` : '';
   const dateText = event.eventDate ? `📅 ${formatDate(event.eventDate, lang)}` : '';
-  const priceText = isArabic ? (event.priceAr ? `💰 ${event.priceAr}` : '') : (event.priceEn ? `💰 ${event.priceEn}` : '');
+  const priceText = isArabic ? (event.priceAr ? `💰 ${stripLegacyRepoLinks(event.priceAr)}` : '') : (event.priceEn ? `💰 ${stripLegacyRepoLinks(event.priceEn)}` : '');
 
   // Clean, elegant WhatsApp message formatted for high conversion and clear link preview
   const whatsappMessage = isArabic
