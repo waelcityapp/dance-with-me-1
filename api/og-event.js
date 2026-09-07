@@ -14,36 +14,105 @@ export default async function handler(req, res) {
   const targetUrl = `${proto}://${host}/?event=${eventId || ''}`;
   const pageUrl = eventId ? `${proto}://${host}/e/${eventId}` : targetUrl;
 
+  // Convert Firestore REST values into normal JavaScript values, including nested maps/arrays.
+  const fromFirestoreValue = (value) => {
+    if (!value || typeof value !== 'object') return value;
+    if ('stringValue' in value) return value.stringValue;
+    if ('integerValue' in value) return Number(value.integerValue);
+    if ('doubleValue' in value) return Number(value.doubleValue);
+    if ('booleanValue' in value) return value.booleanValue;
+    if ('timestampValue' in value) return value.timestampValue;
+    if ('nullValue' in value) return null;
+    if (value.mapValue?.fields) return fromFirestoreFields(value.mapValue.fields);
+    if (value.arrayValue?.values) return value.arrayValue.values.map(fromFirestoreValue);
+    return value;
+  };
+
+  const fromFirestoreFields = (fields) => {
+    if (!fields || typeof fields !== 'object') return {};
+    return Object.fromEntries(
+      Object.entries(fields).map(([key, value]) => [key, fromFirestoreValue(value)])
+    );
+  };
+
+  const firstText = (...values) => values.find((value) => typeof value === 'string' && value.trim())?.trim() || '';
+  const isImageUrl = (value) => {
+    if (typeof value !== 'string' || !value.trim()) return false;
+    const clean = value.split('?')[0].split('#')[0].toLowerCase();
+    return /\\.(jpg|jpeg|png|webp|gif|avif)(?:$|\\/)/.test(clean) ||
+      clean.includes('images.unsplash.com') ||
+      clean.includes('cloudinary.com/image/upload');
+  };
+
+  const formatPreviewImage = (rawImg) => {
+    if (!rawImg || typeof rawImg !== 'string') return image;
+    let processedImg = rawImg.trim();
+
+    if (processedImg.includes('cloudinary.com')) {
+      if (processedImg.includes('/video/upload/')) {
+        return image;
+      }
+      if (processedImg.includes('/image/upload/') && !processedImg.includes('w_1200')) {
+        processedImg = processedImg.replace(
+          '/image/upload/',
+          '/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/'
+        );
+      }
+    } else if (processedImg.includes('images.unsplash.com')) {
+      const separator = processedImg.includes('?') ? '&' : '?';
+      processedImg = processedImg
+        .replace(/([?&])w=\\d+/i, '$1w=1200')
+        .replace(/([?&])h=\\d+/i, '$1h=630');
+      if (!/[?&]w=/i.test(processedImg)) processedImg += \`${separator}w=1200\`;
+      if (!/[?&]h=/i.test(processedImg)) processedImg += '&h=630';
+      if (!/[?&]fit=/i.test(processedImg)) processedImg += '&fit=crop';
+    }
+
+    return processedImg;
+  };
+
   if (eventId) {
     try {
-      const fbRes = await fetch(`https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events/${eventId}`);
+      const fbRes = await fetch(
+        \`https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/events/\${encodeURIComponent(eventId)}\`
+      );
+
       if (fbRes.ok) {
         const fbData = await fbRes.json();
-        if (fbData && fbData.fields) {
-          const rawTitle = fbData.fields.titleAr?.stringValue || fbData.fields.titleEn?.stringValue;
-          const rawDesc = fbData.fields.descriptionAr?.stringValue || fbData.fields.descriptionEn?.stringValue;
-          const rawImg = fbData.fields.mediaUrl?.stringValue || fbData.fields.thumbnailUrl?.stringValue;
-          const rawDate = fbData.fields.date?.stringValue;
-          const rawLoc = fbData.fields.locationAr?.stringValue || fbData.fields.locationEn?.stringValue;
+        if (fbData?.fields) {
+          const found = fromFirestoreFields(fbData.fields);
+          const event = found.eventData && typeof found.eventData === 'object'
+            ? { ...found, ...found.eventData }
+            : found;
 
-          if (rawTitle) title = `${rawTitle} | CityEve سيتي إيف`;
-          if (rawDesc) description = rawDesc.substring(0, 200).replace(/[\r\n]+/g, ' ');
+          const rawTitle = firstText(event.titleAr, event.titleEn, found.titleAr, found.titleEn);
+          const rawDesc = firstText(
+            event.descriptionAr,
+            event.descriptionEn,
+            found.descriptionAr,
+            found.descriptionEn
+          );
+          const rawDate = firstText(event.eventDate, event.date, event.startDate, found.eventDate, found.date);
+          const rawLocation = firstText(
+            event.location?.nameAr,
+            event.location?.nameEn,
+            event.locationAr,
+            event.locationEn,
+            found.locationAr,
+            found.locationEn
+          );
+
+          // Required image priority:
+          // 1) thumbnailUrl, 2) mediaUrl only when it is an image, 3) branded fallback.
+          const thumbnail = firstText(event.thumbnailUrl, found.thumbnailUrl);
+          const media = firstText(event.mediaUrl, found.mediaUrl);
+          const rawImg = thumbnail || (isImageUrl(media) ? media : '');
+
+          if (rawTitle) title = \`${rawTitle} | CityEve سيتي إيف\`;
+          if (rawDesc) description = rawDesc.replace(/[\\r\\n]+/g, ' ').substring(0, 220).trim();
           if (rawDate) eventDate = rawDate;
-          if (rawLoc) locationName = rawLoc;
-          if (rawImg && rawImg.trim().length > 0) {
-            let processedImg = rawImg.trim();
-            if (processedImg.includes('cloudinary.com')) {
-              if (processedImg.includes('/video/upload/')) {
-                // Transform video into 1200x630 JPEG frame snapshot for WhatsApp/FB previews
-                processedImg = processedImg
-                  .replace('/video/upload/', '/video/upload/w_1200,h_630,c_fill,so_1,q_auto,f_jpg/')
-                  .replace(/\.(mp4|mov|webm|avi|m4v)$/i, '.jpg');
-              } else if (processedImg.includes('/image/upload/')) {
-                processedImg = processedImg.replace('/image/upload/', '/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/');
-              }
-            }
-            image = processedImg;
-          }
+          if (rawLocation) locationName = rawLocation;
+          if (rawImg) image = formatPreviewImage(rawImg);
         }
       }
     } catch (e) {
