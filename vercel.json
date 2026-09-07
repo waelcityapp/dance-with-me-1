@@ -5,6 +5,10 @@
       "destination": "https://dance-with-me-35e98.firebaseapp.com/__/auth/$1"
     },
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
       "source": "/e/:eventId",
       "destination": "/api/og-event?event=:eventId"
     },
