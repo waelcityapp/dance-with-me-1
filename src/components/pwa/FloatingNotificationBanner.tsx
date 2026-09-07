@@ -31,9 +31,8 @@ export const FloatingNotificationBanner: React.FC<FloatingNotificationBannerProp
 
     const timer = setInterval(() => {
       setProgress((prev) => {
-        if (prev <= 0) {
+        if (prev <= step) {
           clearInterval(timer);
-          onClose();
           return 0;
         }
         return prev - step;
@@ -41,7 +40,13 @@ export const FloatingNotificationBanner: React.FC<FloatingNotificationBannerProp
     }, interval);
 
     return () => clearInterval(timer);
-  }, [notification, onClose]);
+  }, [notification]);
+
+  useEffect(() => {
+    if (progress === 0 && notification) {
+      onClose();
+    }
+  }, [progress, notification, onClose]);
 
   if (!notification) return null;
 

@@ -18,12 +18,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
 
   const isArabic = lang === 'ar';
   const shareTitle = isArabic ? event.titleAr : event.titleEn;
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://cityeve.online';
-  const shareUrl = currentOrigin.includes('cityeve.online') ? `https://cityeve.online/e/${event.id}` : `${currentOrigin}/e/${event.id}`;
+  const shareUrl = `https://cityeve.online/e/${event.id}`;
 
   const descSnippet = (isArabic ? event.descriptionAr : event.descriptionEn || '')
     .replace(/[\r\n]+/g, ' ')
-    .slice(0, 140)
+    .slice(0, 150)
     .trim();
 
   const locationName = isArabic ? event.location?.nameAr : event.location?.nameEn;
@@ -31,14 +30,14 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
   const dateText = event.eventDate ? `📅 ${formatDate(event.eventDate, lang)}` : '';
   const priceText = isArabic ? (event.priceAr ? `💰 ${event.priceAr}` : '') : (event.priceEn ? `💰 ${event.priceEn}` : '');
 
-  // Formatted WhatsApp message with title, description snippet, location, link, and platform signature
+  // Clean, elegant WhatsApp message formatted for high conversion and clear link preview
   const whatsappMessage = isArabic
-    ? `🎟️ *${event.titleAr}*\n\n📝 ${descSnippet}...\n${locationText ? locationText + '\n' : ''}${dateText ? dateText + '\n' : ''}${priceText ? priceText + '\n' : ''}\n🔗 *شاهد تفاصيل الإعلان واحجز تذكرتك عبر منصة سيتي إيف:*\n${shareUrl}\n\n✨ منصة سيتي إيف | CityEve`
-    : `🎟️ *${event.titleEn}*\n\n📝 ${descSnippet}...\n${locationText ? locationText + '\n' : ''}${dateText ? dateText + '\n' : ''}${priceText ? priceText + '\n' : ''}\n🔗 *View event details and book your ticket on CityEve:*\n${shareUrl}\n\n✨ CityEve Platform`;
+    ? `🎟️ *${event.titleAr}*\n\n📝 ${descSnippet}${descSnippet.length >= 150 ? '...' : ''}\n\n${locationText ? locationText + '\n' : ''}${dateText ? dateText + '\n' : ''}${priceText ? priceText + '\n' : ''}\n🔗 *تفاصيل الفعالية والحجز عبر منصة سيتي إيف:*\n${shareUrl}\n\n✨ منصة سيتي إيف | CityEve`
+    : `🎟️ *${event.titleEn}*\n\n📝 ${descSnippet}${descSnippet.length >= 150 ? '...' : ''}\n\n${locationText ? locationText + '\n' : ''}${dateText ? dateText + '\n' : ''}${priceText ? priceText + '\n' : ''}\n🔗 *Event details and booking on CityEve:*\n${shareUrl}\n\n✨ CityEve Platform`;
 
   const handleCopy = () => {
     try {
-      navigator.clipboard.writeText(`${shareTitle}\n${shareUrl}`);
+      navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch (e) {}

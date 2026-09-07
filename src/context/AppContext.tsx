@@ -784,11 +784,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
     });
 
-    // When no events exist in DB, fallback to rich modern sample events
-    if (result.length === 0) {
-      return MODERN_FEATURED_EVENTS;
-    }
-
     return result;
   }, [events, user]);
 
@@ -1279,28 +1274,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  const addNewEvent = (newEv: Omit<DanceEvent, 'id' | 'likesCount' | 'uploadDate'>): DanceEvent | undefined => {
-    if (!user) {
-      openGuestAlert('post_ad');
-      return;
-    }
-    
+  const addNewEvent = (newEv: Partial<DanceEvent>): DanceEvent => {
     // Calculate new eventRef
     let maxRef = 1000;
     const assignedRefs = events.map(e => e.eventRef).filter((r): r is number => typeof r === 'number');
     if (assignedRefs.length > 0) {
       maxRef = Math.max(...assignedRefs);
     }
-    const newEventRef = maxRef + 1;
+    const newEventRef = newEv.eventRef || (maxRef + 1);
+    const eventId = newEv.id || `ev-${Date.now()}`;
+
+    // Ensure safe eventDate in the future
+    let safeEventDate = newEv.eventDate;
+    if (!safeEventDate || isNaN(new Date(safeEventDate).getTime()) || isEventExpired(safeEventDate)) {
+      safeEventDate = new Date(Date.now() + 30 * 86400000).toISOString();
+    }
 
     const createdEvent: DanceEvent = {
+      titleAr: 'فعالية جديدة',
+      titleEn: 'New Event',
+      descriptionAr: 'وصف الفعالية',
+      descriptionEn: 'Event Description',
+      category: 'party',
+      styles: ['Salsa'],
+      mediaType: 'image',
+      mediaUrl: 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
+      priceAr: '250 ج.م',
+      priceEn: '250 EGP',
+      location: {
+        nameAr: 'القاهرة، مصر',
+        nameEn: 'Cairo, Egypt',
+        addressAr: 'القاهرة، مصر',
+        addressEn: 'Cairo, Egypt',
+        googleMapsUrl: '',
+        lat: 30.0444,
+        lng: 31.2357,
+        governorateAr: 'القاهرة',
+        governorateEn: 'Cairo',
+        areaAr: 'القاهرة',
+        areaEn: 'Cairo'
+      },
+      contact: {
+        organizerName: user?.name || 'المعلن',
+        phone: user?.phone || '',
+        whatsapp: user?.phone || ''
+      },
       ...newEv,
-      id: `ev-${Date.now()}`,
+      id: eventId,
       eventRef: newEventRef,
-      likesCount: 1,
+      likesCount: newEv.likesCount || 1,
+      viewsCount: newEv.viewsCount || 1,
+      eventDate: safeEventDate,
       uploadDate: new Date().toISOString()
-    };
-    setEvents(prev => [createdEvent, ...prev]);
+    } as DanceEvent;
+
+    setEvents(prev => [createdEvent, ...prev.filter(e => e.id !== createdEvent.id)]);
     saveEventToFirestore(createdEvent);
 
     // Send a notification to all subscribers
@@ -1308,8 +1337,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `notif-new-${Date.now()}`,
       titleAr: `🔥 فاعلية جديدة: ${createdEvent.titleAr}`,
       titleEn: `🔥 New Event: ${createdEvent.titleEn}`,
-      messageAr: createdEvent.descriptionAr.slice(0, 100) + '...',
-      messageEn: createdEvent.descriptionEn.slice(0, 100) + '...',
+      messageAr: (createdEvent.descriptionAr || '').slice(0, 100) + '...',
+      messageEn: (createdEvent.descriptionEn || '').slice(0, 100) + '...',
       date: new Date().toISOString(),
       read: false,
       type: 'new_party',
@@ -1343,27 +1372,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          console.error('Failed to delete media for deleted event:', err);
        }
     }
-    // Instead of deleting the event document entirely, we clear its data and mark it as empty
-    // to preserve its `position` (serial number).
-    if (evToDelete) {
-      const emptyEv = {
-        ...evToDelete,
-        titleAr: '',
-        titleEn: '',
-        descriptionAr: '',
-        descriptionEn: '',
-        mediaUrl: '',
-        thumbnailUrl: '',
-        isEmpty: true,
-      };
-      saveEventToFirestore(emptyEv);
-      setEvents(prev => prev.map(e => e.id === eventId ? emptyEv : e));
-      deleteAllBookingsForEvent(eventId);
-      setBookings(prev => prev.filter(b => b.eventId !== eventId));
-    } else {
-      setEvents(prev => prev.filter(e => e.id !== eventId));
-      deleteEventFromFirestore(eventId);
-    }
+    // Remove from state immediately and delete from Firestore completely
+    setEvents(prev => prev.filter(e => e.id !== eventId));
+    await deleteEventFromFirestore(eventId);
+    await deleteAllBookingsForEvent(eventId);
+    setBookings(prev => prev.filter(b => b.eventId !== eventId));
   };
 
   const togglePauseEvent = (eventId: string) => {

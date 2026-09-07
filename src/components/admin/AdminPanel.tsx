@@ -81,6 +81,7 @@ import {
 
 import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
 import { sendBroadcastPushNotification, getPushSubscribersCount, playNotificationChime } from '../../lib/pushNotifications';
+import { isEventExpired } from '../../utils/dateUtils';
 
 export const AdminPanel: React.FC = () => {
   const { 
@@ -1242,18 +1243,13 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleApprove = async (sub: AdSubmission) => {
-    if ((submissionPositions[sub.id] === undefined || submissionPositions[sub.id] === '') && !submissionPositionWarnings[sub.id]) {
-      alert(lang === 'ar' ? '⚠️ الرجاء إدخال الرقم التسلسلي (الترتيب). إذا كنت متأكداً من النشر بدون ترتيب، اضغط على "قبول ونشر" مرة أخرى.' : '⚠️ Please enter a Position number. If you are sure you want to publish without a position, click approve again.');
-      setSubmissionPositionWarnings(prev => ({ ...prev, [sub.id]: true }));
-      return;
-    }
-
     setActionLoading(sub.id);
     try {
-      const positionValue = submissionPositions[sub.id] !== undefined && submissionPositions[sub.id] !== '' ? (Number(submissionPositions[sub.id]) || 999999) : (sub.eventData?.position || Number(adminPosition) || 999999);
+      const positionValue = submissionPositions[sub.id] !== undefined && submissionPositions[sub.id] !== '' 
+        ? (Number(submissionPositions[sub.id]) || 999999) 
+        : (sub.eventData?.position || Number(adminPosition) || 999999);
 
-      // 1. Create or save the actual event if eventData exists
-      // Generate the unique event code (eventRef) before saving
+      // 1. Create and publish the actual event
       let maxRef = 1000;
       const assignedRefs = events.map(e => e.eventRef).filter((r): r is number => typeof r === 'number');
       if (assignedRefs.length > 0) {
@@ -1261,44 +1257,82 @@ export const AdminPanel: React.FC = () => {
       }
       const newEventRef = maxRef + 1;
       
-      let eventId = '';
-      if (sub.eventData) {
-        eventId = sub.eventData.id || `ev_${sub.adType || 'vip'}_${Date.now()}`;
-        const newEv: DanceEvent = {
-          ...sub.eventData,
-          id: eventId,
-          titleAr: sub.eventData.titleAr || sub.titleAr,
-          titleEn: sub.eventData.titleEn || sub.titleEn,
-          uploadDate: new Date().toISOString(),
-          likesCount: 15,
-          isFeatured: (sub.adType as string) === 'vip' || ((sub.eventData as any)?.adType as string) === 'vip',
-          eventRef: newEventRef,
-          isWeeklyPromo: positionValue === 1, // dynamically set weekly promo based on position
-          position: positionValue,
-          adType: sub.adType || sub.eventData?.adType || (sub.pricing?.total === 0 ? 'free' : 'standard')
-        } as DanceEvent;
-
-        // Add to state (this also saves to Firestore internally)
-        addNewEvent(newEv);
+      const eventId = sub.eventData?.id || `ev_${sub.adType || 'vip'}_${Date.now()}`;
+      const promoDays = sub.pricing?.days || 30;
+      
+      let safeEventDate = sub.eventData?.eventDate;
+      if (!safeEventDate || isNaN(new Date(safeEventDate).getTime()) || isEventExpired(safeEventDate)) {
+        safeEventDate = new Date(Date.now() + promoDays * 86400000).toISOString();
       }
+
+      const mediaUrlToUse = (sub.mediaUrl || sub.eventData?.mediaUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80').trim();
+      let thumbUrlToUse = (sub.thumbnailUrl || sub.eventData?.thumbnailUrl || mediaUrlToUse).trim();
+      if (sub.mediaType === 'video' && mediaUrlToUse.includes('cloudinary.com')) {
+        thumbUrlToUse = mediaUrlToUse.replace(/\.[^.]+$/, '.jpg');
+      }
+
+      const publishedEvent: DanceEvent = {
+        id: eventId,
+        titleAr: sub.eventData?.titleAr || sub.titleAr || 'إعلان جديد',
+        titleEn: sub.eventData?.titleEn || sub.titleEn || 'New Published Ad',
+        descriptionAr: sub.eventData?.descriptionAr || sub.descriptionAr || 'تفاصيل الإعلان والفعالية',
+        descriptionEn: sub.eventData?.descriptionEn || sub.descriptionEn || 'Ad & Event details',
+        category: sub.eventData?.category || sub.category || 'party',
+        styles: sub.eventData?.styles || sub.styles || ['Salsa'],
+        mediaType: sub.mediaType || sub.eventData?.mediaType || 'image',
+        mediaUrl: mediaUrlToUse,
+        thumbnailUrl: thumbUrlToUse,
+        uploadDate: new Date().toISOString(),
+        eventDate: safeEventDate,
+        priceAr: sub.eventData?.priceAr || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'دخول مجاني' : `${sub.pricing.total} ج.م`) : '250 ج.م'),
+        priceEn: sub.eventData?.priceEn || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'Free Entry' : `${sub.pricing.total} EGP`) : '250 EGP'),
+        location: sub.eventData?.location || {
+          nameAr: 'القاهرة، مصر',
+          nameEn: 'Cairo, Egypt',
+          addressAr: 'القاهرة، مصر',
+          addressEn: 'Cairo, Egypt',
+          googleMapsUrl: '',
+          lat: 30.0444,
+          lng: 31.2357,
+          governorateAr: 'القاهرة',
+          governorateEn: 'Cairo',
+          areaAr: 'القاهرة',
+          areaEn: 'Cairo'
+        },
+        contact: sub.eventData?.contact || {
+          organizerName: sub.advertiserName || 'المعلن',
+          phone: sub.phone || '',
+          whatsapp: sub.phone || ''
+        },
+        eventRef: newEventRef,
+        likesCount: 15,
+        viewsCount: 1,
+        isFeatured: (sub.adType as string) === 'vip' || sub.eventData?.adType === 'vip',
+        isWeeklyPromo: positionValue === 1,
+        position: positionValue,
+        adType: sub.adType || sub.eventData?.adType || 'standard',
+        creatorId: sub.advertiserId || sub.eventData?.creatorId,
+        creatorName: sub.advertiserName || sub.eventData?.creatorName,
+        isEmpty: false
+      };
+
+      // Publish event into global state and Firestore
+      addNewEvent(publishedEvent);
 
       // 2. Update submission status in Firestore with expiration timestamp
-      const promoDays = sub.pricing?.days || 3;
       const expiresAtDate = new Date(Date.now() + promoDays * 86400000).toISOString();
-      if (eventId && sub.eventData) { 
-        sub.eventData.id = eventId; 
-        sub.eventData.eventRef = newEventRef;
-      }
       
-      const updated: AdSubmission = { eventRef: newEventRef,
+      const updated: AdSubmission = { 
         ...sub,
+        eventRef: newEventRef,
         status: 'approved',
         userRead: false,
         reviewedAt: new Date().toISOString(),
-        expiresAt: expiresAtDate
+        expiresAt: expiresAtDate,
+        eventData: publishedEvent
       };
       
-      if (eventId && updated.eventData) { updated.eventData.id = eventId; } updateLocalStorageItem(updated);
+      updateLocalStorageItem(updated);
       await saveAdSubmissionToFirestore(updated);
       
       // Send personal notification to the user with the event code and attendance count (initially 0)
@@ -1349,6 +1383,8 @@ export const AdminPanel: React.FC = () => {
       } catch (e) {
         console.error('Failed to send admin approval notification:', e);
       }
+
+      alert(lang === 'ar' ? `✅ تم قبول ونشر الإعلان "${publishedEvent.titleAr}" بنجاح!` : `✅ Ad "${publishedEvent.titleEn}" approved and published successfully!`);
     } catch (err) {
       console.error('Error approving ad:', err);
     } finally {

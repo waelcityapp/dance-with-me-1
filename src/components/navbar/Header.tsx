@@ -409,7 +409,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     {/* Section 3: Admin & Management (if user is admin) */}
-                    {user?.isAdmin && (
+                    {(user?.isAdmin || user?.email === 'waelvts@gmail.com') && (
                       <div className="space-y-1 pt-1 border-t border-[#78101F]/40">
                         <div className="text-[10px] font-black text-amber-400/70 uppercase tracking-wider px-1">
                           {lang === 'ar' ? 'الإدارة والتحكم' : 'Management'}
