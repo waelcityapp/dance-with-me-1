@@ -745,6 +745,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setLang = (newLang: Language) => {
     setLangState(newLang);
+
+    // Keep the visible URL in sync with the user's language choice.
+    // This is especially important when a user opens an English event
+    // link from WhatsApp and then switches the site back to Arabic.
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (newLang === 'en') {
+        url.searchParams.set('lang', 'en');
+      } else {
+        url.searchParams.delete('lang');
+      }
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
   };
 
   const setTheme = (newTheme: ThemeMode) => {
