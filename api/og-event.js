@@ -35,6 +35,11 @@ export default async function handler(req, res) {
     );
   };
 
+  const stripLegacyRepoLinks = (value) => String(value || '')
+    .replace(/https?:\\/\\/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'\"`)\\]]*/gi, '')
+    .replace(/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'\"`)\\]]*/gi, '')
+    .trim();
+
   const firstText = (...values) => values.find((value) => typeof value === 'string' && value.trim())?.trim() || '';
   const isImageUrl = (value) => {
     if (typeof value !== 'string' || !value.trim()) return false;
@@ -119,6 +124,9 @@ export default async function handler(req, res) {
       console.error('Error fetching event from Firestore:', e);
     }
   }
+
+  title = stripLegacyRepoLinks(title);
+  description = stripLegacyRepoLinks(description);
 
   // Clean strings for HTML attributes
   const safeTitle = title.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
