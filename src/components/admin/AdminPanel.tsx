@@ -200,32 +200,48 @@ export const AdminPanel: React.FC = () => {
         console.log(`Auto-cleaning ${oldArchived.length} old archived submissions...`);
         for (const sub of oldArchived) {
           try {
-            // Delete media from Cloudinary
-            if (sub.mediaUrl) await deleteFromCloudinary(sub.mediaUrl, sub.mediaType || 'image').catch(console.error);
-            if (sub.receiptUrl) await deleteFromCloudinary(sub.receiptUrl, 'image').catch(console.error);
-            
-            // Delete associated Event if exists
-            if (sub.eventData?.id) {
-               try {
-                 const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
-                 const eventId = sub.eventData.id;
-                 await deleteEventFromFirestore(eventId);
-                 
-                 // Find and delete associated bookings
-                 if (bookings) {
-                   const associatedBookings = bookings.filter(b => b.eventId === eventId);
-                   for (const bkg of associatedBookings) {
-                     if (bkg.receiptUrl) {
-                       await deleteFromCloudinary(bkg.receiptUrl, 'image').catch(console.error);
-                     }
-                     await deleteBookingFromFirestore(bkg.id);
-                   }
-                 }
-               } catch (e) {
-                 console.error('Failed to delete associated event or bookings', e);
-               }
+            // Never remove Firestore records while a Cloudinary deletion is uncertain.
+            const mediaCandidates: Array<[string | undefined, 'image' | 'video']> = [
+              [sub.mediaUrl, sub.mediaType || 'image'],
+              [sub.eventData?.mediaUrl, sub.eventData?.mediaType || sub.mediaType || 'image'],
+              [sub.eventData?.thumbnailUrl, 'image'],
+              [sub.receiptUrl, 'image'],
+              [sub.receiptImage, 'image']
+            ];
+            const seenMedia = new Set<string>();
+            let mediaDeletionOk = true;
+            for (const [url, resourceType] of mediaCandidates) {
+              if (!url || seenMedia.has(url)) continue;
+              seenMedia.add(url);
+              const deleted = await deleteFromCloudinary(url, resourceType);
+              if (!deleted) mediaDeletionOk = false;
             }
-            
+
+            const eventId = sub.eventData?.id;
+            const associatedBookings = eventId && bookings
+              ? bookings.filter(b => b.eventId === eventId)
+              : [];
+            for (const bkg of associatedBookings) {
+              const bookingMedia = bkg.receiptImage || bkg.receiptUrl;
+              if (bookingMedia && !(await deleteFromCloudinary(bookingMedia, 'image'))) {
+                mediaDeletionOk = false;
+              }
+            }
+
+            if (!mediaDeletionOk) {
+              console.warn('Keeping archived ad because one or more media files could not be deleted:', sub.id);
+              continue;
+            }
+
+            // Delete associated Event and bookings only after media cleanup succeeds.
+            if (eventId) {
+              const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
+              await deleteEventFromFirestore(eventId);
+              for (const bkg of associatedBookings) {
+                await deleteBookingFromFirestore(bkg.id);
+              }
+            }
+
             // Delete Ad Submission from Firestore
             await deleteAdSubmissionFromFirestore(sub.id);
           } catch (e) {
