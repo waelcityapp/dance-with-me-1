@@ -1,3 +1,23 @@
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+
+let firestoreDb = null;
+try {
+  const firebaseApp = getApps().length
+    ? getApps()[0]
+    : initializeApp({
+        projectId: 'dance-with-me-35e98',
+        appId: '1:163649448355:web:85ba28f8797c6f9d57d216',
+        apiKey: 'AIzaSyCUF8UbABOG3mmdUOzBu8oRh5ht0oWk24I',
+        authDomain: 'cityeve.online',
+        storageBucket: 'dance-with-me-35e98.firebasestorage.app',
+        messagingSenderId: '163649448355'
+      });
+  firestoreDb = getFirestore(firebaseApp);
+} catch (e) {
+  console.error('Firebase SDK initialization note:', e);
+}
+
 export default async function handler(req, res) {
   const eventId = req.query.event || req.query.eventId;
 
@@ -89,6 +109,21 @@ export default async function handler(req, res) {
         if (!fbRes.ok) continue;
         const fbData = await fbRes.json();
         if (fbData && fbData.fields) found = fromFirestoreFields(fbData.fields);
+      }
+
+      // REST can be rate-limited. Use the Firebase SDK as a reliable fallback.
+      if (!found && firestoreDb) {
+        for (const collectionName of collections) {
+          try {
+            const snap = await getDoc(doc(firestoreDb, collectionName, eventId));
+            if (snap.exists()) {
+              found = snap.data();
+              break;
+            }
+          } catch (sdkError) {
+            console.error('Firebase SDK event lookup note:', sdkError);
+          }
+        }
       }
 
       if (found) {
