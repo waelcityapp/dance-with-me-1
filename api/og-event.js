@@ -36,15 +36,15 @@ export default async function handler(req, res) {
   };
 
   const stripLegacyRepoLinks = (value) => String(value || '')
-    .replace(/https?:\\/\\/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'\"`)\\]]*/gi, '')
-    .replace(/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'\"`)\\]]*/gi, '')
+    .replace(/https?:\/\/(?:www\.)?github\.com\/waelcityapp\/mybucket[^\s<>'\"`)\]]*/gi, '')
+    .replace(/(?:www\.)?github\.com\/waelcityapp\/mybucket[^\s<>'\"`)\]]*/gi, '')
     .trim();
 
   const firstText = (...values) => values.find((value) => typeof value === 'string' && value.trim())?.trim() || '';
   const isImageUrl = (value) => {
     if (typeof value !== 'string' || !value.trim()) return false;
     const clean = value.split('?')[0].split('#')[0].toLowerCase();
-    return /\\.(jpg|jpeg|png|webp|gif|avif)(?:$|\\/)/.test(clean) ||
+    return /\.(jpg|jpeg|png|webp|gif|avif)(?:$|\/)/.test(clean) ||
       clean.includes('images.unsplash.com') ||
       clean.includes('cloudinary.com/image/upload');
   };
@@ -66,8 +66,8 @@ export default async function handler(req, res) {
     } else if (processedImg.includes('images.unsplash.com')) {
       const separator = processedImg.includes('?') ? '&' : '?';
       processedImg = processedImg
-        .replace(/([?&])w=\\d+/i, '$1w=1200')
-        .replace(/([?&])h=\\d+/i, '$1h=630');
+        .replace(/([?&])w=\d+/i, '$1w=1200')
+        .replace(/([?&])h=\d+/i, '$1h=630');
       if (!/[?&]w=/i.test(processedImg)) processedImg += \`${separator}w=1200\`;
       if (!/[?&]h=/i.test(processedImg)) processedImg += '&h=630';
       if (!/[?&]fit=/i.test(processedImg)) processedImg += '&fit=crop';
@@ -114,7 +114,7 @@ export default async function handler(req, res) {
           const rawImg = thumbnail || (isImageUrl(media) ? media : '');
 
           if (rawTitle) title = \`${rawTitle} | CityEve سيتي إيف\`;
-          if (rawDesc) description = rawDesc.replace(/[\\r\\n]+/g, ' ').substring(0, 220).trim();
+          if (rawDesc) description = rawDesc.replace(/[\r\n]+/g, ' ').substring(0, 220).trim();
           if (rawDate) eventDate = rawDate;
           if (rawLocation) locationName = rawLocation;
           if (rawImg) image = formatPreviewImage(rawImg);
