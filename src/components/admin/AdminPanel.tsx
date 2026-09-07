@@ -1048,14 +1048,22 @@ export const AdminPanel: React.FC = () => {
 
   // One-time cleanup: keep only explicitly approved/indexable events.
   const handlePurgeUnverifiedAds = async () => {
-    const unverifiedEvents = events.filter((event) => event.seoIndexable !== true);
-    const verifiedEvents = events.length - unverifiedEvents.length;
+    // Read directly from Firestore so an old browser cache can never control a destructive action.
+    const { collection, getDocs } = await import('firebase/firestore');
+    const eventsSnapshot = await getDocs(collection(db, 'events'));
+    const currentEvents = eventsSnapshot.docs.map((eventDoc) => ({
+      id: eventDoc.id,
+      ...eventDoc.data()
+    })) as DanceEvent[];
+
+    const unverifiedEvents = currentEvents.filter((event) => event.seoIndexable !== true);
+    const verifiedEvents = currentEvents.filter((event) => event.seoIndexable === true).length;
 
     // Safety stop: never allow a mass deletion when the verification marker is missing.
     if (verifiedEvents === 0) {
       alert(lang === 'ar'
-        ? 'تم إيقاف العملية لحمايتك: النظام لم يجد أي إعلان موثق في القائمة الحالية. لم يتم حذف أي شيء.'
-        : 'Operation stopped for safety: no verified ads were found in the current list. Nothing was deleted.');
+        ? 'تم إيقاف العملية لحمايتك: لم يجد النظام أي إعلان موثق داخل Firestore مباشرة. لم يتم حذف أي شيء.'
+        : 'Operation stopped for safety: no verified ads were found directly in Firestore. Nothing was deleted.');
       return;
     }
 
@@ -1072,7 +1080,7 @@ export const AdminPanel: React.FC = () => {
     let skipped = 0;
 
     try {
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const { query, where } = await import('firebase/firestore');
       const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
       const candidateIds = new Set(unverifiedEvents.map((event) => event.id));
 
