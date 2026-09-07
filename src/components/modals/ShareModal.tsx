@@ -17,8 +17,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
   if (!event) return null;
 
   const stripLegacyRepoLinks = (value: string) => value
-    .replace(/https?:\\/\\/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'"\`\\])\\]]*/gi, '')
-    .replace(/(?:www\\.)?github\\.com\\/waelcityapp\\/mybucket[^\\s<>'"\`\\])\\]]*/gi, '');
+    .replace(/https?:\/\/(?:www\.)?github\.com\/waelcityapp\/mybucket[^\s<>'"\`\])\]]*/gi, '')
+    .replace(/(?:www\.)?github\.com\/waelcityapp\/mybucket[^\s<>'"\`\])\]]*/gi, '');
 
   const isArabic = lang === 'ar';
   const shareTitle = stripLegacyRepoLinks(isArabic ? event.titleAr : event.titleEn);
