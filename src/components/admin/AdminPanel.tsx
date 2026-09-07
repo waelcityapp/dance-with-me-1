@@ -5835,7 +5835,10 @@ export const AdminPanel: React.FC = () => {
                   </thead>
                   <tbody>
                     {(() => {
-                      const sortedEvents = [...events].sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
+                      // Keep the analytics leaderboard bounded even if Firestore contains legacy records.
+                      const sortedEvents = [...events]
+                        .sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0))
+                        .slice(0, 25);
                       const maxLikes = Math.max(...sortedEvents.map(e => e.likesCount || 0), 1);
 
                       return sortedEvents.map((ev, index) => {
