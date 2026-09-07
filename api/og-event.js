@@ -39,7 +39,10 @@ export default async function handler(req, res) {
   const appIcon = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
   const appIconSmall = "https://res.cloudinary.com/dynasmcaj/image/upload/w_64,h_64,c_fill,g_auto,q_auto,f_png/fbyjfjq8equle5pl7kwz.png";
   let eventDate = new Date().toISOString();
+  let eventEndDate = '';
   let locationName = "Cairo, Egypt";
+  let locationAddress = '';
+  let locationCity = 'Cairo';
 
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'cityeve.online';
   const proto = req.headers['x-forwarded-proto'] || 'https';
@@ -160,10 +163,17 @@ export default async function handler(req, res) {
           ? firstText(event.descriptionEn, event.descriptionAr, found.descriptionEn, found.descriptionAr)
           : firstText(event.descriptionAr, event.descriptionEn, found.descriptionAr, found.descriptionEn);
         const rawDate = firstText(event.eventDate, event.date, event.startDate, found.eventDate, found.date);
+        const rawEndDate = firstText(event.endDate, event.eventEndDate, found.endDate, found.eventEndDate);
         const rawLocation = firstText(
           ...(requestedLang === 'en'
             ? [event.location?.nameEn, event.location?.nameAr, event.locationEn, event.locationAr, found.locationEn, found.locationAr]
             : [event.location?.nameAr, event.location?.nameEn, event.locationAr, event.locationEn, found.locationAr, found.locationEn])
+        );
+        const rawLocationAddress = firstText(
+          event.location?.address, event.address, found.location?.address, found.address
+        );
+        const rawLocationCity = firstText(
+          event.location?.city, event.city, found.location?.city, found.city
         );
 
         // Keep the event image as the large preview image.
@@ -175,7 +185,10 @@ export default async function handler(req, res) {
         if (rawTitle) title = stripLegacyRepoLinks(rawTitle) + (requestedLang === 'en' ? ' | CityEve' : ' | CityEve سيتي إيف');
         if (rawDesc) description = stripLegacyRepoLinks(rawDesc).replace(/[\r\n]+/g, ' ').substring(0, 220).trim();
         if (rawDate) eventDate = rawDate;
+        if (rawEndDate) eventEndDate = rawEndDate;
         if (rawLocation) locationName = stripLegacyRepoLinks(rawLocation);
+        if (rawLocationAddress) locationAddress = stripLegacyRepoLinks(rawLocationAddress);
+        if (rawLocationCity) locationCity = stripLegacyRepoLinks(rawLocationCity);
         if (rawImg) image = formatPreviewImage(rawImg);
       }
     } catch (e) {
@@ -196,11 +209,14 @@ export default async function handler(req, res) {
   const eventJsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Event",
+    "@id": `${pageUrl}#event`,
+    "identifier": eventId || undefined,
     "name": safeTitle,
     "description": safeDesc,
     "image": image,
     "url": pageUrl,
     "startDate": eventDate,
+    ...(eventEndDate ? { "endDate": eventEndDate } : {}),
     "eventStatus": "https://schema.org/EventScheduled",
     "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
     "location": {
@@ -208,7 +224,8 @@ export default async function handler(req, res) {
       "name": locationName,
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": "Cairo",
+        ...(locationAddress ? { "streetAddress": locationAddress } : {}),
+        "addressLocality": locationCity,
         "addressCountry": "EG"
       }
     },
