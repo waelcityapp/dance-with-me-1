@@ -1,4 +1,24 @@
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+
 const PROJECT_ID = 'dance-with-me-35e98';
+
+let firestoreDb = null;
+try {
+  const firebaseApp = getApps().length
+    ? getApps()[0]
+    : initializeApp({
+        projectId: 'dance-with-me-35e98',
+        appId: '1:163649448355:web:85ba28f8797c6f9d57d216',
+        apiKey: 'AIzaSyCUF8UbABOG3mmdUOzBu8oRh5ht0oWk24I',
+        authDomain: 'cityeve.online',
+        storageBucket: 'dance-with-me-35e98.firebasestorage.app',
+        messagingSenderId: '163649448355'
+      });
+  firestoreDb = getFirestore(firebaseApp);
+} catch (error) {
+  console.error('Sitemap Firebase initialization note:', error);
+}
 const DATABASE = '(default)';
 const SITE_URL = 'https://cityeve.online';
 
@@ -28,6 +48,23 @@ const fromFirestoreFields = (fields) => Object.fromEntries(
 const firstText = (...values) => values.find(
   (value) => typeof value === 'string' && value.trim()
 )?.trim() || '';
+
+const appendPublicEvent = (eventUrls, eventId, event) => {
+  if (!eventId || !isPublicEvent(event)) return;
+  const updatedAt = firstText(
+    event.updatedAt,
+    event.updated_at,
+    event.createdAt,
+    event.created_at
+  );
+  if (eventUrls.some((item) => item.id === eventId)) return;
+  eventUrls.push({
+    id: eventId,
+    updatedAt: updatedAt && !Number.isNaN(Date.parse(updatedAt))
+      ? new Date(updatedAt).toISOString()
+      : ''
+  });
+};
 
 const isPublicEvent = (event) => {
   if (!event || typeof event !== 'object') return false;
@@ -65,28 +102,23 @@ export default async function handler(req, res) {
       const payload = await response.json();
       for (const document of payload.documents || []) {
         const eventId = document.name?.split('/').pop();
-        const event = fromFirestoreFields(document.fields);
-        if (!eventId || !isPublicEvent(event)) continue;
-
-        const updatedAt = firstText(
-          event.updatedAt,
-          event.updated_at,
-          event.createdAt,
-          event.created_at
-        );
-
-        eventUrls.push({
-          id: eventId,
-          updatedAt: updatedAt && !Number.isNaN(Date.parse(updatedAt))
-            ? new Date(updatedAt).toISOString()
-            : ''
-        });
+        appendPublicEvent(eventUrls, eventId, fromFirestoreFields(document.fields));
       }
 
       pageToken = payload.nextPageToken || '';
     } while (pageToken);
   } catch (error) {
-    console.error('Sitemap event lookup failed:', error);
+    console.error('Sitemap REST event lookup failed:', error);
+  }
+
+  // Firestore REST listing may be rate-limited; use the SDK as a fallback.
+  if (eventUrls.length === 0 && firestoreDb) {
+    try {
+      const snapshot = await getDocs(collection(firestoreDb, 'events'));
+      snapshot.forEach((document) => appendPublicEvent(eventUrls, document.id, document.data()));
+    } catch (error) {
+      console.error('Sitemap SDK event lookup failed:', error);
+    }
   }
 
   const urls = [
