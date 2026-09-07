@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'cityeve.online';
   const proto = req.headers['x-forwarded-proto'] || 'https';
-  const targetUrl = `${proto}://${host}/?event=${eventId || ''}`;
+  const targetUrl = `${proto}://${host}/?event=${eventId || ''}${requestedLang === 'en' ? '&lang=en' : ''}`;
   const pageUrl = eventId ? `${proto}://${host}/e/${eventId}` : targetUrl;
 
   // Convert Firestore REST values into normal JavaScript values, including nested maps/arrays.
