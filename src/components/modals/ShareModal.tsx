@@ -40,7 +40,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
     '',
     isArabic ? 'تفاصيل الفعالية والحجز عبر منصة CityEve:' : 'Event details and booking on CityEve:',
     shareUrl
-  ].join('\\n');
+  ].join('\n');
 
   const handleCopy = () => {
     try {
