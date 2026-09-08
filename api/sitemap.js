@@ -126,8 +126,10 @@ export default async function handler(req, res) {
     }
   }
 
+  const categoryPages = ['parties', 'courses', 'trips', 'exhibitions', 'services', 'jobs'];
   const urls = [
     { loc: SITE_URL, alternates: true },
+    ...categoryPages.map((category) => ({ loc: `${SITE_URL}/categories/${category}.html`, alternates: false })),
     ...eventUrls.flatMap(({ id, updatedAt }) => [
       { loc: `${SITE_URL}/e/${encodeURIComponent(id)}`, updatedAt, alternates: true },
       { loc: `${SITE_URL}/e/${encodeURIComponent(id)}?lang=en`, updatedAt, alternates: false }
