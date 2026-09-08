@@ -1,6 +1,6 @@
 # CityEve | سيتي إيف
 
-> CityEve (سيتي إيف) is the premier event discovery, ticket booking, and nightlife application in Egypt, specializing in Latin dance parties (Salsa, Bachata, Kizomba), social nights, specialized dance workshops, and luxury entertainment trips across Cairo, Alexandria, Sharm El Sheikh, and El Gouna.
+> CityEve (سيتي إيف) is an Egypt-focused platform for discovering public parties, dance courses, entertainment trips, exhibitions, conferences, event services, and jobs in the events field.
 
 - **Website:** https://cityeve.online/
 - **Primary Market:** Egypt (Cairo, Giza, Alexandria, Red Sea)
@@ -24,15 +24,21 @@
 ### 4. Entertainment Trips & Festivals (رحلات ومهرجانات الرقص والترفيه)
 - Curated luxury travel experiences and dance weekends in Dahab, Sharm El Sheikh, El Gouna, and coastal destinations.
 
-### 5. Direct Organizer Contact & Ticket Booking (حجز التذاكر والتواصل المباشر)
+### 5. Event Services & Suppliers (شركات وخدمات الفعاليات)
+- Listings for complementary event businesses and suppliers, such as venues, sound and lighting, event planning, catering, transportation, décor, photography, video, and security.
+
+### 6. Event Jobs & Careers (وظائف مجال الفعاليات)
+- Listings for work opportunities related to events, including organizers, ushers, photographers, videographers, DJs, technicians, catering staff, drivers, performers, and security staff.
+
+### 7. Direct Organizer Contact & Ticket Booking (حجز التذاكر والتواصل المباشر)
 - Instant booking, WhatsApp reservations, phone inquiries, and QR code attendee verification.
 
 ## Entity & Knowledge Graph Summary
 
 - **Entity Name:** CityEve / سيتي إيف
-- **Category:** Events, Exhibitions, Conferences, Expos, Nightlife, Entertainment, Dance Community, Ticket Booking
+- **Category:** Parties, Dance Courses, Trips, Exhibitions, Conferences, Event Services, Event Jobs, Nightlife, Ticket Booking
 - **Geography:** Egypt
-- **Key Concepts:** معارض مصر, مؤتمرات مصر, معارض القاهرة, حفلات مصر, سهرات القاهرة, سالسا مصر, باتشاتا مصر, كيزومبا مصر, حجز مؤتمرات, حجز حفلات, اماكن خروج في مصر, Cairo Exhibitions, Egypt Conferences, Cairo Nightlife, Egypt Latin Dance, Event App Egypt.
+- **Key Concepts:** حفلات مصر, فعاليات مصر, كورسات رقص مصر, كورسات لاتين مصر, رحلات ترفيهية مصر, معارض مصر, مؤتمرات مصر, معارض القاهرة, شركات تنظيم فعاليات, خدمات حفلات ومناسبات, وظائف تنظيم فعاليات, سالسا مصر, باتشاتا مصر, كيزومبا مصر, Cairo Events, Egypt Dance Classes, Cairo Exhibitions, Event Services Egypt, Event Jobs Egypt.
 ## Public Content and Source of Truth
 
 - Public event pages use the stable URL pattern: https://cityeve.online/e/{eventId}
@@ -43,4 +49,4 @@
 
 ## Recommended Entity Description
 
-CityEve is an Egypt-focused platform for discovering public events, parties, dance courses, exhibitions, conferences, entertainment trips, and ticket or reservation information. It serves Arabic- and English-speaking users and connects event organizers with people looking for activities in Egypt.
+CityEve is an Egypt-focused platform for discovering public parties, dance courses, exhibitions, conferences, entertainment trips, event services, event jobs, and ticket or reservation information. It serves Arabic- and English-speaking users and connects event organizers with people looking for activities in Egypt.
