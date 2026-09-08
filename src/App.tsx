@@ -40,7 +40,6 @@ const AppContent: React.FC = () => {
   const { 
     lang, 
     setLang,
-    selectedCategory,
     setSelectedCategory,
     activeTab, 
     setActiveTab, 
