@@ -61,7 +61,11 @@ export async function uploadToCloudinary(file: File): Promise<string | null> {
 /**
  * Deletes a file from Cloudinary via our backend
  */
-export async function deleteFromCloudinary(url: string, resourceType: 'image' | 'video' = 'image'): Promise<boolean> {
+export async function deleteFromCloudinary(
+  url: string,
+  resourceType: 'image' | 'video' = 'image',
+  submissionId?: string
+): Promise<boolean> {
   if (!url || typeof url !== 'string' || !url.includes('cloudinary.com')) {
     return true;
   }
@@ -85,7 +89,7 @@ export async function deleteFromCloudinary(url: string, resourceType: 'image' | 
         'Content-Type': 'application/json',
         Authorization: 'Bearer ' + token,
       },
-      body: JSON.stringify({ url, resourceType }),
+      body: JSON.stringify({ url, resourceType, submissionId }),
     });
     
     if (!response.ok) {
