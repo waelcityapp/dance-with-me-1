@@ -33,3 +33,14 @@
 - **Category:** Events, Exhibitions, Conferences, Expos, Nightlife, Entertainment, Dance Community, Ticket Booking
 - **Geography:** Egypt
 - **Key Concepts:** معارض مصر, مؤتمرات مصر, معارض القاهرة, حفلات مصر, سهرات القاهرة, سالسا مصر, باتشاتا مصر, كيزومبا مصر, حجز مؤتمرات, حجز حفلات, اماكن خروج في مصر, Cairo Exhibitions, Egypt Conferences, Cairo Nightlife, Egypt Latin Dance, Event App Egypt.
+## Public Content and Source of Truth
+
+- Public event pages use the stable URL pattern: https://cityeve.online/e/{eventId}
+- English event pages use the same URL with the `?lang=en` parameter.
+- Only approved, published, and indexable events are public and eligible for search indexing.
+- Pending user submissions, rejected submissions, archived events, private user data, bookings, and admin pages are not public sources.
+- Event details should be taken from the individual public event page and its structured data, not from private submissions.
+
+## Recommended Entity Description
+
+CityEve is an Egypt-focused platform for discovering public events, parties, dance courses, exhibitions, conferences, entertainment trips, and ticket or reservation information. It serves Arabic- and English-speaking users and connects event organizers with people looking for activities in Egypt.
