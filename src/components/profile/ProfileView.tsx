@@ -127,7 +127,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  const deleteOwnedSubmissionMedia = async (sub: AdSubmission): Promise<boolean> => {
+  const deleteOwnedSubmissionMedia = async (sub: AdSubmission): Promise<{ ok: boolean; reason?: string }> => {
     const media: Array<[string | undefined, 'image' | 'video']> = [
       [sub.mediaUrl, sub.mediaType || 'image'],
       [sub.previousMediaUrl, sub.mediaType || 'image'],
@@ -136,12 +136,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       [sub.receiptImage, 'image']
     ];
     const seen = new Set<string>();
+    let failureReason = '';
     for (const [url, type] of media) {
       if (!url || seen.has(url)) continue;
       seen.add(url);
-      if (!(await deleteFromCloudinary(url, type, sub.id))) return false;
+      const deleted = await deleteFromCloudinary(url, type, sub.id, reason => {
+        failureReason = reason;
+      });
+      if (!deleted) {
+        return { ok: false, reason: failureReason || 'لم يؤكد Cloudinary حذف الوسيط' };
+      }
     }
-    return true;
+    return { ok: true };
   };
 
   const handleDeleteAdSubmission = async (submissionId: string) => {
@@ -153,15 +159,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const subToDelete = adSubmissions.find(s => s.id === submissionId);
       if (!subToDelete) return;
 
-      const mediaDeleted = await deleteOwnedSubmissionMedia(subToDelete);
-      if (!mediaDeleted) {
+      if (subToDelete.status === 'approved') {
         alert(lang === 'ar'
-          ? 'لم يتم حذف الإعلان لأن Cloudinary لم يؤكد حذف الوسائط.'
-          : 'The ad was kept because Cloudinary did not confirm media deletion.');
+          ? 'لا يمكن حذف إعلان منشور من حساب المستخدم. اطلب من الأدمن حذفه.'
+          : 'A published ad cannot be deleted from the user account. Ask the admin to delete it.');
+        return;
+      }
+
+      const mediaResult = await deleteOwnedSubmissionMedia(subToDelete);
+      if (!mediaResult.ok) {
+        alert(lang === 'ar'
+          ? 'فشل الحذف: ' + mediaResult.reason
+          : 'Deletion failed: ' + mediaResult.reason);
         return;
       }
 
       await deleteAdSubmissionFromFirestore(submissionId);
+      alert(lang === 'ar' ? 'تم حذف الإعلان ووسائطه بنجاح.' : 'The ad and its media were deleted successfully.');
       setAdSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
       try {
         const local: AdSubmission[] = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
@@ -181,7 +195,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     try {
       for (const sub of myUserAdSubmissions) {
         if (sub.status === 'approved') continue;
-        if (!(await deleteOwnedSubmissionMedia(sub))) continue;
+        const mediaResult = await deleteOwnedSubmissionMedia(sub);
+        if (!mediaResult.ok) continue;
         await deleteAdSubmissionFromFirestore(sub.id);
       }
       setAdSubmissions(prev => prev.filter(sub => sub.status === 'approved'));
