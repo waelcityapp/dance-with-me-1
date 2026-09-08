@@ -64,7 +64,8 @@ export async function uploadToCloudinary(file: File): Promise<string | null> {
 export async function deleteFromCloudinary(
   url: string,
   resourceType: 'image' | 'video' = 'image',
-  submissionId?: string
+  submissionId?: string,
+  onError?: (reason: string) => void
 ): Promise<boolean> {
   if (!url || typeof url !== 'string' || !url.includes('cloudinary.com')) {
     return true;
@@ -79,7 +80,9 @@ export async function deleteFromCloudinary(
   try {
     const token = await auth.currentUser?.getIdToken();
     if (!token) {
-      console.warn('Cloudinary deletion blocked: no Firebase login token.');
+      const reason = 'لا يوجد تسجيل دخول صالح للأدمن أو مالك الإعلان';
+      console.warn('Cloudinary deletion blocked:', reason);
+      onError?.(reason);
       return false;
     }
 
@@ -92,13 +95,11 @@ export async function deleteFromCloudinary(
       body: JSON.stringify({ url, resourceType, submissionId }),
     });
     
-    if (!response.ok) {
-      return false;
-    }
-    
     const data = await response.json().catch(() => ({}));
-    if (data.success !== true) {
-      console.warn('Cloudinary deletion was not confirmed:', data.error || data.result || data);
+    if (!response.ok || data.success !== true) {
+      const reason = data.error || data.warning || ('استجابة السيرفر رقم ' + response.status);
+      console.warn('Cloudinary deletion was not confirmed:', reason, data.result || '');
+      onError?.(reason);
       return false;
     }
     return true;
