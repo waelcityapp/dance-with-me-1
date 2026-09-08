@@ -88,7 +88,10 @@ export default async function handler(req, res) {
     .replace(/(?:www\.)?github\.com\/waelcityapp\/mybucket[^\s<>'\"`)\]]*/gi, '')
     .trim();
 
-  const firstText = (...values) => values.find((value) => typeof value === 'string' && value.trim())?.trim() || '';
+  const requestUserAgent = (req.headers?.['user-agent'] || req.headers?.['User-Agent'] || '').toString();
+const isCrawler = /googlebot|google-inspectiontool|bingbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|slackbot/i.test(requestUserAgent);
+
+const firstText = (...values) => values.find((value) => typeof value === 'string' && value.trim())?.trim() || '';
   const isImageUrl = (value) => {
     if (typeof value !== 'string' || !value.trim()) return false;
     const clean = value.split('?')[0].split('#')[0].toLowerCase();
@@ -293,7 +296,7 @@ export default async function handler(req, res) {
   ${eventJsonLd.replace(/</g, '\\u003c')}
   </script>
 
-  <meta http-equiv="refresh" content="0;url=${targetUrl}" />
+  ${isCrawler ? '' : `<meta http-equiv="refresh" content="0;url=${targetUrl}" />`}
 </head>
 <body style="background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
   <div style="text-align:center;padding:20px;">
