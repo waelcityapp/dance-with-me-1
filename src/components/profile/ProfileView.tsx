@@ -174,7 +174,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         return;
       }
 
-      await deleteAdSubmissionFromFirestore(submissionId);
+      const recordDeleted = await deleteAdSubmissionFromFirestore(submissionId);
+      if (!recordDeleted) {
+        alert(lang === 'ar' ? 'فشل الحذف: تعذر حذف سجل الإعلان من Firebase.' : 'Deletion failed: the ad record could not be deleted from Firebase.');
+        return;
+      }
       alert(lang === 'ar' ? 'تم حذف الإعلان ووسائطه بنجاح.' : 'The ad and its media were deleted successfully.');
       setAdSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
       try {
@@ -197,7 +201,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         if (sub.status === 'approved') continue;
         const mediaResult = await deleteOwnedSubmissionMedia(sub);
         if (!mediaResult.ok) continue;
-        await deleteAdSubmissionFromFirestore(sub.id);
+        const recordDeleted = await deleteAdSubmissionFromFirestore(sub.id);
+        if (!recordDeleted) console.warn('Ad record deletion was not confirmed:', sub.id);
       }
       setAdSubmissions(prev => prev.filter(sub => sub.status === 'approved'));
       localStorage.setItem('dwm_ad_submissions', '[]');
