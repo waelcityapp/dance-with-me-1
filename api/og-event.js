@@ -220,7 +220,7 @@ export default async function handler(req, res) {
     "@type": "Event",
     "@id": `${pageUrl}#event`,
     "identifier": eventId || undefined,
-    "name": safeTitle,
+    "name": title,
     "description": description,
     "image": image,
     "url": pageUrl,
