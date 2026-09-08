@@ -1088,7 +1088,11 @@ export function subscribeToBookings(
   isAdmin?: boolean
 ): () => void {
   try {
-    const q = collection(db, COLLECTIONS.BOOKINGS);
+    const q = isAdmin
+      ? collection(db, COLLECTIONS.BOOKINGS)
+      : (userId
+        ? query(collection(db, COLLECTIONS.BOOKINGS), where('userId', '==', userId))
+        : query(collection(db, COLLECTIONS.BOOKINGS), where('userId', '==', '__no_user__')));
     return onSnapshot(
       q,
       (snapshot) => {
