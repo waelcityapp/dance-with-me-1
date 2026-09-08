@@ -4,6 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import webpush from "web-push";
 import { v2 as cloudinary } from "cloudinary";
+import { createVerify } from "crypto";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, doc, getDoc, collection, getDocs } from "firebase/firestore";
 
@@ -81,6 +82,70 @@ function extractCloudinaryPublicId(url: string): string | null {
   }
 }
 
+// Verify Firebase Auth before allowing destructive Cloudinary operations.
+const firebaseProjectId =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.VITE_FIREBASE_PROJECT_ID ||
+  "dance-with-me-35e98";
+const adminEmail =
+  process.env.ADMIN_EMAIL ||
+  process.env.VITE_ADMIN_EMAIL ||
+  "waelvts@gmail.com";
+
+let firebaseCertsCache: { certs: Record<string, string>; expiresAt: number } | null = null;
+
+async function getFirebaseCerts(): Promise<Record<string, string>> {
+  if (firebaseCertsCache && firebaseCertsCache.expiresAt > Date.now()) {
+    return firebaseCertsCache.certs;
+  }
+  const response = await fetch(
+    "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
+  );
+  if (!response.ok) throw new Error("Unable to load Firebase token certificates");
+  const certs = await response.json() as Record<string, string>;
+  const cacheControl = response.headers.get("cache-control") || "";
+  const maxAge = Number(cacheControl.match(/max-age=(\\d+)/)?.[1] || 3600);
+  firebaseCertsCache = { certs, expiresAt: Date.now() + maxAge * 1000 };
+  return certs;
+}
+
+async function isAuthorizedAdminRequest(req: express.Request): Promise<boolean> {
+  try {
+    const header = req.headers.authorization || "";
+    if (!header.startsWith("Bearer ")) return false;
+    const token = header.slice("Bearer ".length).trim();
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+
+    const decode = (value: string) =>
+      JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+    const tokenHeader = decode(parts[0]);
+    const tokenPayload = decode(parts[1]);
+    if (tokenHeader.alg !== "RS256" || !tokenHeader.kid) return false;
+
+    const certs = await getFirebaseCerts();
+    const certificate = certs[tokenHeader.kid];
+    if (!certificate) return false;
+
+    const verifier = createVerify("RSA-SHA256");
+    verifier.update(parts[0] + "." + parts[1]);
+    verifier.end();
+    if (!verifier.verify(certificate, Buffer.from(parts[2], "base64url"))) {
+      return false;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    return tokenPayload.aud === firebaseProjectId
+      && tokenPayload.iss === ("https://securetoken.google.com/" + firebaseProjectId)
+      && typeof tokenPayload.sub === "string"
+      && tokenPayload.exp > now
+      && tokenPayload.email === adminEmail
+      && tokenPayload.email_verified === true;
+  } catch {
+    return false;
+  }
+}
+
 // Default / Persisted VAPID Configuration
 // Can be customized via environment variables VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
 let vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "BJGxmjsed25gM5oW5bD85jkU2mXfcMubN-arM5uTobCM5lUQZkUqao22afa32sVLXGvWAcrBnxsz44PYlioeL0I";
@@ -110,9 +175,15 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Cloudinary media delete endpoint
+  // Cloudinary media delete endpoint. Destructive deletion is admin-only.
   app.post("/api/delete-media", async (req, res) => {
     try {
+      if (!(await isAuthorizedAdminRequest(req))) {
+        return res.status(403).json({
+          success: false,
+          error: "Admin authentication required",
+        });
+      }
       const { url, resourceType = "image" } = req.body || {};
       if (!url || typeof url !== "string") {
         return res.json({ success: true, message: "No URL provided" });
