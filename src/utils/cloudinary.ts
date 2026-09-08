@@ -1,4 +1,5 @@
 import imageCompression from 'browser-image-compression';
+import { auth } from '../lib/firebase';
 
 /**
  * Compresses an image file before uploading
@@ -72,10 +73,17 @@ export async function deleteFromCloudinary(url: string, resourceType: 'image' | 
   }
 
   try {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) {
+      console.warn('Cloudinary deletion blocked: no Firebase login token.');
+      return false;
+    }
+
     const response = await fetch('/api/delete-media', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
       },
       body: JSON.stringify({ url, resourceType }),
     });
