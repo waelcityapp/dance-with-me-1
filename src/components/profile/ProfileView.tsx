@@ -127,38 +127,64 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
+  const deleteOwnedSubmissionMedia = async (sub: AdSubmission): Promise<boolean> => {
+    const media: Array<[string | undefined, 'image' | 'video']> = [
+      [sub.mediaUrl, sub.mediaType || 'image'],
+      [sub.previousMediaUrl, sub.mediaType || 'image'],
+      [sub.eventData?.mediaUrl, sub.eventData?.mediaType || sub.mediaType || 'image'],
+      [sub.eventData?.thumbnailUrl, 'image'],
+      [sub.receiptImage, 'image']
+    ];
+    const seen = new Set<string>();
+    for (const [url, type] of media) {
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      if (!(await deleteFromCloudinary(url, type, sub.id))) return false;
+    }
+    return true;
+  };
+
   const handleDeleteAdSubmission = async (submissionId: string) => {
-    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف هذا الإعلان بشكل نهائي؟' : 'Are you sure you want to permanently delete this ad?');
+    const confirmed = await triggerConfirm(lang === 'ar'
+      ? 'سيتم حذف إعلانك غير المنشور وصوره وفيديوهاته نهائيًا. هل تريد المتابعة؟'
+      : 'This will permanently delete your unpublished ad and its media. Continue?');
     if (!confirmed) return;
     try {
       const subToDelete = adSubmissions.find(s => s.id === submissionId);
-      if (subToDelete) {
-        const eventId = subToDelete.eventData?.id || subToDelete.id;
-        if (eventId) deleteEvent(eventId);
+      if (!subToDelete) return;
+
+      const mediaDeleted = await deleteOwnedSubmissionMedia(subToDelete);
+      if (!mediaDeleted) {
+        alert(lang === 'ar'
+          ? 'لم يتم حذف الإعلان لأن Cloudinary لم يؤكد حذف الوسائط.'
+          : 'The ad was kept because Cloudinary did not confirm media deletion.');
+        return;
       }
+
       await deleteAdSubmissionFromFirestore(submissionId);
       setAdSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
       try {
         const local: AdSubmission[] = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
-        const filtered = local.filter(item => item.id !== submissionId);
-        localStorage.setItem('dwm_ad_submissions', JSON.stringify(filtered));
+        localStorage.setItem('dwm_ad_submissions', JSON.stringify(local.filter(item => item.id !== submissionId)));
       } catch (e) {}
     } catch (err) {
       console.error('Error deleting ad:', err);
+      alert(lang === 'ar' ? 'تعذر حذف الإعلان بأمان.' : 'The ad could not be safely deleted.');
     }
   };
 
   const handleDeleteAllAdSubmissions = async () => {
-    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف جميع إعلاناتك وفواتيرك بشكل نهائي؟' : 'Are you sure you want to permanently delete all your ads and invoices?');
+    const confirmed = await triggerConfirm(lang === 'ar'
+      ? 'سيتم حذف إعلاناتك غير المنشورة ووسائطها نهائيًا. هل تريد المتابعة؟'
+      : 'This will permanently delete your unpublished ads and their media. Continue?');
     if (!confirmed) return;
     try {
-      const promises = myUserAdSubmissions.map(sub => {
-        const eventId = sub.eventData?.id || sub.id;
-        if (eventId) deleteEvent(eventId);
-        return deleteAdSubmissionFromFirestore(sub.id);
-      });
-      await Promise.all(promises);
-      setAdSubmissions([]);
+      for (const sub of myUserAdSubmissions) {
+        if (sub.status === 'approved') continue;
+        if (!(await deleteOwnedSubmissionMedia(sub))) continue;
+        await deleteAdSubmissionFromFirestore(sub.id);
+      }
+      setAdSubmissions(prev => prev.filter(sub => sub.status === 'approved'));
       localStorage.setItem('dwm_ad_submissions', '[]');
     } catch (err) {
       console.error('Error deleting all ads:', err);
@@ -475,6 +501,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         titleEn: editTitleEn || sub.titleEn,
         mediaUrl: mediaChanged ? editMediaUrl : sub.mediaUrl,
         mediaType: editMediaType,
+        previousMediaUrl: mediaChanged ? oldMediaUrl : sub.previousMediaUrl,
+        status: mediaChanged && sub.status === 'approved' ? 'pending' : sub.status,
         eventData: sub.eventData ? {
           ...sub.eventData,
           titleAr: editTitleAr || sub.eventData.titleAr || sub.titleAr,
@@ -541,9 +569,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         updateEvent(updated.eventData as DanceEvent);
       }
       
-      // Delete old media if changed and it was on Cloudinary
-      if (mediaChanged && oldMediaUrl && oldMediaUrl.includes('cloudinary.com')) {
-        await deleteFromCloudinary(oldMediaUrl, sub.mediaType);
+      // For unpublished ads, remove the old media after the new record is saved.
+      // For published ads, keep the old public media until an admin approves the change.
+      if (mediaChanged && oldMediaUrl && sub.status !== 'approved') {
+        const oldMediaDeleted = await deleteFromCloudinary(oldMediaUrl, sub.mediaType, sub.id);
+        if (!oldMediaDeleted) {
+          console.warn('Old media was kept because Cloudinary did not confirm deletion.');
+        }
       }
 
       await saveNotificationToFirestore({
@@ -1603,7 +1635,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <button
                         onClick={() => handleDeleteAdSubmission(sub.id)}
                         className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/15 text-red-400 hover:text-red-300 font-bold text-xs transition-all cursor-pointer"
-                        title={lang === 'ar' ? 'حذف هذا الإعلان' : 'Delete this ad'}
+                        title={lang === 'ar' ? 'حذف إعلانك غير المنشور ووسائطه' : 'Delete your unpublished ad and its media'}
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
                         <span>{lang === 'ar' ? 'حذف' : 'Delete'}</span>
