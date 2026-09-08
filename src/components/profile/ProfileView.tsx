@@ -1071,6 +1071,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               const isArchived = sub.status === 'archived' || (sub.expiresAt && new Date(sub.expiresAt).getTime() <= Date.now());
               const isEditing = editingSubId === sub.id;
               const associatedEvent = events.find(e => e.id === sub.eventData?.id || e.id === sub.id);
+              const displayMediaUrl =
+                sub.eventData?.thumbnailUrl ||
+                sub.mediaUrl ||
+                sub.eventData?.mediaUrl ||
+                associatedEvent?.thumbnailUrl ||
+                associatedEvent?.mediaUrl;
+              const displayMediaType = sub.mediaType || sub.eventData?.mediaType || associatedEvent?.mediaType || 'image';
 
               return (
                 <motion.div
@@ -1099,9 +1106,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     }}
                   >
                     <div className="flex flex-col gap-2">
-                      <h3 className="text-lg font-black text-white">
-                        {lang === 'ar' ? (sub.eventData?.titleAr || sub.titleAr) : (sub.eventData?.titleEn || sub.titleEn)}
-                      </h3>
+                      <div className="flex items-center gap-3 min-w-0">
+                        {displayMediaUrl ? (
+                          displayMediaType === 'video' ? (
+                            <div className="w-16 h-16 shrink-0 rounded-xl bg-indigo-950 border border-indigo-500/40 flex items-center justify-center text-2xl" title="Video">
+                              🎬
+                            </div>
+                          ) : (
+                            <img
+                              src={displayMediaUrl}
+                              alt={lang === 'ar' ? 'صورة الإعلان' : 'Ad image'}
+                              className="w-16 h-16 shrink-0 rounded-xl object-cover border border-white/10 bg-neutral-800"
+                              loading="lazy"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          )
+                        ) : (
+                          <div className="w-16 h-16 shrink-0 rounded-xl bg-neutral-800 border border-amber-500/30 flex items-center justify-center text-[10px] text-amber-300 text-center px-1">
+                            {lang === 'ar' ? 'لا توجد صورة' : 'No image'}
+                          </div>
+                        )}
+                        <h3 className="text-lg font-black text-white truncate">
+                          {lang === 'ar' ? (sub.eventData?.titleAr || sub.titleAr) : (sub.eventData?.titleEn || sub.titleEn)}
+                        </h3>
+                      </div>
                       <div className="flex items-center gap-2 flex-wrap text-[10px] sm:text-xs">
                         <span className="text-amber-400 font-mono font-bold">
                           #{sub.invoiceNumber}
