@@ -734,7 +734,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setBookings(liveBookings || []);
       },
       user.id,
-      true
+      user.isAdmin === true
     );
     const unsubAds = subscribeToAdSubmissions((ads) => setUserAdSubmissions(ads || []), user.id, false);
     return () => {
