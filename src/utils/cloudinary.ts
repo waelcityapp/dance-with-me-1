@@ -85,7 +85,11 @@ export async function deleteFromCloudinary(url: string, resourceType: 'image' | 
     }
     
     const data = await response.json().catch(() => ({}));
-    return data.success !== false;
+    if (data.success !== true) {
+      console.warn('Cloudinary deletion was not confirmed:', data.error || data.result || data);
+      return false;
+    }
+    return true;
   } catch (error) {
     console.warn('Note: Cloudinary media deletion skipped or failed gracefully:', error);
     return false;
