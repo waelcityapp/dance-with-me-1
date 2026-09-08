@@ -109,41 +109,54 @@ async function getFirebaseCerts(): Promise<Record<string, string>> {
   return certs;
 }
 
-async function isAuthorizedAdminRequest(req: express.Request): Promise<boolean> {
+async function verifyFirebaseToken(req: express.Request): Promise<any | null> {
   try {
     const header = req.headers.authorization || "";
-    if (!header.startsWith("Bearer ")) return false;
+    if (!header.startsWith("Bearer ")) return null;
     const token = header.slice("Bearer ".length).trim();
     const parts = token.split(".");
-    if (parts.length !== 3) return false;
+    if (parts.length !== 3) return null;
 
     const decode = (value: string) =>
       JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
     const tokenHeader = decode(parts[0]);
     const tokenPayload = decode(parts[1]);
-    if (tokenHeader.alg !== "RS256" || !tokenHeader.kid) return false;
+    if (tokenHeader.alg !== "RS256" || !tokenHeader.kid) return null;
 
     const certs = await getFirebaseCerts();
     const certificate = certs[tokenHeader.kid];
-    if (!certificate) return false;
+    if (!certificate) return null;
 
     const verifier = createVerify("RSA-SHA256");
     verifier.update(parts[0] + "." + parts[1]);
     verifier.end();
     if (!verifier.verify(certificate, Buffer.from(parts[2], "base64url"))) {
-      return false;
+      return null;
     }
 
     const now = Math.floor(Date.now() / 1000);
-    return tokenPayload.aud === firebaseProjectId
-      && tokenPayload.iss === ("https://securetoken.google.com/" + firebaseProjectId)
-      && typeof tokenPayload.sub === "string"
-      && tokenPayload.exp > now
-      && tokenPayload.email === adminEmail
-      && tokenPayload.email_verified === true;
+    if (
+      tokenPayload.aud !== firebaseProjectId ||
+      tokenPayload.iss !== ("https://securetoken.google.com/" + firebaseProjectId) ||
+      typeof tokenPayload.sub !== "string" ||
+      tokenPayload.exp <= now
+    ) {
+      return null;
+    }
+
+    return tokenPayload;
   } catch {
-    return false;
+    return null;
   }
+}
+
+async function isAuthorizedAdminRequest(req: express.Request): Promise<boolean> {
+  const claims = await verifyFirebaseToken(req);
+  return Boolean(
+    claims &&
+    claims.email === adminEmail &&
+    claims.email_verified === true
+  );
 }
 
 // Default / Persisted VAPID Configuration
@@ -175,15 +188,63 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Cloudinary media delete endpoint. Destructive deletion is admin-only.
+  // Cloudinary media deletion. Admins can delete any asset;
+  // owners can delete only their own media from non-approved submissions.
   app.post("/api/delete-media", async (req, res) => {
     try {
-      if (!(await isAuthorizedAdminRequest(req))) {
+      const claims = await verifyFirebaseToken(req);
+      if (!claims) {
         return res.status(403).json({
           success: false,
-          error: "Admin authentication required",
+          error: "Firebase authentication required",
         });
       }
+
+      const isAdmin = claims.email === adminEmail && claims.email_verified === true;
+      const { url, resourceType = "image", submissionId } = req.body || {};
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ success: false, error: "Media URL is required" });
+      }
+
+      if (!isAdmin) {
+        if (!submissionId || typeof submissionId !== "string") {
+          return res.status(403).json({ success: false, error: "Submission ownership is required" });
+        }
+
+        const firestoreUrl =
+          "https://firestore.googleapis.com/v1/projects/" +
+          firebaseProjectId +
+          "/databases/(default)/documents/ad_submissions/" +
+          encodeURIComponent(submissionId);
+        const ownershipResponse = await fetch(firestoreUrl, {
+          headers: { Authorization: "Bearer " + (req.headers.authorization || "").slice("Bearer ".length) },
+        });
+        if (!ownershipResponse.ok) {
+          return res.status(403).json({ success: false, error: "Submission could not be verified" });
+        }
+
+        const submissionDocument = await ownershipResponse.json();
+        const submission = parseFirestoreFields(submissionDocument.fields);
+        const isOwner = submission.advertiserId === claims.sub;
+        const isApproved = submission.status === "approved";
+        const allowedUrls = [
+          submission.mediaUrl,
+          submission.receiptUrl,
+          submission.receiptImage,
+          submission.previousMediaUrl,
+          submission.eventData?.mediaUrl,
+          submission.eventData?.thumbnailUrl,
+          submission.eventData?.receiptUrl,
+        ].filter((item): item is string => typeof item === "string" && item.length > 0);
+
+        if (!isOwner || isApproved || !allowedUrls.includes(url)) {
+          return res.status(403).json({
+            success: false,
+            error: "You may only delete your own media from a non-published submission",
+          });
+        }
+      }
+
       const { url, resourceType = "image" } = req.body || {};
       if (!url || typeof url !== "string") {
         return res.json({ success: true, message: "No URL provided" });
@@ -211,9 +272,11 @@ async function startServer() {
         process.env.CLOUDINARY_API_SECRET ||
         process.env.VITE_CLOUDINARY_API_SECRET;
 
-      // If credentials are not provided in environment, handle gracefully without failing
-      if (!apiKey || !apiSecret) {
-        return res.json({ success: true, warning: "Cloudinary credentials not set on server" });
+      if (!cloudName || !apiKey || !apiSecret) {
+        return res.status(500).json({
+          success: false,
+          error: "Cloudinary delete credentials are missing on the server",
+        });
       }
 
       cloudinary.config({
@@ -225,7 +288,10 @@ async function startServer() {
 
       const publicId = extractCloudinaryPublicId(url);
       if (!publicId) {
-        return res.json({ success: true, message: "Could not extract public_id" });
+        return res.status(422).json({
+          success: false,
+          error: "Could not extract Cloudinary public_id from URL",
+        });
       }
 
       const result = await cloudinary.uploader.destroy(publicId, {
@@ -233,7 +299,12 @@ async function startServer() {
         invalidate: true,
       });
 
-      return res.json({ success: true, result });
+      const deletionConfirmed = result?.result === "ok" || result?.result === "not found";
+      return res.status(deletionConfirmed ? 200 : 502).json({
+        success: deletionConfirmed,
+        result,
+        error: deletionConfirmed ? undefined : "Cloudinary did not confirm deletion",
+      });
     } catch (err: any) {
       console.warn("Cloudinary delete-media note:", err?.message || err);
       return res.json({ success: false, error: err?.message || "Failed to delete" });
