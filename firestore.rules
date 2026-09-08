@@ -1,12 +1,114 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Anyone can read and write all collections to bypass third-party cookie blocks inside the iframe preview environment.
-    // This permanently solves the issue where admin deletions and edits failed to persist to Firestore.
-    
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && (
+          request.auth.token.email == 'waelvts@gmail.com'
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        );
+    }
+
+    // Public events are readable, but only an authenticated admin can create,
+    // edit, or delete published event documents.
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isAdmin()
+        && request.resource.data.uploadDate is string
+        && request.resource.data.createdSource is string
+        && request.resource.data.createdSource in ['admin', 'approved_submission'];
+      allow delete: if isAdmin();
+      allow update: if isAdmin()
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewsCount'])
+        || (isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount']));
+    }
+
+    // Users may submit ads, but submissions remain private to their owner
+    // until an admin approves them.
+    match /ad_submissions/{submissionId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.advertiserId == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.advertiserId == request.auth.uid;
+      allow update, delete: if isAdmin()
+        || (isSignedIn() && resource.data.advertiserId == request.auth.uid);
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAdmin()
+        || (isSignedIn() && request.auth.uid == userId);
+    }
+
+    match /app_assets/{assetId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /app_config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Analytics intentionally accepts public counter writes from the PWA.
+    // It does not grant write access to content collections.
+    match /analytics/{documentId} {
+      allow read: if isAdmin();
+      allow write: if true;
+    }
+
+    match /analytics_daily/{documentId} {
+      allow read: if isAdmin();
+      allow write: if true;
+    }
+
+    match /support_messages/{messageId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /security_violations/{violationId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // Legacy client-side admin-code verification still needs read access.
+    // It should be replaced by Firebase Auth-only admin login in a later pass.
+    match /admin_codes/{codeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // No other collection is writable by default.
     match /{document=**} {
-      allow read, write: if true;
+      allow read: if false;
+      allow write: if false;
     }
   }
 }
