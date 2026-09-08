@@ -191,6 +191,8 @@ export interface AdSubmission {
   reviewedAt?: string;
   expiresAt?: string;
   archivedAt?: string;
+  previousMediaUrl?: string;
+  deletionRequestedAt?: string;
   renewalCount?: number;
   eventData?: Partial<DanceEvent>;
   staffSettings?: SecurityStaffSettings;
