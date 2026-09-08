@@ -104,7 +104,7 @@ async function getFirebaseCerts(): Promise<Record<string, string>> {
   if (!response.ok) throw new Error("Unable to load Firebase token certificates");
   const certs = await response.json() as Record<string, string>;
   const cacheControl = response.headers.get("cache-control") || "";
-  const maxAge = Number(cacheControl.match(/max-age=(\\d+)/)?.[1] || 3600);
+  const maxAge = Number(cacheControl.match(/max-age=(\d+)/)?.[1] || 3600);
   firebaseCertsCache = { certs, expiresAt: Date.now() + maxAge * 1000 };
   return certs;
 }
