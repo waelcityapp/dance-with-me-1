@@ -30,7 +30,7 @@ import { WhyBookModal } from './components/modals/WhyBookModal';
 import { AboutUsPage } from './components/about/AboutUsPage';
 import { Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { DanceEvent, AccountTier } from './types';
+import { DanceEvent, AccountTier, DanceCategory } from './types';
 
 import { AdminEditEventPage } from './components/admin/AdminEditEventPage';
 import { VerificationView } from './components/verification/VerificationView';
@@ -40,6 +40,8 @@ const AppContent: React.FC = () => {
   const { 
     lang, 
     setLang,
+    selectedCategory,
+    setSelectedCategory,
     activeTab, 
     setActiveTab, 
     user, 
@@ -69,6 +71,12 @@ const AppContent: React.FC = () => {
     if (requestedLang === 'ar' || requestedLang === 'en') {
       setLang(requestedLang);
     }
+    const requestedCategory = urlParams.get('category') as DanceCategory | null;
+    const validCategories: DanceCategory[] = ['all', 'party', 'course', 'trip', 'exhibition', 'services', 'jobs'];
+    if (requestedCategory && validCategories.includes(requestedCategory)) {
+      setSelectedCategory(requestedCategory);
+      setActiveTab('explore');
+    }
     if (urlParams.get('verify')) {
       setActiveTab('verification');
     }
@@ -83,7 +91,7 @@ const AppContent: React.FC = () => {
     ) {
       setIsInstallOpen(true);
     }
-  }, [setActiveTab, setLang]);
+  }, [setActiveTab, setLang, setSelectedCategory]);
 
   useEffect(() => {
     const handlePopState = () => {
