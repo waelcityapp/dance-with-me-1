@@ -797,7 +797,8 @@ export const AdminPanel: React.FC = () => {
         bookingSubtextAr: adminBookingSubtextAr.trim(),
         bookingSubtextEn: adminBookingSubtextEn.trim(),
         // Admin-created events are published immediately and may be indexed.
-        seoIndexable: true
+        seoIndexable: true,
+        createdSource: 'admin'
       };
       
       // Save to Firestore and verify success
@@ -1661,7 +1662,8 @@ export const AdminPanel: React.FC = () => {
         creatorName: sub.advertiserName || sub.eventData?.creatorName,
         isEmpty: false,
         // This flag is set only after the admin approves and publishes the submission.
-        seoIndexable: true
+        seoIndexable: true,
+        createdSource: 'approved_submission'
       };
 
       // Publish event into global state and Firestore
