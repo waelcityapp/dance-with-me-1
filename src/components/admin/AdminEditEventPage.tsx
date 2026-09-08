@@ -258,7 +258,9 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         showBookingButton,
         showViewsCount,
         bookingSubtextAr: bookingSubtextAr.trim(),
-        bookingSubtextEn: bookingSubtextEn.trim()
+        bookingSubtextEn: bookingSubtextEn.trim(),
+        // Saving edits from the admin panel confirms this event is approved for public SEO.
+        seoIndexable: true
       };
 
       // If position has changed, check if we need to swap with an existing event (or empty placeholder) at the new position
