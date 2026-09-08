@@ -104,7 +104,9 @@ export async function deleteFromCloudinary(
     }
     return true;
   } catch (error) {
-    console.warn('Note: Cloudinary media deletion skipped or failed gracefully:', error);
+    const reason = error instanceof Error ? error.message : 'تعذر الاتصال بخدمة حذف الوسائط';
+    console.warn('Cloudinary media deletion failed:', reason);
+    onError?.(reason);
     return false;
   }
 }
