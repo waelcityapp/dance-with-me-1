@@ -38,8 +38,10 @@ export default async function handler(req, res) {
   let image = "https://res.cloudinary.com/dynasmcaj/image/upload/w_1200,h_630,c_fill,q_auto,f_jpg/fbyjfjq8equle5pl7kwz.png";
   const appIcon = "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png";
   const appIconSmall = "https://res.cloudinary.com/dynasmcaj/image/upload/w_64,h_64,c_fill,g_auto,q_auto,f_png/fbyjfjq8equle5pl7kwz.png";
-  let eventDate = new Date().toISOString();
+  let eventDate = '';
   let eventEndDate = '';
+  let eventIsArchived = false;
+  let eventIsPaused = false;
   let locationName = "Cairo, Egypt";
   let locationAddress = '';
   let locationCity = 'Cairo';
@@ -186,6 +188,12 @@ export default async function handler(req, res) {
         if (rawDesc) description = stripLegacyRepoLinks(rawDesc).replace(/[\r\n]+/g, ' ').substring(0, 220).trim();
         if (rawDate) eventDate = rawDate;
         if (rawEndDate) eventEndDate = rawEndDate;
+        eventIsArchived =
+          event.status === 'archived' ||
+          found.status === 'archived' ||
+          event.seoIndexable === false ||
+          found.seoIndexable === false;
+        eventIsPaused = event.isPaused === true || found.isPaused === true;
         if (rawLocation) locationName = stripLegacyRepoLinks(rawLocation);
         if (rawLocationAddress) locationAddress = stripLegacyRepoLinks(rawLocationAddress);
         if (rawLocationCity) locationCity = stripLegacyRepoLinks(rawLocationCity);
@@ -206,18 +214,19 @@ export default async function handler(req, res) {
     ? "CityEve, cityeve.online, Egypt events, Cairo events, Egypt parties, Cairo nightlife, salsa Egypt, bachata Egypt, kizomba Egypt, Egypt exhibitions, Egypt conferences, event booking Egypt"
     : "CityEve, سيتي إيف, cityeve.online, فعاليات مصر, حفلات مصر, معارض مصر, مؤتمرات مصر, حفلات القاهرة, سهرات القاهرة, سالسا مصر, باتشاتا مصر, كيزومبا, حجز فعاليات مصر";
 
+  const shouldIndexEvent = !eventIsArchived && !eventIsPaused;
   const eventJsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Event",
     "@id": `${pageUrl}#event`,
     "identifier": eventId || undefined,
     "name": safeTitle,
-    "description": safeDesc,
+    "description": description,
     "image": image,
     "url": pageUrl,
-    "startDate": eventDate,
+    ...(eventDate ? { "startDate": eventDate } : {}),
     ...(eventEndDate ? { "endDate": eventEndDate } : {}),
-    "eventStatus": "https://schema.org/EventScheduled",
+    ...(shouldIndexEvent ? { "eventStatus": "https://schema.org/EventScheduled" } : {}),
     "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
     "location": {
       "@type": "Place",
@@ -245,7 +254,7 @@ export default async function handler(req, res) {
   <title>${safeTitle}</title>
   <meta name="description" content="${safeDesc}" />
   <meta name="keywords" content="${keywords}" />
-  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="robots" content="${shouldIndexEvent ? 'index, follow' : 'noindex, follow'}, max-image-preview:large" />
   <link rel="canonical" href="${pageUrl}" />
   <link rel="alternate" hreflang="ar" href="${arabicPageUrl}" />
   <link rel="alternate" hreflang="en" href="${englishPageUrl}" />
@@ -281,7 +290,7 @@ export default async function handler(req, res) {
   
   <!-- JSON-LD Event Structured Data for Google Rich Snippets -->
   <script type="application/ld+json">
-  ${eventJsonLd}
+  ${eventJsonLd.replace(/</g, '\\u003c')}
   </script>
 
   <meta http-equiv="refresh" content="0;url=${targetUrl}" />
