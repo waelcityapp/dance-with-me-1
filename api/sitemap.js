@@ -74,7 +74,15 @@ const isPublicEvent = (event) => {
   const explicitlyApproved = event.seoIndexable === true;
   if (!explicitlyApproved) return false;
 
-  if (event.isPublished === false || event.published === false || event.approved === false) {
+  if (
+    event.isPublished === false ||
+    event.published === false ||
+    event.approved === false ||
+    event.isArchived === true ||
+    event.archived === true ||
+    event.isPaused === true ||
+    event.paused === true
+  ) {
     return false;
   }
 
