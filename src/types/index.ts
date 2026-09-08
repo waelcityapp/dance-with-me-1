@@ -126,6 +126,8 @@ export interface DanceEvent {
   creatorName?: string;
   /** Only approved/published events should be included in search engine sitemaps. */
   seoIndexable?: boolean;
+  /** Required audit source for newly created event documents. */
+  createdSource?: 'admin' | 'approved_submission';
 }
 
 export type AccountTier = 'free' | 'featured' | 'vip';
