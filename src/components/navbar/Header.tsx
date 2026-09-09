@@ -95,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#D4AF37]/40 bg-[#FBF3E2] backdrop-blur-xl transition-all duration-300 shadow-md text-[#42030A]">
+    <header className="sticky top-0 z-50 w-full border-b border-[#d4af67]/55 bg-[#fffaf0]/95 backdrop-blur-xl transition-all duration-300 shadow-[0_8px_28px_rgba(66,3,10,0.08)] text-[#5b0d18]">
       <div className="mx-auto flex items-center justify-between max-w-6xl px-3 sm:px-6 h-16 gap-2 relative">
         {/* Brand Logo & Title */}
         <div 
@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
           <motion.div 
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.95 }}
-            className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl overflow-hidden border border-[#D4AF37] shadow-sm bg-[#FBF3E2] shrink-0"
+            className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl overflow-hidden border border-[#d4af67] shadow-sm bg-[#fffaf0] shrink-0"
           >
             <img 
               src={appAssets?.app_icon_url || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"} 
@@ -118,11 +118,11 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex flex-col justify-center">
             <div className="flex items-center gap-1.5">
               <span className="flex h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
-              <h1 className="font-sans text-lg sm:text-xl font-black tracking-tight text-[#42030A] leading-none">
+              <h1 className="font-serif text-lg sm:text-xl font-semibold tracking-tight text-[#5b0d18] leading-none">
                 {appAssets?.appNameEn || appAssets?.appNameAr || "CityEve"}
               </h1>
             </div>
-            <span className="font-mono text-[9px] text-[#78101F] font-bold tracking-wider leading-tight mt-0.5">
+            <span className="font-sans text-[10px] text-[#8b4a45] font-semibold tracking-wide leading-tight mt-0.5">
               {lang === 'ar' ? 'دليل الفعاليات والسهرات' : 'Events & Nightlife'}
             </span>
           </div>
@@ -135,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onOpenAboutUs}
-              className="flex items-center justify-center px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-[#42030A]/10 hover:bg-[#42030A]/15 border border-[#42030A]/30 text-[#42030A] transition-all cursor-pointer text-xs sm:text-sm font-black whitespace-nowrap shadow-xs backdrop-blur-sm"
+              className="flex items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-[#6b101c]/8 hover:bg-[#6b101c]/14 border border-[#d4af67]/65 text-[#6b101c] transition-all cursor-pointer text-xs sm:text-sm font-bold whitespace-nowrap shadow-sm backdrop-blur-sm"
               title={lang === 'ar' ? 'عن التطبيق والمنصة' : 'About Platform'}
             >
               <span className="text-[#42030A] font-bold">{lang === 'ar' ? 'من نحن' : 'About Us'}</span>
