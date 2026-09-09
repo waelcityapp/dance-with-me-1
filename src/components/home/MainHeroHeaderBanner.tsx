@@ -84,7 +84,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           <div className="mb-3 flex flex-col items-center sm:mb-6">
             {/* Decorative wordmark layer: replaceable later with the final transparent SVG asset. */}
             <div className="relative inline-flex items-center">
-              <span className="font-serif text-4xl font-semibold italic leading-none tracking-[-0.08em] text-[#f8e5b1] drop-shadow-[0_3px_12px_rgba(0,0,0,0.35)] sm:text-7xl">
+              <span className="font-serif text-3xl font-semibold italic leading-none tracking-[-0.08em] text-[#f8e5b1] drop-shadow-[0_3px_12px_rgba(0,0,0,0.35)] sm:text-7xl">
                 CityEve
               </span>
               <span className="absolute -bottom-3 left-1/2 h-px w-24 -translate-x-1/2 bg-gradient-to-r from-transparent via-[#d4af67] to-transparent sm:w-32" />
@@ -92,14 +92,14 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           </div>
 
           <div className="max-w-3xl px-1">
-            <h1 className="text-2xl font-black leading-[1.12] tracking-tight text-white drop-shadow-md sm:text-5xl lg:text-6xl">
+            <h1 className="text-xl font-black leading-[1.15] tracking-tight text-white drop-shadow-md sm:text-5xl lg:text-6xl">
               {isAr ? (
                 <>كل الفعاليات <span className="text-[#edc56d]">في مكان واحد</span></>
               ) : (
                 <>Every event <span className="text-[#edc56d]">in one place</span></>
               )}
             </h1>
-            <p className="mx-auto mt-2 max-w-2xl text-xs font-medium leading-5 text-[#f6e8c8]/85 sm:mt-4 sm:text-base lg:text-lg">
+            <p className="mx-auto mt-2 max-w-2xl text-[11px] font-medium leading-5 text-[#f6e8c8]/85 sm:mt-4 sm:text-base lg:text-lg">
               {isAr
                 ? 'اكتشف أفضل الحفلات والرحلات والدورات والخدمات، واحجز تجربتك القادمة بسهولة.'
                 : 'Discover parties, trips, courses, and services — then book your next experience with ease.'}
@@ -115,7 +115,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
               <span className="flex h-8 w-8 shrink-0 sm:h-9 sm:w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#6b101c] text-[#f0c66e] transition group-hover:bg-[#841526]">
                 <Search className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
               </span>
-              <span className="flex-1 text-xs font-semibold leading-5 text-[#7c5b57] sm:text-base">
+              <span className="flex-1 text-[11px] font-semibold leading-5 text-[#7c5b57] sm:text-base">
                 {isAr ? 'ابحث عن حفلة، دورة، رحلة أو خدمة...' : 'Search for a party, course, trip, or service...'}
               </span>
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#d4a84f] text-[#3d0711]">
@@ -131,7 +131,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 type="button"
                 whileTap={{ scale: 0.96 }}
                 onClick={handleExplore}
-                className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-3 py-1.5 text-[11px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] sm:px-4 sm:text-sm"
+                className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2.5 py-1.5 text-[10px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] sm:px-4 sm:text-sm"
               >
                 {isAr ? category.ar : category.en}
               </motion.button>
