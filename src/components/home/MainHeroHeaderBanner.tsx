@@ -9,12 +9,12 @@ interface MainHeroHeaderBannerProps {
 }
 
 const categories = [
-  { ar: 'حفلات', en: 'Parties' },
-  { ar: 'دورات', en: 'Courses' },
-  { ar: 'رحلات', en: 'Trips' },
-  { ar: 'معارض', en: 'Exhibitions' },
-  { ar: 'خدمات', en: 'Services' },
-  { ar: 'وظائف', en: 'Jobs' },
+  { ar: 'حفلات وسهرات', en: 'Parties & Nightlife' },
+  { ar: 'دورات وكورسات', en: 'Courses & Workshops' },
+  { ar: 'رحلات ومعسكرات', en: 'Trips & Camps' },
+  { ar: 'معارض ومؤتمرات', en: 'Exhibitions & Conferences' },
+  { ar: 'شركات وخدمات مكملة', en: 'Companies & Event Services' },
+  { ar: 'وظائف في نفس المجال', en: 'Jobs in the Field' },
 ];
 
 export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
