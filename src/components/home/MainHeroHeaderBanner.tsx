@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { Sparkles, Calendar, Ticket, ArrowLeft, ArrowRight, Flame, PlusCircle, Smartphone, MapPin, Music } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Search } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface MainHeroHeaderBannerProps {
@@ -8,273 +8,137 @@ interface MainHeroHeaderBannerProps {
   onPostAdClick?: () => void;
 }
 
+const categories = [
+  { ar: 'حفلات', en: 'Parties' },
+  { ar: 'دورات', en: 'Courses' },
+  { ar: 'رحلات', en: 'Trips' },
+  { ar: 'معارض', en: 'Exhibitions' },
+  { ar: 'خدمات', en: 'Services' },
+  { ar: 'وظائف', en: 'Jobs' },
+];
+
 export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   onExploreClick,
-  onPostAdClick
+  onPostAdClick,
 }) => {
   const { lang, appAssets } = useApp();
   const isAr = lang === 'ar';
+  const uploadedBackground = isAr
+    ? appAssets?.app_hero_banner_url
+    : appAssets?.app_hero_banner_url_en;
 
-  const customBannerUrlAr = appAssets?.app_hero_banner_url;
-  const customBannerUrlEn = appAssets?.app_hero_banner_url_en;
-
-  const activeBannerUrl = isAr ? customBannerUrlAr : customBannerUrlEn;
-
-  // Optimize Cloudinary banner images for ultra-fast load speed (WebP/AVIF auto compression)
-  const optimizedBannerSrc = React.useMemo(() => {
-    if (!activeBannerUrl) return '';
-    if (activeBannerUrl.includes('res.cloudinary.com') && activeBannerUrl.includes('/image/upload/')) {
-      if (!activeBannerUrl.includes('/f_auto') && !activeBannerUrl.includes('/q_auto')) {
-        return activeBannerUrl.replace('/image/upload/', '/image/upload/f_auto,q_auto,w_1400/');
-      }
-    }
-    return activeBannerUrl;
-  }, [activeBannerUrl]);
+  const backgroundImage = uploadedBackground || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1800&q=80';
 
   const handleExplore = () => {
     if (onExploreClick) {
       onExploreClick();
-    } else {
-      const searchSec = document.getElementById('search-section');
-      if (searchSec) {
-        searchSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        window.scrollTo({ top: 400, behavior: 'smooth' });
-      }
+      return;
     }
+
+    const searchSection = document.getElementById('search-section');
+    searchSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
-    <section 
-      aria-label="CityEVE Hero Banner"
-      className="relative w-full overflow-hidden bg-transparent text-white transition-all pt-2 sm:pt-3 px-3 sm:px-6"
+    <section
+      aria-label={isAr ? 'بانر CityEve الرئيسي' : 'CityEve main banner'}
+      className="relative w-full overflow-hidden px-3 pb-3 pt-2 sm:px-5 sm:pb-5"
     >
-      {/* If custom banner image is provided for current language, render it cleanly */}
-      {activeBannerUrl ? (
-        <div className="relative w-full max-w-5xl mx-auto overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-md bg-neutral-950">
-          <img
-            src={optimizedBannerSrc || activeBannerUrl}
-            alt={isAr ? "CityEVE - اكبر الحفلات والفعاليات في جيبك" : "CityEVE - The Biggest Parties & Events in Your Pocket"}
-            className="w-full h-auto object-cover max-h-[260px] sm:max-h-[340px] md:max-h-[380px] will-change-transform block"
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            referrerPolicy="no-referrer"
-          />
+      <div
+        className="relative isolate mx-auto min-h-[370px] max-w-6xl overflow-hidden rounded-[28px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] sm:min-h-[430px] lg:min-h-[470px]"
+        dir={isAr ? 'rtl' : 'ltr'}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover bg-center opacity-25"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(211,151,64,0.34),transparent_34%),linear-gradient(115deg,#3d0711_0%,#650d1b_48%,#2b040b_100%)]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(39,4,11,0.1),rgba(39,4,11,0.3))]"
+        />
 
-          {/* Light gentle bottom gradient */}
-          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+        <div className="pointer-events-none absolute -left-16 top-16 h-40 w-40 rounded-full bg-[#d9a441]/12 blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 bottom-8 h-52 w-52 rounded-full bg-[#a72b37]/30 blur-3xl" />
 
-          {/* Ultra-Prominent Action Overlay Floating on Banner */}
-          <div className="absolute bottom-3 sm:bottom-4 inset-x-0 z-30 px-3 sm:px-6 flex justify-center pointer-events-none">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+        <div className="relative z-10 flex min-h-[370px] flex-col items-center justify-center px-4 py-9 text-center sm:min-h-[430px] sm:px-8 sm:py-12 lg:min-h-[470px]">
+          <div className="absolute inset-x-5 top-5 flex items-center justify-between sm:inset-x-8 sm:top-7">
+            <button
               type="button"
               onClick={onPostAdClick}
-              className="pointer-events-auto group relative w-full max-w-md sm:max-w-lg md:max-w-xl flex items-center justify-between py-2 px-3 sm:py-2.5 sm:px-4 rounded-2xl sm:rounded-3xl bg-neutral-950/85 hover:bg-neutral-950/95 backdrop-blur-md border-2 border-amber-400/40 hover:border-amber-400 shadow-2xl shadow-black/80 transition-all cursor-pointer overflow-hidden text-right"
-              dir={isAr ? 'rtl' : 'ltr'}
+              className="inline-flex items-center gap-2 rounded-full border border-[#d4af67]/70 bg-[#5b0d18]/75 px-3.5 py-2 text-xs font-bold text-[#f7e8bd] shadow-lg backdrop-blur-sm transition hover:bg-[#741523] sm:px-4 sm:text-sm"
             >
-              {/* Subtle shining gradient accent */}
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-amber-500/10 opacity-60 group-hover:opacity-100 transition-opacity" />
+              <Plus className="h-4 w-4 text-[#e1b45b]" />
+              <span>{isAr ? 'أضف فعاليتك' : 'Post your event'}</span>
+            </button>
 
-              <div className="relative z-10 flex items-center gap-2.5 sm:gap-3.5">
-                <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-neutral-950 shadow-md shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-                  <PlusCircle className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <span className="text-sm sm:text-base md:text-lg font-black text-white group-hover:text-amber-300 transition-colors drop-shadow-md">
-                    {isAr ? 'إضافة إعلان' : 'Post Event'}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold text-[#F5E6D8] bg-[#500610]/90 border border-[#D4AF37]/60 shadow-md">
-                    <span className="text-xs sm:text-sm">🎁</span>
-                    <span className="text-amber-300">{isAr ? 'مجاناً حتى 1 نوفمبر' : 'Free until Nov 1st'}</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="relative z-10 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 text-white group-hover:bg-amber-400 group-hover:text-neutral-950 transition-all shrink-0 shadow-sm">
-                {isAr ? <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />}
-              </div>
-            </motion.button>
+            <span className="text-[11px] font-medium tracking-[0.18em] text-[#e9ca85]/80 sm:text-xs">
+              {isAr ? 'اكتشف • احجز • استمتع' : 'DISCOVER • BOOK • ENJOY'}
+            </span>
           </div>
-        </div>
-      ) : (
-        /* Full Dynamic High-End Canvas Banner matching the uploaded graphic - Optimized for high performance */
-        <div className="relative w-full max-w-5xl mx-auto overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-md bg-neutral-950 min-h-[300px] sm:min-h-[340px] flex items-center">
-          {/* Background Concert Crowd & Stage Lighting - Optimized size & opacity */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 will-change-transform"
-            style={{
-              backgroundImage: `url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=75')`
-            }}
-          />
 
-          {/* High-Performance Gradient Overlays without heavy blur filters */}
-          <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/85 to-neutral-950/40 z-10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-neutral-950/70 z-10" />
-          
-          {/* Lightweight Radial Ambient Lights (CSS radial gradient instead of heavy blur-3xl) */}
-          <div 
-            className="absolute top-0 right-1/4 w-80 h-80 pointer-events-none z-10 opacity-30" 
-            style={{ background: 'radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(0, 0, 0, 0) 70%)' }}
-          />
-          <div 
-            className="absolute bottom-0 right-10 w-72 h-72 pointer-events-none z-10 opacity-30"
-            style={{ background: 'radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(0, 0, 0, 0) 70%)' }}
-          />
-          <div 
-            className="absolute top-1/3 left-10 w-64 h-64 pointer-events-none z-10 opacity-25"
-            style={{ background: 'radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(0, 0, 0, 0) 70%)' }}
-          />
-
-          {/* Content Container */}
-          <div className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-10 w-full">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center" dir={isAr ? 'rtl' : 'ltr'}>
-              
-              {/* Left Column: Typography, Logo, and Action Buttons */}
-              <div className="lg:col-span-7 space-y-4 sm:space-y-6 text-center lg:text-start">
-                
-                {/* Brand Logo with Glowing Stars */}
-                <div 
-                  className="inline-flex items-center gap-3 bg-white/10 dark:bg-neutral-900/90 border border-white/20 dark:border-amber-500/30 px-4 py-2 rounded-2xl shadow-lg"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-xs shadow-md">
-                    CE
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-xl sm:text-2xl tracking-wider text-white">
-                      City<span className="text-amber-400">EVE</span>
-                    </span>
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                  </div>
-                </div>
-
-                {/* Main Slogan Headline */}
-                <div className="space-y-2">
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tight leading-[1.15] drop-shadow-md">
-                    {isAr ? (
-                      <>
-                        أكبر <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">الحفلات والفعاليات</span> في جيبك
-                      </>
-                    ) : (
-                      <>
-                        The Biggest <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">Parties & Events</span> In Your Pocket
-                      </>
-                    )}
-                  </h2>
-
-                  {/* Subtitle */}
-                  <p className="text-sm sm:text-base md:text-lg text-neutral-300 max-w-xl font-medium leading-relaxed drop-shadow">
-                    {isAr 
-                      ? 'استكشف، احجز، وعش التجربة مع منصة CityEVE المتكاملة للحفلات الكبرى والسهرات وأرقى الفعاليات'
-                      : 'Discover, book tickets, and live the moment with CityEVE — the premier Latin dance, nightlife & festival portal'}
-                  </p>
-                </div>
-
-                {/* Quick Feature Badges */}
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-1">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1.5 rounded-xl shadow-sm">
-                    <Flame className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{isAr ? 'حجوزات فورية مباشرة' : 'Instant Direct Bookings'}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/15 border border-blue-500/30 px-3 py-1.5 rounded-xl shadow-sm">
-                    <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                    <span>{isAr ? 'تجربة موبايل متكاملة' : 'Mobile First Experience'}</span>
-                  </span>
-                </div>
-
-                {/* Call-To-Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
-                  <button
-                    onClick={handleExplore}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-neutral-950 font-black text-sm shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
-                  >
-                    <Ticket className="w-4 h-4 stroke-[2.5]" />
-                    <span>{isAr ? 'استكشف الحفلات الآن' : 'Explore Events Now'}</span>
-                    {isAr ? <ArrowLeft className="w-4 h-4 stroke-[2.5]" /> : <ArrowRight className="w-4 h-4 stroke-[2.5]" />}
-                  </button>
-
-                  {onPostAdClick && (
-                    <button
-                      onClick={onPostAdClick}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-sm transition-all active:scale-95 cursor-pointer"
-                    >
-                      <PlusCircle className="w-4 h-4 text-amber-400" />
-                      <span>{isAr ? 'أضف فعاليتك مجاناً' : 'Post Your Event Free'}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Column: Device Mockups & Concert Visuals */}
-              <div className="lg:col-span-5 relative flex items-center justify-center">
-                <div className="relative w-full max-w-sm sm:max-w-md lg:max-w-full">
-                  {/* Floating Phone App Preview Card */}
-                  <div className="relative mx-auto rounded-3xl p-3 bg-neutral-900/95 border-2 border-amber-500/40 shadow-2xl max-w-[280px] sm:max-w-[320px]">
-                    
-                    {/* Phone Notch / Header */}
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800 text-[11px] text-neutral-400 px-1 font-mono">
-                      <div className="flex items-center gap-1 text-amber-400 font-bold">
-                        <Sparkles className="w-3 h-3" />
-                        <span>CityEVE Live</span>
-                      </div>
-                      <span className="flex items-center gap-1 text-emerald-400 font-bold text-[10px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        ONLINE
-                      </span>
-                    </div>
-
-                    {/* Miniature Card */}
-                    <div className="rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800/80 shadow-inner">
-                      <div className="relative h-32 w-full overflow-hidden">
-                        <img 
-                          src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=75" 
-                          alt="Party Preview" 
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent" />
-                        <span className="absolute top-2 right-2 bg-amber-500 text-neutral-950 font-black text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider">
-                          👑 VIP EVENT
-                        </span>
-                      </div>
-
-                      <div className="p-3 space-y-1.5">
-                        <h4 className="font-black text-xs text-white truncate">
-                          {isAr ? 'ليالي السالسا والباتشاتا الكبرى' : 'Grand Latin Night & Festival'}
-                        </h4>
-                        <div className="flex items-center justify-between text-[10px] text-neutral-400">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-amber-400" />
-                            {isAr ? 'القاهرة، المعادي' : 'Cairo, Maadi'}
-                          </span>
-                          <span className="font-mono text-emerald-400 font-bold">
-                            {isAr ? 'حجز فوري' : 'Open'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stats strip */}
-                    <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-neutral-800/60 text-center text-[10px]">
-                      <div className="bg-neutral-950/60 rounded-xl p-1.5 border border-neutral-800">
-                        <span className="text-neutral-400 block">{isAr ? 'الفعاليات' : 'Events'}</span>
-                        <strong className="text-white font-mono font-bold">+500</strong>
-                      </div>
-                      <div className="bg-neutral-950/60 rounded-xl p-1.5 border border-neutral-800">
-                        <span className="text-neutral-400 block">{isAr ? 'المشتركين' : 'Members'}</span>
-                        <strong className="text-amber-400 font-mono font-bold">+25,000</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+          <div className="mb-5 flex flex-col items-center sm:mb-6">
+            {/* Decorative wordmark layer: replaceable later with the final transparent SVG asset. */}
+            <div className="relative inline-flex items-center">
+              <span className="font-serif text-5xl font-semibold italic leading-none tracking-[-0.08em] text-[#f8e5b1] drop-shadow-[0_3px_12px_rgba(0,0,0,0.35)] sm:text-7xl">
+                CityEve
+              </span>
+              <span className="absolute -bottom-3 left-1/2 h-px w-24 -translate-x-1/2 bg-gradient-to-r from-transparent via-[#d4af67] to-transparent sm:w-32" />
             </div>
           </div>
+
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-black leading-[1.15] tracking-tight text-white drop-shadow-md sm:text-5xl lg:text-6xl">
+              {isAr ? (
+                <>كل الفعاليات <span className="text-[#edc56d]">في مكان واحد</span></>
+              ) : (
+                <>Every event <span className="text-[#edc56d]">in one place</span></>
+              )}
+            </h1>
+            <p className="mx-auto mt-3 max-w-2xl text-sm font-medium leading-7 text-[#f6e8c8]/85 sm:mt-4 sm:text-base lg:text-lg">
+              {isAr
+                ? 'اكتشف أفضل الحفلات والرحلات والدورات والخدمات، واحجز تجربتك القادمة بسهولة.'
+                : 'Discover parties, trips, courses, and services — then book your next experience with ease.'}
+            </p>
+          </div>
+
+          <div className="mt-6 w-full max-w-2xl sm:mt-8">
+            <button
+              type="button"
+              onClick={handleExplore}
+              className="group flex w-full items-center gap-3 rounded-2xl border border-[#e0be75]/70 bg-[#fffaf0] px-3 py-2.5 text-right text-[#6a1520] shadow-[0_12px_35px_rgba(30,0,6,0.28)] transition hover:bg-white sm:px-4 sm:py-3"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#6b101c] text-[#f0c66e] transition group-hover:bg-[#841526]">
+                <Search className="h-5 w-5" />
+              </span>
+              <span className="flex-1 text-sm font-semibold text-[#7c5b57] sm:text-base">
+                {isAr ? 'ابحث عن حفلة، دورة، رحلة أو خدمة...' : 'Search for a party, course, trip, or service...'}
+              </span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#d4a84f] text-[#3d0711]">
+                {isAr ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+              </span>
+            </button>
+          </div>
+
+          <div className="mt-5 flex max-w-4xl flex-wrap justify-center gap-2 sm:mt-6 sm:gap-2.5">
+            {categories.map((category) => (
+              <motion.button
+                key={category.en}
+                type="button"
+                whileTap={{ scale: 0.96 }}
+                onClick={handleExplore}
+                className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-3.5 py-2 text-xs font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] sm:px-4 sm:text-sm"
+              >
+                {isAr ? category.ar : category.en}
+              </motion.button>
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </section>
   );
 };
