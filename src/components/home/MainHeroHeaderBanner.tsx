@@ -42,10 +42,10 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   return (
     <section
       aria-label={isAr ? 'بانر CityEve الرئيسي' : 'CityEve main banner'}
-      className="relative w-full overflow-hidden px-3 pb-3 pt-2 sm:px-5 sm:pb-5"
+      className="relative w-full overflow-hidden px-1 pb-1 pt-1 sm:px-5 sm:pb-5"
     >
       <div
-        className="relative isolate mx-auto min-h-[300px] max-w-6xl overflow-hidden rounded-[28px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] sm:min-h-[430px] lg:min-h-[470px]"
+        className="relative isolate mx-auto min-h-[270px] max-w-6xl overflow-hidden rounded-[18px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] sm:min-h-[430px] sm:rounded-[28px] lg:min-h-[470px]"
         dir={isAr ? 'rtl' : 'ltr'}
       >
         <div
@@ -65,14 +65,14 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
         <div className="pointer-events-none absolute -left-16 top-16 h-40 w-40 rounded-full bg-[#d9a441]/12 blur-3xl" />
         <div className="pointer-events-none absolute -right-16 bottom-8 h-52 w-52 rounded-full bg-[#a72b37]/30 blur-3xl" />
 
-        <div className="relative z-10 flex min-h-[300px] flex-col items-center justify-start px-4 pb-16 pt-9 text-center sm:min-h-[430px] sm:justify-center sm:px-8 sm:py-12 lg:min-h-[470px]">
-          <div className="absolute inset-x-4 top-3 flex items-center justify-between gap-2 sm:inset-x-8 sm:top-7">
+        <div className="relative z-10 flex min-h-[270px] flex-col items-center justify-start px-2 pb-8 pt-8 text-center sm:min-h-[430px] sm:justify-center sm:px-8 sm:py-12 lg:min-h-[470px]">
+          <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-1 sm:inset-x-8 sm:top-7">
             <button
               type="button"
               onClick={onPostAdClick}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#d4af67]/70 bg-[#5b0d18]/75 px-2.5 py-1.5 text-[11px] font-bold text-[#f7e8bd] shadow-lg backdrop-blur-sm transition hover:bg-[#741523] sm:px-4 sm:text-sm"
+              className="inline-flex items-center gap-1 rounded-full border border-[#d4af67]/70 bg-[#5b0d18]/75 px-2 py-1 text-[10px] font-bold text-[#f7e8bd] shadow-lg backdrop-blur-sm transition hover:bg-[#741523] sm:px-4 sm:text-sm"
             >
-              <Plus className="h-3.5 w-3.5 text-[#e1b45b] sm:h-4 sm:w-4" />
+              <Plus className="h-3 w-3 text-[#e1b45b] sm:h-4 sm:w-4" />
               <span>{isAr ? 'أضف فعاليتك' : 'Post your event'}</span>
             </button>
 
