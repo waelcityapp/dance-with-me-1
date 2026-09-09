@@ -65,8 +65,8 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
         <div className="pointer-events-none absolute -left-16 top-16 h-40 w-40 rounded-full bg-[#d9a441]/12 blur-3xl" />
         <div className="pointer-events-none absolute -right-16 bottom-8 h-52 w-52 rounded-full bg-[#a72b37]/30 blur-3xl" />
 
-        <div className="relative z-10 flex min-h-[300px] flex-col items-center justify-center px-4 py-7 text-center sm:min-h-[430px] sm:px-8 sm:py-12 lg:min-h-[470px]">
-          <div className="absolute inset-x-4 top-4 flex items-center justify-between gap-2 sm:inset-x-8 sm:top-7">
+        <div className="relative z-10 flex min-h-[300px] flex-col items-center justify-start px-4 pb-16 pt-9 text-center sm:min-h-[430px] sm:justify-center sm:px-8 sm:py-12 lg:min-h-[470px]">
+          <div className="absolute inset-x-4 top-3 flex items-center justify-between gap-2 sm:inset-x-8 sm:top-7">
             <button
               type="button"
               onClick={onPostAdClick}
@@ -81,10 +81,10 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
             </span>
           </div>
 
-          <div className="mb-3 flex flex-col items-center sm:mb-6">
+          <div className="mb-1.5 flex flex-col items-center sm:mb-6">
             {/* Decorative wordmark layer: replaceable later with the final transparent SVG asset. */}
             <div className="relative inline-flex items-center">
-              <span className="font-serif text-3xl font-semibold italic leading-none tracking-[-0.08em] text-[#f8e5b1] drop-shadow-[0_3px_12px_rgba(0,0,0,0.35)] sm:text-7xl">
+              <span className="font-serif text-2xl font-semibold italic leading-none tracking-[-0.08em] text-[#f8e5b1] drop-shadow-[0_3px_12px_rgba(0,0,0,0.35)] sm:text-7xl">
                 CityEve
               </span>
               <span className="absolute -bottom-3 left-1/2 h-px w-24 -translate-x-1/2 bg-gradient-to-r from-transparent via-[#d4af67] to-transparent sm:w-32" />
@@ -92,46 +92,46 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           </div>
 
           <div className="max-w-3xl px-1">
-            <h1 className="text-xl font-black leading-[1.15] tracking-tight text-white drop-shadow-md sm:text-5xl lg:text-6xl">
+            <h1 className="text-lg font-black leading-[1.08] tracking-tight text-white drop-shadow-md sm:text-5xl lg:text-6xl">
               {isAr ? (
                 <>كل الفعاليات <span className="text-[#edc56d]">في مكان واحد</span></>
               ) : (
                 <>Every event <span className="text-[#edc56d]">in one place</span></>
               )}
             </h1>
-            <p className="mx-auto mt-2 max-w-2xl text-[11px] font-medium leading-5 text-[#f6e8c8]/85 sm:mt-4 sm:text-base lg:text-lg">
+            <p className="mx-auto mt-1 max-w-2xl text-[10px] font-medium leading-4 text-[#f6e8c8]/85 sm:mt-4 sm:text-base lg:text-lg">
               {isAr
                 ? 'اكتشف أفضل الحفلات والرحلات والدورات والخدمات، واحجز تجربتك القادمة بسهولة.'
                 : 'Discover parties, trips, courses, and services — then book your next experience with ease.'}
             </p>
           </div>
 
-          <div className="mt-4 w-full max-w-2xl sm:mt-8">
+          <div className="mt-3 w-full max-w-2xl sm:mt-8">
             <button
               type="button"
               onClick={handleExplore}
-              className="group flex w-full items-center gap-2 rounded-2xl border border-[#e0be75]/70 bg-[#fffaf0] px-2.5 py-2 text-right text-[#6a1520] shadow-[0_12px_35px_rgba(30,0,6,0.28)] transition hover:bg-white sm:px-4 sm:py-3"
+              className="group flex w-full items-center gap-2 rounded-2xl border border-[#e0be75]/70 bg-[#fffaf0] px-2.5 py-1.5 text-right text-[#6a1520] shadow-[0_12px_35px_rgba(30,0,6,0.28)] transition hover:bg-white sm:px-4 sm:py-3"
             >
-              <span className="flex h-8 w-8 shrink-0 sm:h-9 sm:w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#6b101c] text-[#f0c66e] transition group-hover:bg-[#841526]">
+              <span className="flex h-7 w-7 shrink-0 sm:h-9 sm:w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#6b101c] text-[#f0c66e] transition group-hover:bg-[#841526]">
                 <Search className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
               </span>
-              <span className="flex-1 text-[11px] font-semibold leading-5 text-[#7c5b57] sm:text-base">
+              <span className="flex-1 text-[10px] font-semibold leading-4 text-[#7c5b57] sm:text-base">
                 {isAr ? 'ابحث عن حفلة، دورة، رحلة أو خدمة...' : 'Search for a party, course, trip, or service...'}
               </span>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#d4a84f] text-[#3d0711]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#d4a84f] text-[#3d0711]">
                 {isAr ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
               </span>
             </button>
           </div>
 
-          <div className="mt-3 flex max-w-4xl flex-wrap justify-center gap-1.5 px-1 sm:mt-6 sm:gap-2.5">
+          <div className="mt-2 flex max-w-4xl flex-wrap justify-center gap-1 px-1 sm:mt-6 sm:gap-2.5">
             {categories.map((category) => (
               <motion.button
                 key={category.en}
                 type="button"
                 whileTap={{ scale: 0.96 }}
                 onClick={handleExplore}
-                className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2.5 py-1.5 text-[10px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] sm:px-4 sm:text-sm"
+                className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2 py-1 text-[9px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] sm:px-4 sm:text-sm"
               >
                 {isAr ? category.ar : category.en}
               </motion.button>
