@@ -50,16 +50,16 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
       >
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-cover bg-center opacity-25"
+          className="absolute inset-0 bg-cover bg-center opacity-95"
           style={{ backgroundImage: `url(${backgroundImage})` }}
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(211,151,64,0.34),transparent_34%),linear-gradient(115deg,#3d0711_0%,#650d1b_48%,#2b040b_100%)]"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(211,151,64,0.12),transparent_34%),linear-gradient(115deg,rgba(61,7,17,0.18)_0%,rgba(91,13,24,0.12)_48%,rgba(43,4,11,0.22)_100%)]"
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(39,4,11,0.1),rgba(39,4,11,0.3))]"
+          className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(39,4,11,0.04),rgba(39,4,11,0.18))]"
         />
 
         <div className="pointer-events-none absolute -left-16 top-16 h-40 w-40 rounded-full bg-[#d9a441]/12 blur-3xl" />
