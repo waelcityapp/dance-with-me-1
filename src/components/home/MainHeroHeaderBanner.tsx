@@ -147,7 +147,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           </div>
 
           <div className="mt-[clamp(8px,2.2vw,16px)] w-full max-w-[min(640px,calc(100vw-32px))] md:mt-4 md:max-w-2xl">
-            <div className="group flex w-full items-center gap-1.5 rounded-2xl border border-[#d4a84f]/75 bg-[#4a0913]/72 px-2 py-1.5 text-right text-[#fff0c8] shadow-[0_10px_26px_rgba(30,0,6,0.22)] backdrop-blur-md transition focus-within:border-[#f4d78d] focus-within:bg-[#4a0913]/85 md:gap-2 md:px-3 md:py-2">
+            <div className="group flex w-full items-center gap-1.5 rounded-[26px] border-2 border-[#9a672d]/90 bg-[#351b19]/90 px-2 py-1.5 text-right text-[#fff0c8] shadow-[inset_0_1px_0_rgba(255,225,160,0.16),0_10px_26px_rgba(30,0,6,0.24)] backdrop-blur-md transition focus-within:border-[#e0b45e] focus-within:bg-[#3d201d]/95 md:gap-2 md:px-3 md:py-2">
               <input
                 type="search"
                 value={heroSearchQuery}
@@ -161,7 +161,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 className="min-w-0 flex-1 bg-transparent text-[10px] font-semibold leading-4 text-[#fff0c8] outline-none placeholder:text-[#e7c98b]/75 md:text-sm"
                 dir={isAr ? 'rtl' : 'ltr'}
               />
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#d4a84f] text-[#3d0711] shadow-sm">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[14px] border border-[#efc96e]/80 bg-[#d4a84f] text-[#3d0711] shadow-[0_2px_5px_rgba(0,0,0,0.22)]">
                 {isAr ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
               </span>
             </div>
