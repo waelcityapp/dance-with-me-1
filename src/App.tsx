@@ -27,6 +27,7 @@ import { FloatingNotificationBanner } from './components/pwa/FloatingNotificatio
 import { AdViewsDetailsModal } from './components/modals/AdViewsDetailsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { MarketersManagement } from './components/admin/MarketersManagement';
+import { MarketerWalletPage } from './components/marketer/MarketerWalletPage';
 import { MainHeroHeaderBanner } from './components/home/MainHeroHeaderBanner';
 import { WhyBookModal } from './components/modals/WhyBookModal';
 import { AboutUsPage } from './components/about/AboutUsPage';
@@ -63,12 +64,11 @@ const AppContent: React.FC = () => {
 
   const [adminWorkspace, setAdminWorkspace] = useState<'main' | 'marketers'>('main');
   const [marketersGridTarget, setMarketersGridTarget] = useState<HTMLElement | null>(null);
+  const [marketerWalletOpen, setMarketerWalletOpen] = useState(false);
 
-  // Handle hardware / browser back button on mobile
   const lastBackPressRef = useRef<number>(0);
 
   useEffect(() => {
-    // Check if initial URL contains verification code parameter or install trigger
     const urlParams = new URLSearchParams(window.location.search);
     const requestedLang = urlParams.get('lang');
     if (requestedLang === 'ar' || requestedLang === 'en') {
@@ -89,6 +89,21 @@ const AppContent: React.FC = () => {
       setIsInstallOpen(true);
     }
   }, [setActiveTab, setLang]);
+
+  useEffect(() => {
+    const openWallet = () => {
+      setMarketerWalletOpen(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    window.addEventListener('OPEN_MARKETER_WALLET', openWallet);
+    return () => window.removeEventListener('OPEN_MARKETER_WALLET', openWallet);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'profile' && marketerWalletOpen) {
+      setMarketerWalletOpen(false);
+    }
+  }, [activeTab, marketerWalletOpen]);
 
   useEffect(() => {
     if (activeTab !== 'admin' && adminWorkspace !== 'main') {
@@ -133,6 +148,10 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const handlePopState = () => {
+      if (marketerWalletOpen) {
+        setMarketerWalletOpen(false);
+        return;
+      }
       if (activeTab !== 'explore') {
         setActiveTab('explore');
       }
@@ -142,9 +161,8 @@ const AppContent: React.FC = () => {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [activeTab, setActiveTab]);
+  }, [activeTab, setActiveTab, marketerWalletOpen]);
 
-  // Modal States
   const [selectedMapEvent, setSelectedMapEvent] = useState<DanceEvent | null>(null);
   const [selectedShareEvent, setSelectedShareEvent] = useState<DanceEvent | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -201,7 +219,6 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-600 dark:selection:text-amber-300 transition-colors duration-200">
-      {/* Sticky Luxury Header */}
       <Header
         onOpenNotifications={() => setIsNotifOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
@@ -212,10 +229,8 @@ const AppContent: React.FC = () => {
         }}
       />
 
-      {/* Top Hero Canvas with Curved Oval Bottom Edge */}
       {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
         <div className="relative w-full">
-          {/* Curved Hero Section starting with header beige (#FBF3E2) and fading downwards */}
           <div className="w-full bg-gradient-to-b from-[#FBF3E2] via-[#8C1626] to-transparent dark:to-neutral-950/0 border-b border-[#D4AF37]/30 rounded-b-[32px] sm:rounded-b-[48px] md:rounded-b-[56px] shadow-xl pb-8 sm:pb-10 transition-colors duration-200">
             <MainHeroHeaderBanner
               onExploreClick={() => {
@@ -230,7 +245,6 @@ const AppContent: React.FC = () => {
             />
           </div>
 
-          {/* Why Book Container - Overlapping the curved oval blue edge */}
           <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 -mt-8 sm:-mt-9 relative z-10">
             <motion.div
               whileHover={{ scale: 1.01 }}
@@ -238,15 +252,10 @@ const AppContent: React.FC = () => {
               onClick={() => setIsWhyBookOpen(true)}
               className="relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-md shadow-neutral-900/10 dark:shadow-black/30"
             >
-              {/* Continuous subtle spinning gradient */}
               <div 
                 className="absolute inset-[-100%] animate-[spin_5s_linear_infinite] opacity-75 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]"
-                style={{
-                  background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #ec4899, #ef4444)'
-                }} 
+                style={{ background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #ec4899, #ef4444)' }} 
               />
-              
-              {/* Inner Content */}
               <div className="relative flex items-center justify-between bg-white dark:bg-neutral-900 rounded-[14px] py-1.5 sm:py-2 px-2.5 sm:px-3.5 w-full h-full shadow-xs">
                 <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                   <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 group-hover:rotate-6 transition-transform">
@@ -261,7 +270,6 @@ const AppContent: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                
                 <div className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all shrink-0 ms-2">
                   {lang === 'ar' ? <ArrowLeft className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
                 </div>
@@ -271,12 +279,16 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      {/* Main Body Content */}
       <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-1.5 sm:pt-2' : 'pt-2.5'}`}>
         {activeTab === 'verification' ? (
           <VerificationView />
         ) : activeTab === 'about_us' ? (
           <AboutUsPage />
+        ) : marketerWalletOpen ? (
+          <MarketerWalletPage onBack={() => {
+            setMarketerWalletOpen(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }} />
         ) : (
           <>
             {activeTab === 'profile' && (
@@ -338,57 +350,17 @@ const AppContent: React.FC = () => {
         )}
       </main>
 
-      {/* iOS-Style Floating Bottom Navigation Bar */}
       <BottomNav onOpenPersonalNotifications={() => setIsPersonalNotifOpen(true)} />
 
-      {/* Interactive Modals */}
-      <MapModal
-        event={selectedMapEvent}
-        onClose={() => setSelectedMapEvent(null)}
-      />
-
-      <ShareModal
-        event={selectedShareEvent}
-        onClose={() => setSelectedShareEvent(null)}
-      />
-
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-      />
-
-      <NotificationsModal
-        isOpen={isNotifOpen}
-        onClose={() => setIsNotifOpen(false)}
-      />
-
-      <PersonalNotificationsModal
-        isOpen={isPersonalNotifOpen}
-        onClose={() => setIsPersonalNotifOpen(false)}
-      />
-
-      <PwaInstallModal
-        isOpen={isInstallOpen}
-        onClose={() => setIsInstallOpen(false)}
-      />
-
-      <GuestAlertModal
-        isOpen={guestAlertState.isOpen}
-        reason={guestAlertState.reason}
-        onClose={closeGuestAlert}
-        onOpenAuth={() => setIsAuthOpen(true)}
-      />
-
-      <SupportModal
-        isOpen={isSupportModalOpen}
-        onClose={closeSupportModal}
-      />
-
-      <WhyBookModal
-        isOpen={isWhyBookOpen}
-        onClose={() => setIsWhyBookOpen(false)}
-      />
-
+      <MapModal event={selectedMapEvent} onClose={() => setSelectedMapEvent(null)} />
+      <ShareModal event={selectedShareEvent} onClose={() => setSelectedShareEvent(null)} />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
+      <PersonalNotificationsModal isOpen={isPersonalNotifOpen} onClose={() => setIsPersonalNotifOpen(false)} />
+      <PwaInstallModal isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />
+      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={() => setIsAuthOpen(true)} />
+      <SupportModal isOpen={isSupportModalOpen} onClose={closeSupportModal} />
+      <WhyBookModal isOpen={isWhyBookOpen} onClose={() => setIsWhyBookOpen(false)} />
       <AdminLockModal />
       <BookingModal />
       <CustomAlertModal />
