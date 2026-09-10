@@ -32,8 +32,12 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   const uploadedBackground = isAr
     ? appAssets?.app_hero_banner_url
     : appAssets?.app_hero_banner_url_en;
+  const uploadedMobileBackground = isAr
+    ? appAssets?.app_hero_banner_mobile_url
+    : appAssets?.app_hero_banner_mobile_url_en;
 
   const backgroundImage = uploadedBackground || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1800&q=80';
+  const mobileBackgroundImage = uploadedMobileBackground || uploadedBackground || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80';
 
   const activeCategory = categories.find(category => category.id === activeCategoryId);
   const selectedCategoryLabel = categories.find(category => category.id === selectedCategory);
@@ -89,11 +93,8 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
         className="relative isolate mx-auto min-h-[300px] max-w-6xl overflow-hidden rounded-[18px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] md:min-h-[340px] md:rounded-[24px] lg:min-h-[340px]"
         dir={isAr ? 'rtl' : 'ltr'}
       >
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-cover bg-center opacity-95"
-          style={{ backgroundImage: `url(${backgroundImage})` }}
-        />
+        <div aria-hidden="true" className="absolute inset-0 bg-cover bg-center opacity-95 md:hidden" style={{ backgroundImage: `url(${mobileBackgroundImage})` }} />
+        <div aria-hidden="true" className="absolute inset-0 hidden bg-cover bg-center opacity-95 md:block" style={{ backgroundImage: `url(${backgroundImage})` }} />
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(211,151,64,0.12),transparent_34%),linear-gradient(115deg,rgba(61,7,17,0.18)_0%,rgba(91,13,24,0.12)_48%,rgba(43,4,11,0.22)_100%)]"
