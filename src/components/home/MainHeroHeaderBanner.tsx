@@ -162,12 +162,14 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
               className="mx-auto flex w-full max-w-[320px] items-center justify-center gap-2 rounded-full border border-[#f4d78d]/70 bg-[#4a0913]/85 px-3 py-2 text-[11px] font-bold text-[#fff0c8] shadow-sm backdrop-blur-sm transition hover:bg-[#791524] md:hidden"
               aria-expanded={isCategoryMenuOpen}
             >
-              <span className="truncate">{mobileCategoryLabel}</span>
+              <span className="shrink-0">{isAr ? 'كل الأقسام الرئيسية' : 'All Main Sections'}</span>
+              <span className="h-4 w-px shrink-0 bg-[#f4d78d]/40" />
+              <span className="truncate text-[#edc56d]">{mobileCategoryLabel}</span>
               <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isCategoryMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isCategoryMenuOpen && (
-              <div className="absolute bottom-full left-1/2 z-30 mb-2 w-[calc(100%-8px)] max-w-[360px] -translate-x-1/2 rounded-2xl border border-[#d4af67]/70 bg-[#3d0711]/98 p-2 text-right shadow-2xl backdrop-blur-md md:hidden">
+              <div className="relative z-30 mx-auto mt-2 w-[calc(100%-8px)] max-w-[360px] rounded-2xl border border-[#d4af67]/70 bg-[#3d0711]/98 p-2 text-right shadow-2xl backdrop-blur-md md:hidden">
                 {!activeCategoryId ? (
                   <div className="grid grid-cols-1 gap-1">
                     {categories.map(category => (
