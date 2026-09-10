@@ -25,10 +25,11 @@ import { PushPermissionPrompt } from './components/pwa/PushPermissionPrompt';
 import { FloatingNotificationBanner } from './components/pwa/FloatingNotificationBanner';
 import { AdViewsDetailsModal } from './components/modals/AdViewsDetailsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
+import { MarketersManagement } from './components/admin/MarketersManagement';
 import { MainHeroHeaderBanner } from './components/home/MainHeroHeaderBanner';
 import { WhyBookModal } from './components/modals/WhyBookModal';
 import { AboutUsPage } from './components/about/AboutUsPage';
-import { Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Megaphone, Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DanceEvent, AccountTier } from './types';
 
@@ -59,6 +60,8 @@ const AppContent: React.FC = () => {
     setIsAdminLockModalOpen
   } = useApp();
 
+  const [adminWorkspace, setAdminWorkspace] = useState<'main' | 'marketers'>('main');
+
   // Handle hardware / browser back button on mobile
   const lastBackPressRef = useRef<number>(0);
 
@@ -84,6 +87,12 @@ const AppContent: React.FC = () => {
       setIsInstallOpen(true);
     }
   }, [setActiveTab, setLang]);
+
+  useEffect(() => {
+    if (activeTab !== 'admin' && adminWorkspace !== 'main') {
+      setAdminWorkspace('main');
+    }
+  }, [activeTab, adminWorkspace]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -223,7 +232,30 @@ const AppContent: React.FC = () => {
                 }}
               />
             )}
-            {activeTab === 'admin' && <AdminPanel />}
+            {activeTab === 'admin' && (
+              adminWorkspace === 'marketers' ? (
+                <MarketersManagement onBack={() => setAdminWorkspace('main')} />
+              ) : (
+                <>
+                  {user?.isAdmin && (
+                    <div className="mb-4 flex justify-end" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdminWorkspace('marketers');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="w-full sm:w-auto h-12 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 px-5 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 transition-all"
+                      >
+                        <Megaphone className="h-4 w-4" />
+                        {lang === 'ar' ? 'قسم المسوقين' : 'Marketers Section'}
+                      </button>
+                    </div>
+                  )}
+                  <AdminPanel />
+                </>
+              )
+            )}
             {activeTab === 'edit_ad_admin' && (
               <AdminEditEventPage
                 key={editingEvent?.id || 'edit_ad'}
@@ -334,4 +366,3 @@ export default function App() {
     </AppProvider>
   );
 }
-
