@@ -217,6 +217,39 @@ async function backfillLegacyUsers() {
   }
 }
 
+function ensureWalletTab(isActiveMarketer: boolean, lang: 'ar' | 'en') {
+  const existing = document.querySelector('[data-cityeve-wallet-tab]') as HTMLButtonElement | null;
+  if (!isActiveMarketer) {
+    if (existing) existing.remove();
+    return;
+  }
+
+  if (existing) {
+    const label = existing.querySelector('[data-cityeve-wallet-label]');
+    if (label) label.textContent = lang === 'ar' ? 'محفظتي' : 'My Wallet';
+    return;
+  }
+
+  const buttons = Array.from(document.querySelectorAll('button')) as HTMLButtonElement[];
+  const adsButton = buttons.find((button) => {
+    const text = button.textContent || '';
+    return text.includes('إعلاناتي VIP') || text.includes('My Ads');
+  });
+  const tabsRow = adsButton?.parentElement;
+  if (!tabsRow) return;
+
+  const walletButton = document.createElement('button');
+  walletButton.type = 'button';
+  walletButton.setAttribute('data-cityeve-wallet-tab', 'true');
+  walletButton.className = 'shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-neutral-950';
+  walletButton.innerHTML = `<span aria-hidden="true">💰</span><span data-cityeve-wallet-label>${lang === 'ar' ? 'محفظتي' : 'My Wallet'}</span>`;
+  walletButton.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('OPEN_MARKETER_WALLET'));
+  });
+
+  adsButton.insertAdjacentElement('afterend', walletButton);
+}
+
 function renderProfileBadge() {
   try {
     const cachedUser = readCachedUser();
@@ -224,6 +257,10 @@ function renderProfileBadge() {
     const name = String(cachedUser?.name || '').trim();
     const reference = String(cachedUser?.accountReference || '').trim();
     if (!name || !reference) return;
+
+    const lang: 'ar' | 'en' = document.documentElement.lang === 'en' ? 'en' : 'ar';
+    const isActiveMarketer = cachedUser?.isMarketer === true && cachedUser?.marketerStatus === 'active';
+    ensureWalletTab(isActiveMarketer, lang);
 
     const headings = Array.from(document.querySelectorAll('main h2')) as HTMLHeadingElement[];
     const nameHeading = headings.find((heading) => heading.textContent?.trim() === name);
@@ -233,7 +270,6 @@ function renderProfileBadge() {
     const container = nameRow.parentElement;
     if (!container) return;
 
-    const lang = document.documentElement.lang === 'en' ? 'en' : 'ar';
     const accountLabel = lang === 'ar' ? 'رقم حسابك' : 'Your account number';
 
     let accountBadge = container.querySelector('[data-cityeve-account-reference]') as HTMLElement | null;
@@ -259,8 +295,8 @@ function renderProfileBadge() {
     }
     accountBadge.textContent = `${accountLabel}: ${reference}`;
 
-    const isActiveMarketer = cachedUser?.isMarketer === true && cachedUser?.marketerStatus === 'active';
     let marketerBadge = container.querySelector('[data-cityeve-marketer-status]') as HTMLElement | null;
+    let marketerHint = container.querySelector('[data-cityeve-marketer-hint]') as HTMLElement | null;
 
     if (isActiveMarketer) {
       if (!marketerBadge) {
@@ -270,7 +306,7 @@ function renderProfileBadge() {
         marketerBadge.style.alignItems = 'center';
         marketerBadge.style.gap = '7px';
         marketerBadge.style.width = 'fit-content';
-        marketerBadge.style.marginBottom = '10px';
+        marketerBadge.style.marginBottom = '6px';
         marketerBadge.style.padding = '7px 12px';
         marketerBadge.style.borderRadius = '11px';
         marketerBadge.style.border = '1px solid rgba(16, 185, 129, 0.35)';
@@ -285,8 +321,24 @@ function renderProfileBadge() {
         ? '✓ أنت الآن مسوّق معتمد في CityEve'
         : '✓ You’re now a verified CityEve marketer';
       marketerBadge.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
-    } else if (marketerBadge) {
-      marketerBadge.remove();
+
+      if (!marketerHint) {
+        marketerHint = document.createElement('div');
+        marketerHint.setAttribute('data-cityeve-marketer-hint', 'true');
+        marketerHint.style.width = 'fit-content';
+        marketerHint.style.marginBottom = '10px';
+        marketerHint.style.color = '#a3a3a3';
+        marketerHint.style.fontSize = '11px';
+        marketerHint.style.fontWeight = '600';
+        marketerBadge.insertAdjacentElement('afterend', marketerHint);
+      }
+      marketerHint.textContent = lang === 'ar'
+        ? 'يمكنك الآن استخدام كودك التسويقي ومتابعة أرباحك من قسم المحفظة.'
+        : 'You can now use your marketing code and track earnings from My Wallet.';
+      marketerHint.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    } else {
+      if (marketerBadge) marketerBadge.remove();
+      if (marketerHint) marketerHint.remove();
     }
   } catch {
     // UI enhancement only; never block the profile if the DOM is not ready yet.
