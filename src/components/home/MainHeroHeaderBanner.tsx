@@ -11,12 +11,12 @@ interface MainHeroHeaderBannerProps {
 }
 
 const categories = [
-  { id: 'party' as DanceCategory, ar: 'حفلات وسهرات', en: 'Parties & Nightlife' },
-  { id: 'course' as DanceCategory, ar: 'دورات وكورسات', en: 'Courses & Workshops' },
-  { id: 'trip' as DanceCategory, ar: 'رحلات ومعسكرات', en: 'Trips & Camps' },
-  { id: 'exhibition' as DanceCategory, ar: 'معارض ومؤتمرات', en: 'Exhibitions & Conferences' },
-  { id: 'services' as DanceCategory, ar: 'شركات وخدمات مكملة', en: 'Companies & Event Services' },
-  { id: 'jobs' as DanceCategory, ar: 'وظائف في نفس المجال', en: 'Jobs in the Field' },
+  { id: 'party' as DanceCategory, ar: 'حفلات وسهرات', allAr: 'كل الحفلات والسهرات', en: 'Parties & Nightlife', allEn: 'All Parties & Nightlife' },
+  { id: 'course' as DanceCategory, ar: 'دورات وكورسات', allAr: 'كل الدورات والكورسات', en: 'Courses & Workshops', allEn: 'All Courses & Workshops' },
+  { id: 'trip' as DanceCategory, ar: 'رحلات ومعسكرات', allAr: 'كل الرحلات والمعسكرات', en: 'Trips & Camps', allEn: 'All Trips & Camps' },
+  { id: 'exhibition' as DanceCategory, ar: 'معارض ومؤتمرات', allAr: 'كل المعارض والمؤتمرات', en: 'Exhibitions & Conferences', allEn: 'All Exhibitions & Conferences' },
+  { id: 'services' as DanceCategory, ar: 'شركات وخدمات مكملة', allAr: 'كل الشركات والخدمات المكملة', en: 'Companies & Event Services', allEn: 'All Companies & Event Services' },
+  { id: 'jobs' as DanceCategory, ar: 'وظائف في نفس المجال', allAr: 'كل الوظائف في نفس المجال', en: 'Jobs in the Field', allEn: 'All Jobs in the Field' },
 ];
 
 export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
@@ -43,7 +43,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   const mobileCategoryLabel = selectedSubcategoryLabel
     ? (isAr ? selectedSubcategoryLabel.labelAr : selectedSubcategoryLabel.labelEn)
     : selectedCategoryLabel
-      ? (isAr ? `كل ${selectedCategoryLabel.ar}` : `All ${selectedCategoryLabel.en}`)
+      ? (isAr ? selectedCategoryLabel.allAr : selectedCategoryLabel.allEn)
       : (isAr ? 'كل الحفلات والسهرات' : 'All Parties & Nightlife');
 
   const chooseCategory = (categoryId: DanceCategory) => {
@@ -202,7 +202,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                       onClick={() => chooseSubcategory(activeCategoryId, 'all')}
                       className="mb-1 flex w-full items-center justify-between rounded-xl bg-[#d4a84f]/15 px-3 py-2 text-[11px] font-black text-[#f8df9b] hover:bg-[#d4a84f]/25"
                     >
-                      <span>{isAr ? `كل ${activeCategory?.ar || 'القسم'}` : `All ${activeCategory?.en || 'section'}`}</span>
+                      <span>{isAr ? activeCategory?.allAr || 'الكل' : activeCategory?.allEn || 'All'}</span>
                       <span>✓</span>
                     </button>
                     <div className="grid max-h-52 gap-1 overflow-y-auto">
