@@ -124,7 +124,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
             </span>
           </div>
 
-          <div className="mb-1 flex flex-col items-center md:mb-6">
+          <div className="relative -top-1 mb-3 flex flex-col items-center md:-top-2 md:mb-8">
             {/* Decorative wordmark layer: replaceable later with the final transparent SVG asset. */}
             <div className="relative inline-flex items-center">
               <span
