@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ArrowLeft, ArrowRight, Plus, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { motion } from 'motion/react';
+import { DanceCategory } from '../../types';
+import { getSubcategoriesForCategory } from '../../data/categoriesConfig';
 
 interface MainHeroHeaderBannerProps {
   onExploreClick?: () => void;
@@ -9,25 +11,54 @@ interface MainHeroHeaderBannerProps {
 }
 
 const categories = [
-  { ar: 'حفلات وسهرات', en: 'Parties & Nightlife' },
-  { ar: 'دورات وكورسات', en: 'Courses & Workshops' },
-  { ar: 'رحلات ومعسكرات', en: 'Trips & Camps' },
-  { ar: 'معارض ومؤتمرات', en: 'Exhibitions & Conferences' },
-  { ar: 'شركات وخدمات مكملة', en: 'Companies & Event Services' },
-  { ar: 'وظائف في نفس المجال', en: 'Jobs in the Field' },
+  { id: 'party' as DanceCategory, ar: 'حفلات وسهرات', en: 'Parties & Nightlife' },
+  { id: 'course' as DanceCategory, ar: 'دورات وكورسات', en: 'Courses & Workshops' },
+  { id: 'trip' as DanceCategory, ar: 'رحلات ومعسكرات', en: 'Trips & Camps' },
+  { id: 'exhibition' as DanceCategory, ar: 'معارض ومؤتمرات', en: 'Exhibitions & Conferences' },
+  { id: 'services' as DanceCategory, ar: 'شركات وخدمات مكملة', en: 'Companies & Event Services' },
+  { id: 'jobs' as DanceCategory, ar: 'وظائف في نفس المجال', en: 'Jobs in the Field' },
 ];
 
 export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   onExploreClick,
   onPostAdClick,
 }) => {
-  const { lang, appAssets } = useApp();
+  const { lang, appAssets, selectedCategory } = useApp();
   const isAr = lang === 'ar';
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [activeCategoryId, setActiveCategoryId] = useState<DanceCategory | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState('all');
   const uploadedBackground = isAr
     ? appAssets?.app_hero_banner_url
     : appAssets?.app_hero_banner_url_en;
 
   const backgroundImage = uploadedBackground || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1800&q=80';
+
+  const activeCategory = categories.find(category => category.id === activeCategoryId);
+  const selectedCategoryLabel = categories.find(category => category.id === selectedCategory);
+  const selectedSubcategoryLabel = activeCategoryId && selectedSubcategory !== 'all'
+    ? getSubcategoriesForCategory(activeCategoryId).find(sub => sub.id === selectedSubcategory)
+    : null;
+
+  const mobileCategoryLabel = selectedSubcategoryLabel
+    ? (isAr ? selectedSubcategoryLabel.labelAr : selectedSubcategoryLabel.labelEn)
+    : selectedCategoryLabel
+      ? (isAr ? `كل ${selectedCategoryLabel.ar}` : `All ${selectedCategoryLabel.en}`)
+      : (isAr ? 'كل الحفلات والسهرات' : 'All Parties & Nightlife');
+
+  const chooseCategory = (categoryId: DanceCategory) => {
+    setActiveCategoryId(categoryId);
+    setSelectedSubcategory('all');
+  };
+
+  const chooseSubcategory = (categoryId: DanceCategory, subcategoryId: string) => {
+    setActiveCategoryId(categoryId);
+    setSelectedSubcategory(subcategoryId);
+    setIsCategoryMenuOpen(false);
+    window.dispatchEvent(new CustomEvent('cityeve-hero-filter', {
+      detail: { category: categoryId, subcategory: subcategoryId },
+    }));
+  };
 
   const handleExplore = () => {
     if (onExploreClick) {
@@ -124,10 +155,75 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
             </button>
           </div>
 
-          <div className="mt-2 flex max-w-4xl flex-wrap justify-center gap-1 px-1 md:mt-3 md:gap-2">
+          <div className="relative mt-2 w-full max-w-4xl px-1 md:mt-3">
+            <button
+              type="button"
+              onClick={() => setIsCategoryMenuOpen(open => !open)}
+              className="mx-auto flex w-full max-w-[320px] items-center justify-center gap-2 rounded-full border border-[#f4d78d]/70 bg-[#4a0913]/85 px-3 py-2 text-[11px] font-bold text-[#fff0c8] shadow-sm backdrop-blur-sm transition hover:bg-[#791524] md:hidden"
+              aria-expanded={isCategoryMenuOpen}
+            >
+              <span className="truncate">{mobileCategoryLabel}</span>
+              <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isCategoryMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isCategoryMenuOpen && (
+              <div className="absolute bottom-full left-1/2 z-30 mb-2 w-[calc(100%-8px)] max-w-[360px] -translate-x-1/2 rounded-2xl border border-[#d4af67]/70 bg-[#3d0711]/98 p-2 text-right shadow-2xl backdrop-blur-md md:hidden">
+                {!activeCategoryId ? (
+                  <div className="grid grid-cols-1 gap-1">
+                    {categories.map(category => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => chooseCategory(category.id)}
+                        className="flex items-center justify-between rounded-xl px-3 py-2 text-[11px] font-bold text-[#fff0c8] transition hover:bg-[#791524]"
+                      >
+                        <ChevronLeft className="h-4 w-4 text-[#d4a84f]" />
+                        <span>{isAr ? category.ar : category.en}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveCategoryId(null)}
+                      className="mb-1 flex w-full items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold text-[#e3b85e] hover:bg-[#791524]"
+                    >
+                      {isAr ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                      <span>{isAr ? 'الأقسام الرئيسية' : 'Main categories'}</span>
+                    </button>
+                    <div className="mb-1 border-b border-[#d4af67]/25 px-3 pb-2 text-[11px] font-black text-white">
+                      {activeCategory && (isAr ? activeCategory.ar : activeCategory.en)}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => chooseSubcategory(activeCategoryId, 'all')}
+                      className="mb-1 flex w-full items-center justify-between rounded-xl bg-[#d4a84f]/15 px-3 py-2 text-[11px] font-black text-[#f8df9b] hover:bg-[#d4a84f]/25"
+                    >
+                      <span>{isAr ? `كل ${activeCategory?.ar || 'القسم'}` : `All ${activeCategory?.en || 'section'}`}</span>
+                      <span>✓</span>
+                    </button>
+                    <div className="grid max-h-52 gap-1 overflow-y-auto">
+                      {getSubcategoriesForCategory(activeCategoryId).map(sub => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
+                          className="rounded-xl px-3 py-2 text-right text-[10px] font-bold text-[#fff0c8] transition hover:bg-[#791524]"
+                        >
+                          {isAr ? sub.labelAr : sub.labelEn}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="hidden flex-wrap justify-center gap-1 md:flex md:gap-2">
             {categories.map((category) => (
               <motion.button
-                key={category.en}
+                key={category.id}
                 type="button"
                 whileTap={{ scale: 0.96 }}
                 onClick={handleExplore}
@@ -136,6 +232,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 {isAr ? category.ar : category.en}
               </motion.button>
             ))}
+            </div>
           </div>
         </div>
       </div>
