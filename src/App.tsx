@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/navbar/Header';
 import { BottomNav } from './components/navbar/BottomNav';
@@ -25,10 +26,12 @@ import { PushPermissionPrompt } from './components/pwa/PushPermissionPrompt';
 import { FloatingNotificationBanner } from './components/pwa/FloatingNotificationBanner';
 import { AdViewsDetailsModal } from './components/modals/AdViewsDetailsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
+import { MarketersManagement } from './components/admin/MarketersManagement';
+import { MarketerWalletPage } from './components/marketer/MarketerWalletPage';
 import { MainHeroHeaderBanner } from './components/home/MainHeroHeaderBanner';
 import { WhyBookModal } from './components/modals/WhyBookModal';
 import { AboutUsPage } from './components/about/AboutUsPage';
-import { Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Megaphone, Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DanceEvent, AccountTier, DanceCategory } from './types';
 
@@ -50,7 +53,7 @@ const AppContent: React.FC = () => {
     isSupportModalOpen, 
     closeSupportModal, 
     setEditingEvent, 
-    editingEvent, 
+    editingEvent,
     feedViewMode,
     activePushToast,
     setActivePushToast,
@@ -59,6 +62,10 @@ const AppContent: React.FC = () => {
     isAdminUnlocked,
     setIsAdminLockModalOpen
   } = useApp();
+
+  const [adminWorkspace, setAdminWorkspace] = useState<'main' | 'marketers'>('main');
+  const [marketersGridTarget, setMarketersGridTarget] = useState<HTMLElement | null>(null);
+  const [marketerWalletOpen, setMarketerWalletOpen] = useState(false);
 
   // Handle hardware / browser back button on mobile
   const lastBackPressRef = useRef<number>(0);
@@ -93,6 +100,62 @@ const AppContent: React.FC = () => {
   }, [setActiveTab, setLang, setSelectedCategory]);
 
   useEffect(() => {
+    const openWallet = () => {
+      setMarketerWalletOpen(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    window.addEventListener('OPEN_MARKETER_WALLET', openWallet);
+    return () => window.removeEventListener('OPEN_MARKETER_WALLET', openWallet);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'profile' && marketerWalletOpen) {
+      setMarketerWalletOpen(false);
+    }
+  }, [activeTab, marketerWalletOpen]);
+
+  useEffect(() => {
+    if (activeTab !== 'admin' && adminWorkspace !== 'main') {
+      setAdminWorkspace('main');
+    }
+  }, [activeTab, adminWorkspace]);
+
+  useEffect(() => {
+    if (activeTab !== 'admin' || adminWorkspace !== 'main' || !user?.isAdmin) {
+      setMarketersGridTarget(null);
+      return;
+    }
+
+    let cancelled = false;
+    let attempts = 0;
+    const locateModulesGrid = () => {
+      if (cancelled) return;
+      const headings = Array.from(document.querySelectorAll('h3'));
+      const heading = headings.find((node) => {
+        const text = node.textContent?.trim() || '';
+        return text === 'أقسام ووحدات التحكم' || text === 'Control Modules';
+      });
+      const section = heading?.parentElement?.parentElement;
+      const grid = section ? Array.from(section.children).find((el) => el.classList.contains('grid')) as HTMLElement | undefined : undefined;
+      if (grid) {
+        setMarketersGridTarget(grid);
+        const countLabel = heading?.parentElement?.querySelector('span');
+        if (countLabel) {
+          countLabel.textContent = lang === 'ar' ? '12 وحدة متكاملة' : '12 Modules';
+        }
+        return;
+      }
+      attempts += 1;
+      if (attempts < 20) window.setTimeout(locateModulesGrid, 100);
+    };
+
+    window.setTimeout(locateModulesGrid, 0);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, adminWorkspace, user?.isAdmin, lang]);
+
+  useEffect(() => {
     const handlePopState = () => {
       if (activeTab !== 'explore') {
         setActiveTab('explore');
@@ -125,6 +188,40 @@ const AppContent: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  const marketersModuleCard = marketersGridTarget ? createPortal(
+    <motion.div
+      whileHover={{ scale: 1.015 }}
+      whileTap={{ scale: 0.985 }}
+      onClick={() => {
+        setAdminWorkspace('marketers');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }}
+      className="rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-orange-500/70 dark:hover:border-orange-400/60 bg-white dark:bg-neutral-900 p-3 sm:p-3.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group h-auto min-h-[96px] sm:min-h-[108px]"
+      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+    >
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-orange-500/10 text-orange-500">
+          <Megaphone className="h-4 w-4" />
+        </div>
+        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md leading-tight bg-orange-100 dark:bg-orange-500/20 text-orange-800 dark:text-orange-300">
+          {lang === 'ar' ? 'تسويق' : 'MARKETING'}
+        </span>
+      </div>
+      <div className="mt-2">
+        <h4 className="text-xs sm:text-sm font-extrabold text-neutral-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors leading-tight">
+          {lang === 'ar' ? 'قسم المسوقين' : 'Marketers Section'}
+        </h4>
+        <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+          {lang === 'ar' ? 'البحث عن المسوقين وتفعيل أو إيقاف الحسابات' : 'Search, activate & pause marketer accounts'}
+        </p>
+      </div>
+      <div className="mt-1 flex items-center justify-end text-[10px] font-black text-orange-600 dark:text-orange-400 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span>{lang === 'ar' ? 'فتح ➔' : 'Open ➔'}</span>
+      </div>
+    </motion.div>,
+    marketersGridTarget
+  ) : null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-600 dark:selection:text-amber-300 transition-colors duration-200">
@@ -171,8 +268,7 @@ const AppContent: React.FC = () => {
                 style={{
                   background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #ec4899, #ef4444)'
                 }} 
-              />
-              
+              /> 
               {/* Inner Content */}
               <div className="relative flex items-center justify-between bg-white dark:bg-neutral-900 rounded-[14px] py-1.5 sm:py-2 px-2.5 sm:px-3.5 w-full h-full shadow-xs">
                 <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
@@ -188,7 +284,6 @@ const AppContent: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                
                 <div className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all shrink-0 ms-2">
                   {lang === 'ar' ? <ArrowLeft className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
                 </div>
@@ -204,6 +299,11 @@ const AppContent: React.FC = () => {
           <VerificationView />
         ) : activeTab === 'about_us' ? (
           <AboutUsPage />
+        ) : marketerWalletOpen ? (
+          <MarketerWalletPage onBack={() => {
+            setMarketerWalletOpen(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }} />
         ) : (
           <>
             {activeTab === 'profile' && (
@@ -230,7 +330,16 @@ const AppContent: React.FC = () => {
                 }}
               />
             )}
-            {activeTab === 'admin' && <AdminPanel />}
+            {activeTab === 'admin' && (
+              adminWorkspace === 'marketers' ? (
+                <MarketersManagement onBack={() => setAdminWorkspace('main')} />
+              ) : (
+                <>
+                  <AdminPanel />
+                  {marketersModuleCard}
+                </>
+              )
+            )}
             {activeTab === 'edit_ad_admin' && (
               <AdminEditEventPage
                 key={editingEvent?.id || 'edit_ad'}
@@ -260,53 +369,15 @@ const AppContent: React.FC = () => {
       <BottomNav onOpenPersonalNotifications={() => setIsPersonalNotifOpen(true)} />
 
       {/* Interactive Modals */}
-      <MapModal
-        event={selectedMapEvent}
-        onClose={() => setSelectedMapEvent(null)}
-      />
-
-      <ShareModal
-        event={selectedShareEvent}
-        onClose={() => setSelectedShareEvent(null)}
-      />
-
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-      />
-
-      <NotificationsModal
-        isOpen={isNotifOpen}
-        onClose={() => setIsNotifOpen(false)}
-      />
-
-      <PersonalNotificationsModal
-        isOpen={isPersonalNotifOpen}
-        onClose={() => setIsPersonalNotifOpen(false)}
-      />
-
-      <PwaInstallModal
-        isOpen={isInstallOpen}
-        onClose={() => setIsInstallOpen(false)}
-      />
-
-      <GuestAlertModal
-        isOpen={guestAlertState.isOpen}
-        reason={guestAlertState.reason}
-        onClose={closeGuestAlert}
-        onOpenAuth={() => setIsAuthOpen(true)}
-      />
-
-      <SupportModal
-        isOpen={isSupportModalOpen}
-        onClose={closeSupportModal}
-      />
-
-      <WhyBookModal
-        isOpen={isWhyBookOpen}
-        onClose={() => setIsWhyBookOpen(false)}
-      />
-
+      <MapModal event={selectedMapEvent} onClose={() => setSelectedMapEvent(null)} />
+      <ShareModal event={selectedShareEvent} onClose={() => setSelectedShareEvent(null)} />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
+      <PersonalNotificationsModal isOpen={isPersonalNotifOpen} onClose={() => setIsPersonalNotifOpen(false)} />
+      <PwaInstallModal isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />
+      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={() => setIsAuthOpen(true)} />
+      <SupportModal isOpen={isSupportModalOpen} onClose={closeSupportModal} />
+      <WhyBookModal isOpen={isWhyBookOpen} onClose={() => setIsWhyBookOpen(false)} />
       <AdminLockModal />
       <BookingModal />
       <CustomAlertModal />
@@ -341,4 +412,3 @@ export default function App() {
     </AppProvider>
   );
 }
-
