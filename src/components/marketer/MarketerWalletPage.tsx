@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Clock3, Copy, Megaphone, WalletCards } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Check, Clock3, Copy, LockKeyhole, Megaphone, WalletCards } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useApp } from '../../context/AppContext';
 import { db } from '../../lib/firebase';
@@ -12,6 +12,11 @@ type WalletSnapshot = {
   marketerCode?: string;
   marketerStatus?: 'active' | 'paused' | 'inactive';
   isMarketer?: boolean;
+  marketerStatusReason?: string;
+  marketerStatusMessage?: string;
+  marketerStatusChangedAt?: string;
+  marketerWalletStatus?: 'active' | 'withdrawals_paused' | 'frozen' | 'closed';
+  marketerWalletReason?: string;
   marketerWalletAvailable?: number;
   marketerWalletPending?: number;
   marketerWalletPaid?: number;
@@ -21,6 +26,7 @@ export const MarketerWalletPage: React.FC<MarketerWalletPageProps> = ({ onBack }
   const { lang, user } = useApp();
   const [wallet, setWallet] = useState<WalletSnapshot>({});
   const [copied, setCopied] = useState(false);
+  const [showDecision, setShowDecision] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -31,7 +37,11 @@ export const MarketerWalletPage: React.FC<MarketerWalletPageProps> = ({ onBack }
   }, [user?.id]);
 
   const marketerCode = wallet.marketerCode || user?.marketerCode || '';
-  const isActive = (wallet.isMarketer ?? user?.isMarketer) === true && (wallet.marketerStatus || user?.marketerStatus) === 'active';
+  const marketerStatus = wallet.marketerStatus || user?.marketerStatus || 'inactive';
+  const hasMarketerHistory = (wallet.isMarketer ?? user?.isMarketer) === true || Boolean(marketerCode);
+  const isActive = hasMarketerHistory && marketerStatus === 'active';
+  const walletStatus = wallet.marketerWalletStatus || user?.marketerWalletStatus || 'active';
+  const canRequestWithdrawal = walletStatus === 'active';
   const available = Number(wallet.marketerWalletAvailable || 0);
   const pending = Number(wallet.marketerWalletPending || 0);
   const paid = Number(wallet.marketerWalletPaid || 0);
@@ -52,7 +62,7 @@ export const MarketerWalletPage: React.FC<MarketerWalletPageProps> = ({ onBack }
     }
   };
 
-  if (!user || !isActive) {
+  if (!user || !hasMarketerHistory) {
     return (
       <section className="py-10" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         <div className="max-w-xl mx-auto rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 text-center shadow-sm">
@@ -61,7 +71,7 @@ export const MarketerWalletPage: React.FC<MarketerWalletPageProps> = ({ onBack }
             {lang === 'ar' ? 'المحفظة غير متاحة حالياً' : 'Wallet is currently unavailable'}
           </h1>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            {lang === 'ar' ? 'تظهر المحفظة فقط للمسوّق النشط.' : 'The wallet is available only to active marketers.'}
+            {lang === 'ar' ? 'لا يوجد سجل تسويقي مرتبط بهذا الحساب.' : 'No marketing record is linked to this account.'}
           </p>
           <button onClick={onBack} className="mt-5 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 px-5 py-2.5 text-sm font-bold">
             {lang === 'ar' ? 'العودة إلى حسابي' : 'Back to profile'}
@@ -94,6 +104,63 @@ export const MarketerWalletPage: React.FC<MarketerWalletPageProps> = ({ onBack }
               {lang === 'ar' ? 'تابع كودك التسويقي وأرباحك وعمولاتك من مكان واحد.' : 'Track your marketing code, earnings and commissions in one place.'}
             </p>
           </div>
+        </div>
+      </div>
+
+      {!isActive && (
+        <div className={`rounded-3xl border p-5 shadow-sm ${marketerStatus === 'paused' ? 'border-amber-500/30 bg-amber-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
+          <div className="flex items-start gap-3">
+            <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${marketerStatus === 'paused' ? 'text-amber-500' : 'text-red-500'}`} />
+            <div className="min-w-0 flex-1">
+              <h2 className="font-black text-neutral-900 dark:text-white">
+                {marketerStatus === 'paused'
+                  ? (lang === 'ar' ? 'حساب التسويق موقوف مؤقتًا' : 'Marketing account temporarily paused')
+                  : (lang === 'ar' ? 'حساب التسويق موقوف نهائيًا' : 'Marketing account permanently inactive')}
+              </h2>
+              <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                {lang === 'ar' ? 'يمكنك متابعة أرصدتك وعملياتك السابقة، وتحدد حالة المحفظة أدناه إمكانية السحب.' : 'You can still review previous balances and transactions. The wallet status below controls withdrawals.'}
+              </p>
+              {(wallet.marketerStatusReason || wallet.marketerStatusMessage) && (
+                <button type="button" onClick={() => setShowDecision((current) => !current)} className="mt-3 rounded-xl border border-current/20 px-3 py-2 text-xs font-black">
+                  {showDecision ? (lang === 'ar' ? 'إخفاء التفاصيل' : 'Hide details') : (lang === 'ar' ? 'معرفة سبب الإيقاف' : 'View decision reason')}
+                </button>
+              )}
+              {showDecision && (
+                <div className="mt-3 rounded-2xl bg-white/60 dark:bg-neutral-950/40 p-4 text-sm">
+                  <p><strong>{lang === 'ar' ? 'السبب:' : 'Reason:'}</strong> {wallet.marketerStatusReason || '—'}</p>
+                  {wallet.marketerStatusMessage && <p className="mt-2"><strong>{lang === 'ar' ? 'رسالة الإدارة:' : 'Administration message:'}</strong> {wallet.marketerStatusMessage}</p>}
+                  {wallet.marketerStatusChangedAt && <p className="mt-2 text-xs text-neutral-500">{new Date(wallet.marketerStatusChangedAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={`rounded-3xl border p-5 shadow-sm ${canRequestWithdrawal ? 'border-emerald-500/25 bg-emerald-500/10' : 'border-red-500/25 bg-red-500/10'}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            {canRequestWithdrawal ? <Banknote className="h-5 w-5 shrink-0 text-emerald-500" /> : <LockKeyhole className="h-5 w-5 shrink-0 text-red-500" />}
+            <div>
+              <h2 className="font-black text-neutral-900 dark:text-white">
+                {canRequestWithdrawal
+                  ? (lang === 'ar' ? 'السحب مسموح' : 'Withdrawals allowed')
+                  : walletStatus === 'frozen'
+                    ? (lang === 'ar' ? 'الرصيد مجمّد للمراجعة' : 'Balance frozen for review')
+                    : walletStatus === 'closed'
+                      ? (lang === 'ar' ? 'المحفظة مغلقة نهائيًا' : 'Wallet permanently closed')
+                      : (lang === 'ar' ? 'طلبات السحب متوقفة مؤقتًا' : 'Withdrawals temporarily paused')}
+              </h2>
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                {wallet.marketerWalletReason || (canRequestWithdrawal
+                  ? (lang === 'ar' ? 'يمكنك تقديم طلب سحب عند تفعيل نظام المدفوعات.' : 'You can request a withdrawal once payouts are enabled.')
+                  : (lang === 'ar' ? 'راجع سبب قرار الإدارة أعلاه أو تواصل مع الدعم.' : 'Review the administration decision above or contact support.'))}
+              </p>
+            </div>
+          </div>
+          <button type="button" disabled={!canRequestWithdrawal || available <= 0} title={lang === 'ar' ? 'سيتم ربط الطلب بمحرك السحب الآمن لاحقًا' : 'This will be connected to the secure payout engine later'} className="h-11 rounded-xl bg-emerald-600 disabled:bg-neutral-300 dark:disabled:bg-neutral-700 disabled:text-neutral-500 text-white px-5 text-sm font-black">
+            {lang === 'ar' ? 'طلب سحب' : 'Request withdrawal'}
+          </button>
         </div>
       </div>
 

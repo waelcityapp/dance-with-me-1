@@ -149,6 +149,12 @@ function ensureLiveUserSync(userId: string) {
         marketerCode: firestoreUser.marketerCode ?? cachedUser.marketerCode,
         marketerActivatedAt: firestoreUser.marketerActivatedAt ?? cachedUser.marketerActivatedAt,
         marketerUpdatedAt: firestoreUser.marketerUpdatedAt ?? cachedUser.marketerUpdatedAt,
+        marketerStatusReason: firestoreUser.marketerStatusReason ?? cachedUser.marketerStatusReason,
+        marketerStatusMessage: firestoreUser.marketerStatusMessage ?? cachedUser.marketerStatusMessage,
+        marketerStatusChangedAt: firestoreUser.marketerStatusChangedAt ?? cachedUser.marketerStatusChangedAt,
+        marketerWalletStatus: firestoreUser.marketerWalletStatus ?? cachedUser.marketerWalletStatus,
+        marketerWalletReason: firestoreUser.marketerWalletReason ?? cachedUser.marketerWalletReason,
+        marketerWalletUpdatedAt: firestoreUser.marketerWalletUpdatedAt ?? cachedUser.marketerWalletUpdatedAt,
       };
 
       const changed =
@@ -156,6 +162,10 @@ function ensureLiveUserSync(userId: string) {
         nextUser.isMarketer !== cachedUser.isMarketer ||
         nextUser.marketerStatus !== cachedUser.marketerStatus ||
         nextUser.marketerCode !== cachedUser.marketerCode ||
+        nextUser.marketerStatusReason !== cachedUser.marketerStatusReason ||
+        nextUser.marketerStatusMessage !== cachedUser.marketerStatusMessage ||
+        nextUser.marketerWalletStatus !== cachedUser.marketerWalletStatus ||
+        nextUser.marketerWalletReason !== cachedUser.marketerWalletReason ||
         nextUser.marketerUpdatedAt !== cachedUser.marketerUpdatedAt;
 
       if (changed) writeCachedUser(nextUser);
@@ -217,9 +227,9 @@ async function backfillLegacyUsers() {
   }
 }
 
-function ensureWalletTab(isActiveMarketer: boolean, lang: 'ar' | 'en') {
+function ensureWalletTab(hasMarketerHistory: boolean, lang: 'ar' | 'en') {
   const existing = document.querySelector('[data-cityeve-wallet-tab]') as HTMLButtonElement | null;
-  if (!isActiveMarketer) {
+  if (!hasMarketerHistory) {
     if (existing) existing.remove();
     return;
   }
@@ -259,8 +269,10 @@ function renderProfileBadge() {
     if (!name || !reference) return;
 
     const lang: 'ar' | 'en' = document.documentElement.lang === 'en' ? 'en' : 'ar';
-    const isActiveMarketer = cachedUser?.isMarketer === true && cachedUser?.marketerStatus === 'active';
-    ensureWalletTab(isActiveMarketer, lang);
+    const marketerStatus = cachedUser?.marketerStatus || 'inactive';
+    const hasMarketerHistory = cachedUser?.isMarketer === true || Boolean(cachedUser?.marketerCode);
+    const isActiveMarketer = hasMarketerHistory && marketerStatus === 'active';
+    ensureWalletTab(hasMarketerHistory, lang);
 
     const headings = Array.from(document.querySelectorAll('main h2')) as HTMLHeadingElement[];
     const nameHeading = headings.find((heading) => heading.textContent?.trim() === name);
@@ -298,7 +310,7 @@ function renderProfileBadge() {
     let marketerBadge = container.querySelector('[data-cityeve-marketer-status]') as HTMLElement | null;
     let marketerHint = container.querySelector('[data-cityeve-marketer-hint]') as HTMLElement | null;
 
-    if (isActiveMarketer) {
+    if (hasMarketerHistory) {
       if (!marketerBadge) {
         marketerBadge = document.createElement('div');
         marketerBadge.setAttribute('data-cityeve-marketer-status', 'true');
@@ -309,17 +321,24 @@ function renderProfileBadge() {
         marketerBadge.style.marginBottom = '6px';
         marketerBadge.style.padding = '7px 12px';
         marketerBadge.style.borderRadius = '11px';
-        marketerBadge.style.border = '1px solid rgba(16, 185, 129, 0.35)';
-        marketerBadge.style.background = 'rgba(16, 185, 129, 0.12)';
-        marketerBadge.style.color = '#6ee7b7';
         marketerBadge.style.fontSize = '13px';
         marketerBadge.style.fontWeight = '800';
         marketerBadge.style.lineHeight = '1.35';
         accountBadge.insertAdjacentElement('afterend', marketerBadge);
       }
-      marketerBadge.textContent = lang === 'ar'
-        ? '✓ أنت الآن مسوّق معتمد في CityEve'
-        : '✓ You’re now a verified CityEve marketer';
+      const statusAppearance = isActiveMarketer
+        ? { border: 'rgba(16, 185, 129, 0.35)', background: 'rgba(16, 185, 129, 0.12)', color: '#6ee7b7' }
+        : marketerStatus === 'paused'
+          ? { border: 'rgba(245, 158, 11, 0.35)', background: 'rgba(245, 158, 11, 0.12)', color: '#fbbf24' }
+          : { border: 'rgba(239, 68, 68, 0.35)', background: 'rgba(239, 68, 68, 0.12)', color: '#f87171' };
+      marketerBadge.style.border = `1px solid ${statusAppearance.border}`;
+      marketerBadge.style.background = statusAppearance.background;
+      marketerBadge.style.color = statusAppearance.color;
+      marketerBadge.textContent = isActiveMarketer
+        ? (lang === 'ar' ? '✓ أنت الآن مسوّق معتمد في CityEve' : '✓ You’re now a verified CityEve marketer')
+        : marketerStatus === 'paused'
+          ? (lang === 'ar' ? 'حساب التسويق موقوف مؤقتًا' : 'Marketing account temporarily paused')
+          : (lang === 'ar' ? 'حساب التسويق موقوف نهائيًا' : 'Marketing account permanently inactive');
       marketerBadge.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
 
       if (!marketerHint) {
@@ -332,9 +351,9 @@ function renderProfileBadge() {
         marketerHint.style.fontWeight = '600';
         marketerBadge.insertAdjacentElement('afterend', marketerHint);
       }
-      marketerHint.textContent = lang === 'ar'
-        ? 'يمكنك الآن استخدام كودك التسويقي ومتابعة أرباحك من قسم المحفظة.'
-        : 'You can now use your marketing code and track earnings from My Wallet.';
+      marketerHint.textContent = isActiveMarketer
+        ? (lang === 'ar' ? 'يمكنك الآن استخدام كودك التسويقي ومتابعة أرباحك من قسم المحفظة.' : 'You can now use your marketing code and track earnings from My Wallet.')
+        : (lang === 'ar' ? 'يمكنك فتح محفظتك لمعرفة حالة الرصيد وقرار الإدارة.' : 'Open My Wallet to review your balance status and the administration decision.');
       marketerHint.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
     } else {
       if (marketerBadge) marketerBadge.remove();
