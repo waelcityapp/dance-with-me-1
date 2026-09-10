@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, BadgeCheck, Ban, Copy, Search, UserCheck, Users } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useApp } from '../../context/AppContext';
@@ -11,6 +11,10 @@ interface MarketersManagementProps {
 }
 
 const normalize = (value?: string) => (value || '').trim().toLowerCase();
+const OWNER_REFERENCE = '0000';
+const FIRST_ACCOUNT_NUMBER = 10001;
+const ADMIN_EMAIL = (((import.meta as any).env.VITE_ADMIN_EMAIL as string | undefined)?.trim().toLowerCase()) || 'waelvts@gmail.com';
+const isOfficialReference = (value?: string) => /^CE-\d{5,}$/.test(String(value || '').trim());
 
 const createMarketingCode = (users: UserProfile[]) => {
   const existing = new Set(users.map((u) => normalize(u.marketerCode)));
@@ -35,6 +39,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   const [loading, setLoading] = useState(true);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const migrationStarted = useRef(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToAllUsers(
@@ -49,6 +54,89 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
     );
     return unsubscribe;
   }, [lang]);
+
+  useEffect(() => {
+    if (!adminUser?.isAdmin || loading || users.length === 0 || migrationStarted.current) return;
+
+    const missingUsers = users.filter((item) => {
+      const email = normalize(item.email);
+      if (email === ADMIN_EMAIL) return item.accountReference !== OWNER_REFERENCE;
+      return !isOfficialReference(item.accountReference);
+    });
+
+    if (missingUsers.length === 0) return;
+    migrationStarted.current = true;
+
+    const migrateExistingUsers = async () => {
+      try {
+        setMessage(lang === 'ar' ? 'جاري إنشاء أرقام الحسابات القديمة وحفظها في Firestore...' : 'Assigning account numbers to existing users in Firestore...');
+
+        const sortedUsers = [...users].sort((a, b) => {
+          const aTime = new Date(a.createdAt || 0).getTime();
+          const bTime = new Date(b.createdAt || 0).getTime();
+          return aTime - bTime;
+        });
+
+        const existingNumbers = sortedUsers
+          .map((item) => {
+            const match = String(item.accountReference || '').trim().match(/^CE-(\d+)$/);
+            return match ? Number(match[1]) : 0;
+          })
+          .filter((value) => Number.isFinite(value) && value >= FIRST_ACCOUNT_NUMBER);
+
+        let lastNumber = existingNumbers.length > 0
+          ? Math.max(...existingNumbers)
+          : FIRST_ACCOUNT_NUMBER - 1;
+
+        let createdCount = 0;
+
+        for (const item of sortedUsers) {
+          const email = normalize(item.email);
+          const isOwnerAccount = email === ADMIN_EMAIL;
+          const current = String(item.accountReference || '').trim();
+
+          if (isOwnerAccount) {
+            if (current !== OWNER_REFERENCE) {
+              await setDoc(doc(db, 'users', item.id), {
+                accountReference: OWNER_REFERENCE,
+                accountReferenceCreatedAt: (item as any).accountReferenceCreatedAt || new Date().toISOString(),
+                accountReferenceUpdatedAt: new Date().toISOString(),
+              }, { merge: true });
+              createdCount += 1;
+            }
+            continue;
+          }
+
+          if (isOfficialReference(current)) continue;
+
+          lastNumber += 1;
+          const accountReference = `CE-${lastNumber}`;
+          await setDoc(doc(db, 'users', item.id), {
+            accountReference,
+            accountReferenceCreatedAt: new Date().toISOString(),
+          }, { merge: true });
+          createdCount += 1;
+        }
+
+        await setDoc(doc(db, 'system_counters', 'user_account_reference'), {
+          lastNumber: Math.max(lastNumber, FIRST_ACCOUNT_NUMBER - 1),
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+
+        setMessage(lang === 'ar'
+          ? `تم حفظ أرقام الحسابات في Firestore بنجاح (${createdCount} حساب).`
+          : `Account numbers saved in Firestore successfully (${createdCount} accounts).`);
+      } catch (error) {
+        console.error('Failed to backfill account references:', error);
+        migrationStarted.current = false;
+        setMessage(lang === 'ar'
+          ? 'تعذر حفظ أرقام بعض الحسابات في Firestore. راجع صلاحيات قاعدة البيانات.'
+          : 'Could not save some account numbers in Firestore. Check database permissions.');
+      }
+    };
+
+    void migrateExistingUsers();
+  }, [adminUser?.isAdmin, lang, loading, users]);
 
   const filteredUsers = useMemo(() => {
     const q = normalize(query);
@@ -85,7 +173,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
       const ref = doc(db, 'users', target.id);
       if (mode === 'activate') {
         const marketerCode = target.marketerCode || createMarketingCode(users);
-        const accountReference = target.accountReference || await ensureAccountReference(target.id);
+        const accountReference = target.accountReference || await ensureAccountReference(target.id, target.email);
 
         if (!accountReference) {
           throw new Error('Could not assign account reference');
@@ -224,8 +312,8 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                       </div>
                       <div className="mt-1 grid gap-0.5 text-xs text-neutral-500 dark:text-neutral-400 break-all">
                         <span>{item.phone || '—'} · {item.email || '—'}</span>
-                        <span className="font-mono">
-                          {lang === 'ar' ? 'رقم الحساب:' : 'Account ref:'} {item.accountReference || (lang === 'ar' ? 'سيتم إنشاؤه تلقائياً' : 'Will be assigned automatically')}
+                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                          {lang === 'ar' ? 'رقم الحساب:' : 'Account ref:'} {item.accountReference || (lang === 'ar' ? 'جاري الإنشاء...' : 'Assigning...')}
                         </span>
                         <span className="font-mono text-[10px] opacity-70">ID: {item.id}</span>
                       </div>
