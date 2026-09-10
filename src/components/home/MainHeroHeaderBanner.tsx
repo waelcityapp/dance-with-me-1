@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Plus, Search, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DanceCategory } from '../../types';
 import { getSubcategoriesForCategory } from '../../data/categoriesConfig';
@@ -150,10 +150,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           </div>
 
           <div className="mt-2 w-full max-w-[310px] md:mt-4 md:max-w-2xl">
-            <div className="group flex w-full items-center gap-1.5 rounded-2xl border border-[#f4dca7]/65 bg-[#fffaf0]/80 px-2 py-1.5 text-right text-[#6a1520] shadow-[0_10px_26px_rgba(30,0,6,0.18)] backdrop-blur-md transition focus-within:border-[#f4dca7] focus-within:bg-[#fffaf0]/90 md:gap-2 md:px-3 md:py-2">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[#6b101c]/90 text-[#f0c66e] transition group-hover:bg-[#841526] md:h-8 md:w-8">
-                <Search className="h-4.5 w-4.5 md:h-5 md:w-5" />
-              </span>
+            <div className="group flex w-full items-center gap-1.5 rounded-2xl border border-[#d4a84f]/75 bg-[#4a0913]/72 px-2 py-1.5 text-right text-[#fff0c8] shadow-[0_10px_26px_rgba(30,0,6,0.22)] backdrop-blur-md transition focus-within:border-[#f4d78d] focus-within:bg-[#4a0913]/85 md:gap-2 md:px-3 md:py-2">
               <input
                 type="search"
                 value={heroSearchQuery}
@@ -164,11 +161,11 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 }}
                 placeholder={isAr ? 'ابحث عن حفلة أو دورة أو رحلة...' : 'Search for a party, course, or trip...'}
                 aria-label={isAr ? 'البحث عن فعالية' : 'Search events'}
-                className="min-w-0 flex-1 bg-transparent text-[10px] font-semibold leading-4 text-[#6a1520] outline-none placeholder:text-[#8d7770]/85 md:text-sm"
+                className="min-w-0 flex-1 bg-transparent text-[10px] font-semibold leading-4 text-[#fff0c8] outline-none placeholder:text-[#e7c98b]/75 md:text-sm"
                 dir={isAr ? 'rtl' : 'ltr'}
               />
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#6b101c]/90 text-[#f0c66e]">
-                <Search className="h-4 w-4" />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#d4a84f] text-[#3d0711] shadow-sm">
+                {isAr ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
               </span>
             </div>
           </div>
