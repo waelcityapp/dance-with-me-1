@@ -32,6 +32,30 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     setVisibleCount(5);
   }, [selectedCategory, searchQuery, selectedStyleFilter]);
 
+  // Apply the hierarchical category selection made in the mobile hero menu.
+  useEffect(() => {
+    const handleHeroFilter = (event: Event) => {
+      const detail = (event as CustomEvent<{ category?: DanceCategory; subcategory?: string }>).detail;
+      if (!detail?.category) return;
+      setSelectedCategory(detail.category);
+      setTimeout(() => {
+        setSelectedStyleFilter(detail.subcategory || 'all');
+        document.getElementById('events-feed')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
+    };
+    window.addEventListener('cityeve-hero-filter', handleHeroFilter);
+    return () => window.removeEventListener('cityeve-hero-filter', handleHeroFilter);
+  }, [setSelectedCategory]);
+
+  useEffect(() => {
+    const handleHeroSearch = (event: Event) => {
+      const query = (event as CustomEvent<{ query?: string }>).detail?.query || '';
+      setSearchQuery(query);
+    };
+    window.addEventListener('cityeve-hero-search', handleHeroSearch);
+    return () => window.removeEventListener('cityeve-hero-search', handleHeroSearch);
+  }, []);
+
   // Reset subcategory filter when main category changes
   useEffect(() => {
     setSelectedStyleFilter('all');
