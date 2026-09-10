@@ -38,8 +38,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       const detail = (event as CustomEvent<{ category?: DanceCategory; subcategory?: string }>).detail;
       if (!detail?.category) return;
       setSelectedCategory(detail.category);
-      setSelectedStyleFilter(detail.subcategory || 'all');
       setTimeout(() => {
+        setSelectedStyleFilter(detail.subcategory || 'all');
         document.getElementById('events-feed')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 0);
     };
