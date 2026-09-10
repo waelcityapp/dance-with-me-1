@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240" role="img" aria-labelledby="title desc">
+  <title id="title">CityEve</title>
+  <desc id="desc">CityEve luxury dance-inspired wordmark</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0.85" y2="1"><stop offset="0" stop-color="#fff8df"/><stop offset="0.48" stop-color="#f3d487"/><stop offset="1" stop-color="#bd8630"/></linearGradient>
+    <filter id="glow" x="-15%" y="-25%" width="130%" height="150%"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <path d="M206 48 C128 30 76 80 96 139 C111 183 166 193 216 166" fill="none" stroke="#edc56d" stroke-width="5" stroke-linecap="round" opacity=".78"/>
+  <path d="M592 49 C667 31 716 78 696 137 C682 180 635 190 586 166" fill="none" stroke="#edc56d" stroke-width="5" stroke-linecap="round" opacity=".78"/>
+  <text x="400" y="145" text-anchor="middle" font-family="Bodoni Moda, Didot, Georgia, serif" font-size="128" font-weight="600" font-style="italic" letter-spacing="-7" fill="url(#gold)" filter="url(#glow)">CityEve</text>
+  <path d="M267 185 C326 161 473 161 533 185 C498 202 302 202 267 185Z" fill="none" stroke="#edc56d" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+</svg>
