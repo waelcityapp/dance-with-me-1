@@ -250,6 +250,8 @@ export interface AppAssets {
   app_logo_url?: string;
   app_hero_banner_url?: string;
   app_hero_banner_url_en?: string;
+  app_hero_banner_mobile_url?: string;
+  app_hero_banner_mobile_url_en?: string;
   appNameAr?: string;
   appNameEn?: string;
   whatsappSupport?: string;

@@ -269,6 +269,8 @@ export const AdminPanel: React.FC = () => {
   const [formAppLogoUrl, setFormAppLogoUrl] = useState('');
   const [formHeroBannerUrl, setFormHeroBannerUrl] = useState('');
   const [formHeroBannerUrlEn, setFormHeroBannerUrlEn] = useState('');
+  const [formHeroBannerMobileUrl, setFormHeroBannerMobileUrl] = useState('');
+  const [formHeroBannerMobileUrlEn, setFormHeroBannerMobileUrlEn] = useState('');
   const [formWhatsappSupport, setFormWhatsappSupport] = useState('');
   const [formInstagramUrl, setFormInstagramUrl] = useState('');
   const [formPromoTitleAr, setFormPromoTitleAr] = useState('');
@@ -282,6 +284,8 @@ export const AdminPanel: React.FC = () => {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingHeroBanner, setIsUploadingHeroBanner] = useState(false);
   const [isUploadingHeroBannerEn, setIsUploadingHeroBannerEn] = useState(false);
+  const [isUploadingHeroBannerMobile, setIsUploadingHeroBannerMobile] = useState(false);
+  const [isUploadingHeroBannerMobileEn, setIsUploadingHeroBannerMobileEn] = useState(false);
   const [localPricingConfig, setLocalPricingConfig] = useState(pricingConfig);
   const [savingPricing, setSavingPricing] = useState(false);
   useEffect(() => { setLocalPricingConfig(pricingConfig); }, [pricingConfig]);
@@ -454,6 +458,8 @@ export const AdminPanel: React.FC = () => {
       setFormAppLogoUrl(appAssets.app_logo_url || '');
       setFormHeroBannerUrl(appAssets.app_hero_banner_url || '');
       setFormHeroBannerUrlEn(appAssets.app_hero_banner_url_en || '');
+      setFormHeroBannerMobileUrl(appAssets.app_hero_banner_mobile_url || '');
+      setFormHeroBannerMobileUrlEn(appAssets.app_hero_banner_mobile_url_en || '');
       setFormWhatsappSupport(appAssets.whatsappSupport || '');
       setFormInstagramUrl(appAssets.instagramUrl || '');
       setFormPromoTitleAr(appAssets.promoTitleAr || '');
@@ -914,7 +920,7 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleUploadBrandingImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'icon' | 'logo' | 'banner' | 'banner_en') => {
+  const handleUploadBrandingImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'icon' | 'logo' | 'banner' | 'banner_en' | 'banner_mobile' | 'banner_mobile_en') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -929,6 +935,10 @@ export const AdminPanel: React.FC = () => {
       setIsUploadingHeroBanner(true);
     } else if (type === 'banner_en') {
       setIsUploadingHeroBannerEn(true);
+    } else if (type === 'banner_mobile') {
+      setIsUploadingHeroBannerMobile(true);
+    } else if (type === 'banner_mobile_en') {
+      setIsUploadingHeroBannerMobileEn(true);
     } else {
       setIsUploadingLogo(true);
     }
@@ -954,6 +964,16 @@ export const AdminPanel: React.FC = () => {
              deleteFromCloudinary(formHeroBannerUrlEn, 'image').catch(console.error);
           }
           setFormHeroBannerUrlEn(url);
+        } else if (type === 'banner_mobile') {
+          if (formHeroBannerMobileUrl && formHeroBannerMobileUrl.includes('cloudinary.com') && formHeroBannerMobileUrl !== appAssets?.app_hero_banner_mobile_url) {
+            deleteFromCloudinary(formHeroBannerMobileUrl, 'image').catch(console.error);
+          }
+          setFormHeroBannerMobileUrl(url);
+        } else if (type === 'banner_mobile_en') {
+          if (formHeroBannerMobileUrlEn && formHeroBannerMobileUrlEn.includes('cloudinary.com') && formHeroBannerMobileUrlEn !== appAssets?.app_hero_banner_mobile_url_en) {
+            deleteFromCloudinary(formHeroBannerMobileUrlEn, 'image').catch(console.error);
+          }
+          setFormHeroBannerMobileUrlEn(url);
         } else {
           // Delete old logo if it's on Cloudinary
           if (formAppLogoUrl && formAppLogoUrl.includes('cloudinary.com') && formAppLogoUrl !== appAssets?.app_logo_url) {
@@ -972,6 +992,8 @@ export const AdminPanel: React.FC = () => {
       setIsUploadingLogo(false);
       setIsUploadingHeroBanner(false);
       setIsUploadingHeroBannerEn(false);
+      setIsUploadingHeroBannerMobile(false);
+      setIsUploadingHeroBannerMobileEn(false);
     }
   };
 
@@ -985,6 +1007,8 @@ export const AdminPanel: React.FC = () => {
       app_logo_url: formAppLogoUrl.trim(),
       app_hero_banner_url: formHeroBannerUrl.trim(),
       app_hero_banner_url_en: formHeroBannerUrlEn.trim(),
+      app_hero_banner_mobile_url: formHeroBannerMobileUrl.trim(),
+      app_hero_banner_mobile_url_en: formHeroBannerMobileUrlEn.trim(),
       whatsappSupport: formWhatsappSupport.trim(),
       instagramUrl: formInstagramUrl.trim(),
       promoTitleAr: formPromoTitleAr.trim(),
@@ -5623,6 +5647,32 @@ export const AdminPanel: React.FC = () => {
                   <p className="text-[10px] text-neutral-500">
                     {lang === 'ar' ? '💡 صورة البانر باللغة الإنجليزية. إذا تركتها فارغة سيتم ترجمة النص وتطبيقه تلقائياً عند اختيار الإنجليزية.' : '💡 Optional English banner image. If empty, English text will automatically overlay cleanly.'}
                   </p>
+                </div>
+
+                {/* Mobile-safe Hero Backgrounds */}
+                <div className="space-y-2 col-span-1 md:col-span-2 rounded-2xl border border-amber-500/20 bg-amber-950/10 p-4">
+                  <label className="text-xs font-bold text-amber-200 block">
+                    {lang === 'ar' ? 'صور أرضية البانر للموبايل (تُظهر الراقصين بدون قص):' : 'Mobile-safe hero backgrounds (keeps dancers visible):'}
+                  </label>
+                  <p className="text-[10px] text-neutral-500 mb-3">
+                    {lang === 'ar' ? 'ارفع نسخة الموبايل المصممة بالطول إلى Cloudinary. إذا تركتها فارغة سيستخدم الموقع صورة الكمبيوتر تلقائياً.' : 'Upload the portrait/mobile floor to Cloudinary. If empty, the desktop image is used as fallback.'}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex gap-2 items-center">
+                      <input type="url" value={formHeroBannerMobileUrl} onChange={(e) => setFormHeroBannerMobileUrl(e.target.value)} className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-neutral-950 text-white border border-neutral-800 text-[10px] font-mono outline-none" placeholder="Cloudinary mobile AR URL" dir="ltr" />
+                      <label className="flex items-center justify-center px-3 h-[38px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white cursor-pointer shrink-0">
+                        {isUploadingHeroBannerMobile ? <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : <span className="text-[10px] font-bold">{lang === 'ar' ? 'رفع موبايل' : 'Upload'}</span>}
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadBrandingImage(e, 'banner_mobile')} disabled={isUploadingHeroBannerMobile} />
+                      </label>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <input type="url" value={formHeroBannerMobileUrlEn} onChange={(e) => setFormHeroBannerMobileUrlEn(e.target.value)} className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-neutral-950 text-white border border-neutral-800 text-[10px] font-mono outline-none" placeholder="Cloudinary mobile EN URL (optional)" dir="ltr" />
+                      <label className="flex items-center justify-center px-3 h-[38px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white cursor-pointer shrink-0">
+                        {isUploadingHeroBannerMobileEn ? <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : <span className="text-[10px] font-bold">{lang === 'ar' ? 'رفع EN' : 'Upload EN'}</span>}
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadBrandingImage(e, 'banner_mobile_en')} disabled={isUploadingHeroBannerMobileEn} />
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 {/* WhatsApp Support Number */}

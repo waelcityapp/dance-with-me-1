@@ -1,280 +1,313 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Sparkles, Calendar, Ticket, ArrowLeft, ArrowRight, Flame, PlusCircle, Smartphone, MapPin, Music } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Plus, Search, X } from 'lucide-react';
 import { motion } from 'motion/react';
+import { DanceCategory } from '../../types';
+import { getSubcategoriesForCategory } from '../../data/categoriesConfig';
 
 interface MainHeroHeaderBannerProps {
   onExploreClick?: () => void;
   onPostAdClick?: () => void;
 }
 
+const categories = [
+  { id: 'party' as DanceCategory, ar: 'حفلات وسهرات', allAr: 'كل الحفلات والسهرات', en: 'Parties & Nightlife', allEn: 'All Parties & Nightlife' },
+  { id: 'course' as DanceCategory, ar: 'دورات وكورسات', allAr: 'كل الدورات والكورسات', en: 'Courses & Workshops', allEn: 'All Courses & Workshops' },
+  { id: 'trip' as DanceCategory, ar: 'رحلات ومعسكرات', allAr: 'كل الرحلات والمعسكرات', en: 'Trips & Camps', allEn: 'All Trips & Camps' },
+  { id: 'exhibition' as DanceCategory, ar: 'معارض ومؤتمرات', allAr: 'كل المعارض والمؤتمرات', en: 'Exhibitions & Conferences', allEn: 'All Exhibitions & Conferences' },
+  { id: 'services' as DanceCategory, ar: 'شركات وخدمات مكملة', allAr: 'كل الشركات والخدمات المكملة', en: 'Companies & Event Services', allEn: 'All Companies & Event Services' },
+  { id: 'jobs' as DanceCategory, ar: 'وظائف في نفس المجال', allAr: 'كل الوظائف في نفس المجال', en: 'Jobs in the Field', allEn: 'All Jobs in the Field' },
+];
+
 export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   onExploreClick,
-  onPostAdClick
+  onPostAdClick,
 }) => {
-  const { lang, appAssets } = useApp();
+  const { lang, appAssets, selectedCategory } = useApp();
   const isAr = lang === 'ar';
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [activeCategoryId, setActiveCategoryId] = useState<DanceCategory | null>(null);
+  const [chosenCategoryId, setChosenCategoryId] = useState<DanceCategory | null>(null);
+  const [chosenSubcategoryId, setChosenSubcategoryId] = useState('all');
+  const [heroSearchQuery, setHeroSearchQuery] = useState('');
+  const uploadedBackground = isAr
+    ? appAssets?.app_hero_banner_url
+    : appAssets?.app_hero_banner_url_en;
+  const uploadedMobileBackground = isAr
+    ? appAssets?.app_hero_banner_mobile_url
+    : appAssets?.app_hero_banner_mobile_url_en;
 
-  const customBannerUrlAr = appAssets?.app_hero_banner_url;
-  const customBannerUrlEn = appAssets?.app_hero_banner_url_en;
+  const backgroundImage = uploadedBackground || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1800&q=80';
+  const mobileBackgroundImage = uploadedMobileBackground || uploadedBackground || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80';
 
-  const activeBannerUrl = isAr ? customBannerUrlAr : customBannerUrlEn;
+  const activeCategory = categories.find(category => category.id === activeCategoryId);
+  const selectedCategoryLabel = categories.find(category => category.id === selectedCategory);
+  const selectedSubcategoryLabel = chosenCategoryId && chosenSubcategoryId !== 'all'
+    ? getSubcategoriesForCategory(chosenCategoryId).find(sub => sub.id === chosenSubcategoryId)
+    : null;
 
-  // Optimize Cloudinary banner images for ultra-fast load speed (WebP/AVIF auto compression)
-  const optimizedBannerSrc = React.useMemo(() => {
-    if (!activeBannerUrl) return '';
-    if (activeBannerUrl.includes('res.cloudinary.com') && activeBannerUrl.includes('/image/upload/')) {
-      if (!activeBannerUrl.includes('/f_auto') && !activeBannerUrl.includes('/q_auto')) {
-        return activeBannerUrl.replace('/image/upload/', '/image/upload/f_auto,q_auto,w_1400/');
-      }
-    }
-    return activeBannerUrl;
-  }, [activeBannerUrl]);
+  const mobileCategoryLabel = selectedSubcategoryLabel
+    ? (isAr ? selectedSubcategoryLabel.labelAr : selectedSubcategoryLabel.labelEn)
+    : chosenCategoryId
+      ? (isAr
+        ? categories.find(category => category.id === chosenCategoryId)?.allAr
+        : categories.find(category => category.id === chosenCategoryId)?.allEn)
+    : selectedCategoryLabel
+      ? (isAr ? selectedCategoryLabel.allAr : selectedCategoryLabel.allEn)
+      : (isAr ? 'كل الحفلات والسهرات' : 'All Parties & Nightlife');
+
+  const chooseCategory = (categoryId: DanceCategory) => {
+    setActiveCategoryId(categoryId);
+  };
+
+  const closeCategoryMenu = () => {
+    setIsCategoryMenuOpen(false);
+    setActiveCategoryId(null);
+  };
+
+  const chooseSubcategory = (categoryId: DanceCategory, subcategoryId: string) => {
+    setActiveCategoryId(null);
+    setChosenCategoryId(categoryId);
+    setChosenSubcategoryId(subcategoryId);
+    setIsCategoryMenuOpen(false);
+    window.dispatchEvent(new CustomEvent('cityeve-hero-filter', {
+      detail: { category: categoryId, subcategory: subcategoryId },
+    }));
+  };
 
   const handleExplore = () => {
     if (onExploreClick) {
       onExploreClick();
-    } else {
-      const searchSec = document.getElementById('search-section');
-      if (searchSec) {
-        searchSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        window.scrollTo({ top: 400, behavior: 'smooth' });
-      }
+      return;
     }
+
+    const searchSection = document.getElementById('search-section');
+    searchSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
-    <section 
-      aria-label="CityEVE Hero Banner"
-      className="relative w-full overflow-hidden bg-transparent text-white transition-all pt-2 sm:pt-3 px-3 sm:px-6"
+    <section
+      aria-label={isAr ? 'بانر CityEve الرئيسي' : 'CityEve main banner'}
+      className="relative w-full overflow-hidden px-1 pb-1 pt-1 md:px-5 md:pb-5"
     >
-      {/* If custom banner image is provided for current language, render it cleanly */}
-      {activeBannerUrl ? (
-        <div className="relative w-full max-w-5xl mx-auto overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-md bg-neutral-950">
-          <img
-            src={optimizedBannerSrc || activeBannerUrl}
-            alt={isAr ? "CityEVE - اكبر الحفلات والفعاليات في جيبك" : "CityEVE - The Biggest Parties & Events in Your Pocket"}
-            className="w-full h-auto object-cover max-h-[260px] sm:max-h-[340px] md:max-h-[380px] will-change-transform block"
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            referrerPolicy="no-referrer"
-          />
+      <div
+        className="relative isolate mx-auto min-h-[270px] max-w-6xl overflow-hidden rounded-[18px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] md:min-h-[340px] md:rounded-[24px] lg:min-h-[340px]"
+        dir={isAr ? 'rtl' : 'ltr'}
+      >
+        <div aria-hidden="true" className="absolute inset-0 bg-cover bg-center opacity-95 md:hidden" style={{ backgroundImage: `url(${mobileBackgroundImage})` }} />
+        <div aria-hidden="true" className="absolute inset-0 hidden bg-cover bg-center opacity-95 md:block" style={{ backgroundImage: `url(${backgroundImage})` }} />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(211,151,64,0.12),transparent_34%),linear-gradient(115deg,rgba(61,7,17,0.18)_0%,rgba(91,13,24,0.12)_48%,rgba(43,4,11,0.22)_100%)]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(39,4,11,0.04),rgba(39,4,11,0.18))]"
+        />
 
-          {/* Light gentle bottom gradient */}
-          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+        <div className="pointer-events-none absolute -left-16 top-16 h-40 w-40 rounded-full bg-[#d9a441]/12 blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 bottom-8 h-52 w-52 rounded-full bg-[#a72b37]/30 blur-3xl" />
 
-          {/* Ultra-Prominent Action Overlay Floating on Banner */}
-          <div className="absolute bottom-3 sm:bottom-4 inset-x-0 z-30 px-3 sm:px-6 flex justify-center pointer-events-none">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+        <div className="relative z-10 flex min-h-[270px] flex-col items-center justify-center px-3 py-5 text-center md:min-h-[340px] md:px-8 md:py-6 lg:min-h-[340px]">
+          <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-1 md:inset-x-8 md:top-4">
+            <button
               type="button"
               onClick={onPostAdClick}
-              className="pointer-events-auto group relative w-full max-w-md sm:max-w-lg md:max-w-xl flex items-center justify-between py-2 px-3 sm:py-2.5 sm:px-4 rounded-2xl sm:rounded-3xl bg-neutral-950/85 hover:bg-neutral-950/95 backdrop-blur-md border-2 border-amber-400/40 hover:border-amber-400 shadow-2xl shadow-black/80 transition-all cursor-pointer overflow-hidden text-right"
-              dir={isAr ? 'rtl' : 'ltr'}
+              className="inline-flex items-center gap-1 rounded-full border border-[#d4af67]/70 bg-[#5b0d18]/75 px-2 py-1 text-[10px] font-bold text-[#f7e8bd] shadow-lg backdrop-blur-sm transition hover:bg-[#741523] md:px-3 md:text-xs"
             >
-              {/* Subtle shining gradient accent */}
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-amber-500/10 opacity-60 group-hover:opacity-100 transition-opacity" />
+              <Plus className="h-3 w-3 text-[#e1b45b] md:h-4 md:w-4" />
+              <span>{isAr ? 'أضف فعاليتك' : 'Post your event'}</span>
+            </button>
 
-              <div className="relative z-10 flex items-center gap-2.5 sm:gap-3.5">
-                <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-neutral-950 shadow-md shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-                  <PlusCircle className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <span className="text-sm sm:text-base md:text-lg font-black text-white group-hover:text-amber-300 transition-colors drop-shadow-md">
-                    {isAr ? 'إضافة إعلان' : 'Post Event'}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold text-[#F5E6D8] bg-[#500610]/90 border border-[#D4AF37]/60 shadow-md">
-                    <span className="text-xs sm:text-sm">🎁</span>
-                    <span className="text-amber-300">{isAr ? 'مجاناً حتى 1 نوفمبر' : 'Free until Nov 1st'}</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="relative z-10 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 text-white group-hover:bg-amber-400 group-hover:text-neutral-950 transition-all shrink-0 shadow-sm">
-                {isAr ? <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />}
-              </div>
-            </motion.button>
+            <span className="text-[9px] font-medium tracking-[0.12em] text-[#e9ca85]/80 md:text-xs">
+              {isAr ? 'اكتشف • احجز • استمتع' : 'DISCOVER • BOOK • ENJOY'}
+            </span>
           </div>
-        </div>
-      ) : (
-        /* Full Dynamic High-End Canvas Banner matching the uploaded graphic - Optimized for high performance */
-        <div className="relative w-full max-w-5xl mx-auto overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-md bg-neutral-950 min-h-[300px] sm:min-h-[340px] flex items-center">
-          {/* Background Concert Crowd & Stage Lighting - Optimized size & opacity */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 will-change-transform"
-            style={{
-              backgroundImage: `url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=75')`
-            }}
-          />
 
-          {/* High-Performance Gradient Overlays without heavy blur filters */}
-          <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/85 to-neutral-950/40 z-10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-neutral-950/70 z-10" />
-          
-          {/* Lightweight Radial Ambient Lights (CSS radial gradient instead of heavy blur-3xl) */}
-          <div 
-            className="absolute top-0 right-1/4 w-80 h-80 pointer-events-none z-10 opacity-30" 
-            style={{ background: 'radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(0, 0, 0, 0) 70%)' }}
-          />
-          <div 
-            className="absolute bottom-0 right-10 w-72 h-72 pointer-events-none z-10 opacity-30"
-            style={{ background: 'radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(0, 0, 0, 0) 70%)' }}
-          />
-          <div 
-            className="absolute top-1/3 left-10 w-64 h-64 pointer-events-none z-10 opacity-25"
-            style={{ background: 'radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(0, 0, 0, 0) 70%)' }}
-          />
-
-          {/* Content Container */}
-          <div className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-10 w-full">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center" dir={isAr ? 'rtl' : 'ltr'}>
-              
-              {/* Left Column: Typography, Logo, and Action Buttons */}
-              <div className="lg:col-span-7 space-y-4 sm:space-y-6 text-center lg:text-start">
-                
-                {/* Brand Logo with Glowing Stars */}
-                <div 
-                  className="inline-flex items-center gap-3 bg-white/10 dark:bg-neutral-900/90 border border-white/20 dark:border-amber-500/30 px-4 py-2 rounded-2xl shadow-lg"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-xs shadow-md">
-                    CE
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-xl sm:text-2xl tracking-wider text-white">
-                      City<span className="text-amber-400">EVE</span>
-                    </span>
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                  </div>
-                </div>
-
-                {/* Main Slogan Headline */}
-                <div className="space-y-2">
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tight leading-[1.15] drop-shadow-md">
-                    {isAr ? (
-                      <>
-                        أكبر <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">الحفلات والفعاليات</span> في جيبك
-                      </>
-                    ) : (
-                      <>
-                        The Biggest <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">Parties & Events</span> In Your Pocket
-                      </>
-                    )}
-                  </h2>
-
-                  {/* Subtitle */}
-                  <p className="text-sm sm:text-base md:text-lg text-neutral-300 max-w-xl font-medium leading-relaxed drop-shadow">
-                    {isAr 
-                      ? 'استكشف، احجز، وعش التجربة مع منصة CityEVE المتكاملة للحفلات الكبرى والسهرات وأرقى الفعاليات'
-                      : 'Discover, book tickets, and live the moment with CityEVE — the premier Latin dance, nightlife & festival portal'}
-                  </p>
-                </div>
-
-                {/* Quick Feature Badges */}
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-1">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1.5 rounded-xl shadow-sm">
-                    <Flame className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{isAr ? 'حجوزات فورية مباشرة' : 'Instant Direct Bookings'}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/15 border border-blue-500/30 px-3 py-1.5 rounded-xl shadow-sm">
-                    <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                    <span>{isAr ? 'تجربة موبايل متكاملة' : 'Mobile First Experience'}</span>
-                  </span>
-                </div>
-
-                {/* Call-To-Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
-                  <button
-                    onClick={handleExplore}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-neutral-950 font-black text-sm shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
-                  >
-                    <Ticket className="w-4 h-4 stroke-[2.5]" />
-                    <span>{isAr ? 'استكشف الحفلات الآن' : 'Explore Events Now'}</span>
-                    {isAr ? <ArrowLeft className="w-4 h-4 stroke-[2.5]" /> : <ArrowRight className="w-4 h-4 stroke-[2.5]" />}
-                  </button>
-
-                  {onPostAdClick && (
-                    <button
-                      onClick={onPostAdClick}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-sm transition-all active:scale-95 cursor-pointer"
-                    >
-                      <PlusCircle className="w-4 h-4 text-amber-400" />
-                      <span>{isAr ? 'أضف فعاليتك مجاناً' : 'Post Your Event Free'}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Column: Device Mockups & Concert Visuals */}
-              <div className="lg:col-span-5 relative flex items-center justify-center">
-                <div className="relative w-full max-w-sm sm:max-w-md lg:max-w-full">
-                  {/* Floating Phone App Preview Card */}
-                  <div className="relative mx-auto rounded-3xl p-3 bg-neutral-900/95 border-2 border-amber-500/40 shadow-2xl max-w-[280px] sm:max-w-[320px]">
-                    
-                    {/* Phone Notch / Header */}
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800 text-[11px] text-neutral-400 px-1 font-mono">
-                      <div className="flex items-center gap-1 text-amber-400 font-bold">
-                        <Sparkles className="w-3 h-3" />
-                        <span>CityEVE Live</span>
-                      </div>
-                      <span className="flex items-center gap-1 text-emerald-400 font-bold text-[10px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        ONLINE
-                      </span>
-                    </div>
-
-                    {/* Miniature Card */}
-                    <div className="rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800/80 shadow-inner">
-                      <div className="relative h-32 w-full overflow-hidden">
-                        <img 
-                          src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=75" 
-                          alt="Party Preview" 
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent" />
-                        <span className="absolute top-2 right-2 bg-amber-500 text-neutral-950 font-black text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider">
-                          👑 VIP EVENT
-                        </span>
-                      </div>
-
-                      <div className="p-3 space-y-1.5">
-                        <h4 className="font-black text-xs text-white truncate">
-                          {isAr ? 'ليالي السالسا والباتشاتا الكبرى' : 'Grand Latin Night & Festival'}
-                        </h4>
-                        <div className="flex items-center justify-between text-[10px] text-neutral-400">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-amber-400" />
-                            {isAr ? 'القاهرة، المعادي' : 'Cairo, Maadi'}
-                          </span>
-                          <span className="font-mono text-emerald-400 font-bold">
-                            {isAr ? 'حجز فوري' : 'Open'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stats strip */}
-                    <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-neutral-800/60 text-center text-[10px]">
-                      <div className="bg-neutral-950/60 rounded-xl p-1.5 border border-neutral-800">
-                        <span className="text-neutral-400 block">{isAr ? 'الفعاليات' : 'Events'}</span>
-                        <strong className="text-white font-mono font-bold">+500</strong>
-                      </div>
-                      <div className="bg-neutral-950/60 rounded-xl p-1.5 border border-neutral-800">
-                        <span className="text-neutral-400 block">{isAr ? 'المشتركين' : 'Members'}</span>
-                        <strong className="text-amber-400 font-mono font-bold">+25,000</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+          <div className="mb-1 flex flex-col items-center md:mb-6">
+            {/* Decorative wordmark layer: replaceable later with the final transparent SVG asset. */}
+            <div className="relative inline-flex items-center">
+              <span className="font-serif text-xl font-semibold italic leading-none tracking-[-0.08em] text-[#f8e5b1] drop-shadow-[0_3px_12px_rgba(0,0,0,0.35)] md:text-5xl">
+                CityEve
+              </span>
+              <span className="absolute -bottom-3 left-1/2 h-px w-24 -translate-x-1/2 bg-gradient-to-r from-transparent via-[#d4af67] to-transparent md:w-32" />
             </div>
           </div>
+
+          <div className="max-w-3xl px-1">
+            <h1 className="text-base font-black leading-[1.12] tracking-tight text-white drop-shadow-md md:text-4xl lg:text-4xl">
+              {isAr ? (
+                <>كل الفعاليات <span className="text-[#edc56d]">في مكان واحد</span></>
+              ) : (
+                <>Every event <span className="text-[#edc56d]">in one place</span></>
+              )}
+            </h1>
+            <p className="mx-auto mt-1 max-w-[310px] text-[9px] font-medium leading-3.5 text-[#f6e8c8]/85 md:mt-2 md:max-w-2xl md:text-xs lg:text-sm">
+              {isAr
+                ? 'اكتشف أفضل الحفلات والرحلات والدورات والخدمات، واحجز تجربتك القادمة بسهولة.'
+                : 'Discover parties, trips, courses, and services — then book your next experience with ease.'}
+            </p>
+          </div>
+
+          <div className="mt-2 w-full max-w-[310px] md:mt-4 md:max-w-2xl">
+            <div className="group flex w-full items-center gap-1.5 rounded-2xl border border-[#f4dca7]/65 bg-[#fffaf0]/80 px-2 py-1.5 text-right text-[#6a1520] shadow-[0_10px_26px_rgba(30,0,6,0.18)] backdrop-blur-md transition focus-within:border-[#f4dca7] focus-within:bg-[#fffaf0]/90 md:gap-2 md:px-3 md:py-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[#6b101c]/90 text-[#f0c66e] transition group-hover:bg-[#841526] md:h-8 md:w-8">
+                <Search className="h-4.5 w-4.5 md:h-5 md:w-5" />
+              </span>
+              <input
+                type="search"
+                value={heroSearchQuery}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setHeroSearchQuery(value);
+                  window.dispatchEvent(new CustomEvent('cityeve-hero-search', { detail: { query: value } }));
+                }}
+                placeholder={isAr ? 'ابحث عن حفلة أو دورة أو رحلة...' : 'Search for a party, course, or trip...'}
+                aria-label={isAr ? 'البحث عن فعالية' : 'Search events'}
+                className="min-w-0 flex-1 bg-transparent text-[10px] font-semibold leading-4 text-[#6a1520] outline-none placeholder:text-[#8d7770]/85 md:text-sm"
+                dir={isAr ? 'rtl' : 'ltr'}
+              />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#6b101c]/90 text-[#f0c66e]">
+                <Search className="h-4 w-4" />
+              </span>
+            </div>
+          </div>
+
+          <div className="relative mt-2 w-full max-w-4xl px-1 md:mt-3">
+            <button
+              type="button"
+              onClick={() => setIsCategoryMenuOpen(open => !open)}
+              className="mx-auto flex w-full max-w-[320px] items-center justify-center gap-2 rounded-full border border-[#f4d78d]/70 bg-[#4a0913]/85 px-3 py-2 text-[11px] font-bold text-[#fff0c8] shadow-sm backdrop-blur-sm transition hover:bg-[#791524] md:hidden"
+              aria-expanded={isCategoryMenuOpen}
+            >
+              <span className="shrink-0">{isAr ? 'كل الأقسام الرئيسية' : 'All Main Sections'}</span>
+              <span className="h-4 w-px shrink-0 bg-[#f4d78d]/40" />
+              <span className="truncate text-[#edc56d]">{mobileCategoryLabel}</span>
+              <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isCategoryMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isCategoryMenuOpen && (
+              <div className="relative z-30 mx-auto mt-2 w-[calc(100%-8px)] max-w-[360px] rounded-2xl border border-[#d4af67]/70 bg-[#3d0711]/98 p-2 text-right shadow-2xl backdrop-blur-md md:hidden">
+                <div className="mb-1 flex items-center justify-between border-b border-[#d4af67]/25 px-2 pb-2">
+                  <button
+                    type="button"
+                    onClick={closeCategoryMenu}
+                    aria-label={isAr ? 'إغلاق القائمة' : 'Close menu'}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#e8c978] transition hover:bg-[#791524] hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <span className="text-[11px] font-black text-[#fff0c8]">
+                    {activeCategoryId
+                      ? (isAr ? 'اختر التصنيف الفرعي' : 'Choose a subcategory')
+                      : (isAr ? 'اختر القسم الرئيسي' : 'Choose a main section')}
+                  </span>
+                </div>
+                {!activeCategoryId ? (
+                  <div className="grid grid-cols-1 gap-1">
+                    {categories.map(category => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => chooseCategory(category.id)}
+                        className="flex items-center justify-between rounded-xl px-3 py-2 text-[11px] font-bold text-[#fff0c8] transition hover:bg-[#791524]"
+                      >
+                        <ChevronLeft className="h-4 w-4 text-[#d4a84f]" />
+                        <span>{isAr ? category.ar : category.en}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveCategoryId(null)}
+                      className="mb-1 flex w-full items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold text-[#e3b85e] hover:bg-[#791524]"
+                    >
+                      {isAr ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                      <span>{isAr ? 'رجوع إلى الأقسام الرئيسية' : 'Back to main sections'}</span>
+                    </button>
+                    <div className="mb-1 border-b border-[#d4af67]/25 px-3 pb-2 text-[11px] font-black text-white">
+                      {activeCategory && (isAr ? activeCategory.ar : activeCategory.en)}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => chooseSubcategory(activeCategoryId, 'all')}
+                      className="mb-1 flex w-full items-center justify-between rounded-xl bg-[#d4a84f]/15 px-3 py-2 text-[11px] font-black text-[#f8df9b] hover:bg-[#d4a84f]/25"
+                    >
+                      <span>{isAr ? activeCategory?.allAr || 'الكل' : activeCategory?.allEn || 'All'}</span>
+                      <span>✓</span>
+                    </button>
+                    <div className="grid max-h-52 gap-1 overflow-y-auto">
+                      {getSubcategoriesForCategory(activeCategoryId).map(sub => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
+                          className="rounded-xl px-3 py-2 text-right text-[10px] font-bold text-[#fff0c8] transition hover:bg-[#791524]"
+                        >
+                          {isAr ? sub.labelAr : sub.labelEn}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="hidden flex-wrap justify-center gap-1 md:flex md:gap-2">
+            {categories.map((category) => (
+              <motion.button
+                key={category.id}
+                type="button"
+                whileTap={{ scale: 0.96 }}
+                onClick={() => chooseCategory(category.id)}
+                className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2 py-1 text-[9px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] md:px-3 md:text-xs"
+              >
+                {isAr ? category.ar : category.en}
+              </motion.button>
+            ))}
+            </div>
+
+            {activeCategoryId && (
+              <div className="mx-auto mt-3 hidden w-full max-w-2xl rounded-2xl border border-[#d4af67]/65 bg-[#3d0711]/95 p-3 text-right shadow-2xl backdrop-blur-md md:block">
+                <div className="mb-2 flex items-center justify-between border-b border-[#d4af67]/25 px-1 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategoryId(null)}
+                    aria-label={isAr ? 'إغلاق القائمة' : 'Close menu'}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#e8c978] transition hover:bg-[#791524] hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs font-black text-[#fff0c8]">
+                    {activeCategory && (isAr ? `تصنيفات ${activeCategory.ar}` : `${activeCategory.en} categories`)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => chooseSubcategory(activeCategoryId, 'all')}
+                    className="rounded-full border border-[#d4a84f] bg-[#d4a84f]/15 px-3 py-1.5 text-[11px] font-black text-[#f8df9b] transition hover:bg-[#d4a84f]/30"
+                  >
+                    {isAr ? activeCategory.allAr : activeCategory.allEn}
+                  </button>
+                  {getSubcategoriesForCategory(activeCategoryId).map(sub => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
+                      className="rounded-full border border-[#f4d78d]/45 bg-[#4a0913]/75 px-3 py-1.5 text-[10px] font-bold text-[#fff0c8] transition hover:border-[#f4d78d] hover:bg-[#791524]"
+                    >
+                      {isAr ? sub.labelAr : sub.labelEn}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </section>
   );
 };
