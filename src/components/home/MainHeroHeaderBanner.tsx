@@ -27,7 +27,8 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   const isAr = lang === 'ar';
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<DanceCategory | null>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState('all');
+  const [chosenCategoryId, setChosenCategoryId] = useState<DanceCategory | null>(null);
+  const [chosenSubcategoryId, setChosenSubcategoryId] = useState('all');
   const uploadedBackground = isAr
     ? appAssets?.app_hero_banner_url
     : appAssets?.app_hero_banner_url_en;
@@ -36,19 +37,22 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
 
   const activeCategory = categories.find(category => category.id === activeCategoryId);
   const selectedCategoryLabel = categories.find(category => category.id === selectedCategory);
-  const selectedSubcategoryLabel = activeCategoryId && selectedSubcategory !== 'all'
-    ? getSubcategoriesForCategory(activeCategoryId).find(sub => sub.id === selectedSubcategory)
+  const selectedSubcategoryLabel = chosenCategoryId && chosenSubcategoryId !== 'all'
+    ? getSubcategoriesForCategory(chosenCategoryId).find(sub => sub.id === chosenSubcategoryId)
     : null;
 
   const mobileCategoryLabel = selectedSubcategoryLabel
     ? (isAr ? selectedSubcategoryLabel.labelAr : selectedSubcategoryLabel.labelEn)
+    : chosenCategoryId
+      ? (isAr
+        ? categories.find(category => category.id === chosenCategoryId)?.allAr
+        : categories.find(category => category.id === chosenCategoryId)?.allEn)
     : selectedCategoryLabel
       ? (isAr ? selectedCategoryLabel.allAr : selectedCategoryLabel.allEn)
       : (isAr ? 'كل الحفلات والسهرات' : 'All Parties & Nightlife');
 
   const chooseCategory = (categoryId: DanceCategory) => {
     setActiveCategoryId(categoryId);
-    setSelectedSubcategory('all');
   };
 
   const closeCategoryMenu = () => {
@@ -58,7 +62,8 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
 
   const chooseSubcategory = (categoryId: DanceCategory, subcategoryId: string) => {
     setActiveCategoryId(categoryId);
-    setSelectedSubcategory(subcategoryId);
+    setChosenCategoryId(categoryId);
+    setChosenSubcategoryId(subcategoryId);
     setIsCategoryMenuOpen(false);
     window.dispatchEvent(new CustomEvent('cityeve-hero-filter', {
       detail: { category: categoryId, subcategory: subcategoryId },
