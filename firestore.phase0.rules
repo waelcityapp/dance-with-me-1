@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isPlatformOwner() {
+      return isSignedIn()
+        && request.auth.token.email == 'waelvts@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function userProtectedFieldsAreUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'id',
+        'email',
+        'isAdmin',
+        'isSuspended',
+        'accountTier',
+        'requestedTier',
+        'accountReference',
+        'isMarketer',
+        'marketerStatus',
+        'marketerCode',
+        'marketerActivatedAt',
+        'marketerUpdatedAt',
+        'marketerStatusReason',
+        'marketerStatusMessage',
+        'marketerStatusChangedAt',
+        'marketerWalletStatus',
+        'marketerWalletReason',
+        'marketerWalletUpdatedAt',
+        'password'
+      ]);
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isPlatformOwner();
+    }
+
+    match /app_assets/{assetId} {
+      allow read: if true;
+      allow write: if isPlatformOwner();
+    }
+
+    match /app_config/{configId} {
+      allow read: if true;
+      allow write: if isPlatformOwner();
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId) || isPlatformOwner();
+
+      allow create: if isPlatformOwner() || (
+        isSelf(userId)
+        && request.resource.data.id == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.isAdmin == false
+        && !('password' in request.resource.data)
+        && !('isMarketer' in request.resource.data)
+        && !('marketerCode' in request.resource.data)
+        && !('marketerWalletStatus' in request.resource.data)
+      );
+
+      allow update: if isPlatformOwner() || (
+        isSelf(userId)
+        && userProtectedFieldsAreUnchanged()
+        && !('password' in request.resource.data)
+      );
+
+      allow delete: if isPlatformOwner();
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isPlatformOwner()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow update: if isPlatformOwner() || (
+        isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'cancelledAt',
+          'userRead'
+        ])
+      );
+
+      allow delete: if isPlatformOwner();
+    }
+
+    // The admin code is verified by a trusted backend only. It must never be
+    // readable or writable from the browser, including by the owner account.
+    match /admin_codes/{codeId} {
+      allow read, write: if false;
+    }
+
+    // Collections not migrated during this first security batch stay closed
+    // in the test rules until their access patterns have dedicated tests.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
