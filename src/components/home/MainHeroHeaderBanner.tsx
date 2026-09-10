@@ -127,7 +127,13 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           <div className="relative -top-1 mb-3 flex flex-col items-center md:-top-2 md:mb-8">
             {/* Decorative wordmark layer: replaceable later with the final transparent SVG asset. */}
             <div className="relative inline-flex items-center">
-              <img src="/cityeve-wordmark.svg" alt="CityEve" className="h-auto w-[clamp(180px,48vw,270px)] md:w-[270px]" />
+              <span
+                className="bg-gradient-to-b from-[#fff9e8] via-[#f4d98d] to-[#bd8630] bg-clip-text text-[clamp(2.25rem,9vw,4.5rem)] font-semibold leading-[0.8] tracking-[-0.08em] text-transparent drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
+                style={{ fontFamily: '"Bodoni Moda", "Times New Roman", serif' }}
+              >
+                CityEve
+              </span>
+              <span className="absolute -bottom-3 left-1/2 h-[2px] w-[clamp(110px,30vw,180px)] -translate-x-1/2 rounded-full bg-gradient-to-r from-transparent via-[#edc56d] to-transparent md:-bottom-4" />
             </div>
           </div>
 
