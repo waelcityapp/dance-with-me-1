@@ -47,6 +47,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     return () => window.removeEventListener('cityeve-hero-filter', handleHeroFilter);
   }, [setSelectedCategory]);
 
+  useEffect(() => {
+    const handleHeroSearch = (event: Event) => {
+      const query = (event as CustomEvent<{ query?: string }>).detail?.query || '';
+      setSearchQuery(query);
+    };
+    window.addEventListener('cityeve-hero-search', handleHeroSearch);
+    return () => window.removeEventListener('cityeve-hero-search', handleHeroSearch);
+  }, []);
+
   // Reset subcategory filter when main category changes
   useEffect(() => {
     setSelectedStyleFilter('all');
