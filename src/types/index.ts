@@ -127,6 +127,7 @@ export interface DanceEvent {
 }
 
 export type AccountTier = 'free' | 'featured' | 'vip';
+export type MarketerStatus = 'active' | 'paused' | 'inactive';
 
 export interface UserProfile {
   id: string;
@@ -143,6 +144,12 @@ export interface UserProfile {
   isSuspended?: boolean;
   accountTier?: AccountTier;
   requestedTier?: AccountTier;
+  accountReference?: string;
+  isMarketer?: boolean;
+  marketerStatus?: MarketerStatus;
+  marketerCode?: string;
+  marketerActivatedAt?: string;
+  marketerUpdatedAt?: string;
 }
 
 export interface NotificationItem {
