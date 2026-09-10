@@ -29,6 +29,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   const [activeCategoryId, setActiveCategoryId] = useState<DanceCategory | null>(null);
   const [chosenCategoryId, setChosenCategoryId] = useState<DanceCategory | null>(null);
   const [chosenSubcategoryId, setChosenSubcategoryId] = useState('all');
+  const [heroSearchQuery, setHeroSearchQuery] = useState('');
   const uploadedBackground = isAr
     ? appAssets?.app_hero_banner_url
     : appAssets?.app_hero_banner_url_en;
@@ -149,21 +150,27 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           </div>
 
           <div className="mt-2 w-full max-w-[310px] md:mt-4 md:max-w-2xl">
-            <button
-              type="button"
-              onClick={handleExplore}
-              className="group flex w-full items-center gap-1.5 rounded-2xl border border-[#e0be75]/70 bg-[#fffaf0] px-2 py-1.5 text-right text-[#6a1520] shadow-[0_12px_35px_rgba(30,0,6,0.28)] transition hover:bg-white md:gap-2 md:px-3 md:py-2"
-            >
-              <span className="flex h-7 w-7 shrink-0 md:h-8 md:w-8 items-center justify-center rounded-xl bg-[#6b101c] text-[#f0c66e] transition group-hover:bg-[#841526]">
+            <div className="group flex w-full items-center gap-1.5 rounded-2xl border border-[#f4dca7]/65 bg-[#fffaf0]/80 px-2 py-1.5 text-right text-[#6a1520] shadow-[0_10px_26px_rgba(30,0,6,0.18)] backdrop-blur-md transition focus-within:border-[#f4dca7] focus-within:bg-[#fffaf0]/90 md:gap-2 md:px-3 md:py-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[#6b101c]/90 text-[#f0c66e] transition group-hover:bg-[#841526] md:h-8 md:w-8">
                 <Search className="h-4.5 w-4.5 md:h-5 md:w-5" />
               </span>
-              <span className="flex-1 text-[10px] font-semibold leading-4 text-[#7c5b57] md:text-sm">
-                {isAr ? 'ابحث عن حفلة، دورة، رحلة أو خدمة...' : 'Search for a party, course, trip, or service...'}
+              <input
+                type="search"
+                value={heroSearchQuery}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setHeroSearchQuery(value);
+                  window.dispatchEvent(new CustomEvent('cityeve-hero-search', { detail: { query: value } }));
+                }}
+                placeholder={isAr ? 'ابحث عن حفلة أو دورة أو رحلة...' : 'Search for a party, course, or trip...'}
+                aria-label={isAr ? 'البحث عن فعالية' : 'Search events'}
+                className="min-w-0 flex-1 bg-transparent text-[10px] font-semibold leading-4 text-[#6a1520] outline-none placeholder:text-[#8d7770]/85 md:text-sm"
+                dir={isAr ? 'rtl' : 'ltr'}
+              />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#6b101c]/90 text-[#f0c66e]">
+                <Search className="h-4 w-4" />
               </span>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#d4a84f] text-[#3d0711]">
-                {isAr ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
-              </span>
-            </button>
+            </div>
           </div>
 
           <div className="relative mt-2 w-full max-w-4xl px-1 md:mt-3">
