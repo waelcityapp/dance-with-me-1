@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, getDocs, runTransaction } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, runTransaction } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
 const COUNTER_COLLECTION = 'system_counters';
@@ -12,6 +12,8 @@ const ADMIN_EMAIL = (((import.meta as any).env.VITE_ADMIN_EMAIL as string | unde
 const completedUserIds = new Set<string>();
 const inFlightUserIds = new Set<string>();
 let legacyBackfillStarted = false;
+let liveUserId: string | null = null;
+let stopLiveUserSync: (() => void) | null = null;
 
 const isNumberedReference = (value?: string) => /^CE\d{5,}$/.test(String(value || '').trim());
 const getLegacyNumber = (value?: string) => {
@@ -20,12 +22,6 @@ const getLegacyNumber = (value?: string) => {
 };
 const isOwner = (email?: string) => String(email || '').trim().toLowerCase() === ADMIN_EMAIL;
 
-/**
- * Creates one permanent human-friendly account number per user:
- * CE10001, CE10002, CE10003 ...
- * The platform owner keeps the reserved test number CE1000.
- * Existing CE-xxxxx references are migrated to CExxxxx without changing the number.
- */
 export async function ensureAccountReference(userId: string, email?: string): Promise<string | null> {
   const cleanUserId = String(userId || '').trim();
   const cleanEmail = String(email || '').trim().toLowerCase();
@@ -60,9 +56,7 @@ export async function ensureAccountReference(userId: string, email?: string): Pr
         return OWNER_ACCOUNT_REFERENCE;
       }
 
-      if (isNumberedReference(currentReference)) {
-        return currentReference;
-      }
+      if (isNumberedReference(currentReference)) return currentReference;
 
       const legacyNumber = getLegacyNumber(currentReference);
       if (legacyNumber !== null) {
@@ -78,20 +72,14 @@ export async function ensureAccountReference(userId: string, email?: string): Pr
       const storedLastNumber = counterSnapshot.exists()
         ? Number(counterSnapshot.data()?.lastNumber)
         : FIRST_ACCOUNT_NUMBER - 1;
-
       const safeLastNumber = Number.isFinite(storedLastNumber)
         ? Math.max(storedLastNumber, FIRST_ACCOUNT_NUMBER - 1)
         : FIRST_ACCOUNT_NUMBER - 1;
-
       const nextNumber = safeLastNumber + 1;
       const nextReference = `CE${nextNumber}`;
       const now = new Date().toISOString();
 
-      transaction.set(counterRef, {
-        lastNumber: nextNumber,
-        updatedAt: now,
-      }, { merge: true });
-
+      transaction.set(counterRef, { lastNumber: nextNumber, updatedAt: now }, { merge: true });
       transaction.set(userRef, {
         id: cleanUserId,
         accountReference: nextReference,
@@ -113,49 +101,93 @@ export async function ensureAccountReference(userId: string, email?: string): Pr
   }
 }
 
-function syncCachedReference(userId: string, accountReference: string | null) {
-  if (!accountReference) return;
+function readCachedUser(): any | null {
   try {
     const raw = localStorage.getItem(LOCAL_USER_KEY);
-    if (!raw) return;
-    const cachedUser = JSON.parse(raw);
-    if (cachedUser?.id === userId && cachedUser.accountReference !== accountReference) {
-      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify({
-        ...cachedUser,
-        accountReference,
-      }));
-    }
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    // Firestore remains the source of truth; local cache failure must not block assignment.
+    return null;
   }
 }
 
-const ensureCachedUserReference = () => {
+function writeCachedUser(nextUser: any) {
   try {
-    const raw = localStorage.getItem(LOCAL_USER_KEY);
-    if (!raw) return;
-    const cachedUser = JSON.parse(raw);
-    const id = String(cachedUser?.id || '').trim();
-    const email = String(cachedUser?.email || '').trim().toLowerCase();
-    const current = String(cachedUser?.accountReference || '').trim();
-
-    if (isOwner(email)) {
-      void backfillLegacyUsers();
-    }
-
-    const alreadyCorrect = isOwner(email)
-      ? current === OWNER_ACCOUNT_REFERENCE
-      : isNumberedReference(current);
-
-    if (!id || completedUserIds.has(id) || alreadyCorrect) {
-      scheduleProfileBadgeRender();
-      return;
-    }
-
-    void ensureAccountReference(id, email);
+    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(nextUser));
   } catch {
-    // Ignore malformed/absent local cache.
+    // Firestore remains the source of truth.
   }
+}
+
+function syncCachedReference(userId: string, accountReference: string | null) {
+  if (!accountReference) return;
+  const cachedUser = readCachedUser();
+  if (cachedUser?.id === userId && cachedUser.accountReference !== accountReference) {
+    writeCachedUser({ ...cachedUser, accountReference });
+  }
+}
+
+function ensureLiveUserSync(userId: string) {
+  const cleanUserId = String(userId || '').trim();
+  if (!cleanUserId || liveUserId === cleanUserId) return;
+
+  if (stopLiveUserSync) stopLiveUserSync();
+  liveUserId = cleanUserId;
+
+  stopLiveUserSync = onSnapshot(
+    doc(db, 'users', cleanUserId),
+    (snapshot) => {
+      if (!snapshot.exists()) return;
+      const firestoreUser = snapshot.data();
+      const cachedUser = readCachedUser();
+      if (!cachedUser || cachedUser.id !== cleanUserId) return;
+
+      const nextUser = {
+        ...cachedUser,
+        accountReference: firestoreUser.accountReference ?? cachedUser.accountReference,
+        isMarketer: firestoreUser.isMarketer === true,
+        marketerStatus: firestoreUser.marketerStatus || 'inactive',
+        marketerCode: firestoreUser.marketerCode ?? cachedUser.marketerCode,
+        marketerActivatedAt: firestoreUser.marketerActivatedAt ?? cachedUser.marketerActivatedAt,
+        marketerUpdatedAt: firestoreUser.marketerUpdatedAt ?? cachedUser.marketerUpdatedAt,
+      };
+
+      const changed =
+        nextUser.accountReference !== cachedUser.accountReference ||
+        nextUser.isMarketer !== cachedUser.isMarketer ||
+        nextUser.marketerStatus !== cachedUser.marketerStatus ||
+        nextUser.marketerCode !== cachedUser.marketerCode ||
+        nextUser.marketerUpdatedAt !== cachedUser.marketerUpdatedAt;
+
+      if (changed) writeCachedUser(nextUser);
+      scheduleProfileBadgeRender();
+    },
+    (error) => console.warn('Unable to sync current CityEve user status:', error)
+  );
+}
+
+const ensureCachedUserReference = () => {
+  const cachedUser = readCachedUser();
+  if (!cachedUser) return;
+
+  const id = String(cachedUser?.id || '').trim();
+  const email = String(cachedUser?.email || '').trim().toLowerCase();
+  const current = String(cachedUser?.accountReference || '').trim();
+  if (!id) return;
+
+  ensureLiveUserSync(id);
+
+  if (isOwner(email)) void backfillLegacyUsers();
+
+  const alreadyCorrect = isOwner(email)
+    ? current === OWNER_ACCOUNT_REFERENCE
+    : isNumberedReference(current);
+
+  if (completedUserIds.has(id) || alreadyCorrect) {
+    scheduleProfileBadgeRender();
+    return;
+  }
+
+  void ensureAccountReference(id, email);
 };
 
 async function backfillLegacyUsers() {
@@ -169,11 +201,7 @@ async function backfillLegacyUsers() {
       ...userDoc.data(),
     })) as Array<{ id: string; email?: string; accountReference?: string; createdAt?: string }>;
 
-    users.sort((a, b) => {
-      const aDate = new Date(a.createdAt || 0).getTime();
-      const bDate = new Date(b.createdAt || 0).getTime();
-      return aDate - bDate;
-    });
+    users.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
 
     for (const user of users) {
       const current = String(user.accountReference || '').trim();
@@ -181,10 +209,7 @@ async function backfillLegacyUsers() {
       const needsReference = isOwner(email)
         ? current !== OWNER_ACCOUNT_REFERENCE
         : !isNumberedReference(current);
-
-      if (needsReference) {
-        await ensureAccountReference(user.id, email);
-      }
+      if (needsReference) await ensureAccountReference(user.id, email);
     }
   } catch (error) {
     console.warn('Unable to backfill legacy CityEve account references:', error);
@@ -194,9 +219,8 @@ async function backfillLegacyUsers() {
 
 function renderProfileBadge() {
   try {
-    const raw = localStorage.getItem(LOCAL_USER_KEY);
-    if (!raw) return;
-    const cachedUser = JSON.parse(raw);
+    const cachedUser = readCachedUser();
+    if (!cachedUser) return;
     const name = String(cachedUser?.name || '').trim();
     const reference = String(cachedUser?.accountReference || '').trim();
     if (!name || !reference) return;
@@ -277,13 +301,10 @@ function scheduleProfileBadgeRender() {
 
 onAuthStateChanged(auth, (firebaseUser) => {
   if (!firebaseUser?.uid) return;
-
   const email = String(firebaseUser.email || '').trim().toLowerCase();
+  ensureLiveUserSync(firebaseUser.uid);
   void ensureAccountReference(firebaseUser.uid, email);
-
-  if (isOwner(email)) {
-    void backfillLegacyUsers();
-  }
+  if (isOwner(email)) void backfillLegacyUsers();
 });
 
 ensureCachedUserReference();
