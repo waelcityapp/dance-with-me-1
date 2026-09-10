@@ -90,7 +90,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
       className="relative w-full overflow-hidden px-1 pb-1 pt-1 md:px-5 md:pb-5"
     >
       <div
-        className="relative isolate mx-auto min-h-[300px] max-w-6xl overflow-hidden rounded-[18px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] md:min-h-[340px] md:rounded-[24px] lg:min-h-[340px]"
+        className="relative isolate mx-auto min-h-[270px] max-w-6xl overflow-hidden rounded-[18px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] md:min-h-[340px] md:rounded-[24px] lg:min-h-[340px]"
         dir={isAr ? 'rtl' : 'ltr'}
       >
         <div aria-hidden="true" className="absolute inset-0 bg-cover bg-center opacity-95 md:hidden" style={{ backgroundImage: `url(${mobileBackgroundImage})` }} />
@@ -107,7 +107,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
         <div className="pointer-events-none absolute -left-16 top-16 h-40 w-40 rounded-full bg-[#d9a441]/12 blur-3xl" />
         <div className="pointer-events-none absolute -right-16 bottom-8 h-52 w-52 rounded-full bg-[#a72b37]/30 blur-3xl" />
 
-        <div className="relative z-10 flex min-h-[300px] flex-col items-center justify-start px-2 pb-8 pt-8 text-center md:min-h-[340px] md:justify-center md:px-8 md:py-6 lg:min-h-[340px]">
+        <div className="relative z-10 flex min-h-[270px] flex-col items-center justify-center px-3 py-5 text-center md:min-h-[340px] md:px-8 md:py-6 lg:min-h-[340px]">
           <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-1 md:inset-x-8 md:top-4">
             <button
               type="button"
@@ -123,10 +123,10 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
             </span>
           </div>
 
-          <div className="mb-1.5 flex flex-col items-center md:mb-6">
+          <div className="mb-1 flex flex-col items-center md:mb-6">
             {/* Decorative wordmark layer: replaceable later with the final transparent SVG asset. */}
             <div className="relative inline-flex items-center">
-              <span className="font-serif text-2xl font-semibold italic leading-none tracking-[-0.08em] text-[#f8e5b1] drop-shadow-[0_3px_12px_rgba(0,0,0,0.35)] md:text-5xl">
+              <span className="font-serif text-xl font-semibold italic leading-none tracking-[-0.08em] text-[#f8e5b1] drop-shadow-[0_3px_12px_rgba(0,0,0,0.35)] md:text-5xl">
                 CityEve
               </span>
               <span className="absolute -bottom-3 left-1/2 h-px w-24 -translate-x-1/2 bg-gradient-to-r from-transparent via-[#d4af67] to-transparent md:w-32" />
@@ -134,25 +134,25 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           </div>
 
           <div className="max-w-3xl px-1">
-            <h1 className="text-lg font-black leading-[1.08] tracking-tight text-white drop-shadow-md md:text-4xl lg:text-4xl">
+            <h1 className="text-base font-black leading-[1.12] tracking-tight text-white drop-shadow-md md:text-4xl lg:text-4xl">
               {isAr ? (
                 <>كل الفعاليات <span className="text-[#edc56d]">في مكان واحد</span></>
               ) : (
                 <>Every event <span className="text-[#edc56d]">in one place</span></>
               )}
             </h1>
-            <p className="mx-auto mt-1 max-w-2xl text-[10px] font-medium leading-4 text-[#f6e8c8]/85 md:mt-2 md:text-xs lg:text-sm">
+            <p className="mx-auto mt-1 max-w-[310px] text-[9px] font-medium leading-3.5 text-[#f6e8c8]/85 md:mt-2 md:max-w-2xl md:text-xs lg:text-sm">
               {isAr
                 ? 'اكتشف أفضل الحفلات والرحلات والدورات والخدمات، واحجز تجربتك القادمة بسهولة.'
                 : 'Discover parties, trips, courses, and services — then book your next experience with ease.'}
             </p>
           </div>
 
-          <div className="mt-3 w-full max-w-2xl md:mt-4">
+          <div className="mt-2 w-full max-w-[310px] md:mt-4 md:max-w-2xl">
             <button
               type="button"
               onClick={handleExplore}
-              className="group flex w-full items-center gap-2 rounded-2xl border border-[#e0be75]/70 bg-[#fffaf0] px-2.5 py-1.5 text-right text-[#6a1520] shadow-[0_12px_35px_rgba(30,0,6,0.28)] transition hover:bg-white md:px-3 md:py-2"
+              className="group flex w-full items-center gap-1.5 rounded-2xl border border-[#e0be75]/70 bg-[#fffaf0] px-2 py-1.5 text-right text-[#6a1520] shadow-[0_12px_35px_rgba(30,0,6,0.28)] transition hover:bg-white md:gap-2 md:px-3 md:py-2"
             >
               <span className="flex h-7 w-7 shrink-0 md:h-8 md:w-8 items-center justify-center rounded-xl bg-[#6b101c] text-[#f0c66e] transition group-hover:bg-[#841526]">
                 <Search className="h-4.5 w-4.5 md:h-5 md:w-5" />
