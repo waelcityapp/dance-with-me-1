@@ -12,7 +12,7 @@ interface MarketersManagementProps {
 
 const normalize = (value?: string) => (value || '').trim().toLowerCase();
 const normalizeSearch = (value?: string) => normalize(value).replace(/[\s-]/g, '');
-const OWNER_REFERENCE = '0000';
+const OWNER_REFERENCE = 'CE1000';
 const FIRST_ACCOUNT_NUMBER = 10001;
 const isOfficialReference = (value?: string) => /^CE\d{5,}$/.test(String(value || '').trim());
 const getReferenceNumber = (value?: string) => {
@@ -67,8 +67,6 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
       (items) => {
         const nextUsers = [...(items || [])];
 
-        // Always keep the currently logged-in platform owner visible exactly once.
-        // Match by ID first, then email, then the single admin record if present.
         if (adminUser?.isAdmin) {
           const ownerIndex = findOwnerIndex(nextUsers, adminUser);
           if (ownerIndex >= 0) {
@@ -80,12 +78,12 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
               phone: adminUser.phone || storedOwner.phone,
               avatar: adminUser.avatar || storedOwner.avatar,
               isAdmin: true,
-              accountReference: storedOwner.accountReference || adminUser.accountReference || OWNER_REFERENCE,
+              accountReference: OWNER_REFERENCE,
             };
           } else {
             nextUsers.unshift({
               ...adminUser,
-              accountReference: adminUser.accountReference || OWNER_REFERENCE,
+              accountReference: OWNER_REFERENCE,
             });
           }
         }
@@ -99,7 +97,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
       }
     );
     return unsubscribe;
-  }, [lang, adminUser?.id, adminUser?.email, adminUser?.name, adminUser?.phone, adminUser?.avatar, adminUser?.isAdmin, adminUser?.accountReference]);
+  }, [lang, adminUser?.id, adminUser?.email, adminUser?.name, adminUser?.phone, adminUser?.avatar, adminUser?.isAdmin]);
 
   useEffect(() => {
     if (!adminUser?.isAdmin || !adminUser.id || loading || users.length === 0 || migrationStarted.current) return;
@@ -188,8 +186,8 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
 
       if (failedAccounts.length === 0) {
         setMessage(lang === 'ar'
-          ? `تم تحديث أرقام الحسابات بنجاح (${updatedCount} تحديث). رقم صاحب التطبيق 0000.`
-          : `Account numbers updated successfully (${updatedCount} updates). Owner number is 0000.`);
+          ? `تم تحديث أرقام الحسابات بنجاح (${updatedCount} تحديث). رقم صاحب التطبيق CE1000.`
+          : `Account numbers updated successfully (${updatedCount} updates). Owner number is CE1000.`);
       } else {
         setMessage(lang === 'ar'
           ? `تم تحديث معظم الحسابات (${updatedCount} تحديث)، وتعذر تحديث ${failedAccounts.length} فقط.`
@@ -204,7 +202,6 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   const filteredUsers = useMemo(() => {
     const q = normalizeSearch(query);
     const sorted = [...users].sort((a, b) => {
-      // Keep the platform owner visible at the top for easy testing.
       const aOwner = adminUser && findOwnerIndex([a], adminUser) === 0 ? 1 : 0;
       const bOwner = adminUser && findOwnerIndex([b], adminUser) === 0 ? 1 : 0;
       if (aOwner !== bOwner) return bOwner - aOwner;
