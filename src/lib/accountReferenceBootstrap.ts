@@ -46,7 +46,6 @@ export async function ensureAccountReference(userId: string, email?: string): Pr
         ? String(userSnapshot.data()?.accountReference || '').trim()
         : '';
 
-      // Owner/admin account always uses the reserved number 0000.
       if (isOwner(effectiveEmail)) {
         if (currentReference !== OWNER_ACCOUNT_REFERENCE) {
           transaction.set(userRef, {
@@ -59,7 +58,6 @@ export async function ensureAccountReference(userId: string, email?: string): Pr
         return OWNER_ACCOUNT_REFERENCE;
       }
 
-      // Never replace a valid numbered reference already assigned to a normal account.
       if (isNumberedReference(currentReference)) {
         return currentReference;
       }
@@ -128,6 +126,14 @@ const ensureCachedUserReference = () => {
     const id = String(cachedUser?.id || '').trim();
     const email = String(cachedUser?.email || '').trim().toLowerCase();
     const current = String(cachedUser?.accountReference || '').trim();
+
+    // The preview can keep the admin session in LocalStorage when Firebase Auth
+    // is unavailable in the iframe. In that case we still run the one-time
+    // legacy migration for every existing user.
+    if (isOwner(email)) {
+      void backfillLegacyUsers();
+    }
+
     const alreadyCorrect = isOwner(email)
       ? current === OWNER_ACCOUNT_REFERENCE
       : isNumberedReference(current);
@@ -156,10 +162,9 @@ async function backfillLegacyUsers() {
     const users = snapshot.docs.map((userDoc) => ({
       id: userDoc.id,
       ...userDoc.data(),
-    })) as Array<{ id: string; email?: string; accountReference?: string }>;
+    })) as Array<{ id: string; email?: string; accountReference?: string; createdAt?: string }>;
 
-    // Oldest accounts first keeps the numbering predictable for existing members.
-    users.sort((a: any, b: any) => {
+    users.sort((a, b) => {
       const aDate = new Date(a.createdAt || 0).getTime();
       const bDate = new Date(b.createdAt || 0).getTime();
       return aDate - bDate;
@@ -182,11 +187,6 @@ async function backfillLegacyUsers() {
   }
 }
 
-/**
- * Keeps the account number visible directly under the profile name without
- * changing any other profile behavior. The badge reads the number from the
- * current cached profile, while Firestore remains the source of truth.
- */
 function renderProfileBadge() {
   try {
     const raw = localStorage.getItem(LOCAL_USER_KEY);
@@ -241,7 +241,6 @@ function scheduleProfileBadgeRender() {
   badgeTimer = window.setTimeout(renderProfileBadge, 80);
 }
 
-// Firebase/Google/email authentication path.
 onAuthStateChanged(auth, (firebaseUser) => {
   if (!firebaseUser?.uid) return;
 
@@ -253,12 +252,9 @@ onAuthStateChanged(auth, (firebaseUser) => {
   }
 });
 
-// Covers the app's local fallback session as well as users who sign in later
-// without changing the existing authentication flow.
 ensureCachedUserReference();
 window.setInterval(ensureCachedUserReference, 5000);
 
-// Re-render the small badge when navigating into Profile or switching language.
 const observer = new MutationObserver(scheduleProfileBadgeRender);
 observer.observe(document.documentElement, { childList: true, subtree: true });
 document.addEventListener('click', () => scheduleProfileBadgeRender());
