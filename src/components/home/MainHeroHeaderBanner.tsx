@@ -91,7 +91,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
       className="relative w-full overflow-hidden px-1 pb-1 pt-1 md:px-5 md:pb-5"
     >
       <div
-        className="relative isolate mx-auto min-h-[270px] max-w-6xl overflow-hidden rounded-[18px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] md:min-h-[340px] md:rounded-[24px] lg:min-h-[340px]"
+        className="relative isolate mx-auto h-[clamp(270px,75vw,330px)] max-w-6xl overflow-hidden rounded-[18px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] md:h-[340px] md:rounded-[24px]"
         dir={isAr ? 'rtl' : 'ltr'}
       >
         <div aria-hidden="true" className="absolute inset-0 bg-cover bg-center opacity-95 md:hidden" style={{ backgroundImage: `url(${mobileBackgroundImage})` }} />
@@ -108,7 +108,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
         <div className="pointer-events-none absolute -left-16 top-16 h-40 w-40 rounded-full bg-[#d9a441]/12 blur-3xl" />
         <div className="pointer-events-none absolute -right-16 bottom-8 h-52 w-52 rounded-full bg-[#a72b37]/30 blur-3xl" />
 
-        <div className="relative z-10 flex min-h-[270px] flex-col items-center justify-center px-3 py-5 text-center md:min-h-[340px] md:px-8 md:py-6 lg:min-h-[340px]">
+        <div className="relative z-10 flex h-full min-h-0 flex-col items-center justify-center px-[clamp(12px,4vw,32px)] py-[clamp(16px,4vw,24px)] text-center md:px-8 md:py-6">
           <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-1 md:inset-x-8 md:top-4">
             <button
               type="button"
@@ -127,26 +127,26 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
           <div className="relative -top-1 mb-3 flex flex-col items-center md:-top-2 md:mb-8">
             {/* Decorative wordmark layer: replaceable later with the final transparent SVG asset. */}
             <div className="relative inline-flex items-center">
-              <img src="/cityeve-wordmark.svg" alt="CityEve" className="h-auto w-[155px] md:w-[270px]" />
+              <img src="/cityeve-wordmark.svg" alt="CityEve" className="h-auto w-[clamp(180px,48vw,270px)] md:w-[270px]" />
             </div>
           </div>
 
           <div className="max-w-3xl px-1">
-            <h1 className="text-base font-black leading-[1.12] tracking-tight text-white drop-shadow-md md:text-4xl lg:text-4xl">
+            <h1 className="text-[clamp(16px,4.7vw,24px)] font-black leading-[1.12] tracking-tight text-white drop-shadow-md md:text-4xl lg:text-4xl">
               {isAr ? (
                 <>كل الفعاليات <span className="text-[#edc56d]">في مكان واحد</span></>
               ) : (
                 <>Every event <span className="text-[#edc56d]">in one place</span></>
               )}
             </h1>
-            <p className="mx-auto mt-1 max-w-[310px] text-[9px] font-medium leading-3.5 text-[#f6e8c8]/85 md:mt-2 md:max-w-2xl md:text-xs lg:text-sm">
+            <p className="mx-auto mt-1 max-w-[min(340px,calc(100vw-32px))] text-[clamp(9px,2.7vw,12px)] font-medium leading-[1.35] text-[#f6e8c8]/85 md:mt-2 md:max-w-2xl md:text-xs lg:text-sm">
               {isAr
                 ? 'اكتشف أفضل الحفلات والرحلات والدورات والخدمات، واحجز تجربتك القادمة بسهولة.'
                 : 'Discover parties, trips, courses, and services — then book your next experience with ease.'}
             </p>
           </div>
 
-          <div className="mt-2 w-full max-w-[310px] md:mt-4 md:max-w-2xl">
+          <div className="mt-[clamp(8px,2.2vw,16px)] w-full max-w-[min(640px,calc(100vw-32px))] md:mt-4 md:max-w-2xl">
             <div className="group flex w-full items-center gap-1.5 rounded-2xl border border-[#d4a84f]/75 bg-[#4a0913]/72 px-2 py-1.5 text-right text-[#fff0c8] shadow-[0_10px_26px_rgba(30,0,6,0.22)] backdrop-blur-md transition focus-within:border-[#f4d78d] focus-within:bg-[#4a0913]/85 md:gap-2 md:px-3 md:py-2">
               <input
                 type="search"
@@ -167,11 +167,11 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
             </div>
           </div>
 
-          <div className="relative mt-2 w-full max-w-4xl px-1 md:mt-3">
+          <div className="relative mt-[clamp(8px,2vw,12px)] w-full max-w-4xl px-1 md:mt-3">
             <button
               type="button"
               onClick={() => setIsCategoryMenuOpen(open => !open)}
-              className="mx-auto flex w-full max-w-[320px] items-center justify-center gap-2 rounded-full border border-[#f4d78d]/70 bg-[#4a0913]/85 px-3 py-2 text-[11px] font-bold text-[#fff0c8] shadow-sm backdrop-blur-sm transition hover:bg-[#791524] md:hidden"
+              className="mx-auto flex w-full max-w-[min(320px,calc(100vw-40px))] items-center justify-center gap-2 rounded-full border border-[#f4d78d]/70 bg-[#4a0913]/85 px-3 py-2 text-[11px] font-bold text-[#fff0c8] shadow-sm backdrop-blur-sm transition hover:bg-[#791524] md:hidden"
               aria-expanded={isCategoryMenuOpen}
             >
               <span className="shrink-0">{isAr ? 'كل الأقسام الرئيسية' : 'All Main Sections'}</span>
