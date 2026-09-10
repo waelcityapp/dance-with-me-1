@@ -124,10 +124,13 @@ export interface DanceEvent {
   createdByAdmin?: boolean;
   creatorId?: string;
   creatorName?: string;
+  /** Only approved/published events should be included in search engine sitemaps. */
+  seoIndexable?: boolean;
+  /** Required audit source for newly created event documents. */
+  createdSource?: 'admin' | 'approved_submission';
 }
 
 export type AccountTier = 'free' | 'featured' | 'vip';
-export type MarketerStatus = 'active' | 'paused' | 'inactive';
 
 export interface UserProfile {
   id: string;
@@ -144,12 +147,6 @@ export interface UserProfile {
   isSuspended?: boolean;
   accountTier?: AccountTier;
   requestedTier?: AccountTier;
-  accountReference?: string;
-  isMarketer?: boolean;
-  marketerStatus?: MarketerStatus;
-  marketerCode?: string;
-  marketerActivatedAt?: string;
-  marketerUpdatedAt?: string;
 }
 
 export interface NotificationItem {
@@ -194,6 +191,8 @@ export interface AdSubmission {
   reviewedAt?: string;
   expiresAt?: string;
   archivedAt?: string;
+  previousMediaUrl?: string;
+  deletionRequestedAt?: string;
   renewalCount?: number;
   eventData?: Partial<DanceEvent>;
   staffSettings?: SecurityStaffSettings;
