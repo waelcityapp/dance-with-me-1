@@ -61,7 +61,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   };
 
   const chooseSubcategory = (categoryId: DanceCategory, subcategoryId: string) => {
-    setActiveCategoryId(categoryId);
+    setActiveCategoryId(null);
     setChosenCategoryId(categoryId);
     setChosenSubcategoryId(subcategoryId);
     setIsCategoryMenuOpen(false);
@@ -253,13 +253,50 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 key={category.id}
                 type="button"
                 whileTap={{ scale: 0.96 }}
-                onClick={() => chooseSubcategory(category.id, 'all')}
+                onClick={() => chooseCategory(category.id)}
                 className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2 py-1 text-[9px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] md:px-3 md:text-xs"
               >
                 {isAr ? category.ar : category.en}
               </motion.button>
             ))}
             </div>
+
+            {activeCategoryId && (
+              <div className="mx-auto mt-3 hidden w-full max-w-2xl rounded-2xl border border-[#d4af67]/65 bg-[#3d0711]/95 p-3 text-right shadow-2xl backdrop-blur-md md:block">
+                <div className="mb-2 flex items-center justify-between border-b border-[#d4af67]/25 px-1 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategoryId(null)}
+                    aria-label={isAr ? 'إغلاق القائمة' : 'Close menu'}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#e8c978] transition hover:bg-[#791524] hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs font-black text-[#fff0c8]">
+                    {activeCategory && (isAr ? `تصنيفات ${activeCategory.ar}` : `${activeCategory.en} categories`)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => chooseSubcategory(activeCategoryId, 'all')}
+                    className="rounded-full border border-[#d4a84f] bg-[#d4a84f]/15 px-3 py-1.5 text-[11px] font-black text-[#f8df9b] transition hover:bg-[#d4a84f]/30"
+                  >
+                    {isAr ? activeCategory.allAr : activeCategory.allEn}
+                  </button>
+                  {getSubcategoriesForCategory(activeCategoryId).map(sub => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
+                      className="rounded-full border border-[#f4d78d]/45 bg-[#4a0913]/75 px-3 py-1.5 text-[10px] font-bold text-[#fff0c8] transition hover:border-[#f4d78d] hover:bg-[#791524]"
+                    >
+                      {isAr ? sub.labelAr : sub.labelEn}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
