@@ -6,7 +6,7 @@ const COUNTER_COLLECTION = 'system_counters';
 const COUNTER_DOCUMENT = 'user_account_reference';
 const FIRST_ACCOUNT_NUMBER = 10001;
 const LOCAL_USER_KEY = 'dwm_user_v1';
-const OWNER_ACCOUNT_REFERENCE = '0000';
+const OWNER_ACCOUNT_REFERENCE = 'CE1000';
 const ADMIN_EMAIL = (((import.meta as any).env.VITE_ADMIN_EMAIL as string | undefined)?.trim().toLowerCase()) || 'waelvts@gmail.com';
 
 const completedUserIds = new Set<string>();
@@ -23,7 +23,7 @@ const isOwner = (email?: string) => String(email || '').trim().toLowerCase() ===
 /**
  * Creates one permanent human-friendly account number per user:
  * CE10001, CE10002, CE10003 ...
- * The platform owner keeps the reserved test number 0000.
+ * The platform owner keeps the reserved test number CE1000.
  * Existing CE-xxxxx references are migrated to CExxxxx without changing the number.
  */
 export async function ensureAccountReference(userId: string, email?: string): Promise<string | null> {
