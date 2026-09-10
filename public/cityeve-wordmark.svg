@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190" role="img" aria-labelledby="title desc">
+  <title id="title">CityEve</title>
+  <desc id="desc">CityEve luxury gold wordmark</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff8df"/>
+      <stop offset="0.52" stop-color="#f5d98e"/>
+      <stop offset="1" stop-color="#c99435"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-30%" width="140%" height="160%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <text x="360" y="118" text-anchor="middle" font-family="Great Vibes, Brush Script MT, cursive" font-size="112" fill="url(#gold)" filter="url(#softGlow)">CityEve</text>
+  <path d="M270 148 C330 132 405 132 470 148" fill="none" stroke="#edc56d" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+</svg>
