@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/navbar/Header';
 import { BottomNav } from './components/navbar/BottomNav';
@@ -61,6 +62,7 @@ const AppContent: React.FC = () => {
   } = useApp();
 
   const [adminWorkspace, setAdminWorkspace] = useState<'main' | 'marketers'>('main');
+  const [marketersGridTarget, setMarketersGridTarget] = useState<HTMLElement | null>(null);
 
   // Handle hardware / browser back button on mobile
   const lastBackPressRef = useRef<number>(0);
@@ -95,6 +97,41 @@ const AppContent: React.FC = () => {
   }, [activeTab, adminWorkspace]);
 
   useEffect(() => {
+    if (activeTab !== 'admin' || adminWorkspace !== 'main' || !user?.isAdmin) {
+      setMarketersGridTarget(null);
+      return;
+    }
+
+    let cancelled = false;
+    let attempts = 0;
+    const locateModulesGrid = () => {
+      if (cancelled) return;
+      const headings = Array.from(document.querySelectorAll('h3'));
+      const heading = headings.find((node) => {
+        const text = node.textContent?.trim() || '';
+        return text === 'أقسام ووحدات التحكم' || text === 'Control Modules';
+      });
+      const section = heading?.parentElement?.parentElement;
+      const grid = section ? Array.from(section.children).find((el) => el.classList.contains('grid')) as HTMLElement | undefined : undefined;
+      if (grid) {
+        setMarketersGridTarget(grid);
+        const countLabel = heading?.parentElement?.querySelector('span');
+        if (countLabel) {
+          countLabel.textContent = lang === 'ar' ? '12 وحدة متكاملة' : '12 Modules';
+        }
+        return;
+      }
+      attempts += 1;
+      if (attempts < 20) window.setTimeout(locateModulesGrid, 100);
+    };
+
+    window.setTimeout(locateModulesGrid, 0);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, adminWorkspace, user?.isAdmin, lang]);
+
+  useEffect(() => {
     const handlePopState = () => {
       if (activeTab !== 'explore') {
         setActiveTab('explore');
@@ -127,6 +164,40 @@ const AppContent: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  const marketersModuleCard = marketersGridTarget ? createPortal(
+    <motion.div
+      whileHover={{ scale: 1.015 }}
+      whileTap={{ scale: 0.985 }}
+      onClick={() => {
+        setAdminWorkspace('marketers');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }}
+      className="rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-orange-500/70 dark:hover:border-orange-400/60 bg-white dark:bg-neutral-900 p-3 sm:p-3.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group h-auto min-h-[96px] sm:min-h-[108px]"
+      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+    >
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-orange-500/10 text-orange-500">
+          <Megaphone className="h-4 w-4" />
+        </div>
+        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md leading-tight bg-orange-100 dark:bg-orange-500/20 text-orange-800 dark:text-orange-300">
+          {lang === 'ar' ? 'تسويق' : 'MARKETING'}
+        </span>
+      </div>
+      <div className="mt-2">
+        <h4 className="text-xs sm:text-sm font-extrabold text-neutral-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors leading-tight">
+          {lang === 'ar' ? 'قسم المسوقين' : 'Marketers Section'}
+        </h4>
+        <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+          {lang === 'ar' ? 'البحث عن المسوقين وتفعيل أو إيقاف الحسابات' : 'Search, activate & pause marketer accounts'}
+        </p>
+      </div>
+      <div className="mt-1 flex items-center justify-end text-[10px] font-black text-orange-600 dark:text-orange-400 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span>{lang === 'ar' ? 'فتح ➔' : 'Open ➔'}</span>
+      </div>
+    </motion.div>,
+    marketersGridTarget
+  ) : null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-600 dark:selection:text-amber-300 transition-colors duration-200">
@@ -237,22 +308,8 @@ const AppContent: React.FC = () => {
                 <MarketersManagement onBack={() => setAdminWorkspace('main')} />
               ) : (
                 <>
-                  {user?.isAdmin && (
-                    <div className="mb-4 flex justify-end" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAdminWorkspace('marketers');
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className="w-full sm:w-auto h-12 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 px-5 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 transition-all"
-                      >
-                        <Megaphone className="h-4 w-4" />
-                        {lang === 'ar' ? 'قسم المسوقين' : 'Marketers Section'}
-                      </button>
-                    </div>
-                  )}
                   <AdminPanel />
+                  {marketersModuleCard}
                 </>
               )
             )}
