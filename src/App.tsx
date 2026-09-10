@@ -53,7 +53,7 @@ const AppContent: React.FC = () => {
     isSupportModalOpen, 
     closeSupportModal, 
     setEditingEvent, 
-    editingEvent,
+    editingEvent, 
     feedViewMode,
     activePushToast,
     setActivePushToast,
@@ -268,7 +268,8 @@ const AppContent: React.FC = () => {
                 style={{
                   background: 'conic-gradient(from 0deg, #ef4444, #f59e0b, #ec4899, #ef4444)'
                 }} 
-              /> 
+              />
+              
               {/* Inner Content */}
               <div className="relative flex items-center justify-between bg-white dark:bg-neutral-900 rounded-[14px] py-1.5 sm:py-2 px-2.5 sm:px-3.5 w-full h-full shadow-xs">
                 <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
@@ -284,6 +285,7 @@ const AppContent: React.FC = () => {
                     </span>
                   </div>
                 </div>
+                
                 <div className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all shrink-0 ms-2">
                   {lang === 'ar' ? <ArrowLeft className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
                 </div>
@@ -369,15 +371,53 @@ const AppContent: React.FC = () => {
       <BottomNav onOpenPersonalNotifications={() => setIsPersonalNotifOpen(true)} />
 
       {/* Interactive Modals */}
-      <MapModal event={selectedMapEvent} onClose={() => setSelectedMapEvent(null)} />
-      <ShareModal event={selectedShareEvent} onClose={() => setSelectedShareEvent(null)} />
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
-      <PersonalNotificationsModal isOpen={isPersonalNotifOpen} onClose={() => setIsPersonalNotifOpen(false)} />
-      <PwaInstallModal isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />
-      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={() => setIsAuthOpen(true)} />
-      <SupportModal isOpen={isSupportModalOpen} onClose={closeSupportModal} />
-      <WhyBookModal isOpen={isWhyBookOpen} onClose={() => setIsWhyBookOpen(false)} />
+      <MapModal
+        event={selectedMapEvent}
+        onClose={() => setSelectedMapEvent(null)}
+      />
+
+      <ShareModal
+        event={selectedShareEvent}
+        onClose={() => setSelectedShareEvent(null)}
+      />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+      />
+
+      <NotificationsModal
+        isOpen={isNotifOpen}
+        onClose={() => setIsNotifOpen(false)}
+      />
+
+      <PersonalNotificationsModal
+        isOpen={isPersonalNotifOpen}
+        onClose={() => setIsPersonalNotifOpen(false)}
+      />
+
+      <PwaInstallModal
+        isOpen={isInstallOpen}
+        onClose={() => setIsInstallOpen(false)}
+      />
+
+      <GuestAlertModal
+        isOpen={guestAlertState.isOpen}
+        reason={guestAlertState.reason}
+        onClose={closeGuestAlert}
+        onOpenAuth={() => setIsAuthOpen(true)}
+      />
+
+      <SupportModal
+        isOpen={isSupportModalOpen}
+        onClose={closeSupportModal}
+      />
+
+      <WhyBookModal
+        isOpen={isWhyBookOpen}
+        onClose={() => setIsWhyBookOpen(false)}
+      />
+
       <AdminLockModal />
       <BookingModal />
       <CustomAlertModal />
@@ -412,3 +452,4 @@ export default function App() {
     </AppProvider>
   );
 }
+
