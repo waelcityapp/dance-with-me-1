@@ -226,7 +226,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 key={category.id}
                 type="button"
                 whileTap={{ scale: 0.96 }}
-                onClick={handleExplore}
+                onClick={() => chooseSubcategory(category.id, 'all')}
                 className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2 py-1 text-[9px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] md:px-3 md:text-xs"
               >
                 {isAr ? category.ar : category.en}
