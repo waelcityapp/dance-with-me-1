@@ -11,9 +11,14 @@ interface MarketersManagementProps {
 }
 
 const normalize = (value?: string) => (value || '').trim().toLowerCase();
+const normalizeSearch = (value?: string) => normalize(value).replace(/[\s-]/g, '');
 const OWNER_REFERENCE = '0000';
 const FIRST_ACCOUNT_NUMBER = 10001;
-const isOfficialReference = (value?: string) => /^CE-\d{5,}$/.test(String(value || '').trim());
+const isOfficialReference = (value?: string) => /^CE\d{5,}$/.test(String(value || '').trim());
+const getReferenceNumber = (value?: string) => {
+  const match = String(value || '').trim().match(/^CE-?(\d{5,})$/);
+  return match ? Number(match[1]) : null;
+};
 
 const createMarketingCode = (users: UserProfile[]) => {
   const existing = new Set(users.map((u) => normalize(u.marketerCode)));
@@ -58,30 +63,30 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
     if (!adminUser?.isAdmin || !adminUser.id || loading || users.length === 0 || migrationStarted.current) return;
 
     const ownerInList = users.find((item) => item.id === adminUser.id);
-    const hasMissingReferences = users.some((item) => {
+    const needsMigration = users.some((item) => {
       if (item.id === adminUser.id) return item.accountReference !== OWNER_REFERENCE;
-      return !isOfficialReference(item.accountReference);
+      const current = String(item.accountReference || '').trim();
+      return !isOfficialReference(current);
     });
 
-    if (!hasMissingReferences && ownerInList?.accountReference === OWNER_REFERENCE) return;
+    if (!needsMigration && ownerInList?.accountReference === OWNER_REFERENCE) return;
     migrationStarted.current = true;
 
     const migrateExistingUsers = async () => {
       setMessage(lang === 'ar'
-        ? 'جاري تثبيت رقم صاحب التطبيق وترقيم الحسابات القديمة في Firestore...'
-        : 'Saving the owner number and assigning legacy account numbers in Firestore...');
+        ? 'جاري تحديث أرقام الحسابات إلى الصيغة الجديدة بدون شرطة...'
+        : 'Updating account numbers to the new dashless format...');
 
-      let createdCount = 0;
+      let updatedCount = 0;
       const failedAccounts: string[] = [];
 
-      // Reserve 0000 for the currently logged-in platform admin first.
       try {
         await setDoc(doc(db, 'users', adminUser.id), {
           accountReference: OWNER_REFERENCE,
           accountReferenceCreatedAt: ownerInList?.accountReference ? (ownerInList as any).accountReferenceCreatedAt || new Date().toISOString() : new Date().toISOString(),
           accountReferenceUpdatedAt: new Date().toISOString(),
         }, { merge: true });
-        if (ownerInList?.accountReference !== OWNER_REFERENCE) createdCount += 1;
+        if (ownerInList?.accountReference !== OWNER_REFERENCE) updatedCount += 1;
       } catch (error) {
         console.error('Failed to reserve owner account reference:', error);
         failedAccounts.push(adminUser.name || adminUser.email || adminUser.id);
@@ -96,10 +101,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
         });
 
       const existingNumbers = sortedUsers
-        .map((item) => {
-          const match = String(item.accountReference || '').trim().match(/^CE-(\d+)$/);
-          return match ? Number(match[1]) : 0;
-        })
+        .map((item) => getReferenceNumber(item.accountReference) || 0)
         .filter((value) => Number.isFinite(value) && value >= FIRST_ACCOUNT_NUMBER);
 
       let lastNumber = existingNumbers.length > 0
@@ -110,18 +112,20 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
         const current = String(item.accountReference || '').trim();
         if (isOfficialReference(current)) continue;
 
-        const nextNumber = lastNumber + 1;
-        const accountReference = `CE-${nextNumber}`;
+        const existingNumber = getReferenceNumber(current);
+        const numberToUse = existingNumber ?? (lastNumber + 1);
+        const accountReference = `CE${numberToUse}`;
 
         try {
           await setDoc(doc(db, 'users', item.id), {
             accountReference,
-            accountReferenceCreatedAt: new Date().toISOString(),
+            accountReferenceCreatedAt: (item as any).accountReferenceCreatedAt || new Date().toISOString(),
+            accountReferenceUpdatedAt: new Date().toISOString(),
           }, { merge: true });
-          lastNumber = nextNumber;
-          createdCount += 1;
+          lastNumber = Math.max(lastNumber, numberToUse);
+          updatedCount += 1;
         } catch (error) {
-          console.error(`Failed to assign account reference to ${item.id}:`, error);
+          console.error(`Failed to migrate account reference for ${item.id}:`, error);
           failedAccounts.push(item.name || item.email || item.id);
         }
       }
@@ -138,12 +142,12 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
 
       if (failedAccounts.length === 0) {
         setMessage(lang === 'ar'
-          ? `تم حفظ أرقام الحسابات في Firestore بنجاح (${createdCount} تحديث). رقم صاحب التطبيق: 0000.`
-          : `Account numbers saved successfully (${createdCount} updates). Owner number: 0000.`);
+          ? `تم تحديث أرقام الحسابات بنجاح (${updatedCount} تحديث). الصيغة الآن مثل CE10001.`
+          : `Account numbers updated successfully (${updatedCount} updates). Format is now CE10001.`);
       } else {
         setMessage(lang === 'ar'
-          ? `تم ترقيم معظم الحسابات (${createdCount} تحديث)، وتعذر تحديث ${failedAccounts.length} فقط. بقية الحسابات لم تتوقف.`
-          : `Most accounts were numbered (${createdCount} updates); only ${failedAccounts.length} updates failed. The rest continued.`);
+          ? `تم تحديث معظم الحسابات (${updatedCount} تحديث)، وتعذر تحديث ${failedAccounts.length} فقط.`
+          : `Most accounts were updated (${updatedCount} updates); only ${failedAccounts.length} updates failed.`);
         migrationStarted.current = false;
       }
     };
@@ -152,7 +156,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   }, [adminUser, lang, loading, users]);
 
   const filteredUsers = useMemo(() => {
-    const q = normalize(query);
+    const q = normalizeSearch(query);
     const sorted = [...users].sort((a, b) => {
       const aMarketer = a.isMarketer ? 1 : 0;
       const bMarketer = b.isMarketer ? 1 : 0;
@@ -170,7 +174,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
         item.marketerCode,
         item.accountReference,
       ];
-      return values.some((value) => normalize(value).includes(q));
+      return values.some((value) => normalizeSearch(value).includes(q));
     });
   }, [query, users]);
 
