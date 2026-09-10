@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BadgeCheck, Ban, Copy, Search, UserCheck, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, Ban, Copy, Search, UserCheck, Users, X } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useApp } from '../../context/AppContext';
 import { db, subscribeToAllUsers } from '../../lib/firebase';
 import { ensureAccountReference } from '../../lib/accountReferenceBootstrap';
-import { UserProfile } from '../../types';
+import { MarketerStatus, MarketerWalletStatus, UserProfile } from '../../types';
 
 interface MarketersManagementProps {
   onBack: () => void;
@@ -36,6 +36,11 @@ const createMarketingCode = (users: UserProfile[]) => {
   return `CE-${Date.now().toString(36).slice(-7).toUpperCase()}`;
 };
 
+type StatusDecision = {
+  target: UserProfile;
+  marketerStatus: Exclude<MarketerStatus, 'active'>;
+};
+
 const findOwnerIndex = (items: UserProfile[], adminUser: UserProfile | null) => {
   if (!adminUser) return -1;
   const byId = items.findIndex((item) => item.id === adminUser.id);
@@ -60,6 +65,10 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   const [loading, setLoading] = useState(true);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [statusDecision, setStatusDecision] = useState<StatusDecision | null>(null);
+  const [walletStatus, setWalletStatus] = useState<MarketerWalletStatus>('active');
+  const [statusReason, setStatusReason] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
   const migrationStarted = useRef(false);
 
   useEffect(() => {
@@ -229,7 +238,11 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   const activeMarketers = users.filter((item) => item.isMarketer && item.marketerStatus === 'active').length;
   const pausedMarketers = users.filter((item) => item.isMarketer && item.marketerStatus === 'paused').length;
 
-  const updateMarketer = async (target: UserProfile, mode: 'activate' | 'pause' | 'remove') => {
+  const updateMarketer = async (
+    target: UserProfile,
+    mode: 'activate' | 'pause' | 'remove',
+    decision?: { walletStatus: MarketerWalletStatus; reason: string; message: string },
+  ) => {
     if (!adminUser?.isAdmin || actionUserId) return;
     setActionUserId(target.id);
     setMessage(null);
@@ -250,6 +263,12 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
           marketerCode,
           marketerActivatedAt: target.marketerActivatedAt || new Date().toISOString(),
           marketerUpdatedAt: new Date().toISOString(),
+          marketerStatusReason: '',
+          marketerStatusMessage: '',
+          marketerStatusChangedAt: new Date().toISOString(),
+          marketerWalletStatus: 'active',
+          marketerWalletReason: '',
+          marketerWalletUpdatedAt: new Date().toISOString(),
         }, { merge: true });
         setMessage(lang === 'ar' ? `تم تفعيل ${target.name || target.email} كمسوّق.` : `${target.name || target.email} is now an active marketer.`);
       } else if (mode === 'pause') {
@@ -257,6 +276,12 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
           isMarketer: true,
           marketerStatus: 'paused',
           marketerUpdatedAt: new Date().toISOString(),
+          marketerStatusReason: decision?.reason || '',
+          marketerStatusMessage: decision?.message || '',
+          marketerStatusChangedAt: new Date().toISOString(),
+          marketerWalletStatus: decision?.walletStatus || 'active',
+          marketerWalletReason: decision?.reason || '',
+          marketerWalletUpdatedAt: new Date().toISOString(),
         }, { merge: true });
         setMessage(lang === 'ar' ? 'تم إيقاف حساب المسوّق مؤقتاً.' : 'Marketer account paused.');
       } else {
@@ -264,6 +289,12 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
           isMarketer: false,
           marketerStatus: 'inactive',
           marketerUpdatedAt: new Date().toISOString(),
+          marketerStatusReason: decision?.reason || '',
+          marketerStatusMessage: decision?.message || '',
+          marketerStatusChangedAt: new Date().toISOString(),
+          marketerWalletStatus: decision?.walletStatus || 'closed',
+          marketerWalletReason: decision?.reason || '',
+          marketerWalletUpdatedAt: new Date().toISOString(),
         }, { merge: true });
         setMessage(lang === 'ar' ? 'تم إلغاء صفة المسوّق وإعادة الحساب كمستخدم عادي.' : 'Marketer access removed; account is a normal user again.');
       }
@@ -273,6 +304,24 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
     } finally {
       setActionUserId(null);
     }
+  };
+
+  const openStatusDecision = (target: UserProfile, marketerStatus: Exclude<MarketerStatus, 'active'>) => {
+    setStatusDecision({ target, marketerStatus });
+    setWalletStatus(marketerStatus === 'paused' ? 'active' : 'closed');
+    setStatusReason('');
+    setStatusMessage('');
+  };
+
+  const submitStatusDecision = async () => {
+    if (!statusDecision || !statusReason.trim()) return;
+    const mode = statusDecision.marketerStatus === 'paused' ? 'pause' : 'remove';
+    await updateMarketer(statusDecision.target, mode, {
+      walletStatus,
+      reason: statusReason.trim(),
+      message: statusMessage.trim(),
+    });
+    setStatusDecision(null);
   };
 
   const copyText = async (value: string) => {
@@ -360,6 +409,8 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
           {filteredUsers.map((item) => {
             const isActive = item.isMarketer && item.marketerStatus === 'active';
             const isPaused = item.isMarketer && item.marketerStatus === 'paused';
+            const hasMarketerHistory = item.isMarketer || Boolean(item.marketerCode);
+            const isInactive = hasMarketerHistory && item.marketerStatus === 'inactive';
             const busy = actionUserId === item.id;
 
             return (
@@ -375,6 +426,16 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                         {item.isAdmin && <span className="rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-black">{lang === 'ar' ? 'صاحب التطبيق' : 'Platform owner'}</span>}
                         {isActive && <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-black">{lang === 'ar' ? 'مسوّق نشط' : 'Active marketer'}</span>}
                         {isPaused && <span className="rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[10px] font-black">{lang === 'ar' ? 'مسوّق موقوف' : 'Paused marketer'}</span>}
+                        {isInactive && <span className="rounded-full bg-red-500/10 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-black">{lang === 'ar' ? 'إيقاف نهائي' : 'Permanently inactive'}</span>}
+                        {hasMarketerHistory && item.marketerWalletStatus && item.marketerWalletStatus !== 'active' && (
+                          <span className="rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-300 px-2 py-0.5 text-[10px] font-black">
+                            {item.marketerWalletStatus === 'frozen'
+                              ? (lang === 'ar' ? 'الرصيد مجمّد' : 'Balance frozen')
+                              : item.marketerWalletStatus === 'closed'
+                                ? (lang === 'ar' ? 'المحفظة مغلقة' : 'Wallet closed')
+                                : (lang === 'ar' ? 'السحب متوقف' : 'Withdrawals paused')}
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1 grid gap-0.5 text-xs text-neutral-500 dark:text-neutral-400 break-all">
                         <span>{item.phone || '—'} · {item.email || '—'}</span>
@@ -406,7 +467,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                         className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-3 text-xs font-black flex items-center gap-2 transition-colors"
                       >
                         <UserCheck className="h-4 w-4" />
-                        {isPaused ? (lang === 'ar' ? 'إعادة التفعيل' : 'Reactivate') : (lang === 'ar' ? 'تحويل إلى مسوّق' : 'Make marketer')}
+                        {hasMarketerHistory ? (lang === 'ar' ? 'إعادة التفعيل' : 'Reactivate') : (lang === 'ar' ? 'تحويل إلى مسوّق' : 'Make marketer')}
                       </button>
                     )}
 
@@ -414,7 +475,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => updateMarketer(item, 'pause')}
+                        onClick={() => openStatusDecision(item, 'paused')}
                         className="h-10 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-neutral-950 px-3 text-xs font-black flex items-center gap-2 transition-colors"
                       >
                         <Ban className="h-4 w-4" />
@@ -426,7 +487,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => updateMarketer(item, 'remove')}
+                        onClick={() => openStatusDecision(item, 'inactive')}
                         className="h-10 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/15 disabled:opacity-50 text-red-600 dark:text-red-400 px-3 text-xs font-black flex items-center gap-2 transition-colors"
                       >
                         <BadgeCheck className="h-4 w-4" />
@@ -438,6 +499,53 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
               </article>
             );
           })}
+        </div>
+      )}
+
+      {statusDecision && (
+        <div className="fixed inset-0 z-[100] bg-black/65 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="marketer-status-title">
+          <div className="w-full max-w-lg rounded-3xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-5 sm:p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="marketer-status-title" className="text-lg font-black text-neutral-900 dark:text-white">
+                  {statusDecision.marketerStatus === 'paused'
+                    ? (lang === 'ar' ? 'إيقاف المسوق مؤقتًا' : 'Pause marketer')
+                    : (lang === 'ar' ? 'إيقاف المسوق نهائيًا' : 'Deactivate marketer')}
+                </h2>
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{statusDecision.target.name || statusDecision.target.email}</p>
+              </div>
+              <button type="button" onClick={() => setStatusDecision(null)} className="h-9 w-9 rounded-xl border border-neutral-200 dark:border-neutral-700 flex items-center justify-center" aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <label className="mt-5 block text-sm font-black text-neutral-800 dark:text-neutral-200">
+              {lang === 'ar' ? 'حالة المحفظة والسحب' : 'Wallet and withdrawal status'}
+              <select value={walletStatus} onChange={(event) => setWalletStatus(event.target.value as MarketerWalletStatus)} className="mt-2 h-12 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-3 text-sm">
+                <option value="active">{lang === 'ar' ? 'المحفظة طبيعية والسحب مسموح' : 'Wallet active; withdrawals allowed'}</option>
+                <option value="withdrawals_paused">{lang === 'ar' ? 'إيقاف طلبات السحب مؤقتًا' : 'Withdrawals temporarily paused'}</option>
+                <option value="frozen">{lang === 'ar' ? 'تجميد الرصيد للمراجعة' : 'Balance frozen for review'}</option>
+                <option value="closed">{lang === 'ar' ? 'المحفظة مغلقة نهائيًا' : 'Wallet permanently closed'}</option>
+              </select>
+            </label>
+
+            <label className="mt-4 block text-sm font-black text-neutral-800 dark:text-neutral-200">
+              {lang === 'ar' ? 'سبب القرار (إلزامي)' : 'Decision reason (required)'}
+              <input value={statusReason} onChange={(event) => setStatusReason(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-3 text-sm" placeholder={lang === 'ar' ? 'مثال: مراجعة بيانات الحساب' : 'Example: account review'} />
+            </label>
+
+            <label className="mt-4 block text-sm font-black text-neutral-800 dark:text-neutral-200">
+              {lang === 'ar' ? 'رسالة الإدارة للمسوق' : 'Administration message'}
+              <textarea value={statusMessage} onChange={(event) => setStatusMessage(event.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 p-3 text-sm resize-none" placeholder={lang === 'ar' ? 'اكتب التعليمات أو طريقة التواصل لإعادة المراجعة...' : 'Add instructions or review contact details...'} />
+            </label>
+
+            <div className="mt-5 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+              <button type="button" onClick={() => setStatusDecision(null)} className="h-11 rounded-xl border border-neutral-200 dark:border-neutral-700 px-5 text-sm font-black">{lang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
+              <button type="button" disabled={!statusReason.trim() || Boolean(actionUserId)} onClick={() => void submitStatusDecision()} className="h-11 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 px-5 text-sm font-black text-neutral-950">
+                {lang === 'ar' ? 'حفظ القرار' : 'Save decision'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>

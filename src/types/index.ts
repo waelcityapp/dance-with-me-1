@@ -131,6 +131,8 @@ export interface DanceEvent {
 }
 
 export type AccountTier = 'free' | 'featured' | 'vip';
+export type MarketerStatus = 'active' | 'paused' | 'inactive';
+export type MarketerWalletStatus = 'active' | 'withdrawals_paused' | 'frozen' | 'closed';
 
 export interface UserProfile {
   id: string;
@@ -147,6 +149,18 @@ export interface UserProfile {
   isSuspended?: boolean;
   accountTier?: AccountTier;
   requestedTier?: AccountTier;
+  accountReference?: string;
+  isMarketer?: boolean;
+  marketerStatus?: MarketerStatus;
+  marketerCode?: string;
+  marketerActivatedAt?: string;
+  marketerUpdatedAt?: string;
+  marketerStatusReason?: string;
+  marketerStatusMessage?: string;
+  marketerStatusChangedAt?: string;
+  marketerWalletStatus?: MarketerWalletStatus;
+  marketerWalletReason?: string;
+  marketerWalletUpdatedAt?: string;
 }
 
 export interface NotificationItem {
