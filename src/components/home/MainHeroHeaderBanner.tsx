@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Plus, Search, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DanceCategory } from '../../types';
 import { getSubcategoriesForCategory } from '../../data/categoriesConfig';
@@ -49,6 +49,11 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   const chooseCategory = (categoryId: DanceCategory) => {
     setActiveCategoryId(categoryId);
     setSelectedSubcategory('all');
+  };
+
+  const closeCategoryMenu = () => {
+    setIsCategoryMenuOpen(false);
+    setActiveCategoryId(null);
   };
 
   const chooseSubcategory = (categoryId: DanceCategory, subcategoryId: string) => {
@@ -170,6 +175,21 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
 
             {isCategoryMenuOpen && (
               <div className="relative z-30 mx-auto mt-2 w-[calc(100%-8px)] max-w-[360px] rounded-2xl border border-[#d4af67]/70 bg-[#3d0711]/98 p-2 text-right shadow-2xl backdrop-blur-md md:hidden">
+                <div className="mb-1 flex items-center justify-between border-b border-[#d4af67]/25 px-2 pb-2">
+                  <button
+                    type="button"
+                    onClick={closeCategoryMenu}
+                    aria-label={isAr ? 'إغلاق القائمة' : 'Close menu'}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#e8c978] transition hover:bg-[#791524] hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <span className="text-[11px] font-black text-[#fff0c8]">
+                    {activeCategoryId
+                      ? (isAr ? 'اختر التصنيف الفرعي' : 'Choose a subcategory')
+                      : (isAr ? 'اختر القسم الرئيسي' : 'Choose a main section')}
+                  </span>
+                </div>
                 {!activeCategoryId ? (
                   <div className="grid grid-cols-1 gap-1">
                     {categories.map(category => (
@@ -192,7 +212,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                       className="mb-1 flex w-full items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold text-[#e3b85e] hover:bg-[#791524]"
                     >
                       {isAr ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-                      <span>{isAr ? 'الأقسام الرئيسية' : 'Main categories'}</span>
+                      <span>{isAr ? 'رجوع إلى الأقسام الرئيسية' : 'Back to main sections'}</span>
                     </button>
                     <div className="mb-1 border-b border-[#d4af67]/25 px-3 pb-2 text-[11px] font-black text-white">
                       {activeCategory && (isAr ? activeCategory.ar : activeCategory.en)}
