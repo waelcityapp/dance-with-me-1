@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, BadgeCheck, Ban, Copy, Search, UserCheck, Users 
 import { doc, setDoc } from 'firebase/firestore';
 import { useApp } from '../../context/AppContext';
 import { db, subscribeToAllUsers } from '../../lib/firebase';
+import { ensureAccountReference } from '../../lib/accountReferenceBootstrap';
 import { UserProfile } from '../../types';
 
 interface MarketersManagementProps {
@@ -25,12 +26,6 @@ const createMarketingCode = (users: UserProfile[]) => {
   }
 
   return `CE-${Date.now().toString(36).slice(-7).toUpperCase()}`;
-};
-
-const getAccountReference = (user: UserProfile) => {
-  if (user.accountReference) return user.accountReference;
-  const compact = user.id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-  return `CE-${compact.slice(-8) || 'USER'}`;
 };
 
 export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack }) => {
@@ -73,7 +68,6 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
         item.phone,
         item.marketerCode,
         item.accountReference,
-        getAccountReference(item),
       ];
       return values.some((value) => normalize(value).includes(q));
     });
@@ -91,11 +85,16 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
       const ref = doc(db, 'users', target.id);
       if (mode === 'activate') {
         const marketerCode = target.marketerCode || createMarketingCode(users);
+        const accountReference = target.accountReference || await ensureAccountReference(target.id);
+
+        if (!accountReference) {
+          throw new Error('Could not assign account reference');
+        }
+
         await setDoc(ref, {
           isMarketer: true,
           marketerStatus: 'active',
           marketerCode,
-          accountReference: target.accountReference || getAccountReference(target),
           marketerActivatedAt: target.marketerActivatedAt || new Date().toISOString(),
           marketerUpdatedAt: new Date().toISOString(),
         }, { merge: true });
@@ -208,7 +207,6 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
           {filteredUsers.map((item) => {
             const isActive = item.isMarketer && item.marketerStatus === 'active';
             const isPaused = item.isMarketer && item.marketerStatus === 'paused';
-            const accountRef = getAccountReference(item);
             const busy = actionUserId === item.id;
 
             return (
@@ -226,7 +224,9 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                       </div>
                       <div className="mt-1 grid gap-0.5 text-xs text-neutral-500 dark:text-neutral-400 break-all">
                         <span>{item.phone || '—'} · {item.email || '—'}</span>
-                        <span className="font-mono">{lang === 'ar' ? 'رقم الحساب:' : 'Account ref:'} {accountRef}</span>
+                        <span className="font-mono">
+                          {lang === 'ar' ? 'رقم الحساب:' : 'Account ref:'} {item.accountReference || (lang === 'ar' ? 'سيتم إنشاؤه تلقائياً' : 'Will be assigned automatically')}
+                        </span>
                         <span className="font-mono text-[10px] opacity-70">ID: {item.id}</span>
                       </div>
                     </div>
