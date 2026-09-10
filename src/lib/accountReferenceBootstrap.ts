@@ -13,16 +13,18 @@ const completedUserIds = new Set<string>();
 const inFlightUserIds = new Set<string>();
 let legacyBackfillStarted = false;
 
-const isNumberedReference = (value?: string) => /^CE-\d{5,}$/.test(String(value || '').trim());
+const isNumberedReference = (value?: string) => /^CE\d{5,}$/.test(String(value || '').trim());
+const getLegacyNumber = (value?: string) => {
+  const match = String(value || '').trim().match(/^CE-(\d{5,})$/);
+  return match ? Number(match[1]) : null;
+};
 const isOwner = (email?: string) => String(email || '').trim().toLowerCase() === ADMIN_EMAIL;
 
 /**
  * Creates one permanent human-friendly account number per user:
- * CE-10001, CE-10002, CE-10003 ...
+ * CE10001, CE10002, CE10003 ...
  * The platform owner keeps the reserved test number 0000.
- *
- * Firestore transaction on a single counter document prevents duplicates
- * even when more than one registration happens at the same time.
+ * Existing CE-xxxxx references are migrated to CExxxxx without changing the number.
  */
 export async function ensureAccountReference(userId: string, email?: string): Promise<string | null> {
   const cleanUserId = String(userId || '').trim();
@@ -62,6 +64,16 @@ export async function ensureAccountReference(userId: string, email?: string): Pr
         return currentReference;
       }
 
+      const legacyNumber = getLegacyNumber(currentReference);
+      if (legacyNumber !== null) {
+        const migratedReference = `CE${legacyNumber}`;
+        transaction.set(userRef, {
+          accountReference: migratedReference,
+          accountReferenceUpdatedAt: new Date().toISOString(),
+        }, { merge: true });
+        return migratedReference;
+      }
+
       const counterSnapshot = await transaction.get(counterRef);
       const storedLastNumber = counterSnapshot.exists()
         ? Number(counterSnapshot.data()?.lastNumber)
@@ -72,7 +84,7 @@ export async function ensureAccountReference(userId: string, email?: string): Pr
         : FIRST_ACCOUNT_NUMBER - 1;
 
       const nextNumber = safeLastNumber + 1;
-      const nextReference = `CE-${nextNumber}`;
+      const nextReference = `CE${nextNumber}`;
       const now = new Date().toISOString();
 
       transaction.set(counterRef, {
@@ -127,9 +139,6 @@ const ensureCachedUserReference = () => {
     const email = String(cachedUser?.email || '').trim().toLowerCase();
     const current = String(cachedUser?.accountReference || '').trim();
 
-    // The preview can keep the admin session in LocalStorage when Firebase Auth
-    // is unavailable in the iframe. In that case we still run the one-time
-    // legacy migration for every existing user.
     if (isOwner(email)) {
       void backfillLegacyUsers();
     }
@@ -149,10 +158,6 @@ const ensureCachedUserReference = () => {
   }
 };
 
-/**
- * Backfill all legacy users once when the platform owner/admin opens the app.
- * Old users therefore receive a permanent number without needing to register again.
- */
 async function backfillLegacyUsers() {
   if (legacyBackfillStarted) return;
   legacyBackfillStarted = true;
