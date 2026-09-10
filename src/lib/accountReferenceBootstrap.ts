@@ -206,35 +206,64 @@ function renderProfileBadge() {
     if (!nameHeading || !nameHeading.parentElement) return;
 
     const nameRow = nameHeading.parentElement;
-    const existingBadge = nameRow.parentElement?.querySelector('[data-cityeve-account-reference]') as HTMLElement | null;
+    const container = nameRow.parentElement;
+    if (!container) return;
+
     const lang = document.documentElement.lang === 'en' ? 'en' : 'ar';
-    const label = lang === 'ar' ? 'رقم حسابك' : 'Your account number';
+    const accountLabel = lang === 'ar' ? 'رقم حسابك' : 'Your account number';
 
-    if (existingBadge) {
-      existingBadge.textContent = `${label}: ${reference}`;
-      return;
+    let accountBadge = container.querySelector('[data-cityeve-account-reference]') as HTMLElement | null;
+    if (!accountBadge) {
+      accountBadge = document.createElement('div');
+      accountBadge.setAttribute('data-cityeve-account-reference', 'true');
+      accountBadge.setAttribute('dir', 'ltr');
+      accountBadge.style.display = 'inline-flex';
+      accountBadge.style.alignItems = 'center';
+      accountBadge.style.justifyContent = 'center';
+      accountBadge.style.width = 'fit-content';
+      accountBadge.style.marginBottom = '10px';
+      accountBadge.style.padding = '6px 12px';
+      accountBadge.style.borderRadius = '10px';
+      accountBadge.style.border = '1px solid rgba(245, 158, 11, 0.35)';
+      accountBadge.style.background = 'rgba(245, 158, 11, 0.10)';
+      accountBadge.style.color = '#fbbf24';
+      accountBadge.style.fontSize = '13px';
+      accountBadge.style.fontWeight = '800';
+      accountBadge.style.letterSpacing = '0.02em';
+      accountBadge.style.fontFamily = 'monospace';
+      nameRow.insertAdjacentElement('afterend', accountBadge);
     }
+    accountBadge.textContent = `${accountLabel}: ${reference}`;
 
-    const badge = document.createElement('div');
-    badge.setAttribute('data-cityeve-account-reference', 'true');
-    badge.textContent = `${label}: ${reference}`;
-    badge.setAttribute('dir', 'ltr');
-    badge.style.display = 'inline-flex';
-    badge.style.alignItems = 'center';
-    badge.style.justifyContent = 'center';
-    badge.style.width = 'fit-content';
-    badge.style.marginBottom = '10px';
-    badge.style.padding = '6px 12px';
-    badge.style.borderRadius = '10px';
-    badge.style.border = '1px solid rgba(245, 158, 11, 0.35)';
-    badge.style.background = 'rgba(245, 158, 11, 0.10)';
-    badge.style.color = '#fbbf24';
-    badge.style.fontSize = '13px';
-    badge.style.fontWeight = '800';
-    badge.style.letterSpacing = '0.02em';
-    badge.style.fontFamily = 'monospace';
+    const isActiveMarketer = cachedUser?.isMarketer === true && cachedUser?.marketerStatus === 'active';
+    let marketerBadge = container.querySelector('[data-cityeve-marketer-status]') as HTMLElement | null;
 
-    nameRow.insertAdjacentElement('afterend', badge);
+    if (isActiveMarketer) {
+      if (!marketerBadge) {
+        marketerBadge = document.createElement('div');
+        marketerBadge.setAttribute('data-cityeve-marketer-status', 'true');
+        marketerBadge.style.display = 'inline-flex';
+        marketerBadge.style.alignItems = 'center';
+        marketerBadge.style.gap = '7px';
+        marketerBadge.style.width = 'fit-content';
+        marketerBadge.style.marginBottom = '10px';
+        marketerBadge.style.padding = '7px 12px';
+        marketerBadge.style.borderRadius = '11px';
+        marketerBadge.style.border = '1px solid rgba(16, 185, 129, 0.35)';
+        marketerBadge.style.background = 'rgba(16, 185, 129, 0.12)';
+        marketerBadge.style.color = '#6ee7b7';
+        marketerBadge.style.fontSize = '13px';
+        marketerBadge.style.fontWeight = '800';
+        marketerBadge.style.lineHeight = '1.35';
+        accountBadge.insertAdjacentElement('afterend', marketerBadge);
+      }
+      marketerBadge.textContent = lang === 'ar'
+        ? '✓ أنت الآن مسوّق معتمد في CityEve'
+        : '✓ You’re now a verified CityEve marketer';
+      marketerBadge.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    } else if (marketerBadge) {
+      marketerBadge.remove();
+    }
   } catch {
     // UI enhancement only; never block the profile if the DOM is not ready yet.
   }
