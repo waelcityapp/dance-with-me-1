@@ -36,6 +36,23 @@ const createMarketingCode = (users: UserProfile[]) => {
   return `CE-${Date.now().toString(36).slice(-7).toUpperCase()}`;
 };
 
+const findOwnerIndex = (items: UserProfile[], adminUser: UserProfile | null) => {
+  if (!adminUser) return -1;
+  const byId = items.findIndex((item) => item.id === adminUser.id);
+  if (byId >= 0) return byId;
+
+  const adminEmail = normalize(adminUser.email);
+  if (adminEmail) {
+    const byEmail = items.findIndex((item) => normalize(item.email) === adminEmail);
+    if (byEmail >= 0) return byEmail;
+  }
+
+  const adminIndexes = items
+    .map((item, index) => item.isAdmin ? index : -1)
+    .filter((index) => index >= 0);
+  return adminIndexes.length === 1 ? adminIndexes[0] : -1;
+};
+
 export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack }) => {
   const { lang, user: adminUser } = useApp();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -48,7 +65,32 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   useEffect(() => {
     const unsubscribe = subscribeToAllUsers(
       (items) => {
-        setUsers(items || []);
+        const nextUsers = [...(items || [])];
+
+        // Always keep the currently logged-in platform owner visible exactly once.
+        // Match by ID first, then email, then the single admin record if present.
+        if (adminUser?.isAdmin) {
+          const ownerIndex = findOwnerIndex(nextUsers, adminUser);
+          if (ownerIndex >= 0) {
+            const storedOwner = nextUsers[ownerIndex];
+            nextUsers[ownerIndex] = {
+              ...storedOwner,
+              name: adminUser.name || storedOwner.name,
+              email: adminUser.email || storedOwner.email,
+              phone: adminUser.phone || storedOwner.phone,
+              avatar: adminUser.avatar || storedOwner.avatar,
+              isAdmin: true,
+              accountReference: storedOwner.accountReference || adminUser.accountReference || OWNER_REFERENCE,
+            };
+          } else {
+            nextUsers.unshift({
+              ...adminUser,
+              accountReference: adminUser.accountReference || OWNER_REFERENCE,
+            });
+          }
+        }
+
+        setUsers(nextUsers);
         setLoading(false);
       },
       () => {
@@ -57,14 +99,17 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
       }
     );
     return unsubscribe;
-  }, [lang]);
+  }, [lang, adminUser?.id, adminUser?.email, adminUser?.name, adminUser?.phone, adminUser?.avatar, adminUser?.isAdmin, adminUser?.accountReference]);
 
   useEffect(() => {
     if (!adminUser?.isAdmin || !adminUser.id || loading || users.length === 0 || migrationStarted.current) return;
 
-    const ownerInList = users.find((item) => item.id === adminUser.id);
+    const ownerIndex = findOwnerIndex(users, adminUser);
+    const ownerInList = ownerIndex >= 0 ? users[ownerIndex] : null;
+    const ownerDocumentId = ownerInList?.id || adminUser.id;
+
     const needsMigration = users.some((item) => {
-      if (item.id === adminUser.id) return item.accountReference !== OWNER_REFERENCE;
+      if (item === ownerInList) return item.accountReference !== OWNER_REFERENCE;
       const current = String(item.accountReference || '').trim();
       return !isOfficialReference(current);
     });
@@ -81,10 +126,11 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
       const failedAccounts: string[] = [];
 
       try {
-        await setDoc(doc(db, 'users', adminUser.id), {
+        await setDoc(doc(db, 'users', ownerDocumentId), {
           accountReference: OWNER_REFERENCE,
           accountReferenceCreatedAt: ownerInList?.accountReference ? (ownerInList as any).accountReferenceCreatedAt || new Date().toISOString() : new Date().toISOString(),
           accountReferenceUpdatedAt: new Date().toISOString(),
+          isAdmin: true,
         }, { merge: true });
         if (ownerInList?.accountReference !== OWNER_REFERENCE) updatedCount += 1;
       } catch (error) {
@@ -93,7 +139,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
       }
 
       const sortedUsers = [...users]
-        .filter((item) => item.id !== adminUser.id)
+        .filter((item) => item !== ownerInList && item.id !== ownerDocumentId)
         .sort((a, b) => {
           const aTime = new Date(a.createdAt || 0).getTime();
           const bTime = new Date(b.createdAt || 0).getTime();
@@ -142,8 +188,8 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
 
       if (failedAccounts.length === 0) {
         setMessage(lang === 'ar'
-          ? `تم تحديث أرقام الحسابات بنجاح (${updatedCount} تحديث). الصيغة الآن مثل CE10001.`
-          : `Account numbers updated successfully (${updatedCount} updates). Format is now CE10001.`);
+          ? `تم تحديث أرقام الحسابات بنجاح (${updatedCount} تحديث). رقم صاحب التطبيق 0000.`
+          : `Account numbers updated successfully (${updatedCount} updates). Owner number is 0000.`);
       } else {
         setMessage(lang === 'ar'
           ? `تم تحديث معظم الحسابات (${updatedCount} تحديث)، وتعذر تحديث ${failedAccounts.length} فقط.`
@@ -158,6 +204,11 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   const filteredUsers = useMemo(() => {
     const q = normalizeSearch(query);
     const sorted = [...users].sort((a, b) => {
+      // Keep the platform owner visible at the top for easy testing.
+      const aOwner = adminUser && findOwnerIndex([a], adminUser) === 0 ? 1 : 0;
+      const bOwner = adminUser && findOwnerIndex([b], adminUser) === 0 ? 1 : 0;
+      if (aOwner !== bOwner) return bOwner - aOwner;
+
       const aMarketer = a.isMarketer ? 1 : 0;
       const bMarketer = b.isMarketer ? 1 : 0;
       if (aMarketer !== bMarketer) return bMarketer - aMarketer;
@@ -176,7 +227,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
       ];
       return values.some((value) => normalizeSearch(value).includes(q));
     });
-  }, [query, users]);
+  }, [query, users, adminUser]);
 
   const activeMarketers = users.filter((item) => item.isMarketer && item.marketerStatus === 'active').length;
   const pausedMarketers = users.filter((item) => item.isMarketer && item.marketerStatus === 'paused').length;
@@ -315,7 +366,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
             const busy = actionUserId === item.id;
 
             return (
-              <article key={item.id} className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-5 shadow-sm">
+              <article key={`${item.id}-${item.email || ''}`} className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-5 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div className="min-w-0 flex items-start gap-3">
                     <div className="h-11 w-11 shrink-0 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center overflow-hidden">
@@ -324,6 +375,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-black text-neutral-900 dark:text-white truncate">{item.name || (lang === 'ar' ? 'بدون اسم' : 'Unnamed')}</h3>
+                        {item.isAdmin && <span className="rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-black">{lang === 'ar' ? 'صاحب التطبيق' : 'Platform owner'}</span>}
                         {isActive && <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-black">{lang === 'ar' ? 'مسوّق نشط' : 'Active marketer'}</span>}
                         {isPaused && <span className="rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[10px] font-black">{lang === 'ar' ? 'مسوّق موقوف' : 'Paused marketer'}</span>}
                       </div>
