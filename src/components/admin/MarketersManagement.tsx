@@ -13,7 +13,6 @@ interface MarketersManagementProps {
 const normalize = (value?: string) => (value || '').trim().toLowerCase();
 const OWNER_REFERENCE = '0000';
 const FIRST_ACCOUNT_NUMBER = 10001;
-const ADMIN_EMAIL = (((import.meta as any).env.VITE_ADMIN_EMAIL as string | undefined)?.trim().toLowerCase()) || 'waelvts@gmail.com';
 const isOfficialReference = (value?: string) => /^CE-\d{5,}$/.test(String(value || '').trim());
 
 const createMarketingCode = (users: UserProfile[]) => {
@@ -56,87 +55,101 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   }, [lang]);
 
   useEffect(() => {
-    if (!adminUser?.isAdmin || loading || users.length === 0 || migrationStarted.current) return;
+    if (!adminUser?.isAdmin || !adminUser.id || loading || users.length === 0 || migrationStarted.current) return;
 
-    const missingUsers = users.filter((item) => {
-      const email = normalize(item.email);
-      if (email === ADMIN_EMAIL) return item.accountReference !== OWNER_REFERENCE;
+    const ownerInList = users.find((item) => item.id === adminUser.id);
+    const hasMissingReferences = users.some((item) => {
+      if (item.id === adminUser.id) return item.accountReference !== OWNER_REFERENCE;
       return !isOfficialReference(item.accountReference);
     });
 
-    if (missingUsers.length === 0) return;
+    if (!hasMissingReferences && ownerInList?.accountReference === OWNER_REFERENCE) return;
     migrationStarted.current = true;
 
     const migrateExistingUsers = async () => {
-      try {
-        setMessage(lang === 'ar' ? 'جاري إنشاء أرقام الحسابات القديمة وحفظها في Firestore...' : 'Assigning account numbers to existing users in Firestore...');
+      setMessage(lang === 'ar'
+        ? 'جاري تثبيت رقم صاحب التطبيق وترقيم الحسابات القديمة في Firestore...'
+        : 'Saving the owner number and assigning legacy account numbers in Firestore...');
 
-        const sortedUsers = [...users].sort((a, b) => {
+      let createdCount = 0;
+      const failedAccounts: string[] = [];
+
+      // Reserve 0000 for the currently logged-in platform admin first.
+      try {
+        await setDoc(doc(db, 'users', adminUser.id), {
+          accountReference: OWNER_REFERENCE,
+          accountReferenceCreatedAt: ownerInList?.accountReference ? (ownerInList as any).accountReferenceCreatedAt || new Date().toISOString() : new Date().toISOString(),
+          accountReferenceUpdatedAt: new Date().toISOString(),
+        }, { merge: true });
+        if (ownerInList?.accountReference !== OWNER_REFERENCE) createdCount += 1;
+      } catch (error) {
+        console.error('Failed to reserve owner account reference:', error);
+        failedAccounts.push(adminUser.name || adminUser.email || adminUser.id);
+      }
+
+      const sortedUsers = [...users]
+        .filter((item) => item.id !== adminUser.id)
+        .sort((a, b) => {
           const aTime = new Date(a.createdAt || 0).getTime();
           const bTime = new Date(b.createdAt || 0).getTime();
           return aTime - bTime;
         });
 
-        const existingNumbers = sortedUsers
-          .map((item) => {
-            const match = String(item.accountReference || '').trim().match(/^CE-(\d+)$/);
-            return match ? Number(match[1]) : 0;
-          })
-          .filter((value) => Number.isFinite(value) && value >= FIRST_ACCOUNT_NUMBER);
+      const existingNumbers = sortedUsers
+        .map((item) => {
+          const match = String(item.accountReference || '').trim().match(/^CE-(\d+)$/);
+          return match ? Number(match[1]) : 0;
+        })
+        .filter((value) => Number.isFinite(value) && value >= FIRST_ACCOUNT_NUMBER);
 
-        let lastNumber = existingNumbers.length > 0
-          ? Math.max(...existingNumbers)
-          : FIRST_ACCOUNT_NUMBER - 1;
+      let lastNumber = existingNumbers.length > 0
+        ? Math.max(...existingNumbers)
+        : FIRST_ACCOUNT_NUMBER - 1;
 
-        let createdCount = 0;
+      for (const item of sortedUsers) {
+        const current = String(item.accountReference || '').trim();
+        if (isOfficialReference(current)) continue;
 
-        for (const item of sortedUsers) {
-          const email = normalize(item.email);
-          const isOwnerAccount = email === ADMIN_EMAIL;
-          const current = String(item.accountReference || '').trim();
+        const nextNumber = lastNumber + 1;
+        const accountReference = `CE-${nextNumber}`;
 
-          if (isOwnerAccount) {
-            if (current !== OWNER_REFERENCE) {
-              await setDoc(doc(db, 'users', item.id), {
-                accountReference: OWNER_REFERENCE,
-                accountReferenceCreatedAt: (item as any).accountReferenceCreatedAt || new Date().toISOString(),
-                accountReferenceUpdatedAt: new Date().toISOString(),
-              }, { merge: true });
-              createdCount += 1;
-            }
-            continue;
-          }
-
-          if (isOfficialReference(current)) continue;
-
-          lastNumber += 1;
-          const accountReference = `CE-${lastNumber}`;
+        try {
           await setDoc(doc(db, 'users', item.id), {
             accountReference,
             accountReferenceCreatedAt: new Date().toISOString(),
           }, { merge: true });
+          lastNumber = nextNumber;
           createdCount += 1;
+        } catch (error) {
+          console.error(`Failed to assign account reference to ${item.id}:`, error);
+          failedAccounts.push(item.name || item.email || item.id);
         }
+      }
 
+      try {
         await setDoc(doc(db, 'system_counters', 'user_account_reference'), {
           lastNumber: Math.max(lastNumber, FIRST_ACCOUNT_NUMBER - 1),
           updatedAt: new Date().toISOString(),
         }, { merge: true });
-
-        setMessage(lang === 'ar'
-          ? `تم حفظ أرقام الحسابات في Firestore بنجاح (${createdCount} حساب).`
-          : `Account numbers saved in Firestore successfully (${createdCount} accounts).`);
       } catch (error) {
-        console.error('Failed to backfill account references:', error);
-        migrationStarted.current = false;
+        console.error('Failed to update account reference counter:', error);
+        failedAccounts.push(lang === 'ar' ? 'عداد الأرقام' : 'account counter');
+      }
+
+      if (failedAccounts.length === 0) {
         setMessage(lang === 'ar'
-          ? 'تعذر حفظ أرقام بعض الحسابات في Firestore. راجع صلاحيات قاعدة البيانات.'
-          : 'Could not save some account numbers in Firestore. Check database permissions.');
+          ? `تم حفظ أرقام الحسابات في Firestore بنجاح (${createdCount} تحديث). رقم صاحب التطبيق: 0000.`
+          : `Account numbers saved successfully (${createdCount} updates). Owner number: 0000.`);
+      } else {
+        setMessage(lang === 'ar'
+          ? `تم ترقيم معظم الحسابات (${createdCount} تحديث)، وتعذر تحديث ${failedAccounts.length} فقط. بقية الحسابات لم تتوقف.`
+          : `Most accounts were numbered (${createdCount} updates); only ${failedAccounts.length} updates failed. The rest continued.`);
+        migrationStarted.current = false;
       }
     };
 
     void migrateExistingUsers();
-  }, [adminUser?.isAdmin, lang, loading, users]);
+  }, [adminUser, lang, loading, users]);
 
   const filteredUsers = useMemo(() => {
     const q = normalize(query);
