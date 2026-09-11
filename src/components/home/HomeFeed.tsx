@@ -304,7 +304,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   }, [activeEvents]);
 
   const styleChips: string[] = ['all', ...ALL_DANCE_STYLES];
-  const governorates = useMemo(() => Array.from(new Set(activeEvents.map(ev => ev.location?.governorateAr).filter(Boolean) as string[])).sort(), [activeEvents]);
+  const governorates = ['الإسكندرية', 'القاهرة', 'الجيزة', 'البحر الأحمر', 'الأقصر', 'أسوان'];
   const areas = useMemo(() => Array.from(new Set(activeEvents.filter(ev => selectedGovernorate === 'all' || ev.location?.governorateAr === selectedGovernorate).map(ev => ev.location?.areaAr).filter(Boolean) as string[])).sort(), [activeEvents, selectedGovernorate]);
 
   return (
