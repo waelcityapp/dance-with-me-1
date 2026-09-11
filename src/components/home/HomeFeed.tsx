@@ -310,8 +310,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   return (
     <div className="space-y-2 sm:space-y-2.5 pb-12">
       {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
-      <div id="search-section" className="rounded-2xl border-2 border-amber-500/40 bg-white/95 dark:bg-neutral-900/90 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
-        <div className="flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800/80 pb-1">
+      <div id="search-section" dir={lang === "ar" ? "rtl" : "ltr"} className="rounded-2xl border border-[#b08d57]/50 bg-white/95 dark:bg-[#171214]/95 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
+        <div className="flex items-center justify-between gap-2 border-b border-[#b08d57]/30 pb-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <h3 className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
               <Sparkles className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 animate-pulse shrink-0" />
@@ -323,6 +323,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               </span>
             )}
           </div>
+          <button type="button" onClick={() => setShowWhyBookModal(true)} className="order-1 shrink-0 rounded-full border border-[#b08d57]/70 bg-gradient-to-r from-[#5b1220] to-[#8a2636] px-2.5 py-1 text-[10px] sm:text-xs font-black text-[#f4d58d] whitespace-nowrap">{lang === "ar" ? "ليه تحجز من خلال CityEve؟" : "Why book through CityEve?"}</button>
           <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.2 text-[10px] sm:text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 shadow-2xs shrink-0">
             {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
           </span>
@@ -363,7 +364,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               <select value={selectedGovernorate} onChange={e => { setSelectedGovernorate(e.target.value); setSelectedArea('all'); }} className="w-full mb-4 rounded-xl border border-amber-500/50 bg-white dark:bg-neutral-800 p-3 text-sm text-neutral-900 dark:text-white"><option value="all">{lang === 'ar' ? 'كل المحافظات' : 'All governorates'}</option>{governorates.map(g => <option key={g} value={g}>{g}</option>)}</select>
               <label className="block text-xs font-bold text-neutral-500 mb-1">{lang === 'ar' ? 'المنطقة' : 'Area'}</label>
               <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} className="w-full mb-5 rounded-xl border border-amber-500/50 bg-white dark:bg-neutral-800 p-3 text-sm text-neutral-900 dark:text-white"><option value="all">{lang === 'ar' ? 'كل المناطق المتاحة' : 'All available areas'}</option>{areas.map(a => <option key={a} value={a}>{a}</option>)}</select>
-              <button onClick={() => setShowLocationFilter(false)} className="w-full rounded-xl bg-amber-500 py-3 font-black text-neutral-950">{lang === 'ar' ? 'عرض النتائج' : 'Show results'}</button>
+              <button onClick={() => setShowLocationFilter(false)} className="w-full rounded-xl bg-gradient-to-r from-[#5b1220] to-[#8a2636] border border-[#b08d57]/70 py-3 font-black text-[#f4d58d]">{lang === 'ar' ? 'عرض النتائج' : 'Show results'}</button>
             </motion.div>
           </div>
         )}
