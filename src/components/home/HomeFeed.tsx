@@ -344,17 +344,18 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           <button
             type="button"
-            onClick={() => setSelectedTimeFilter('today')}
-            className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-black border cursor-pointer ${selectedTimeFilter === 'today' ? 'bg-amber-500 text-neutral-950 border-amber-400' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
-          >
-            {lang === 'ar' ? 'اليوم' : 'Today'}
-          </button>
-          <button
-            type="button"
             onClick={() => setSelectedTimeFilter('month')}
             className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-black border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'month' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
             {lang === 'ar' ? 'خلال الشهر' : 'Within a month'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedTimeFilter('today')}
+            className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-black border cursor-pointer ${selectedTimeFilter === 'today' ? 'bg-amber-500 text-neutral-950 border-amber-400' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
+          >
+            {lang === 'ar' ? 'اليوم' : 'Today'}
           </button>
           <button
             type="button"
