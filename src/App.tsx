@@ -250,7 +250,7 @@ const AppContent: React.FC = () => {
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => setIsWhyBookOpen(true)}
-              className="relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-md shadow-neutral-900/10 dark:shadow-black/30"
+              className="hidden relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-md shadow-neutral-900/10 dark:shadow-black/30"
             >
               <div 
                 className="absolute inset-[-100%] animate-[spin_5s_linear_infinite] opacity-75 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]"
