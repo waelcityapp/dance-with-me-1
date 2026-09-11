@@ -29,6 +29,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [selectedGovernorate, setSelectedGovernorate] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState<'month' | 'week' | 'today'>('month');
 
   // Reset pagination when category, search, or style filter changes
   useEffect(() => {
@@ -261,12 +262,24 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         return false;
       }
 
-      // A typed search is global across every published event.
+      // Category check
       if (!normalizedSearchQuery && selectedCategory !== 'all' && ev.category !== selectedCategory) {
         return false;
       }
+
       if (normalizedSearchQuery && searchScore === 0) return false;
 
+      const eventDate = new Date(ev.eventDate);
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfToday = new Date(startOfToday);
+      endOfToday.setDate(endOfToday.getDate() + 1);
+      const endOfWeek = new Date(startOfToday);
+      endOfWeek.setDate(endOfWeek.getDate() + 7);
+      const endOfMonth = new Date(startOfToday);
+      endOfMonth.setDate(endOfMonth.getDate() + 30);
+      const filterEnd = selectedTimeFilter === 'today' ? endOfToday : selectedTimeFilter === 'week' ? endOfWeek : endOfMonth;
+      if (!normalizedSearchQuery && (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd)) return false;
       if (!normalizedSearchQuery && selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
       if (!normalizedSearchQuery && selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
 
@@ -429,18 +442,29 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         </div>
 
         {/* Compact Mobile Date & Location Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="grid grid-cols-4 items-stretch gap-1.5 pb-0.5 pt-0.5 w-full" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           <button
             type="button"
-            className="shrink-0 rounded-xl bg-amber-500 px-3 py-1.5 text-[11px] sm:text-xs font-black text-neutral-950 border border-amber-400 shadow-2xs cursor-pointer"
+            onClick={() => setSelectedTimeFilter('month')}
+            className={`w-full min-w-0 rounded-xl px-1.5 py-1.5 text-[10px] sm:text-xs font-black border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'month' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
-            {lang === 'ar' ? 'اليوم' : 'Today'}
+            {lang === 'ar' ? 'خلال الشهر' : 'Within a month'}
           </button>
+
           <button
             type="button"
-            className="shrink-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
+            onClick={() => setSelectedTimeFilter('week')}
+            className={`w-full min-w-0 rounded-xl px-1.5 py-1.5 text-[10px] sm:text-xs font-bold border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'week' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
             {lang === 'ar' ? 'خلال أسبوع' : 'Within a week'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedTimeFilter('today')}
+            className={`w-full min-w-0 rounded-xl px-1.5 py-1.5 text-[10px] sm:text-xs font-black border cursor-pointer ${selectedTimeFilter === 'today' ? 'bg-amber-500 text-neutral-950 border-amber-400' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
+          >
+            {lang === 'ar' ? 'اليوم' : 'Today'}
           </button>
           <button
             type="button"
