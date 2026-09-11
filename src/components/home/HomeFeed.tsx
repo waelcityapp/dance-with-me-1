@@ -152,47 +152,147 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   // Determine if banner is visible
   const promoBannerIsVisible = !!(weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all');
 
-  // Filter events
-  const filteredEvents = activeEvents.filter(ev => {
-    // Exclude the weekly promo event if it is already displayed in the main banner at the top
-    if (promoBannerIsVisible && ev.id === weeklyPromoEvent.id) {
-      return false;
-    }
+  // Search only within active (published) events, with Arabic-friendly normalization
+  // and weighted relevance so the strongest matches appear first.
+  const normalizeSearchText = (value: unknown) =>
+    String(value ?? '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
+      .replace(/ـ/g, '')
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ؤ/g, 'و')
+      .replace(/ئ/g, 'ي')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
 
-    // Category check
-    if (selectedCategory !== 'all' && ev.category !== selectedCategory) {
-      return false;
-    }
-    // Search query check
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = (ev.titleAr || '').toLowerCase().includes(q) || (ev.titleEn || '').toLowerCase().includes(q);
-      const matchDesc = (ev.descriptionAr || '').toLowerCase().includes(q) || (ev.descriptionEn || '').toLowerCase().includes(q);
-      const matchLoc = (ev.location?.nameAr || '').toLowerCase().includes(q) || (ev.location?.nameEn || '').toLowerCase().includes(q);
-      const matchOrganizer = (ev.contact?.organizerName || '').toLowerCase().includes(q);
-      const matchGov = (ev.location?.governorateAr || '').toLowerCase().includes(q) || (ev.location?.governorateEn || '').toLowerCase().includes(q);
-      const matchArea = (ev.location?.areaAr || '').toLowerCase().includes(q) || (ev.location?.areaEn || '').toLowerCase().includes(q);
-      const matchAddress = (ev.location?.addressAr || '').toLowerCase().includes(q) || (ev.location?.addressEn || '').toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc && !matchLoc && !matchOrganizer && !matchGov && !matchArea && !matchAddress) return false;
-    }
-    if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
-    if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
-    // Subcategory / Style filter check
-    if (selectedStyleFilter !== 'all') {
-      const selectedSubcat = subcategories.find(s => s.id === selectedStyleFilter);
-      const matchesDirect = ev.styles.includes(selectedStyleFilter as DanceStyle);
-      const matchesAlias = selectedSubcat?.aliases?.some(alias => ev.styles.includes(alias as DanceStyle));
-      const matchesKeyword = selectedSubcat && (
-        (ev.titleAr || '').includes(selectedSubcat.labelAr) ||
-        (ev.descriptionAr || '').includes(selectedSubcat.labelAr) ||
-        (ev.titleEn || '').toLowerCase().includes(selectedSubcat.labelEn.toLowerCase())
-      );
-      if (!matchesDirect && !matchesAlias && !matchesKeyword) {
-        return false;
+  const normalizedSearchQuery = normalizeSearchText(searchQuery);
+  const searchTerms = normalizedSearchQuery.split(/\s+/).filter(Boolean);
+
+  const getEventSearchScore = (ev: DanceEvent) => {
+    if (!normalizedSearchQuery) return 0;
+
+    const eventDate = new Date(ev.eventDate);
+    const dateValues = Number.isNaN(eventDate.getTime())
+      ? [ev.eventDate]
+      : [
+          ev.eventDate,
+          eventDate.toLocaleDateString('ar-EG'),
+          eventDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' }),
+          eventDate.toLocaleDateString('en-GB'),
+          eventDate.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' }),
+        ];
+
+    const categoryLabels: Record<DanceEvent['category'], string> = {
+      party: 'حفله حفلات party parties',
+      course: 'كورس كورسات دوره دورات course courses',
+      trip: 'رحله رحلات trip trips',
+      exhibition: 'معرض معارض مؤتمر مؤتمرات exhibition conference',
+      services: 'خدمات شركات services suppliers',
+      jobs: 'وظائف وظيفه jobs',
+    };
+
+    const fields = [
+      { weight: 120, values: [ev.titleAr, ev.titleEn] },
+      { weight: 100, values: [ev.contact?.organizerName, ev.creatorName] },
+      { weight: 80, values: [categoryLabels[ev.category], ev.category, ...(ev.styles || [])] },
+      {
+        weight: 70,
+        values: [
+          ev.location?.nameAr,
+          ev.location?.nameEn,
+          ev.location?.governorateAr,
+          ev.location?.governorateEn,
+          ev.location?.areaAr,
+          ev.location?.areaEn,
+          ev.location?.addressAr,
+          ev.location?.addressEn,
+        ],
+      },
+      { weight: 60, values: dateValues },
+      { weight: 50, values: [ev.descriptionAr, ev.descriptionEn] },
+      { weight: 30, values: [ev.priceAr, ev.priceEn, ev.adNumber, ev.eventRef] },
+    ].map(field => ({
+      weight: field.weight,
+      texts: field.values.map(normalizeSearchText).filter(Boolean),
+    }));
+
+    const searchableText = fields.flatMap(field => field.texts).join(' ');
+    if (!searchTerms.every(term => searchableText.includes(term))) return 0;
+
+    let score = 0;
+    for (const term of searchTerms) {
+      for (const field of fields) {
+        const exactMatch = field.texts.some(text => text === term);
+        const startsWithMatch = field.texts.some(text => text.startsWith(term));
+        const containsMatch = field.texts.some(text => text.includes(term));
+        if (exactMatch) {
+          score += field.weight * 3;
+          break;
+        }
+        if (startsWithMatch) {
+          score += field.weight * 2;
+          break;
+        }
+        if (containsMatch) {
+          score += field.weight;
+          break;
+        }
       }
     }
-    return true;
-  });
+
+    // Prefer an exact multi-word phrase in the title, then organizer/performer names,
+    // while still allowing all words to be distributed across different ad fields.
+    if (fields[0].texts.some(text => text.includes(normalizedSearchQuery))) score += 500;
+    else if (fields[1].texts.some(text => text.includes(normalizedSearchQuery))) score += 350;
+    else if (searchableText.includes(normalizedSearchQuery)) score += 100;
+
+    return score;
+  };
+
+  // Filter events
+  const filteredEvents = activeEvents
+    .map(ev => ({ ev, searchScore: getEventSearchScore(ev) }))
+    .filter(({ ev, searchScore }) => {
+      // Exclude the weekly promo event if it is already displayed in the main banner at the top
+      if (promoBannerIsVisible && ev.id === weeklyPromoEvent.id) {
+        return false;
+      }
+
+      // A typed search is global across every published event.
+      if (!normalizedSearchQuery && selectedCategory !== 'all' && ev.category !== selectedCategory) {
+        return false;
+      }
+      if (normalizedSearchQuery && searchScore === 0) return false;
+
+      if (!normalizedSearchQuery && selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
+      if (!normalizedSearchQuery && selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
+
+      // Subcategory / Style filter check
+      if (!normalizedSearchQuery && selectedStyleFilter !== 'all') {
+        const selectedSubcat = subcategories.find(s => s.id === selectedStyleFilter);
+        const matchesDirect = ev.styles.includes(selectedStyleFilter as DanceStyle);
+        const matchesAlias = selectedSubcat?.aliases?.some(alias => ev.styles.includes(alias as DanceStyle));
+        const matchesKeyword = selectedSubcat && (
+          (ev.titleAr || '').includes(selectedSubcat.labelAr) ||
+          (ev.descriptionAr || '').includes(selectedSubcat.labelAr) ||
+          (ev.titleEn || '').toLowerCase().includes(selectedSubcat.labelEn.toLowerCase())
+        );
+        if (!matchesDirect && !matchesAlias && !matchesKeyword) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (normalizedSearchQuery && b.searchScore !== a.searchScore) {
+        return b.searchScore - a.searchScore;
+      }
+      return new Date(b.ev.uploadDate).getTime() - new Date(a.ev.uploadDate).getTime();
+    })
+    .map(({ ev }) => ev);
 
   const categories: { 
     id: DanceCategory; 
