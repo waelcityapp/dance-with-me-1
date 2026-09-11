@@ -186,7 +186,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     const endOfMonth = new Date(startOfToday);
     endOfMonth.setDate(endOfMonth.getDate() + 30);
     const filterEnd = selectedTimeFilter === 'today' ? endOfToday : selectedTimeFilter === 'week' ? endOfWeek : endOfMonth;
-    if (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd) return false;
+    if (!searchQuery.trim() && (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd)) return false;
     if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
     if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
     // Subcategory / Style filter check
