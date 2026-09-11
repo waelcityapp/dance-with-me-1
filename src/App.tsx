@@ -231,7 +231,7 @@ const AppContent: React.FC = () => {
 
       {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
         <div className="relative w-full">
-          <div className="w-full bg-[#FBF3E2] dark:bg-neutral-950 pb-8 sm:pb-10 transition-colors duration-200">
+          <div className="w-full bg-[#FBF3E2] dark:bg-neutral-950 pb-2 sm:pb-3 transition-colors duration-200">
             <MainHeroHeaderBanner
               onExploreClick={() => {
                 const el = document.getElementById('search-section') || document.getElementById('events-feed');
@@ -279,7 +279,7 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-1.5 sm:pt-2' : 'pt-2.5'}`}>
+      <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-0.5 sm:pt-1' : 'pt-2.5'}`}>
         {activeTab === 'verification' ? (
           <VerificationView />
         ) : activeTab === 'about_us' ? (
