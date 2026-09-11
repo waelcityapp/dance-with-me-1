@@ -1307,6 +1307,7 @@ export const AdminPanel: React.FC = () => {
         mediaUrl: mediaUrlToUse,
         thumbnailUrl: thumbUrlToUse,
         uploadDate: new Date().toISOString(),
+        createdSource: 'approved_submission',
         eventDate: safeEventDate,
         priceAr: sub.eventData?.priceAr || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'دخول مجاني' : `${sub.pricing.total} ج.م`) : '250 ج.م'),
         priceEn: sub.eventData?.priceEn || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'Free Entry' : `${sub.pricing.total} EGP`) : '250 EGP'),
