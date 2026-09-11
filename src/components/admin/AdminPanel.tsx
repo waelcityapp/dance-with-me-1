@@ -1341,7 +1341,12 @@ export const AdminPanel: React.FC = () => {
         isEmpty: false
       };
 
-      // Publish event into global state and Firestore
+      // Persist the event first and verify success before approving the submission.
+      const eventSaved = await saveEventToFirestore(publishedEvent);
+      if (!eventSaved) {
+        throw new Error('Failed to publish event to Firestore; submission remains pending.');
+      }
+      // Keep local state in sync after the Firestore write succeeds.
       addNewEvent(publishedEvent);
 
       // 2. Update submission status in Firestore with expiration timestamp
