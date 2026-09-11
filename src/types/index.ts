@@ -182,7 +182,7 @@ export interface AdSubmission {
   phone: string;
   titleAr: string;
   titleEn: string;
-  category: 'party' | 'course' | 'trip';
+  category: 'party' | 'course' | 'trip' | 'exhibition';
   styles: DanceStyle[];
   mediaType: 'image' | 'video';
   mediaUrl: string;
