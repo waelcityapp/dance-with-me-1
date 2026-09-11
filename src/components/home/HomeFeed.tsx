@@ -310,8 +310,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   return (
     <div className="space-y-2 sm:space-y-2.5 pb-12">
       {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
-      <div id="search-section" dir={lang === "ar" ? "rtl" : "ltr"} className="rounded-2xl border border-[#b08d57]/50 bg-[#FBF3E2] dark:bg-neutral-950 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
-        <div className="flex items-center justify-between gap-2 border-b border-[#b08d57]/30 pb-1">
+      <div id="search-section" dir={lang === "ar" ? "rtl" : "ltr"} className="rounded-2xl border border-[#b08d57]/12 bg-[#FBF3E2] dark:bg-neutral-950 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
+        <div className="flex items-center justify-between gap-2 border-b border-[#b08d57]/10 pb-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <h3 className="text-[11px] sm:text-xs font-black text-[#7d2332] dark:text-[#f4d58d] flex items-center">
               <span>{lang === 'ar' ? 'أحدث الإعلانات والفاعليات' : 'Latest Announcements & Events'}</span>
@@ -322,8 +322,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               </span>
             )}
           </div>
-          <button type="button" onClick={() => setShowWhyBookModal(true)} className="order-1 shrink-0 rounded-full border border-[#b08d57]/70 bg-gradient-to-r from-[#5b1220] to-[#8a2636] px-2.5 py-1 text-[10px] sm:text-xs font-black text-[#f4d58d] whitespace-nowrap">{lang === "ar" ? "ليه تحجز من خلال CityEve؟" : "Why book through CityEve?"}</button>
-          <span className="rounded-full bg-[#5b1220] dark:bg-[#b08d57]/20 border border-[#b08d57] px-2.5 py-0.5 text-[11px] sm:text-xs font-mono font-black text-[#f4d58d] rounded-full shadow-sm shrink-0">
+          <button type="button" onClick={() => setShowWhyBookModal(true)} className="order-1 shrink-0 rounded-full border border-[#b08d57]/30 bg-gradient-to-r from-[#5b1220] to-[#8a2636] px-2.5 py-1 text-[10px] sm:text-xs font-black text-[#f4d58d] whitespace-nowrap">{lang === "ar" ? "ليه تحجز من خلال CityEve؟" : "Why book through CityEve?"}</button>
+          <span className="rounded-full bg-[#5b1220] dark:bg-[#b08d57]/20 border border-[#b08d57]/25 px-2.5 py-0.5 text-[11px] sm:text-xs font-mono font-black text-[#f4d58d] rounded-full shadow-sm shrink-0">
             {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
           </span>
         </div>
