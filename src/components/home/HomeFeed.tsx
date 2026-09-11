@@ -302,6 +302,49 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
 
   return (
     <div className="space-y-2 sm:space-y-2.5 pb-12">
+      {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
+      <div id="search-section" className="rounded-2xl border-2 border-amber-500/40 bg-white/95 dark:bg-neutral-900/90 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
+        <div className="flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800/80 pb-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h3 className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 animate-pulse shrink-0" />
+              <span>{lang === 'ar' ? 'أحدث الإعلانات والفاعليات' : 'Latest Announcements & Events'}</span>
+            </h3>
+            {selectedCategory !== 'all' && (
+              <span className="text-[10px] font-black text-neutral-950 bg-white border border-white/90 shadow-2xs px-2 py-0.2 rounded-md tracking-tight transition-transform transform active:scale-95 inline-flex items-center justify-center">
+                {categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}
+              </span>
+            )}
+          </div>
+          <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.2 text-[10px] sm:text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 shadow-2xs shrink-0">
+            {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
+          </span>
+        </div>
+
+        {/* Compact Mobile Date & Location Filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <button
+            type="button"
+            className="shrink-0 rounded-xl bg-amber-500 px-3 py-1.5 text-[11px] sm:text-xs font-black text-neutral-950 border border-amber-400 shadow-2xs cursor-pointer"
+          >
+            {lang === 'ar' ? 'اليوم' : 'Today'}
+          </button>
+          <button
+            type="button"
+            className="shrink-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            {lang === 'ar' ? 'خلال أسبوع' : 'Within a week'}
+          </button>
+          <button
+            type="button"
+            className="shrink-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            <Filter className="inline-block h-3 w-3 ml-1 text-amber-500 align-[-2px]" />
+            {lang === 'ar' ? 'المحافظة / المنطقة' : 'Governorate / Area'}
+          </button>
+        </div>
+      </div>
+
       {/* Weekly Featured Video Promo (Show on Explore tab when no filter is applied or when all is selected) */}
       {weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all' && (
         <WeeklyPromoBanner
