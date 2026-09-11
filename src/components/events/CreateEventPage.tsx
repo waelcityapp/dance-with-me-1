@@ -572,8 +572,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
       setEditingEvent(null);
     } else {
-      // Regular users should NOT call addNewEvent. Their ads must go through the Admin approval flow.
-      // Only Admins (or unlocked Admins) can publish an event directly.
+      // Admins publish directly; guests and regular users create a pending submission for admin review.
       if (user?.isAdmin || isAdminUnlocked) {
         const createdEvent = addNewEvent({
           titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
@@ -616,6 +615,72 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           creatorId: user?.id,
           creatorName: user?.name
         });
+      } else {
+        const submissionId = `guest-submission-${Date.now()}`;
+        const submittedEventData: Partial<DanceEvent> = {
+          titleAr: titleAr || 'إعلان تجريبي جديد',
+          titleEn: titleEn || 'New Event Announcement',
+          descriptionAr: descAr || '',
+          descriptionEn: descEn || '',
+          category: (category === 'all' ? 'party' : category) as any,
+          styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
+          mediaType,
+          mediaUrl: finalMediaUrl,
+          thumbnailUrl: finalThumbnailUrl,
+          eventDate: new Date(eventDate).toISOString(),
+          priceAr,
+          priceEn,
+          location: {
+            nameAr: locationNameAr,
+            nameEn: locationNameEn,
+            addressAr: addressAr || governorateAr || 'القاهرة، مصر',
+            addressEn: addressEn || governorateEn || 'Cairo, Egypt',
+            googleMapsUrl,
+            lat: parseCoordinates(googleMapsUrl).lat,
+            lng: parseCoordinates(googleMapsUrl).lng,
+            governorateAr: governorateAr || 'القاهرة',
+            governorateEn: governorateEn || 'Cairo',
+            areaAr: areaAr || 'الزمالك',
+            areaEn: areaEn || 'Zamalek'
+          },
+          contact: {
+            phone,
+            whatsapp,
+            organizerName: organizerName.trim() || 'معلن جديد'
+          },
+          adType: adType || 'standard',
+          showViewsCount,
+          creatorId: user?.id,
+          creatorName: user?.name
+        };
+
+        const pendingSubmission: AdSubmission = {
+          id: submissionId,
+          invoiceNumber: `GUEST-${Date.now()}`,
+          advertiserId: user?.id,
+          advertiserName: organizerName.trim() || 'معلن زائر',
+          phone: phone || whatsapp || '',
+          titleAr: submittedEventData.titleAr || '',
+          titleEn: submittedEventData.titleEn || '',
+          category: submittedEventData.category as AdSubmission['category'],
+          styles: submittedEventData.styles || ['Salsa'],
+          mediaType,
+          mediaUrl: finalMediaUrl,
+          pricing: {
+            days: subscriptionDays,
+            subtotal: pricing.subtotal,
+            videoSurcharge: pricing.videoSurcharge,
+            total: pricing.total
+          },
+          adType: adType || 'standard',
+          contentLangMode: contentLangMode || 'both',
+          status: 'pending',
+          userRead: false,
+          submittedAt: new Date().toISOString(),
+          eventData: submittedEventData
+        };
+
+        await saveAdSubmissionToFirestore(pendingSubmission);
       }
     }
 
