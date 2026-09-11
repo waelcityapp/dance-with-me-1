@@ -26,6 +26,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [isPillarsOpen, setIsPillarsOpen] = useState(false);
   const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
+  const [showLocationFilter, setShowLocationFilter] = useState(false);
+  const [selectedGovernorate, setSelectedGovernorate] = useState('all');
+  const [selectedArea, setSelectedArea] = useState('all');
 
   // Reset pagination when category, search, or style filter changes
   useEffect(() => {
@@ -172,6 +175,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       const matchAddress = (ev.location?.addressAr || '').toLowerCase().includes(q) || (ev.location?.addressEn || '').toLowerCase().includes(q);
       if (!matchTitle && !matchDesc && !matchLoc && !matchOrganizer && !matchGov && !matchArea && !matchAddress) return false;
     }
+    if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
+    if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
     // Subcategory / Style filter check
     if (selectedStyleFilter !== 'all') {
       const selectedSubcat = subcategories.find(s => s.id === selectedStyleFilter);
@@ -299,6 +304,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   }, [activeEvents]);
 
   const styleChips: string[] = ['all', ...ALL_DANCE_STYLES];
+  const governorates = useMemo(() => Array.from(new Set(activeEvents.map(ev => ev.location?.governorateAr).filter(Boolean) as string[])).sort(), [activeEvents]);
+  const areas = useMemo(() => Array.from(new Set(activeEvents.filter(ev => selectedGovernorate === 'all' || ev.location?.governorateAr === selectedGovernorate).map(ev => ev.location?.areaAr).filter(Boolean) as string[])).sort(), [activeEvents, selectedGovernorate]);
 
   return (
     <div className="space-y-2 sm:space-y-2.5 pb-12">
@@ -337,13 +344,30 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           </button>
           <button
             type="button"
+            onClick={() => setShowLocationFilter(true)}
             className="shrink-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
           >
             <Filter className="inline-block h-3 w-3 ml-1 text-amber-500 align-[-2px]" />
-            {lang === 'ar' ? 'المحافظة / المنطقة' : 'Governorate / Area'}
+            {selectedGovernorate === 'all' ? (lang === 'ar' ? 'المحافظة / المنطقة' : 'Governorate / Area') : selectedGovernorate + (selectedArea !== 'all' ? ' / ' + selectedArea : '')}
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showLocationFilter && (
+          <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-0 sm:p-6">
+            <motion.div className="absolute inset-0 bg-black/60" onClick={() => setShowLocationFilter(false)} />
+            <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-white dark:bg-neutral-900 p-5 shadow-2xl border border-neutral-200 dark:border-neutral-800" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+              <div className="flex items-center justify-between mb-5"><h3 className="font-black text-neutral-900 dark:text-white">{lang === 'ar' ? 'اختار المحافظة والمنطقة' : 'Choose governorate and area'}</h3><button onClick={() => setShowLocationFilter(false)} className="text-neutral-500"><X className="h-5 w-5" /></button></div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1">{lang === 'ar' ? 'المحافظة' : 'Governorate'}</label>
+              <select value={selectedGovernorate} onChange={e => { setSelectedGovernorate(e.target.value); setSelectedArea('all'); }} className="w-full mb-4 rounded-xl border border-amber-500/50 bg-white dark:bg-neutral-800 p-3 text-sm text-neutral-900 dark:text-white"><option value="all">{lang === 'ar' ? 'كل المحافظات' : 'All governorates'}</option>{governorates.map(g => <option key={g} value={g}>{g}</option>)}</select>
+              <label className="block text-xs font-bold text-neutral-500 mb-1">{lang === 'ar' ? 'المنطقة' : 'Area'}</label>
+              <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} className="w-full mb-5 rounded-xl border border-amber-500/50 bg-white dark:bg-neutral-800 p-3 text-sm text-neutral-900 dark:text-white"><option value="all">{lang === 'ar' ? 'كل المناطق المتاحة' : 'All available areas'}</option>{areas.map(a => <option key={a} value={a}>{a}</option>)}</select>
+              <button onClick={() => setShowLocationFilter(false)} className="w-full rounded-xl bg-amber-500 py-3 font-black text-neutral-950">{lang === 'ar' ? 'عرض النتائج' : 'Show results'}</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Weekly Featured Video Promo (Show on Explore tab when no filter is applied or when all is selected) */}
       {weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all' && (
