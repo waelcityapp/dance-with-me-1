@@ -308,7 +308,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const areas = useMemo(() => Array.from(new Set(activeEvents.filter(ev => selectedGovernorate === 'all' || ev.location?.governorateAr === selectedGovernorate).map(ev => ev.location?.areaAr).filter(Boolean) as string[])).sort(), [activeEvents, selectedGovernorate]);
 
   return (
-    <div className="space-y-2 sm:space-y-2.5 pb-12">
+    <div className="space-y-2 sm:space-y-2.5 pb-12 bg-[#3a0710]">
       {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
       <div id="search-section" dir={lang === "ar" ? "rtl" : "ltr"} className="rounded-2xl border border-[#b08d57]/50 bg-white/95 dark:bg-[#171214]/95 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
         <div className="flex items-center justify-between gap-2 border-b border-[#b08d57]/30 pb-1">
