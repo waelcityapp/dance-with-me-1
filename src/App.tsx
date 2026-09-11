@@ -263,7 +263,7 @@ const AppContent: React.FC = () => {
                   </div>
                   <div className="text-right min-w-0">
                     <span className="block text-[11px] sm:text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-500 dark:from-red-400 dark:to-amber-400 truncate">
-                      {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
+                      {lang === 'ar' ? 'ليه تحجز من خلال CityEve؟' : 'Why book through the app?'}
                     </span>
                     <span className="block text-[10px] sm:text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-tight truncate">
                       {lang === 'ar' ? 'اكتشف مميزات التذاكر الفورية والخصومات الحصرية' : 'Discover instant tickets & exclusive discounts'}
