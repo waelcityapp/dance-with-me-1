@@ -656,6 +656,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
         const pendingSubmission: AdSubmission = {
           id: submissionId,
+          createdSource: 'guest_submission',
           invoiceNumber: `GUEST-${Date.now()}`,
           advertiserId: user?.id,
           advertiserName: organizerName.trim() || 'معلن زائر',
