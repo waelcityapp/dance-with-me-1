@@ -239,8 +239,7 @@ const AppContent: React.FC = () => {
       {/* Top Hero Canvas with Curved Oval Bottom Edge */}
       {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
         <div className="relative w-full">
-          {/* Curved Hero Section starting with header beige (#FBF3E2) and fading downwards */}
-          <div className="w-full bg-gradient-to-b from-[#FBF3E2] via-[#8C1626] to-transparent dark:to-neutral-950/0 border-b border-[#D4AF37]/30 rounded-b-[32px] sm:rounded-b-[48px] md:rounded-b-[56px] shadow-xl pb-8 sm:pb-10 transition-colors duration-200">
+          <div className="w-full bg-[#FBF3E2] dark:bg-neutral-950 pb-2 sm:pb-3 transition-colors duration-200">
             <MainHeroHeaderBanner
               onExploreClick={() => {
                 const el = document.getElementById('search-section') || document.getElementById('events-feed');
@@ -260,7 +259,7 @@ const AppContent: React.FC = () => {
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => setIsWhyBookOpen(true)}
-              className="relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-md shadow-neutral-900/10 dark:shadow-black/30"
+              className="hidden relative rounded-2xl p-[1.5px] cursor-pointer group overflow-hidden shadow-md shadow-neutral-900/10 dark:shadow-black/30"
             >
               {/* Continuous subtle spinning gradient */}
               <div 
@@ -278,7 +277,7 @@ const AppContent: React.FC = () => {
                   </div>
                   <div className="text-right min-w-0">
                     <span className="block text-[11px] sm:text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-500 dark:from-red-400 dark:to-amber-400 truncate">
-                      {lang === 'ar' ? 'ليه تحجز من خلال التطبيق؟' : 'Why book through the app?'}
+                      {lang === 'ar' ? 'ليه تحجز من خلال CityEve؟' : 'Why book through the app?'}
                     </span>
                     <span className="block text-[10px] sm:text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-tight truncate">
                       {lang === 'ar' ? 'اكتشف مميزات التذاكر الفورية والخصومات الحصرية' : 'Discover instant tickets & exclusive discounts'}
@@ -296,7 +295,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Main Body Content */}
-      <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-1.5 sm:pt-2' : 'pt-2.5'}`}>
+      <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-0.5 sm:pt-1' : 'pt-2.5'}`}>
         {activeTab === 'verification' ? (
           <VerificationView />
         ) : activeTab === 'about_us' ? (
@@ -452,4 +451,3 @@ export default function App() {
     </AppProvider>
   );
 }
-
