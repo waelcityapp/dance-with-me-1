@@ -29,7 +29,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [selectedGovernorate, setSelectedGovernorate] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
-  const [selectedTimeFilter, setSelectedTimeFilter] = useState<'today' | 'week'>('today');
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState<'month' | 'week' | 'today'>('month');
 
   // Reset pagination when category, search, or style filter changes
   useEffect(() => {
@@ -183,7 +183,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     endOfToday.setDate(endOfToday.getDate() + 1);
     const endOfWeek = new Date(startOfToday);
     endOfWeek.setDate(endOfWeek.getDate() + 7);
-    if (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= (selectedTimeFilter === 'today' ? endOfToday : endOfWeek)) return false;
+    const endOfMonth = new Date(startOfToday);
+    endOfMonth.setDate(endOfMonth.getDate() + 30);
+    const filterEnd = selectedTimeFilter === 'today' ? endOfToday : selectedTimeFilter === 'week' ? endOfWeek : endOfMonth;
+    if (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd) return false;
     if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
     if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
     // Subcategory / Style filter check
@@ -345,6 +348,13 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
             className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-black border cursor-pointer ${selectedTimeFilter === 'today' ? 'bg-amber-500 text-neutral-950 border-amber-400' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
             {lang === 'ar' ? 'اليوم' : 'Today'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedTimeFilter('month')}
+            className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-black border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'month' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
+          >
+            {lang === 'ar' ? 'خلال الشهر' : 'Within a month'}
           </button>
           <button
             type="button"
