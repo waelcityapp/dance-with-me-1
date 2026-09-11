@@ -263,7 +263,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       }
 
       // Category check
-      if (selectedCategory !== 'all' && ev.category !== selectedCategory) {
+      if (!normalizedSearchQuery && selectedCategory !== 'all' && ev.category !== selectedCategory) {
         return false;
       }
 
@@ -280,11 +280,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       endOfMonth.setDate(endOfMonth.getDate() + 30);
       const filterEnd = selectedTimeFilter === 'today' ? endOfToday : selectedTimeFilter === 'week' ? endOfWeek : endOfMonth;
       if (!normalizedSearchQuery && (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd)) return false;
-      if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
-      if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
+      if (!normalizedSearchQuery && selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
+      if (!normalizedSearchQuery && selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
 
       // Subcategory / Style filter check
-      if (selectedStyleFilter !== 'all') {
+      if (!normalizedSearchQuery && selectedStyleFilter !== 'all') {
         const selectedSubcat = subcategories.find(s => s.id === selectedStyleFilter);
         const matchesDirect = ev.styles.includes(selectedStyleFilter as DanceStyle);
         const matchesAlias = selectedSubcat?.aliases?.some(alias => ev.styles.includes(alias as DanceStyle));
