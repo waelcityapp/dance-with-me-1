@@ -196,6 +196,7 @@ export interface AdSubmission {
   contentLangMode?: 'ar' | 'en' | 'both';
   receiptImage?: string;
   status: 'pending' | 'approved' | 'rejected' | 'archived';
+  createdSource?: 'guest_submission' | 'user_submission' | 'admin';
   userRead?: boolean;
   submittedAt: string;
   reviewedAt?: string;
