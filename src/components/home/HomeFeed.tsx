@@ -645,66 +645,27 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           </span>
         </div>
 
-        {/* Prominent Search Bar Input */}
-        <div className="space-y-1">
-          <div className="relative flex items-center bg-neutral-50 dark:bg-neutral-950 border-2 border-amber-500/60 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 rounded-xl px-2.5 py-0.5 shadow-2xs transition-all">
-            <Search className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              dir={lang === 'ar' ? 'rtl' : 'ltr'}
-              placeholder={lang === 'ar' ? 'ابحث عن حفلة، كورس، موقع، منظم، محافظة، منطقة، أو اسم مدرب...' : 'Search for party, course, venue, organizer, governorate, area, instructor...'}
-              className="w-full bg-transparent py-1 px-1.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none font-medium"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="shrink-0 p-0.5 text-neutral-500 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-xs font-bold transition-colors cursor-pointer"
-                title={lang === 'ar' ? 'مسح البحث' : 'Clear search'}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-
-          {/* Subcategories Filter Chips */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar">
-            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 shrink-0 mr-0.5 flex items-center gap-0.5">
-              <Layers className="h-3 w-3 text-amber-500 dark:text-amber-400" />
-              <span>{lang === 'ar' ? 'التصنيف الفرعي:' : 'Subcategory:'}</span>
-            </span>
-            <button
-              onClick={() => setSelectedStyleFilter('all')}
-              className={`rounded-lg px-2 py-0.5 text-[10px] sm:text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
-                selectedStyleFilter === 'all'
-                  ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-2xs font-extrabold'
-                  : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white shadow-2xs'
-              }`}
-            >
-              {lang === 'ar' ? 'الكل' : 'All'}
-            </button>
-            {subcategories.map(sub => {
-              const isSelected = selectedStyleFilter === sub.id;
-              const subLabel = lang === 'ar' ? sub.labelAr : sub.labelEn;
-              return (
-                <button
-                  key={sub.id}
-                  onClick={() => {
-                    setSelectedStyleFilter(sub.id);
-                    logAnalyticsEvent(`subcat_${sub.id}`);
-                  }}
-                  className={`rounded-lg px-2 py-0.5 text-[10px] sm:text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
-                    isSelected
-                      ? 'bg-amber-500 text-neutral-950 border-amber-400 shadow-2xs font-extrabold'
-                      : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white shadow-2xs'
-                  }`}
-                >
-                  {subLabel}
-                </button>
-              );
-            })}
-          </div>
+        {/* Compact Mobile Date & Location Filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <button
+            type="button"
+            className="shrink-0 rounded-xl bg-amber-500 px-3 py-1.5 text-[11px] sm:text-xs font-black text-neutral-950 border border-amber-400 shadow-2xs cursor-pointer"
+          >
+            {lang === 'ar' ? 'اليوم' : 'Today'}
+          </button>
+          <button
+            type="button"
+            className="shrink-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            {lang === 'ar' ? 'خلال أسبوع' : 'Within a week'}
+          </button>
+          <button
+            type="button"
+            className="shrink-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            <Filter className="inline-block h-3 w-3 ml-1 text-amber-500 align-[-2px]" />
+            {lang === 'ar' ? 'المحافظة / المنطقة' : 'Governorate / Area'}
+          </button>
         </div>
       </div>
 
