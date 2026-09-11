@@ -231,7 +231,7 @@ const AppContent: React.FC = () => {
 
       {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
         <div className="relative w-full">
-          <div className="w-full bg-gradient-to-b from-[#FBF3E2] via-[#8C1626] to-transparent dark:to-neutral-950/0 border-b border-[#D4AF37]/30 rounded-b-[32px] sm:rounded-b-[48px] md:rounded-b-[56px] shadow-xl pb-8 sm:pb-10 transition-colors duration-200">
+          <div className="w-full bg-slate-50 dark:bg-neutral-950 pb-8 sm:pb-10 transition-colors duration-200">
             <MainHeroHeaderBanner
               onExploreClick={() => {
                 const el = document.getElementById('search-section') || document.getElementById('events-feed');
