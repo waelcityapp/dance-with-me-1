@@ -29,6 +29,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [selectedGovernorate, setSelectedGovernorate] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState<'today' | 'week'>('today');
 
   // Reset pagination when category, search, or style filter changes
   useEffect(() => {
@@ -175,6 +176,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       const matchAddress = (ev.location?.addressAr || '').toLowerCase().includes(q) || (ev.location?.addressEn || '').toLowerCase().includes(q);
       if (!matchTitle && !matchDesc && !matchLoc && !matchOrganizer && !matchGov && !matchArea && !matchAddress) return false;
     }
+    const eventDate = new Date(ev.eventDate);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(startOfToday);
+    endOfToday.setDate(endOfToday.getDate() + 1);
+    const endOfWeek = new Date(startOfToday);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
+    if (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= (selectedTimeFilter === 'today' ? endOfToday : endOfWeek)) return false;
     if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
     if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
     // Subcategory / Style filter check
@@ -332,13 +341,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           <button
             type="button"
-            className="shrink-0 rounded-xl bg-amber-500 px-3 py-1.5 text-[11px] sm:text-xs font-black text-neutral-950 border border-amber-400 shadow-2xs cursor-pointer"
+            onClick={() => setSelectedTimeFilter('today')}
+            className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-black border cursor-pointer ${selectedTimeFilter === 'today' ? 'bg-amber-500 text-neutral-950 border-amber-400' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
             {lang === 'ar' ? 'اليوم' : 'Today'}
           </button>
           <button
             type="button"
-            className="shrink-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
+            onClick={() => setSelectedTimeFilter('week')}
+            className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-bold border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'week' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
             {lang === 'ar' ? 'خلال أسبوع' : 'Within a week'}
           </button>
