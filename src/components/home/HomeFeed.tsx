@@ -313,8 +313,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       <div id="search-section" dir={lang === "ar" ? "rtl" : "ltr"} className="rounded-2xl border border-[#b08d57]/50 bg-white/95 dark:bg-[#171214]/95 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
         <div className="flex items-center justify-between gap-2 border-b border-[#b08d57]/30 pb-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h3 className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 animate-pulse shrink-0" />
+            <h3 className="text-[11px] sm:text-xs font-black text-[#7d2332] dark:text-[#f4d58d] flex items-center">
               <span>{lang === 'ar' ? 'أحدث الإعلانات والفاعليات' : 'Latest Announcements & Events'}</span>
             </h3>
             {selectedCategory !== 'all' && (
@@ -324,7 +323,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
             )}
           </div>
           <button type="button" onClick={() => setShowWhyBookModal(true)} className="order-1 shrink-0 rounded-full border border-[#b08d57]/70 bg-gradient-to-r from-[#5b1220] to-[#8a2636] px-2.5 py-1 text-[10px] sm:text-xs font-black text-[#f4d58d] whitespace-nowrap">{lang === "ar" ? "ليه تحجز من خلال CityEve؟" : "Why book through CityEve?"}</button>
-          <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.2 text-[10px] sm:text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 shadow-2xs shrink-0">
+          <span className="rounded-full bg-[#5b1220] dark:bg-[#b08d57]/20 border border-[#b08d57] px-2.5 py-0.5 text-[11px] sm:text-xs font-mono font-black text-[#f4d58d] rounded-full shadow-sm shrink-0">
             {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
           </span>
         </div>
