@@ -341,11 +341,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         </div>
 
         {/* Compact Mobile Date & Location Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 no-scrollbar" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="grid grid-cols-4 items-stretch gap-1.5 pb-0.5 pt-0.5 w-full" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           <button
             type="button"
             onClick={() => setSelectedTimeFilter('month')}
-            className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-black border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'month' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
+            className={`w-full min-w-0 rounded-xl px-1.5 py-1.5 text-[10px] sm:text-xs font-black border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'month' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
             {lang === 'ar' ? 'خلال الشهر' : 'Within a month'}
           </button>
@@ -353,7 +353,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           <button
             type="button"
             onClick={() => setSelectedTimeFilter('week')}
-            className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-bold border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'week' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
+            className={`w-full min-w-0 rounded-xl px-1.5 py-1.5 text-[10px] sm:text-xs font-bold border cursor-pointer whitespace-nowrap ${selectedTimeFilter === 'week' ? 'bg-[#5b1220] text-[#f4d58d] border-[#b08d57]' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
             {lang === 'ar' ? 'خلال أسبوع' : 'Within a week'}
           </button>
@@ -361,7 +361,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           <button
             type="button"
             onClick={() => setSelectedTimeFilter('today')}
-            className={`shrink-0 rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-black border cursor-pointer ${selectedTimeFilter === 'today' ? 'bg-amber-500 text-neutral-950 border-amber-400' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
+            className={`w-full min-w-0 rounded-xl px-1.5 py-1.5 text-[10px] sm:text-xs font-black border cursor-pointer ${selectedTimeFilter === 'today' ? 'bg-amber-500 text-neutral-950 border-amber-400' : 'bg-white/70 dark:bg-neutral-900/70 text-[#7d2332] dark:text-[#f4d58d] border-[#b08d57]/30'}`}
           >
             {lang === 'ar' ? 'اليوم' : 'Today'}
           </button>
