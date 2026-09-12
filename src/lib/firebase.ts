@@ -700,7 +700,8 @@ export async function updateUserTierInFirestore(userId: string, accountTier: Acc
  * Verify if the input admin secret code is correct
  */
 export async function verifyAdminSecretCode(inputCode: string): Promise<boolean> {
-  if (!inputCode || inputCode.trim() === '' || !auth.currentUser) return false;
+  if (!inputCode || inputCode.trim() === '') return false;
+  if (!auth.currentUser) throw new Error('FIREBASE_SESSION_REQUIRED');
   try {
     const token = await auth.currentUser.getIdToken();
     const response = await fetch('/api/admin-unlock', {
@@ -708,12 +709,16 @@ export async function verifyAdminSecretCode(inputCode: string): Promise<boolean>
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ code: inputCode.trim() }),
     });
-    return response.ok;
+    if (response.ok) return true;
+    const body = await response.json().catch(() => ({}));
+    if (response.status === 401 && body?.error === 'INVALID_CODE') return false;
+    throw new Error(body?.error || `ADMIN_UNLOCK_HTTP_${response.status}`);
   } catch (err) {
     console.error('Error verifying admin secret code:', err);
-    return false;
+    throw err;
   }
 }
+
 
 /**
  * Set or update the admin secret code
