@@ -130,7 +130,27 @@ export const AdminLockModal: React.FC = () => {
         }
       }
     } catch (err) {
-      setErrorMsg(lang === 'ar' ? 'عذراً، حدث خطأ أثناء التحقق.' : 'Sorry, an error occurred during verification.');
+      const code = err instanceof Error ? err.message : 'UNKNOWN_ERROR';
+      const messages: Record<string, { ar: string; en: string }> = {
+        FIREBASE_SESSION_REQUIRED: {
+          ar: 'جلسة تسجيل الدخول غير مكتملة. سجّل الخروج ثم ادخل بحساب الإدارة مرة أخرى.',
+          en: 'Your sign-in session is incomplete. Sign out and sign in with the admin account again.',
+        },
+        FIREBASE_ADMIN_NOT_CONFIGURED: {
+          ar: 'إعدادات Firebase الخاصة بالـBackend غير مكتملة في بيئة النشر الحالية.',
+          en: 'Firebase Backend settings are incomplete in the current deployment environment.',
+        },
+        ADMIN_ACCOUNT_REQUIRED: {
+          ar: 'الحساب الحالي غير معتمد كحساب إدارة في الـBackend.',
+          en: 'The current account is not recognized as an administrator by the Backend.',
+        },
+        ADMIN_UNLOCK_NOT_CONFIGURED: {
+          ar: 'رمز فتح الإدارة غير مضبوط في بيئة النشر الحالية.',
+          en: 'The admin unlock code is not configured in the current deployment environment.',
+        },
+      };
+      const message = messages[code];
+      setErrorMsg(message ? message[lang] : (lang === 'ar' ? `تعذر الاتصال بحماية الإدارة (${code}). لم تُحتسب محاولة.` : `Admin protection failed (${code}). No attempt was counted.`));
     } finally {
       setLoading(false);
     }
