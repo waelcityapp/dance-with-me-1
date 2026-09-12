@@ -5209,8 +5209,8 @@ export const AdminPanel: React.FC = () => {
               </div>
               <div className="border-t border-white/5 pt-4 mt-4 text-[10px] text-amber-500/70 leading-relaxed">
                 ℹ️ {lang === 'ar' 
-                  ? 'يتم توليد الرمز الافتراضي (123456) تلقائياً عند أول إعداد للتطبيق.' 
-                  : 'A default code (123456) is generated upon first setup.'}
+                  ? 'رمز الإدارة محفوظ بأمان في إعدادات Vercel ولا يظهر داخل الموقع.' 
+                  : 'The admin code is stored securely in Vercel settings and is never displayed in the site.'}
               </div>
             </div>
 

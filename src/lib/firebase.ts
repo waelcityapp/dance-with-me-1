@@ -330,20 +330,8 @@ export async function deleteEventFromFirestore(eventId: string): Promise<boolean
  * Check if database is empty, and seed initial admin codes if needed (no mock events seeded anymore for clean production)
  */
 export async function checkAndSeedEvents(initialEvents: DanceEvent[]): Promise<void> {
-  try {
-    // Seed default admin secret code if empty, and always make sure "2233" is available for user testing
-    const codesRef = collection(db, 'admin_codes');
-    const codesSnap = await getDocs(codesRef).catch(() => null);
-    if (codesSnap && codesSnap.empty) {
-      console.log('No admin codes found. Seeding default code: "2233"');
-      await setDoc(doc(db, 'admin_codes', '2233'), { active: true, createdAt: new Date().toISOString() });
-    } else {
-      // Ensure "2233" is explicitly created/active as requested by the user
-      await setDoc(doc(db, 'admin_codes', '2233'), { active: true, createdAt: new Date().toISOString() });
-    }
-  } catch (error) {
-    console.warn('Error during Firestore seeding check:', error);
-  }
+  void initialEvents;
+  // Administration unlock codes are stored only in Vercel environment variables.
 }
 
 /**
@@ -383,8 +371,9 @@ export async function saveUserToFirestore(user: UserProfile): Promise<boolean> {
     }
     const userId = String(user.id).trim();
     const docRef = doc(db, COLLECTIONS.USERS, userId);
+    const { password: _discardedPassword, ...userWithoutPassword } = user;
     const safeUser = sanitizeForFirestore({
-      ...user,
+      ...userWithoutPassword,
       id: userId,
       phone: user.phone || '',
       avatar: user.avatar || '',
@@ -711,16 +700,15 @@ export async function updateUserTierInFirestore(userId: string, accountTier: Acc
  * Verify if the input admin secret code is correct
  */
 export async function verifyAdminSecretCode(inputCode: string): Promise<boolean> {
-  if (!inputCode || inputCode.trim() === '') return false;
-  const trimmed = inputCode.trim();
-  // Safe fallbacks for seamless testing and admin rescue
-  if (trimmed === '2233' || trimmed === '123456') {
-    return true;
-  }
+  if (!inputCode || inputCode.trim() === '' || !auth.currentUser) return false;
   try {
-    const docRef = doc(db, 'admin_codes', trimmed);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() && docSnap.data()?.active !== false;
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch('/api/admin-unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code: inputCode.trim() }),
+    });
+    return response.ok;
   } catch (err) {
     console.error('Error verifying admin secret code:', err);
     return false;
@@ -731,38 +719,16 @@ export async function verifyAdminSecretCode(inputCode: string): Promise<boolean>
  * Set or update the admin secret code
  */
 export async function updateAdminSecretCode(oldCode: string, newCode: string): Promise<boolean> {
-  try {
-    // Delete the old code document
-    if (oldCode && oldCode.trim() !== '') {
-      const oldDocRef = doc(db, 'admin_codes', oldCode.trim());
-      await deleteDoc(oldDocRef);
-    }
-    // Create the new code document
-    const newDocRef = doc(db, 'admin_codes', newCode.trim());
-    await setDoc(newDocRef, { active: true, createdAt: new Date().toISOString() });
-    return true;
-  } catch (err) {
-    console.error('Error updating admin secret code:', err);
-    return false;
-  }
+  void oldCode;
+  void newCode;
+  return false;
 }
 
 /**
  * Get the current admin secret codes (for admins only)
  */
 export async function getAdminSecretCodes(): Promise<string[]> {
-  try {
-    const ref = collection(db, 'admin_codes');
-    const snap = await getDocs(ref);
-    const codes: string[] = [];
-    snap.forEach((docSnap) => {
-      codes.push(docSnap.id);
-    });
-    return codes;
-  } catch (err) {
-    console.error('Error fetching admin secret codes:', err);
-    return [];
-  }
+  return [];
 }
 
 /**
@@ -1053,10 +1019,15 @@ export function subscribeToDailyAnalytics(onUpdate: (dailyList: any[]) => void):
 export async function saveBookingToFirestore(booking: EventBooking): Promise<boolean> {
   try {
     if (!booking) return false;
-    const bId = booking.id ? String(booking.id).trim() : `bkg-${Date.now()}`;
-    const docRef = doc(db, COLLECTIONS.BOOKINGS, bId);
-    await setDoc(docRef, sanitizeForFirestore({ ...booking, id: bId }), { merge: true });
-    return true;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return false;
+    const token = await currentUser.getIdToken();
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: 'save', booking: sanitizeForFirestore(booking) }),
+    });
+    return response.ok;
   } catch (error) {
     console.error('Error saving booking to Firestore:', error);
     return false;
@@ -1069,10 +1040,15 @@ export async function saveBookingToFirestore(booking: EventBooking): Promise<boo
 export async function deleteBookingFromFirestore(bookingId: string): Promise<boolean> {
   try {
     if (!bookingId || typeof bookingId !== 'string' || !bookingId.trim()) return false;
-    const safeBkgId = bookingId.trim();
-    const docRef = doc(db, COLLECTIONS.BOOKINGS, safeBkgId);
-    await deleteDoc(docRef);
-    return true;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return false;
+    const token = await currentUser.getIdToken();
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: 'delete', bookingId: bookingId.trim() }),
+    });
+    return response.ok;
   } catch (error) {
     console.error('Error deleting booking from Firestore:', error);
     return false;
