@@ -194,6 +194,9 @@ export interface AdSubmission {
     total: number;
   };
   adType?: 'vip' | 'standard' | 'free';
+  marketerCode?: string;
+  marketerId?: string;
+  attributionSource?: 'code';
   contentLangMode?: 'ar' | 'en' | 'both';
   receiptImage?: string;
   status: 'pending' | 'approved' | 'rejected' | 'archived';
