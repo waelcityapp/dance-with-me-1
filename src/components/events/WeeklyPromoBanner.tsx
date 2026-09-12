@@ -330,7 +330,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 setAspectRatioClass('aspect-[16/10] sm:aspect-video');
               }
             }}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
           />
         ) : (
           <div 
@@ -370,7 +370,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 }
               }
             }}
-            className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 opacity-0 hover:opacity-100 transition-opacity cursor-pointer group/play"
+            className="absolute inset-0 z-10 flex items-center justify-center bg-black/5 opacity-0 hover:opacity-100 transition-opacity cursor-pointer group/play"
           >
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-950/80 text-white backdrop-blur-md border border-white/10 group-hover/play:scale-110 transition-transform">
               {isPlaying ? <Pause className="h-8 w-8 fill-current" /> : <Play className="h-8 w-8 fill-current ml-1" />}
@@ -408,7 +408,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           </button>
         )}
         {getSafePlayableVideoUrl(promoEvent.mediaUrl) && (
-          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent opacity-80" />
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-neutral-950/70 via-neutral-950/10 to-transparent opacity-35" />
         )}
       </div>
         <div className="flex flex-col p-4 sm:p-5 relative z-10 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 transition-colors">
@@ -499,8 +499,9 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               </div>
               {promoEvent.location?.googleMapsUrl && promoEvent.location.googleMapsUrl.trim().length > 0 && (
                 <div className="shrink-0 self-start sm:self-auto">
-                  <span className="text-[10px] text-amber-700 dark:text-amber-400 font-black bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse font-sans shadow-xs inline-flex items-center gap-1">
-                    {lang === 'ar' ? 'الخريطة 🗺️' : 'Map 🗺️'}
+                  <span className="text-xs sm:text-sm text-neutral-950 font-black bg-amber-400 border border-amber-500 px-3.5 py-2 rounded-xl tracking-wide font-sans shadow-md inline-flex items-center gap-1.5">
+                    <MapPin className="h-4.5 w-4.5" />
+                    {lang === 'ar' ? 'استخدم الخريطة' : 'Use Map'}
                   </span>
                 </div>
               )}
