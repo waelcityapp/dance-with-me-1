@@ -140,6 +140,18 @@ export const AdminLockModal: React.FC = () => {
           ar: 'إعدادات Firebase الخاصة بالـBackend غير مكتملة في بيئة النشر الحالية.',
           en: 'Firebase Backend settings are incomplete in the current deployment environment.',
         },
+        FIREBASE_PROJECT_ID_MISSING: {
+          ar: 'المتغير FIREBASE_PROJECT_ID غير متاح للـBackend في هذا النشر.',
+          en: 'FIREBASE_PROJECT_ID is unavailable to the Backend in this deployment.',
+        },
+        FIREBASE_CLIENT_EMAIL_MISSING: {
+          ar: 'المتغير FIREBASE_CLIENT_EMAIL غير متاح للـBackend في هذا النشر.',
+          en: 'FIREBASE_CLIENT_EMAIL is unavailable to the Backend in this deployment.',
+        },
+        FIREBASE_PRIVATE_KEY_MISSING: {
+          ar: 'المتغير FIREBASE_PRIVATE_KEY غير متاح للـBackend في هذا النشر.',
+          en: 'FIREBASE_PRIVATE_KEY is unavailable to the Backend in this deployment.',
+        },
         ADMIN_ACCOUNT_REQUIRED: {
           ar: 'الحساب الحالي غير معتمد كحساب إدارة في الـBackend.',
           en: 'The current account is not recognized as an administrator by the Backend.',
