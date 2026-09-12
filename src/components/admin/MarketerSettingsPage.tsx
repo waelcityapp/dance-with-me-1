@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, CalendarDays, Pause, Pencil, Play, Save, Search, Settings, Tag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Check, Copy, Pause, Pencil, Play, Save, Search, Settings, Tag } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MarketerRule, marketerRulesApi, RuleValueType } from '../../lib/marketerRulesApi';
 import { DanceEvent, UserProfile } from '../../types';
@@ -29,6 +29,7 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [codeCopied, setCodeCopied] = useState(false);
   const [defaultTarget, setDefaultTarget] = useState<'advertisement' | 'booking'>('advertisement');
   const [defaultDiscount, setDefaultDiscount] = useState<FormValue>(emptyValue);
   const [defaultReward, setDefaultReward] = useState<FormValue>(emptyValue);
@@ -121,6 +122,17 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
 
   const valueText = (value: MarketerRule['customerDiscount']) => value.type === 'percentage' ? `${value.value}%` : `${value.value} ج.م`;
 
+  const copyMarketerCode = async () => {
+    if (!marketer.marketerCode) return;
+    try {
+      await navigator.clipboard.writeText(marketer.marketerCode);
+      setCodeCopied(true);
+      window.setTimeout(() => setCodeCopied(false), 2500);
+    } catch {
+      setMessage(lang === 'ar' ? 'تعذر نسخ الكود تلقائيًا؛ يمكنك تحديده ونسخه يدويًا.' : 'Could not copy the code automatically; select and copy it manually.');
+    }
+  };
+
   return (
     <section className="space-y-5 animate-fadeIn" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <div className="rounded-3xl border border-amber-500/25 bg-white dark:bg-neutral-900 p-4 sm:p-6 shadow-lg">
@@ -131,9 +143,18 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
           <div className="h-12 w-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 overflow-hidden flex items-center justify-center">
             {marketer.avatar ? <img src={marketer.avatar} alt="" className="h-full w-full object-cover" /> : <Settings className="h-5 w-5" />}
           </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-black truncate">إعدادات المسوق: {marketer.name || marketer.email}</h1>
-            <p className="text-xs text-neutral-500">{marketer.marketerCode || 'بدون كود'} · {marketer.accountReference || marketer.id}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-black break-words">{lang === 'ar' ? 'إعدادات المسوق:' : 'Marketer settings:'} {marketer.name || marketer.email}</h1>
+              {marketer.marketerCode ? (
+                <button type="button" onClick={() => void copyMarketerCode()} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 text-sm font-black text-amber-800 hover:bg-amber-500/20 dark:text-amber-300" aria-label={lang === 'ar' ? `نسخ كود المسوق ${marketer.marketerCode}` : `Copy marketer code ${marketer.marketerCode}`} title={lang === 'ar' ? 'اضغط لنسخ كود المسوق' : 'Click to copy marketer code'}>
+                  <span className="font-mono" dir="ltr">{marketer.marketerCode}</span>
+                  {codeCopied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+                  <span className="text-xs">{codeCopied ? (lang === 'ar' ? 'تم النسخ' : 'Copied') : (lang === 'ar' ? 'نسخ' : 'Copy')}</span>
+                </button>
+              ) : null}
+            </div>
+            <p className="mt-1 text-xs text-neutral-500">{lang === 'ar' ? 'رقم الحساب:' : 'Account reference:'} {marketer.accountReference || marketer.id}</p>
           </div>
         </div>
       </div>
