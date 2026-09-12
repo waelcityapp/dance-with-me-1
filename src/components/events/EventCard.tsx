@@ -378,7 +378,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 setAspectRatioClass('aspect-[16/10]');
               }
             }}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.01]"
           />
         ) : (
           <div 
@@ -485,8 +485,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               </div>
             </div>
             {event.location?.googleMapsUrl && event.location.googleMapsUrl.trim().length > 0 && (
-              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-black shrink-0 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-sans mt-0.5">
-                {lang === 'ar' ? 'الخريطة 🗺️' : 'Map 🗺️'}
+              <span className="text-xs sm:text-sm text-neutral-950 font-black shrink-0 bg-amber-400 border border-amber-500 px-3 py-1.5 rounded-xl tracking-wide font-sans mt-0.5 shadow-sm inline-flex items-center gap-1.5">
+                <MapPin className="h-4 w-4" />
+                {lang === 'ar' ? 'استخدم الخريطة' : 'Use Map'}
               </span>
             )}
           </div>
