@@ -51,6 +51,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-[16/10]');
+  const [imageAspectRatioClass, setImageAspectRatioClass] = useState('aspect-[16/10]');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
@@ -86,6 +87,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
 
   useEffect(() => {
     setAspectRatioClass('aspect-[16/10]');
+    setImageAspectRatioClass('aspect-[16/10]');
   }, [event.mediaUrl]);
 
   const openFullscreenVideo = (e?: React.MouseEvent) => {
@@ -339,7 +341,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       )}
 
       {/* Banner Media Section (Video or Image) */}
-      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${isGoogleDriveUrl(event.mediaUrl) || getSafePlayableVideoUrl(event.mediaUrl) ? aspectRatioClass : ''}`}>
+      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${isGoogleDriveUrl(event.mediaUrl) || getSafePlayableVideoUrl(event.mediaUrl) ? aspectRatioClass : imageAspectRatioClass}`}>
         {/* Paused Overlay with 'X' mark */}
         {event.isPaused && (
           <div className="absolute inset-0 z-20 bg-neutral-950/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
@@ -387,7 +389,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             <img
               src={event.mediaUrl}
               alt={lang === 'ar' ? event.titleAr : event.titleEn}
-              className="w-full h-auto max-h-[650px] object-contain transition-transform duration-700 group-hover:scale-[1.02] block"
+              onLoad={(e) => {
+                const image = e.currentTarget;
+                const ratio = image.naturalWidth / image.naturalHeight;
+                setImageAspectRatioClass(ratio >= 1.2 ? 'aspect-video' : ratio <= 0.85 ? 'aspect-[4/5] max-h-[720px]' : 'aspect-square max-h-[680px]');
+              }}
+              decoding="async"
+              className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-[1.02] block"
             />
             {/* Subtle Zoom Pill Badge */}
             <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-950/75 hover:bg-neutral-950/90 text-white text-[11px] font-bold backdrop-blur-md border border-white/15 shadow-lg transition-all transform opacity-80 group-hover/img:opacity-100 group-hover/img:scale-105">
