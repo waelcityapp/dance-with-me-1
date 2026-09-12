@@ -53,6 +53,7 @@ import { FullscreenVideoModal } from './FullscreenVideoModal';
 import { EventCard } from './EventCard';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, saveAdSubmissionToFirestore } from '../../lib/firebase';
+import { validateMarketerCode } from '../../lib/marketerCodeApi';
 
 // Helper to parse coordinates from any Google Maps URL structure
 const parseCoordinates = (url: string): { lat: number; lng: number } => {
@@ -406,6 +407,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [agreedToTerms, setAgreedToTerms] = useState<boolean>(!!editingEvent);
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<'instapay' | 'wallet' | 'card'>('instapay');
+  const [marketerCodeInput, setMarketerCodeInput] = useState('');
+  const [verifiedMarketer, setVerifiedMarketer] = useState<{ code: string; marketerId: string } | null>(null);
+  const [marketerCodeStatus, setMarketerCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
 
   // Calculate Subscription Pricing
   const getPriceBreakdown = () => {
@@ -442,9 +446,24 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   const pricing = getPriceBreakdown();
 
-  const handleProceedToPayment = (e?: React.FormEvent | React.MouseEvent) => {
+  const handleProceedToPayment = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!agreedToTerms || hasUrlViolation || mapsUrlError) return;
+
+    const optionalCode = marketerCodeInput.trim().toUpperCase();
+    if (optionalCode && verifiedMarketer?.code !== optionalCode) {
+      setMarketerCodeStatus('checking');
+      try {
+        const result = await validateMarketerCode(optionalCode);
+        setVerifiedMarketer({ code: result.code, marketerId: result.marketerId });
+        setMarketerCodeStatus('valid');
+      } catch {
+        setVerifiedMarketer(null);
+        setMarketerCodeStatus('invalid');
+        return;
+      }
+    }
+
     if (!titleAr) setTitleAr(lang === 'ar' ? 'سهرة سالسا وباتشاتا ملكية جديدة' : 'Royal Salsa & Bachata Night');
     if (!titleEn) setTitleEn('Royal Salsa & Bachata Night');
     setStep('payment');
@@ -674,6 +693,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             total: pricing.total
           },
           adType: adType || 'standard',
+          marketerCode: verifiedMarketer?.code,
+          marketerId: verifiedMarketer?.marketerId,
+          attributionSource: verifiedMarketer ? 'code' : undefined,
           contentLangMode: contentLangMode || 'both',
           status: 'pending',
           userRead: false,
@@ -2354,6 +2376,58 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               </div>
             </div>
           </div>
+
+          {/* Optional marketer attribution for paid and free ad submissions. */}
+          {!editingEvent && !user?.isAdmin && !isAdminUnlocked && (
+            <div className="space-y-3 border-t border-amber-200/60 dark:border-white/10 pt-6">
+              <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/5 p-5 sm:p-6 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <Tag className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <div className="min-w-0 flex-1">
+                    <label htmlFor="marketer-code" className="block text-sm font-black text-neutral-900 dark:text-white">
+                      {lang === 'ar' ? 'هل لديك كود مسوق؟ (اختياري)' : 'Do you have a marketer code? (Optional)'}
+                    </label>
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      {lang === 'ar' ? 'اترك الخانة فارغة إذا لم يكن لديك كود، وستكمل إضافة الإعلان بصورة طبيعية.' : 'Leave this empty if you do not have a code; your ad submission will continue normally.'}
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        id="marketer-code"
+                        type="text"
+                        value={marketerCodeInput}
+                        onChange={(event) => {
+                          const value = event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32);
+                          setMarketerCodeInput(value);
+                          setVerifiedMarketer(null);
+                          setMarketerCodeStatus('idle');
+                        }}
+                        placeholder={lang === 'ar' ? 'مثال: MKT-ABC123' : 'Example: MKT-ABC123'}
+                        autoComplete="off"
+                        dir="ltr"
+                        className="h-12 min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-4 font-mono text-sm font-black tracking-wider text-neutral-900 outline-none focus:border-emerald-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
+                      />
+                      {marketerCodeInput && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMarketerCodeInput('');
+                            setVerifiedMarketer(null);
+                            setMarketerCodeStatus('idle');
+                          }}
+                          className="h-12 rounded-xl border border-neutral-300 px-4 text-xs font-black text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        >
+                          {lang === 'ar' ? 'مسح الكود' : 'Clear code'}
+                        </button>
+                      )}
+                    </div>
+                    {marketerCodeStatus === 'checking' && <p className="mt-2 text-xs font-bold text-amber-600 dark:text-amber-400">{lang === 'ar' ? 'جارٍ التحقق من الكود...' : 'Checking code...'}</p>}
+                    {marketerCodeStatus === 'valid' && <p className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ {lang === 'ar' ? 'تم قبول كود المسوق وربطه بطلب الإعلان.' : 'Marketer code accepted and linked to the ad request.'}</p>}
+                    {marketerCodeStatus === 'invalid' && <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">{lang === 'ar' ? 'الكود غير صحيح أو المسوق غير نشط. امسح الكود للمتابعة بدونه.' : 'The code is invalid or inactive. Clear it to continue without a code.'}</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Ad Placement Number & Ad Identifier - Admin Only */}
           {(user?.isAdmin || isAdminUnlocked) && (
