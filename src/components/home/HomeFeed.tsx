@@ -150,8 +150,27 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     return [...promos].sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime())[0];
   }, [activeEvents]);
 
-  // Determine if banner is visible
-  const promoBannerIsVisible = !!(weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all');
+  const eventMatchesDateAndLocationFilters = (ev: DanceEvent) => {
+    const eventDate = new Date(ev.eventDate);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const filterEnd = new Date(startOfToday);
+    filterEnd.setDate(filterEnd.getDate() + (selectedTimeFilter === 'today' ? 1 : selectedTimeFilter === 'week' ? 7 : 30));
+
+    if (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd) return false;
+    if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
+    if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
+    return true;
+  };
+
+  // Keep the featured ad subject to the same date and location filters as the rest of the feed.
+  const promoBannerIsVisible = !!(
+    weeklyPromoEvent &&
+    selectedCategory === 'all' &&
+    !searchQuery &&
+    selectedStyleFilter === 'all' &&
+    eventMatchesDateAndLocationFilters(weeklyPromoEvent)
+  );
 
   // Search only within active (published) events, with Arabic-friendly normalization
   // and weighted relevance so the strongest matches appear first.
@@ -269,19 +288,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
 
       if (normalizedSearchQuery && searchScore === 0) return false;
 
-      const eventDate = new Date(ev.eventDate);
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const endOfToday = new Date(startOfToday);
-      endOfToday.setDate(endOfToday.getDate() + 1);
-      const endOfWeek = new Date(startOfToday);
-      endOfWeek.setDate(endOfWeek.getDate() + 7);
-      const endOfMonth = new Date(startOfToday);
-      endOfMonth.setDate(endOfMonth.getDate() + 30);
-      const filterEnd = selectedTimeFilter === 'today' ? endOfToday : selectedTimeFilter === 'week' ? endOfWeek : endOfMonth;
-      if (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd) return false;
-      if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
-      if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
+      if (!eventMatchesDateAndLocationFilters(ev)) return false;
 
       // Subcategory / Style filter check
       if (!normalizedSearchQuery && selectedStyleFilter !== 'all') {
@@ -494,7 +501,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       </AnimatePresence>
 
       {/* Weekly Featured Video Promo (Show on Explore tab when no filter is applied or when all is selected) */}
-      {weeklyPromoEvent && selectedCategory === 'all' && !searchQuery && selectedStyleFilter === 'all' && (
+      {promoBannerIsVisible && weeklyPromoEvent && (
         <WeeklyPromoBanner
           promoEvent={weeklyPromoEvent}
           onOpenMap={onOpenMap}
