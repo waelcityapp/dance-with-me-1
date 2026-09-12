@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown } from 'lucide-react';
+import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AccountTier } from '../../types';
 import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
@@ -89,6 +89,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('login');
   const [loadingAuth, setLoadingAuth] = useState(false);
+  const [googleFinalizing, setGoogleFinalizing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [authErrorCode, setAuthErrorCode] = useState<string | null>(null);
   const [googleUid, setGoogleUid] = useState<string>('');
@@ -259,23 +260,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const confirmGoogleAuth = async () => {
     setLoadingAuth(true);
+    setGoogleFinalizing(true);
     setErrorMsg(null);
     setAuthErrorCode(null);
     try {
       const googleUser = await loginWithFirebaseGoogle();
       if (googleUser && googleUser.email) {
-        setGoogleUid(googleUser.id);
-        const existing = await getUserByEmailFromFirestore(googleUser.email);
-        if (existing) {
-          setAppActiveTab('explore');
-          await loginUser(existing.name || googleUser.name, googleUser.email, existing.avatar || googleUser.avatar, existing.id);
-          onClose();
-          return;
-        }
-        setName(googleUser.name || (lang === 'ar' ? 'عضو النادي (Google)' : 'Google Member'));
-        setEmail(googleUser.email);
-        if (googleUser.avatar) setSelectedAvatar(googleUser.avatar);
-        setActiveTab('google_onboarding');
+        await loginUser(
+          googleUser.name || (lang === 'ar' ? 'عضو جديد' : 'New Member'),
+          googleUser.email,
+          googleUser.avatar || selectedAvatar,
+          googleUser.id,
+          undefined,
+          'free'
+        );
+        setAppActiveTab('explore');
+        onClose();
       }
     } catch (err: any) {
       const errorCode = err.code || 'unknown';
@@ -304,6 +304,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       
       setActiveTab('login');
     } finally {
+      setGoogleFinalizing(false);
       setLoadingAuth(false);
     }
   };
@@ -371,8 +372,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* If already logged in */}
-          {user ? (
+          {/* Keep the modal stable while the Google session is converted into an app profile. */}
+          {googleFinalizing ? (
+            <div className="flex min-h-64 flex-1 flex-col items-center justify-center gap-4 p-8 text-center" role="status" aria-live="polite">
+              <Loader2 className="h-10 w-10 animate-spin text-amber-400" />
+              <div>
+                <h4 className="text-base font-black text-white">
+                  {lang === 'ar' ? 'جارٍ تجهيز حسابك...' : 'Preparing your account...'}
+                </h4>
+                <p className="mt-1 text-xs text-neutral-400">
+                  {lang === 'ar' ? 'سيتم تحويلك إلى الصفحة الرئيسية تلقائيًا.' : 'You will be taken to the home page automatically.'}
+                </p>
+              </div>
+            </div>
+          ) : user ? (
             <div className="p-6 space-y-6 text-center overflow-y-auto flex-1">
               <div className="flex flex-col items-center gap-3">
                 <img src={user.avatar} alt={user.name} className="h-20 w-20 rounded-2xl object-cover border-2 border-amber-500 shadow-xl gold-glow" />
