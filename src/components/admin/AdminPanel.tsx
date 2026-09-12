@@ -1,4 +1,8093 @@
-Y��x-���jם��i��+��j[h��ܢ��ׯ8��赩h��n�X�z�Z[\ܝ�XX��\�T�]K\�QY��X�H���H	ܙXX�	�[\ܝ�[�[ۋ[�[X]T�\�[��HH���H	�[�[ۋܙXX�	�[\ܝ��ܛ�ۋ��X���\��K��\������$z{-���jםt-contain"
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Crown, 
+  CheckCircle, 
+  XCircle, 
+  Trash2, 
+  Phone, 
+  Eye, 
+  Pencil,
+  Sparkles, 
+  Clock, 
+  DollarSign, 
+  Calendar, 
+  ArrowLeft, 
+  ExternalLink, 
+  FileText, 
+  RefreshCw, 
+  AlertCircle,
+  Check,
+  User,
+  Users,
+  Heart,
+  MapPin,
+  Search,
+  Ban,
+  ShieldCheck,
+  ShieldAlert,
+  Image as ImageIcon,
+  PlayCircle,
+  Ticket,
+  Database,
+  Server,
+  Plus,
+  FilePlus,
+  Video,
+  Download,
+  Activity,
+  Layers,
+  Table,
+  HardDrive,
+  Share2,
+  Code,
+  MessageSquare,
+  Send,
+  Mail,
+  MessageCircle,
+  Key,
+  BarChart3,
+  TrendingUp,
+  MousePointerClick,
+  Bell,
+  Smartphone,
+  Globe,
+  Maximize2, Minimize2, Languages, Loader2, LayoutDashboard } from 'lucide-react';
+import { QrCode, X } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { AdSubmission, AdChangeRequest, DanceEvent, UserProfile, getStyleLabel, ALL_DANCE_STYLES, DanceCategory, DanceStyle, AccountTier } from '../../types';
+import { EventCard } from '../events/EventCard';
+import { ProfileView } from '../profile/ProfileView';
+import { 
+  subscribeToAdSubmissions, 
+  subscribeToAdChangeRequests,
+  saveAdSubmissionToFirestore, 
+  deleteAdSubmissionFromFirestore, 
+  saveEventToFirestore, 
+  saveNotificationToFirestore,
+  deleteAllNotificationsFromFirestore,
+  subscribeToAllUsers,
+  deleteUserFromFirestore,
+  toggleUserSuspensionInFirestore,
+  updateUserTierInFirestore,
+  subscribeToSecurityViolations,
+  resolvedFirebaseConfig,
+  databaseId,
+  subscribeToAnalyticsCounters,
+  subscribeToDailyAnalytics, reorderAdsStartingFrom20,
+  db
+} from '../../lib/firebase';
+import { reviewAdChangeRequest } from '../../lib/adChangeRequests';
+
+import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
+import { sendBroadcastPushNotification, getPushSubscribersCount, playNotificationChime } from '../../lib/pushNotifications';
+import { isEventExpired } from '../../utils/dateUtils';
+
+export const AdminPanel: React.FC = () => {
+  const { 
+    lang, 
+    setActiveTab, 
+    user, 
+    addNewEvent, 
+    events, 
+    expiredEvents,
+    deleteEvent, 
+    adminSelectedUserId,
+    setAdminSelectedUserId,
+    notifications, 
+    supportMessages, 
+    replyToSupportMessage, 
+    cleanUpDuplicateAds, 
+    appAssets, 
+    updateBrandingAssets, 
+    pricingConfig, 
+    updatePricingConfig,
+    bookings,
+    approveBooking,
+    rejectBooking,
+    deleteBooking,
+    triggerConfirm
+  } = useApp();
+  const [submissions, setSubmissions] = useState<AdSubmission[]>([]);
+  const [adChangeRequests, setAdChangeRequests] = useState<AdChangeRequest[]>([]);
+  const [submissionView, setSubmissionView] = useState<'new_ads' | 'changes'>('new_ads');
+  const [loading, setLoading] = useState(true);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [cleaningUp, setCleaningUp] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'archived'>('pending');
+  const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'replied'>('pending');
+  const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [bookingsFilter, setBookingsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [bookingsSearch, setBookingsSearch] = useState('');
+  const [rejectionReasonMap, setRejectionReasonMap] = useState<Record<string, string>>({});
+  const [selectedBookingReceipt, setSelectedBookingReceipt] = useState<string | null>(null);
+  const [adminSection, setAdminSection] = useState<'submissions' | 'database' | 'support' | 'users' | 'security' | 'branding' | 'pricing' | 'analytics' | 'create_ad_admin' | 'bookings' | 'send_notifications' | null>(null);
+  const [dbSubTab, setDbSubTab] = useState<'events' | 'submissions' | 'notifications' | 'schema'>('events');
+  const [selectedJsonDoc, setSelectedJsonDoc] = useState<{ id: string; title: string; data: any } | null>(null);
+  const [qrEventDoc, setQrEventDoc] = useState<{ id: string; title: string } | null>(null);
+  const [viewingAttendeesEvent, setViewingAttendeesEvent] = useState<DanceEvent | null>(null);
+  
+  const [submissionPositions, setSubmissionPositions] = useState<Record<string, number | ''>>({});
+  
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<UserProfile | null>(null);
+  const [usersSubTab, setUsersSubTab] = useState<'search' | 'all'>('all');
+  const [userSearchQuery, setUserSearchQuery] = useState<string>('');
+  const [usersError, setUsersError] = useState<string | null>(null);
+
+  // Send Notifications States
+  const [notifTitleAr, setNotifTitleAr] = useState('');
+  const [notifTitleEn, setNotifTitleEn] = useState('');
+  const [notifMessageAr, setNotifMessageAr] = useState('');
+  const [notifMessageEn, setNotifMessageEn] = useState('');
+  const [notifType, setNotifType] = useState<'system' | 'new_party' | 'course_alert' | 'trip' | 'expiry_warning'>('system');
+  const [notifSending, setNotifSending] = useState(false);
+  const [sendMobilePush, setSendMobilePush] = useState(true);
+  const [pushSubscribersCount, setPushSubscribersCount] = useState<number>(0);
+
+  useEffect(() => {
+    getPushSubscribersCount().then(count => setPushSubscribersCount(count));
+  }, []);
+
+  useEffect(() => subscribeToAdChangeRequests(setAdChangeRequests), []);
+
+  const handleReviewAdChange = async (request: AdChangeRequest, decision: 'approve' | 'reject') => {
+    setActionLoading(`change-${request.id}`);
+    try {
+      await reviewAdChangeRequest(request.id, decision);
+      alert(lang === 'ar'
+        ? (decision === 'approve' ? 'تم اعتماد التغيير بنفس رقم الإعلان والفعالية الحاليين.' : 'تم رفض طلب التغيير.')
+        : (decision === 'approve' ? 'Change approved without changing the ad or event numbers.' : 'Change request rejected.'));
+    } catch (error) {
+      console.error('Failed to review ad change request:', error);
+      alert(lang === 'ar' ? 'تعذر تنفيذ القرار. حاول مرة أخرى.' : 'Unable to complete this decision. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+
+  // Security Section States
+  const [securityViolations, setSecurityViolations] = useState<any[]>([]);
+  const [adminAlertPhone, setAdminAlertPhone] = useState<string>(() => {
+    return localStorage.getItem('dwm_admin_alert_phone') || '201201529891';
+  });
+
+  const hasAutoCleanedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (adminSelectedUserId && allUsers.length > 0) {
+      const u = allUsers.find(u => u.id === adminSelectedUserId);
+      if (u) {
+        setSelectedUserProfile(u);
+        setAdminSelectedUserId(null);
+      }
+    }
+  }, [adminSelectedUserId, allUsers, setAdminSelectedUserId]);
+
+  useEffect(() => {
+    if (submissions.length === 0 || hasAutoCleanedRef.current) return;
+    
+    const autoCleanupOldArchives = async () => {
+      hasAutoCleanedRef.current = true;
+      const now = Date.now();
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      
+      const oldArchived = submissions.filter(s => {
+        let isArchived = s.status === 'archived';
+        let archivedTime = s.archivedAt ? new Date(s.archivedAt).getTime() : 0;
+
+        if (!isArchived && s.expiresAt) {
+           const exp = new Date(s.expiresAt).getTime();
+           if (now >= exp) {
+              isArchived = true;
+              archivedTime = exp;
+           }
+        }
+
+        if (!isArchived || !archivedTime) return false;
+        return (now - archivedTime) > thirtyDaysMs;
+      });
+
+      if (oldArchived.length > 0) {
+        console.log(`Auto-cleaning ${oldArchived.length} old archived submissions...`);
+        for (const sub of oldArchived) {
+          try {
+            // Delete media from Cloudinary
+            if (sub.mediaUrl) await deleteFromCloudinary(sub.mediaUrl, sub.mediaType || 'image').catch(console.error);
+            if (sub.receiptUrl) await deleteFromCloudinary(sub.receiptUrl, 'image').catch(console.error);
+            
+            // Delete associated Event if exists
+            if (sub.eventData?.id) {
+               try {
+                 const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
+                 const eventId = sub.eventData.id;
+                 await deleteEventFromFirestore(eventId);
+                 
+                 // Find and delete associated bookings
+                 if (bookings) {
+                   const associatedBookings = bookings.filter(b => b.eventId === eventId);
+                   for (const bkg of associatedBookings) {
+                     if (bkg.receiptUrl) {
+                       await deleteFromCloudinary(bkg.receiptUrl, 'image').catch(console.error);
+                     }
+                     await deleteBookingFromFirestore(bkg.id);
+                   }
+                 }
+               } catch (e) {
+                 console.error('Failed to delete associated event or bookings', e);
+               }
+            }
+            
+            // Delete Ad Submission from Firestore
+            await deleteAdSubmissionFromFirestore(sub.id);
+          } catch (e) {
+            console.error('Error auto-cleaning old archived ad:', e);
+          }
+        }
+      }
+    };
+
+    autoCleanupOldArchives();
+  }, [submissions, bookings]);
+
+  const handleAlertPhoneChange = (val: string) => {
+    setAdminAlertPhone(val);
+    localStorage.setItem('dwm_admin_alert_phone', val);
+  };
+
+  // Branding & Assets States
+  const [formAppNameAr, setFormAppNameAr] = useState('');
+  const [formAppNameEn, setFormAppNameEn] = useState('');
+  const [formAppIconUrl, setFormAppIconUrl] = useState('');
+  const [formAppLogoUrl, setFormAppLogoUrl] = useState('');
+  const [formHeroBannerUrl, setFormHeroBannerUrl] = useState('');
+  const [formHeroBannerUrlEn, setFormHeroBannerUrlEn] = useState('');
+  const [formHeroBannerMobileUrl, setFormHeroBannerMobileUrl] = useState('');
+  const [formHeroBannerMobileUrlEn, setFormHeroBannerMobileUrlEn] = useState('');
+  const [formWhatsappSupport, setFormWhatsappSupport] = useState('');
+  const [formInstagramUrl, setFormInstagramUrl] = useState('');
+  const [formPromoTitleAr, setFormPromoTitleAr] = useState('');
+  const [formPromoTitleEn, setFormPromoTitleEn] = useState('');
+  const [formPromoSubtitleAr, setFormPromoSubtitleAr] = useState('');
+  const [formPromoSubtitleEn, setFormPromoSubtitleEn] = useState('');
+  const [formPromoBadgeAr, setFormPromoBadgeAr] = useState('');
+  const [formPromoBadgeEn, setFormPromoBadgeEn] = useState('');
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [isUploadingIcon, setIsUploadingIcon] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingHeroBanner, setIsUploadingHeroBanner] = useState(false);
+  const [isUploadingHeroBannerEn, setIsUploadingHeroBannerEn] = useState(false);
+  const [isUploadingHeroBannerMobile, setIsUploadingHeroBannerMobile] = useState(false);
+  const [isUploadingHeroBannerMobileEn, setIsUploadingHeroBannerMobileEn] = useState(false);
+  const [localPricingConfig, setLocalPricingConfig] = useState(pricingConfig);
+  const [savingPricing, setSavingPricing] = useState(false);
+  useEffect(() => { setLocalPricingConfig(pricingConfig); }, [pricingConfig]);
+
+  // Booked Ads Review & Cancellations State
+  const [viewingBookedAds, setViewingBookedAds] = useState(false);
+  const [selectedBookedAdId, setSelectedBookedAdId] = useState<string | null>(null);
+  const [viewingCancellationRequests, setViewingCancellationRequests] = useState(false);
+
+  // Analytics States
+  const [analyticsCounters, setAnalyticsCounters] = useState<any>({});
+  const [dailyAnalytics, setDailyAnalytics] = useState<any[]>([]);
+
+  // Admin Direct Create Ad States
+  const [adminTitleAr, setAdminTitleAr] = useState('');
+  const [adminTitleEn, setAdminTitleEn] = useState('');
+  const [adminDescAr, setAdminDescAr] = useState('');
+  const [adminDescEn, setAdminDescEn] = useState('');
+  const [isTranslating, setIsTranslating] = useState<string | null>(null);
+
+  const handleTranslate = async (text: string, targetLang: 'ar' | 'en', setter: (val: string) => void, fieldName: string) => {
+    if (!text.trim()) return;
+    setIsTranslating(fieldName);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLang })
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        setter(data.translatedText);
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+    } finally {
+      setIsTranslating(null);
+    }
+  };
+
+  const [adminCategory, setAdminCategory] = useState<DanceCategory>('party');
+  const [adminMediaType, setAdminMediaType] = useState<'video' | 'image'>('image');
+  const [adminMediaUrl, setAdminMediaUrl] = useState('');
+  const [adminPriceAr, setAdminPriceAr] = useState('250 ج.م');
+  const [adminPriceEn, setAdminPriceEn] = useState('250 EGP');
+  const [adminEventDate, setAdminEventDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+  const [adminPhone, setAdminPhone] = useState('+201011223344');
+  const [adminWhatsapp, setAdminWhatsapp] = useState('201011223344');
+  const [adminOrganizerName, setAdminOrganizerName] = useState('الإدارة / Admin');
+  const [adminLocationNameAr, setAdminLocationNameAr] = useState('أستوديو الرقص - الزمالك');
+  const [adminLocationNameEn, setAdminLocationNameEn] = useState('Dance Studio - Zamalek');
+  const [adminAddressAr, setAdminAddressAr] = useState('القاهرة، مصر');
+  const [adminAddressEn, setAdminAddressEn] = useState('Cairo, Egypt');
+  const [adminGovernorateAr, setAdminGovernorateAr] = useState('القاهرة');
+  const [adminGovernorateEn, setAdminGovernorateEn] = useState('Cairo');
+  const [adminAreaAr, setAdminAreaAr] = useState('الزمالك');
+  const [adminAreaEn, setAdminAreaEn] = useState('Zamalek');
+  const [adminGoogleMapsUrl, setAdminGoogleMapsUrl] = useState('https://maps.google.com/?q=30.0444,31.2357');
+  const [adminSelectedStyles, setAdminSelectedStyles] = useState<DanceStyle[]>(['Salsa', 'Bachata']);
+  const [adminPosition, setAdminPosition] = useState<string>('');
+  const [adminPositionWarningShown, setAdminPositionWarningShown] = useState<boolean>(false);
+  const [submissionPositionWarnings, setSubmissionPositionWarnings] = useState<Record<string, boolean>>({});
+  const [hasAutoSetPosition, setHasAutoSetPosition] = useState(false);
+
+  useEffect(() => {
+    if (!hasAutoSetPosition && events.length > 0) {
+      const maxPos = events.reduce((max, ev) => {
+        const p = ev.position;
+        if (typeof p === 'number' && p !== 999999) {
+          return p > max ? p : max;
+        }
+        return max;
+      }, 0);
+      setAdminPosition(String(Math.max(20, maxPos + 1)));
+      setHasAutoSetPosition(true);
+    }
+  }, [events, hasAutoSetPosition]);
+  const [adminIsWeeklyPromo, setAdminIsWeeklyPromo] = useState(false);
+  const [adminIsFeatured, setAdminIsFeatured] = useState(true);
+  const [adminShowBookingButton, setAdminShowBookingButton] = useState(true);
+  const [adminShowViewsCount, setAdminShowViewsCount] = useState(true);
+  const [adminBookingSubtextAr, setAdminBookingSubtextAr] = useState('');
+  const [adminBookingSubtextEn, setAdminBookingSubtextEn] = useState('');
+  const [adminEventsFilter, setAdminEventsFilter] = useState<'all' | 'empty' | 'paused' | 'active' | 'available'>('all');
+
+  // Auto-save draft functionality
+  const DRAFT_KEY = 'dwm_admin_ad_draft';
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (draft.adminTitleAr) setAdminTitleAr(draft.adminTitleAr);
+        if (draft.adminTitleEn) setAdminTitleEn(draft.adminTitleEn);
+        if (draft.adminDescAr) setAdminDescAr(draft.adminDescAr);
+        if (draft.adminDescEn) setAdminDescEn(draft.adminDescEn);
+        if (draft.adminPriceAr) setAdminPriceAr(draft.adminPriceAr);
+        if (draft.adminPriceEn) setAdminPriceEn(draft.adminPriceEn);
+        if (draft.adminCategory) setAdminCategory(draft.adminCategory);
+        if (draft.adminSelectedStyles) setAdminSelectedStyles(draft.adminSelectedStyles);
+        if (draft.adminMediaType) setAdminMediaType(draft.adminMediaType);
+        if (draft.adminMediaUrl) setAdminMediaUrl(draft.adminMediaUrl);
+        if (draft.adminLocationNameAr) setAdminLocationNameAr(draft.adminLocationNameAr);
+        if (draft.adminLocationNameEn) setAdminLocationNameEn(draft.adminLocationNameEn);
+        if (draft.adminAddressAr) setAdminAddressAr(draft.adminAddressAr);
+        if (draft.adminAddressEn) setAdminAddressEn(draft.adminAddressEn);
+        if (draft.adminGovernorateAr) setAdminGovernorateAr(draft.adminGovernorateAr);
+        if (draft.adminGovernorateEn) setAdminGovernorateEn(draft.adminGovernorateEn);
+        if (draft.adminAreaAr) setAdminAreaAr(draft.adminAreaAr);
+        if (draft.adminAreaEn) setAdminAreaEn(draft.adminAreaEn);
+        if (draft.adminPhone) setAdminPhone(draft.adminPhone);
+        if (draft.adminWhatsapp) setAdminWhatsapp(draft.adminWhatsapp);
+        if (draft.adminOrganizerName) setAdminOrganizerName(draft.adminOrganizerName);
+        if (draft.adminEventDate) setAdminEventDate(draft.adminEventDate);
+        if (draft.adminPosition) setAdminPosition(draft.adminPosition);
+        if (typeof draft.adminIsFeatured !== 'undefined') setAdminIsFeatured(draft.adminIsFeatured);
+        if (typeof draft.adminIsWeeklyPromo !== 'undefined') setAdminIsWeeklyPromo(draft.adminIsWeeklyPromo);
+        if (typeof draft.adminShowBookingButton !== 'undefined') setAdminShowBookingButton(draft.adminShowBookingButton);
+        if (typeof draft.adminShowViewsCount !== 'undefined') setAdminShowViewsCount(draft.adminShowViewsCount);
+        if (draft.adminBookingSubtextAr) setAdminBookingSubtextAr(draft.adminBookingSubtextAr);
+        if (draft.adminBookingSubtextEn) setAdminBookingSubtextEn(draft.adminBookingSubtextEn);
+      }
+    } catch (e) { console.error('Error loading draft', e); }
+  }, []);
+
+  useEffect(() => {
+    const draft = {
+      adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
+      adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
+      adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGovernorateAr, adminGovernorateEn, adminAreaAr, adminAreaEn, adminGoogleMapsUrl,
+      adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminShowViewsCount, adminBookingSubtextAr, adminBookingSubtextEn
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [
+    adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
+    adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
+    adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGovernorateAr, adminGovernorateEn, adminAreaAr, adminAreaEn, adminGoogleMapsUrl,
+    adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminShowViewsCount, adminBookingSubtextAr, adminBookingSubtextEn
+  ]);
+
+  
+  // Quick Edit States
+  const [adminEditingField, setAdminEditingField] = useState<string | null>(null);
+  const [adminEditValue, setAdminEditValue] = useState('');
+  const [isFullscreenEvents, setIsFullscreenEvents] = useState(false);
+
+  // Media Upload States for Admin Create Ad
+  const [adminUploadedFileName, setAdminUploadedFileName] = useState<string | null>(null);
+  const [adminIsUploadingMedia, setAdminIsUploadingMedia] = useState(false);
+  const [adminUploadProgress, setAdminUploadProgress] = useState<number>(0);
+  const [adminUploadError, setAdminUploadError] = useState<string | null>(null);
+  const [adminPendingFile, setAdminPendingFile] = useState<File | null>(null);
+  const [adminSaveStatus, setAdminSaveStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [adminCreateTab, setAdminCreateTab] = useState<'form' | 'preview'>('form');
+  const [previewAlert, setPreviewAlert] = useState<string | null>(null);
+  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
+
+  const cloudinaryCloudName = (import.meta as any).env.VITE_CLOUDINARY_CLOUD_NAME;
+  const cloudinaryUploadPreset = (import.meta as any).env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+  const adminCameraInputRef = React.useRef<HTMLInputElement>(null);
+  const adminFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (appAssets) {
+      setFormAppNameAr(appAssets.appNameAr || '');
+      setFormAppNameEn(appAssets.appNameEn || '');
+      setFormAppIconUrl(appAssets.app_icon_url || '');
+      setFormAppLogoUrl(appAssets.app_logo_url || '');
+      setFormHeroBannerUrl(appAssets.app_hero_banner_url || '');
+      setFormHeroBannerUrlEn(appAssets.app_hero_banner_url_en || '');
+      setFormHeroBannerMobileUrl(appAssets.app_hero_banner_mobile_url || '');
+      setFormHeroBannerMobileUrlEn(appAssets.app_hero_banner_mobile_url_en || '');
+      setFormWhatsappSupport(appAssets.whatsappSupport || '');
+      setFormInstagramUrl(appAssets.instagramUrl || '');
+      setFormPromoTitleAr(appAssets.promoTitleAr || '');
+      setFormPromoTitleEn(appAssets.promoTitleEn || '');
+      setFormPromoSubtitleAr(appAssets.promoSubtitleAr || '');
+      setFormPromoSubtitleEn(appAssets.promoSubtitleEn || '');
+      setFormPromoBadgeAr(appAssets.promoBadgeAr || '');
+      setFormPromoBadgeEn(appAssets.promoBadgeEn || '');
+    }
+  }, [appAssets]);
+
+  useEffect(() => {
+    if (adminSection === 'analytics') {
+      const unsubCounters = subscribeToAnalyticsCounters((data) => {
+        setAnalyticsCounters(data || {});
+      });
+      const unsubDaily = subscribeToDailyAnalytics((list) => {
+        setDailyAnalytics(list || []);
+      });
+      return () => {
+        unsubCounters();
+        unsubDaily();
+      };
+    }
+  }, [adminSection]);
+
+  const compressAdminImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      if (file.size < 300 * 1024) {
+        resolve(file);
+        return;
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_DIM = 1080;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(compressedFile);
+              } else {
+                resolve(file);
+              }
+            }, 'image/jpeg', 0.82);
+          } else {
+            resolve(file);
+          }
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
+  const handleAdminFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Security check: Validate file type and extension to prevent malicious uploads
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      const validImageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+      const validVideoExts = ['mp4', 'webm', 'mov'];
+      
+      const isImage = validImageTypes.includes(file.type) && validImageExts.includes(ext || '');
+      const isVideo = validVideoTypes.includes(file.type) && validVideoExts.includes(ext || '');
+
+      if (!isImage && !isVideo) {
+        alert(lang === 'ar' ? '⚠️ تحذير أمني: نوع الملف غير مدعوم أو قد يكون خبيثاً. يرجى رفع صورة أو فيديو بصيغة صحيحة.' : '⚠️ Security Warning: Unsupported or potentially malicious file type. Please upload a valid image or video.');
+        e.target.value = '';
+        return;
+      }
+
+      // Check file size (e.g. limit to 50MB) to prevent buffer overflows/denial of service
+      if (file.size > 50 * 1024 * 1024) {
+        alert(lang === 'ar' ? '⚠️ حجم الملف كبير جداً (أكثر من 50 ميجابايت).' : '⚠️ File is too large (over 50MB).');
+        e.target.value = '';
+        return;
+      }
+
+      const processUpload = async (fileToUpload: File, type: 'video' | 'image') => {
+        setAdminUploadedFileName(fileToUpload.name);
+        setAdminMediaType(type);
+        setAdminMediaUrl(URL.createObjectURL(fileToUpload));
+        try {
+          const finalUrl = await performAdminMediaUpload(fileToUpload);
+          setAdminMediaUrl(finalUrl);
+          setAdminPendingFile(null);
+        } catch (err: any) {
+          alert(lang === 'ar' ? `❌ فشل رفع الوسائط: ${err.message}` : `❌ Media upload failed: ${err.message}`);
+          setAdminMediaUrl('');
+          setAdminPendingFile(null);
+        }
+      };
+
+      if (file.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(video.src);
+          if (video.duration > 120) {
+            alert(lang === 'ar' 
+              ? '❌ عذراً، لا يمكن رفع فيديو أطول من دقيقتين. يرجى اختيار فيديو أقصر.' 
+              : '❌ Sorry, videos longer than 2 minutes are not allowed. Please choose a shorter video.');
+            e.target.value = ''; // clear input
+            return;
+          }
+          // Video is valid duration
+          processUpload(file, 'video');
+        };
+        video.onerror = () => {
+          window.URL.revokeObjectURL(video.src);
+          alert(lang === 'ar' ? '❌ فشل تحميل بيانات الفيديو. يرجى تجربة ملف آخر.' : '❌ Failed to load video metadata. Please try another file.');
+        };
+        video.src = URL.createObjectURL(file);
+      } else {
+        // Handle images normally
+        processUpload(file, 'image');
+      }
+    }
+  };
+
+  const performAdminMediaUpload = async (file: File): Promise<string> => {
+    setAdminIsUploadingMedia(true);
+    setAdminUploadProgress(0);
+    setAdminUploadError(null);
+    
+    try {
+      if (!cloudinaryCloudName || !cloudinaryUploadPreset) {
+        throw new Error('Cloudinary configuration missing (VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET). Please use the manual URL input below.');
+      }
+      
+      let fileToUpload = file;
+      if (file.type.startsWith('image/')) {
+        try {
+          fileToUpload = await compressAdminImage(file);
+        } catch (compressErr) {
+          console.error('Image compression failed', compressErr);
+        }
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+      formData.append('upload_preset', cloudinaryUploadPreset);
+
+      const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+      
+      return await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/${resourceType}/upload`, true);
+        
+        xhr.upload.onprogress = (progressEvent) => {
+          if (progressEvent.lengthComputable) {
+            const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+            setAdminUploadProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.secure_url) {
+                resolve(response.secure_url);
+              } else {
+                reject(new Error('No secure URL returned'));
+              }
+            } catch (parseErr) {
+              reject(new Error('Failed to parse response'));
+            }
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error(lang === 'ar' ? 'فشل الاتصال بالخادم السحابي' : 'Network connection error'));
+        };
+
+        xhr.send(formData);
+      });
+
+    } catch (err: any) {
+      console.error('Cloudinary upload error:', err);
+      setAdminUploadError(err.message || 'Upload failed');
+      throw err;
+    } finally {
+      setAdminIsUploadingMedia(false);
+      setAdminUploadProgress(0);
+    }
+  };
+
+  const parseAdminCoordinates = (url: string): { lat: number; lng: number } => {
+    try {
+      if (!url) return { lat: 30.0444, lng: 31.2357 }; // Cairo defaults
+      const coordsRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const match = url.match(coordsRegex);
+      if (match) {
+        return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+      }
+      
+      const queryRegex = /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const queryMatch = url.match(queryRegex);
+      if (queryMatch) {
+        return { lat: parseFloat(queryMatch[1]), lng: parseFloat(queryMatch[2]) };
+      }
+      
+      const daddrRegex = /[?&]daddr=(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const daddrMatch = url.match(daddrRegex);
+      if (daddrMatch) {
+        return { lat: parseFloat(daddrMatch[1]), lng: parseFloat(daddrMatch[2]) };
+      }
+    } catch (e) {
+      console.error('Error parsing coordinates:', e);
+    }
+    return { lat: 30.0444, lng: 31.2357 }; // Cairo defaults
+  };
+
+  const handleAdminPublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminPosition && !adminPositionWarningShown) {
+      alert(lang === 'ar' ? '⚠️ الرجاء إدخال الرقم التسلسلي (الترتيب). إذا كنت متأكداً من النشر بدون ترتيب، اضغط على نشر مرة أخرى.' : '⚠️ Please enter a Position number. If you are sure you want to publish without a position, click publish again.');
+      setAdminPositionWarningShown(true);
+      return;
+    }
+    if (!adminTitleAr.trim() || !adminTitleEn.trim()) {
+      alert(lang === 'ar' ? 'الرجاء إدخال اسم الفعالية بالعربية والإنجليزية' : 'Please input both Arabic and English Titles.');
+      return;
+    }
+    if (!adminDescAr.trim() || !adminDescEn.trim()) {
+      alert(lang === 'ar' ? 'الرجاء إدخال وصف الفعالية بالعربية والإنجليزية' : 'Please input both Arabic and English Descriptions.');
+      return;
+    }
+    if (!adminEventDate) {
+      alert(lang === 'ar' ? 'الرجاء تحديد تاريخ الفعالية' : 'Please specify the event date.');
+      return;
+    }
+
+    setAdminSaveStatus('loading');
+    try {
+      let finalMediaUrl = adminMediaUrl.trim();
+      
+      if (!finalMediaUrl) {
+        finalMediaUrl = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
+      }
+
+      // Generate a proper thumbnailUrl for videos from Cloudinary
+      let finalThumbnailUrl = finalMediaUrl;
+      if (adminMediaType === 'video' && finalMediaUrl.includes('cloudinary.com')) {
+        // Cloudinary trick: change .mp4/etc to .jpg to get a thumbnail
+        finalThumbnailUrl = finalMediaUrl.replace(/\.[^.]+$/, '.jpg');
+      } else if (adminMediaType === 'video') {
+        // Fallback for non-cloudinary videos (though we mostly use cloudinary)
+        finalThumbnailUrl = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
+      }
+
+      
+      const coords = parseAdminCoordinates(adminGoogleMapsUrl || '');
+      
+      let maxRef = 1000;
+      const assignedRefs = (events || []).map(e => e?.eventRef).filter((r): r is number => typeof r === 'number');
+      if (assignedRefs.length > 0) {
+        maxRef = Math.max(...assignedRefs);
+      }
+      const newEventRef = maxRef + 1;
+      
+      const newEventId = `ev-adm-${Date.now()}`;
+
+      // Safe date parsing
+      let safeDateStr = new Date().toISOString();
+      try {
+        const d = new Date(adminEventDate);
+        if (!isNaN(d.getTime())) {
+          safeDateStr = d.toISOString();
+        }
+      } catch (e) { console.error(e); }
+
+      const createdEvent: DanceEvent = {
+        id: newEventId,
+        titleAr: (adminTitleAr || '').trim(),
+        titleEn: (adminTitleEn || '').trim(),
+        descriptionAr: (adminDescAr || '').trim(),
+        descriptionEn: (adminDescEn || '').trim(),
+        category: adminCategory || 'party',
+        styles: adminSelectedStyles || [],
+        mediaType: adminMediaType || 'image',
+        mediaUrl: finalMediaUrl,
+        thumbnailUrl: finalThumbnailUrl,
+        uploadDate: new Date().toISOString(),
+        eventRef: newEventRef,
+        eventDate: safeDateStr,
+        priceAr: (adminPriceAr || '').trim() || '250 ج.م',
+        priceEn: (adminPriceEn || '').trim() || '250 EGP',
+        location: {
+          nameAr: (adminLocationNameAr || '').trim() || 'أستوديو الرقص - الزمالك',
+          nameEn: (adminLocationNameEn || '').trim() || 'Dance Studio - Zamalek',
+          addressAr: (adminAddressAr || '').trim() || 'القاهرة، مصر',
+          addressEn: (adminAddressEn || '').trim() || 'Cairo, Egypt',
+          googleMapsUrl: (adminGoogleMapsUrl || '').trim(),
+          lat: coords.lat,
+          lng: coords.lng,
+          governorateAr: (adminGovernorateAr || '').trim() || 'القاهرة',
+          governorateEn: (adminGovernorateEn || '').trim() || 'Cairo',
+          areaAr: (adminAreaAr || '').trim() || 'الزمالك',
+          areaEn: (adminAreaEn || '').trim() || 'Zamalek'
+        },
+        contact: {
+          phone: (adminPhone || '').trim() || '+201011223344',
+          whatsapp: (adminWhatsapp || '').trim() || '201011223344',
+          organizerName: (adminOrganizerName || '').trim() || 'الإدارة / Admin'
+        },
+        likesCount: 15,
+        isFeatured: !!adminIsFeatured,
+        isWeeklyPromo: !!adminIsWeeklyPromo,
+        position: adminPosition ? (Number(adminPosition) || 999999) : 999999,
+        showBookingButton: adminShowBookingButton,
+        showViewsCount: adminShowViewsCount,
+        bookingSubtextAr: adminBookingSubtextAr.trim(),
+        bookingSubtextEn: adminBookingSubtextEn.trim()
+      };
+      
+      // Save to Firestore and verify success
+      const saveSuccess = await saveEventToFirestore(createdEvent);
+      if (!saveSuccess) {
+        throw new Error('Failed to save to Firestore');
+      }
+
+
+      // Save notification to Firestore so all clients get pushed
+      const newNotifId = `notif-adm-${Date.now()}`;
+      const newNotif = {
+        id: newNotifId,
+        titleAr: `🔥 إعلان جديد: ${createdEvent.titleAr}`,
+        titleEn: `🔥 New Announcement: ${createdEvent.titleEn}`,
+        messageAr: `تم إضافة حدث جديد في التصنيف "${createdEvent.category === 'party' ? 'سهرة' : createdEvent.category === 'course' ? 'دورة' : 'رحلة'}". تصفحه الآن!`,
+        messageEn: `A new ${createdEvent.category} has been published. Explore details now!`,
+        date: new Date().toISOString(),
+        read: false,
+        type: 'new_party' as const,
+        relatedEventId: createdEvent.id
+      };
+      await saveNotificationToFirestore(newNotif);
+
+      // Also create an AdSubmission so the admin can see it in their Profile -> My Ads
+      if (user?.id) {
+        try {
+          const submissionId = `sub-adm-${Date.now()}`;
+          await saveAdSubmissionToFirestore({
+            id: submissionId,
+            eventRef: newEventRef,
+            invoiceNumber: `DWM-ADM-${Math.floor(100000 + Math.random() * 900000)}`,
+            advertiserId: user.id,
+            advertiserName: user.name || 'Admin',
+            phone: adminPhone.trim() || '+201011223344',
+            titleAr: adminTitleAr.trim(),
+            titleEn: adminTitleEn.trim(),
+            category: adminCategory,
+            styles: adminSelectedStyles,
+            mediaType: adminMediaType,
+            mediaUrl: finalMediaUrl,
+            pricing: { days: 30, subtotal: 0, tax: 0, total: 0 },
+            status: 'approved',
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+            userRead: false,
+            reviewedAt: new Date().toISOString(),
+            eventData: createdEvent
+          } as any);
+        } catch (e) {
+          console.error('Failed to create admin ad submission link:', e);
+        }
+      }
+
+      // Send personal notification to all Admins with the event code and initial attendee count (0)
+      try {
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const adminsCol = collection(db, 'users');
+        const adminsQuery = query(adminsCol, where('isAdmin', '==', true));
+        const adminsSnapshot = await getDocs(adminsQuery);
+        const adminIds: string[] = [];
+        adminsSnapshot.forEach(docSnap => {
+          adminIds.push(docSnap.id);
+        });
+
+        // Ensure current admin's ID is included if not fetched
+        if (user?.id && !adminIds.includes(user.id)) {
+          adminIds.push(user.id);
+        }
+
+        for (const adminId of adminIds) {
+          await saveNotificationToFirestore({
+            id: `notif_adm_pub_${Date.now()}_${adminId}`,
+            userId: adminId,
+            type: 'system',
+            titleAr: 'تم نشر إعلان إداري بنجاح! 🎉',
+            titleEn: 'Your Admin Ad is Published! 🎉',
+            messageAr: `تم نشر إعلانك الإداري "${createdEvent.titleAr}" بنجاح. كود الحدث (الرقم المرجعي): ${newEventRef}. عدد الحضور الفعلي حالياً: 0. استخدم هذا الكود لمتابعة الدخول وإدارة الحضور.`,
+            messageEn: `Your admin ad "${createdEvent.titleEn}" has been published. Event Code: ${newEventRef}. Actual attendees count: 0. Use this code to manage check-ins.`,
+            date: new Date().toISOString(),
+            read: false
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send admin publication notifications:', e);
+      }
+
+      setAdminSaveStatus('success');
+      localStorage.removeItem(DRAFT_KEY);
+      alert(lang === 'ar' 
+        ? `🎉 تم النشر بنجاح! كود الحدث (الرقم المرجعي) الخاص بك هو: ${newEventRef}` 
+        : `🎉 Published successfully! Your Event Code is: ${newEventRef}`);
+      
+      // Reset Admin Form Fields
+      setAdminTitleAr('');
+      setAdminTitleEn('');
+      setAdminDescAr('');
+      setAdminDescEn('');
+      setAdminMediaUrl('');
+      setAdminUploadedFileName(null);
+      setAdminPendingFile(null);
+      setHasAutoSetPosition(false);
+      
+      // Navigate to DB inspect
+      setAdminSection('database');
+      setDbSubTab('events');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (err) {
+      console.error('Error publishing admin event:', err);
+      setAdminSaveStatus('error');
+      alert(lang === 'ar' ? '❌ فشل حفظ الإعلان في قاعدة البيانات. يرجى مراجعة الصلاحيات واتصال الإنترنت.' : '❌ Failed to store ad in database. Please check Firestore network connections.');
+    }
+  };
+
+  const handleUploadBrandingImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'icon' | 'logo' | 'banner' | 'banner_en' | 'banner_mobile' | 'banner_mobile_en') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert(lang === 'ar' ? 'الرجاء اختيار صورة.' : 'Please select an image.');
+      return;
+    }
+
+    if (type === 'icon') {
+      setIsUploadingIcon(true);
+    } else if (type === 'banner') {
+      setIsUploadingHeroBanner(true);
+    } else if (type === 'banner_en') {
+      setIsUploadingHeroBannerEn(true);
+    } else if (type === 'banner_mobile') {
+      setIsUploadingHeroBannerMobile(true);
+    } else if (type === 'banner_mobile_en') {
+      setIsUploadingHeroBannerMobileEn(true);
+    } else {
+      setIsUploadingLogo(true);
+    }
+
+    try {
+      const compressedFile = await compressImage(file);
+      const url = await uploadToCloudinary(compressedFile);
+
+      if (url) {
+        if (type === 'icon') {
+          // Delete old icon if it's on Cloudinary
+          if (formAppIconUrl && formAppIconUrl.includes('cloudinary.com') && formAppIconUrl !== appAssets?.app_icon_url) {
+             deleteFromCloudinary(formAppIconUrl, 'image').catch(console.error);
+          }
+          setFormAppIconUrl(url);
+        } else if (type === 'banner') {
+          if (formHeroBannerUrl && formHeroBannerUrl.includes('cloudinary.com') && formHeroBannerUrl !== appAssets?.app_hero_banner_url) {
+             deleteFromCloudinary(formHeroBannerUrl, 'image').catch(console.error);
+          }
+          setFormHeroBannerUrl(url);
+        } else if (type === 'banner_en') {
+          if (formHeroBannerUrlEn && formHeroBannerUrlEn.includes('cloudinary.com') && formHeroBannerUrlEn !== appAssets?.app_hero_banner_url_en) {
+             deleteFromCloudinary(formHeroBannerUrlEn, 'image').catch(console.error);
+          }
+          setFormHeroBannerUrlEn(url);
+        } else if (type === 'banner_mobile') {
+          if (formHeroBannerMobileUrl && formHeroBannerMobileUrl.includes('cloudinary.com') && formHeroBannerMobileUrl !== appAssets?.app_hero_banner_mobile_url) {
+            deleteFromCloudinary(formHeroBannerMobileUrl, 'image').catch(console.error);
+          }
+          setFormHeroBannerMobileUrl(url);
+        } else if (type === 'banner_mobile_en') {
+          if (formHeroBannerMobileUrlEn && formHeroBannerMobileUrlEn.includes('cloudinary.com') && formHeroBannerMobileUrlEn !== appAssets?.app_hero_banner_mobile_url_en) {
+            deleteFromCloudinary(formHeroBannerMobileUrlEn, 'image').catch(console.error);
+          }
+          setFormHeroBannerMobileUrlEn(url);
+        } else {
+          // Delete old logo if it's on Cloudinary
+          if (formAppLogoUrl && formAppLogoUrl.includes('cloudinary.com') && formAppLogoUrl !== appAssets?.app_logo_url) {
+             deleteFromCloudinary(formAppLogoUrl, 'image').catch(console.error);
+          }
+          setFormAppLogoUrl(url);
+        }
+      } else {
+        alert(lang === 'ar' ? 'فشل رفع الصورة.' : 'Failed to upload image.');
+      }
+    } catch (err) {
+      console.error('Error uploading branding image:', err);
+      alert(lang === 'ar' ? 'حدث خطأ أثناء رفع الصورة.' : 'An error occurred during upload.');
+    } finally {
+      setIsUploadingIcon(false);
+      setIsUploadingLogo(false);
+      setIsUploadingHeroBanner(false);
+      setIsUploadingHeroBannerEn(false);
+      setIsUploadingHeroBannerMobile(false);
+      setIsUploadingHeroBannerMobileEn(false);
+    }
+  };
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingBranding(true);
+    const updated = {
+      appNameAr: formAppNameAr.trim(),
+      appNameEn: formAppNameEn.trim(),
+      app_icon_url: formAppIconUrl.trim(),
+      app_logo_url: formAppLogoUrl.trim(),
+      app_hero_banner_url: formHeroBannerUrl.trim(),
+      app_hero_banner_url_en: formHeroBannerUrlEn.trim(),
+      app_hero_banner_mobile_url: formHeroBannerMobileUrl.trim(),
+      app_hero_banner_mobile_url_en: formHeroBannerMobileUrlEn.trim(),
+      whatsappSupport: formWhatsappSupport.trim(),
+      instagramUrl: formInstagramUrl.trim(),
+      promoTitleAr: formPromoTitleAr.trim(),
+      promoTitleEn: formPromoTitleEn.trim(),
+      promoSubtitleAr: formPromoSubtitleAr.trim(),
+      promoSubtitleEn: formPromoSubtitleEn.trim(),
+      promoBadgeAr: formPromoBadgeAr.trim(),
+      promoBadgeEn: formPromoBadgeEn.trim()
+    };
+    const ok = await updateBrandingAssets(updated);
+    setSavingBranding(false);
+    if (ok) {
+      alert(lang === 'ar' ? '🎉 تم تحديث شعارات وهوية التطبيق وتخزينها في كوليكشن app_assets بنجاح!' : '🎉 App branding assets and links have been updated in "app_assets" collection successfully!');
+    } else {
+      alert(lang === 'ar' ? '❌ فشل تحديث البيانات في قاعدة البيانات.' : '❌ Failed to save changes to Firestore.');
+    }
+  };
+
+  const filteredUsers = allUsers.filter(u => {
+    const query = userSearchQuery.trim().toLowerCase();
+    if (!query) return true;
+    const name = (u.name || '').toLowerCase();
+    const email = (u.email || '').toLowerCase();
+    return name.includes(query) || email.includes(query);
+  });
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAllUsers(
+      (users) => {
+        setAllUsers(users);
+        setUsersError(null);
+      },
+      (err) => {
+        setUsersError(err.message || String(err));
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (adminSection === 'security') {
+      const unsubscribe = subscribeToSecurityViolations((violations) => {
+        setSecurityViolations(violations);
+      });
+      return () => unsubscribe();
+    }
+  }, [adminSection]);
+
+  const handleCleanUpClutter = async () => {
+    setCleaningUp(true);
+    try {
+      const dbCount = await cleanUpDuplicateAds();
+      alert(lang === 'ar' ? `تم فحص وتنظيف ${dbCount} من الإعلانات المكررة وبدون صور بنجاح لتقليل الزحمة!` : `Successfully cleaned up ${dbCount} duplicate and imageless ads!`);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCleaningUp(false);
+    }
+  };
+
+  const handleReorderAds = async () => {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من إعادة ترتيب كل الإعلانات لتبدأ من 20 (مع الاحتفاظ بالبانر رقم 1)؟' : 'Are you sure you want to reorder all ads to start from 20 (keeping banner #1)?');
+    if (!confirmed) return;
+    try {
+      await reorderAdsStartingFrom20();
+      alert(lang === 'ar' ? 'تمت إعادة ترتيب الإعلانات بنجاح. قد تحتاج لتحديث الصفحة لرؤية التغييرات.' : 'Ads reordered successfully. You may need to refresh the page to see changes.');
+    } catch (error) {
+      console.error(error);
+      alert('Error reordering ads.');
+    }
+  };
+
+  const handleAssignAllAdsToAdmin = async () => {
+    if (!user) return;
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من تعيين جميع الإعلانات لك كمسؤول؟' : 'Are you sure you want to assign all ads to yourself as admin?');
+    if (!confirmed) return;
+    
+    setCleaningUp(true);
+    try {
+      const { collection, getDocs, updateDoc, writeBatch } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+      
+      const batch = writeBatch(db);
+      
+      // Update ad_submissions
+      const subsSnap = await getDocs(collection(db, 'ad_submissions'));
+      const existingSubEventIds = new Set<string>();
+      
+      subsSnap.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.eventData && data.eventData.id) {
+          existingSubEventIds.add(data.eventData.id);
+        } else if (data.id && (data.id.startsWith('ev-') || data.id.startsWith('ad_'))) {
+          existingSubEventIds.add(data.id);
+        }
+        
+        batch.update(doc.ref, {
+          'eventData.createdByAdmin': true,
+          'eventData.creatorId': user.id,
+          'eventData.creatorName': user.name,
+          'eventData.contact.organizerName': user.name,
+          advertiserId: user.id,
+          advertiserName: user.name
+        });
+      });
+
+      // Update events and create missing submissions
+      const eventsSnap = await getDocs(collection(db, 'events'));
+      const { doc: firestoreDoc } = await import('firebase/firestore');
+      
+      eventsSnap.docs.forEach(docSnap => {
+        batch.update(docSnap.ref, {
+          createdByAdmin: true,
+          creatorId: user.id,
+          creatorName: user.name,
+          'contact.organizerName': user.name
+        });
+        
+        const evData = docSnap.data();
+        if (!existingSubEventIds.has(docSnap.id)) {
+           // Create a dummy ad submission so it shows in the admin's profile
+           const newSubRef = firestoreDoc(collection(db, 'ad_submissions'));
+           batch.set(newSubRef, {
+             id: newSubRef.id,
+             invoiceNumber: `INV-ADM-${Date.now().toString().slice(-4)}`,
+             advertiserId: user.id,
+             advertiserName: user.name,
+             phone: evData.contact?.phone || user.phone || '201011223344',
+             titleAr: evData.titleAr || 'إعلان أدمن',
+             titleEn: evData.titleEn || 'Admin Ad',
+             category: evData.category || 'party',
+             styles: evData.styles || ['Salsa'],
+             mediaType: evData.mediaType || 'image',
+             mediaUrl: evData.mediaUrl || '',
+             pricing: { days: 30, subtotal: 0, videoSurcharge: 0, total: 0 },
+             status: 'approved',
+             submittedAt: evData.uploadDate || new Date().toISOString(),
+             eventData: {
+               ...evData,
+               createdByAdmin: true,
+               creatorId: user.id,
+               creatorName: user.name,
+               contact: {
+                 ...evData.contact,
+                 organizerName: user.name
+               }
+             }
+           });
+        }
+      });
+
+      await batch.commit();
+
+      // Update local events array
+      events.forEach(ev => {
+        ev.createdByAdmin = true;
+        ev.creatorId = user.id;
+        ev.creatorName = user.name;
+        if (ev.contact) {
+          ev.contact.organizerName = user.name;
+        }
+      });
+      
+      alert(lang === 'ar' ? 'تم تعيين الإعلانات لك بنجاح.' : 'Ads assigned to you successfully.');
+    } catch (e) {
+      console.error(e);
+      alert(lang === 'ar' ? 'حدث خطأ.' : 'An error occurred.');
+    } finally {
+      setCleaningUp(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadLocal = (): AdSubmission[] => {
+      try {
+        const local = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
+        return local as AdSubmission[];
+      } catch (e) {
+        return [];
+      }
+    };
+
+    const mergeAndSet = (firebaseList: AdSubmission[]) => {
+      const localList = loadLocal();
+      const map = new Map<string, AdSubmission>();
+      localList.forEach(item => map.set(item.id, item));
+      firebaseList.forEach(item => map.set(item.id, item));
+      
+      const merged = Array.from(map.values());
+      merged.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      setSubmissions(merged);
+      setLoading(false);
+    };
+
+    const initialLocal = loadLocal();
+    if (initialLocal.length > 0) {
+      setSubmissions(initialLocal);
+      setLoading(false);
+    }
+
+    const unsubscribe = subscribeToAdSubmissions(
+      (list) => {
+        mergeAndSet(list);
+      },
+      user?.id,
+      true
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleManualRefresh = () => {
+    if (manualRefreshing) return;
+    setManualRefreshing(true);
+    setLoading(true);
+    
+    const unsubscribe = subscribeToAdSubmissions(
+      (list) => {
+        const loadLocal = (): AdSubmission[] => {
+        try {
+          const local = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
+          return local as AdSubmission[];
+        } catch (e) {
+          return [];
+        }
+      };
+
+      const localList = loadLocal();
+      const map = new Map<string, AdSubmission>();
+      localList.forEach(item => map.set(item.id, item));
+      list.forEach(item => map.set(item.id, item));
+      
+      const merged = Array.from(map.values());
+      merged.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      setSubmissions(merged);
+      setLoading(false);
+      setManualRefreshing(false);
+    });
+
+    // Fallback/Safety timeout to clear loading if Firestore has no updates or is offline
+    setTimeout(() => {
+      setLoading(false);
+      setManualRefreshing(false);
+      unsubscribe();
+    }, 2000);
+  };
+
+  const updateLocalStorageItem = (updatedSub: AdSubmission | null, deleteId?: string) => {
+    try {
+      let local: AdSubmission[] = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
+      if (deleteId) {
+        local = local.filter(item => item.id !== deleteId);
+      } else if (updatedSub) {
+        const index = local.findIndex(item => item.id === updatedSub.id);
+        if (index >= 0) {
+          local[index] = updatedSub;
+        } else {
+          local.unshift(updatedSub);
+        }
+      }
+      localStorage.setItem('dwm_ad_submissions', JSON.stringify(local));
+      
+      // Update state immediately
+      setSubmissions(prev => {
+        if (deleteId) return prev.filter(item => item.id !== deleteId);
+        if (updatedSub) {
+          const exists = prev.some(item => item.id === updatedSub.id);
+          if (exists) return prev.map(item => item.id === updatedSub.id ? updatedSub : item);
+          return [updatedSub, ...prev];
+        }
+        return prev;
+      });
+    } catch (e) {}
+  };
+
+  const handleApprove = async (sub: AdSubmission) => {
+    setActionLoading(sub.id);
+    try {
+      const positionValue = submissionPositions[sub.id] !== undefined && submissionPositions[sub.id] !== '' 
+        ? (Number(submissionPositions[sub.id]) || 999999) 
+        : (sub.eventData?.position || Number(adminPosition) || 999999);
+
+      // 1. Create and publish the actual event
+      let maxRef = 1000;
+      const assignedRefs = events.map(e => e.eventRef).filter((r): r is number => typeof r === 'number');
+      if (assignedRefs.length > 0) {
+        maxRef = Math.max(...assignedRefs);
+      }
+      const newEventRef = maxRef + 1;
+      
+      const eventId = sub.eventData?.id || `ev_${sub.adType || 'vip'}_${Date.now()}`;
+      const promoDays = sub.pricing?.days || 30;
+      
+      let safeEventDate = sub.eventData?.eventDate;
+      if (!safeEventDate || isNaN(new Date(safeEventDate).getTime()) || isEventExpired(safeEventDate)) {
+        safeEventDate = new Date(Date.now() + promoDays * 86400000).toISOString();
+      }
+
+      const mediaUrlToUse = (sub.mediaUrl || sub.eventData?.mediaUrl || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80').trim();
+      let thumbUrlToUse = (sub.thumbnailUrl || sub.eventData?.thumbnailUrl || mediaUrlToUse).trim();
+      if (sub.mediaType === 'video' && mediaUrlToUse.includes('cloudinary.com')) {
+        thumbUrlToUse = mediaUrlToUse.replace(/\.[^.]+$/, '.jpg');
+      }
+
+      const publishedEvent: DanceEvent = {
+        id: eventId,
+        titleAr: sub.eventData?.titleAr || sub.titleAr || 'إعلان جديد',
+        titleEn: sub.eventData?.titleEn || sub.titleEn || 'New Published Ad',
+        descriptionAr: sub.eventData?.descriptionAr || sub.descriptionAr || 'تفاصيل الإعلان والفعالية',
+        descriptionEn: sub.eventData?.descriptionEn || sub.descriptionEn || 'Ad & Event details',
+        category: sub.eventData?.category || sub.category || 'party',
+        styles: sub.eventData?.styles || sub.styles || ['Salsa'],
+        mediaType: sub.mediaType || sub.eventData?.mediaType || 'image',
+        mediaUrl: mediaUrlToUse,
+        thumbnailUrl: thumbUrlToUse,
+        uploadDate: new Date().toISOString(),
+        createdSource: 'approved_submission',
+        eventDate: safeEventDate,
+        priceAr: sub.eventData?.priceAr || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'دخول مجاني' : `${sub.pricing.total} ج.م`) : '250 ج.م'),
+        priceEn: sub.eventData?.priceEn || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'Free Entry' : `${sub.pricing.total} EGP`) : '250 EGP'),
+        location: sub.eventData?.location || {
+          nameAr: 'القاهرة، مصر',
+          nameEn: 'Cairo, Egypt',
+          addressAr: 'القاهرة، مصر',
+          addressEn: 'Cairo, Egypt',
+          googleMapsUrl: '',
+          lat: 30.0444,
+          lng: 31.2357,
+          governorateAr: 'القاهرة',
+          governorateEn: 'Cairo',
+          areaAr: 'القاهرة',
+          areaEn: 'Cairo'
+        },
+        contact: sub.eventData?.contact || {
+          organizerName: sub.advertiserName || 'المعلن',
+          phone: sub.phone || '',
+          whatsapp: sub.phone || ''
+        },
+        eventRef: newEventRef,
+        likesCount: 15,
+        viewsCount: 1,
+        isFeatured: (sub.adType as string) === 'vip' || sub.eventData?.adType === 'vip',
+        isWeeklyPromo: positionValue === 1,
+        position: positionValue,
+        adType: sub.adType || sub.eventData?.adType || 'standard',
+        creatorId: sub.advertiserId || sub.eventData?.creatorId,
+        creatorName: sub.advertiserName || sub.eventData?.creatorName,
+        isEmpty: false
+      };
+
+      // Persist the event first and verify success before approving the submission.
+      const eventSaved = await saveEventToFirestore(publishedEvent);
+      if (!eventSaved) {
+        throw new Error('Failed to publish event to Firestore; submission remains pending.');
+      }
+      // Keep local state in sync after the Firestore write succeeds.
+      addNewEvent(publishedEvent);
+
+      // 2. Update submission status in Firestore with expiration timestamp
+      const expiresAtDate = new Date(Date.now() + promoDays * 86400000).toISOString();
+      
+      const updated: AdSubmission = { 
+        ...sub,
+        eventRef: newEventRef,
+        status: 'approved',
+        userRead: false,
+        reviewedAt: new Date().toISOString(),
+        expiresAt: expiresAtDate,
+        eventData: publishedEvent
+      };
+      
+      updateLocalStorageItem(updated);
+      await saveAdSubmissionToFirestore(updated);
+      
+      // Send personal notification to the user with the event code and attendance count (initially 0)
+      if (sub.advertiserId) {
+        try {
+          const { saveNotificationToFirestore } = await import('../../lib/firebase');
+          await saveNotificationToFirestore({
+            id: `notif_appr_${Date.now()}_${sub.id}`,
+            userId: sub.advertiserId,
+            type: 'system',
+            titleAr: 'تم تفعيل إعلانك بنجاح! 🎉',
+            titleEn: 'Your Ad is Approved! 🎉',
+            messageAr: `تمت الموافقة على نشر إعلانك "${sub.titleAr}". كود الحدث (الرقم المرجعي) الخاص بك هو: ${newEventRef}. عدد الحضور الفعلي حالياً: 0. استخدم هذا الكود للبحث عن إعلانك أو لمشاركته مع الآخرين.`,
+            messageEn: `Your ad "${sub.titleEn}" has been published. Your Event Code is: ${newEventRef}. Actual attendees count: 0. Use this code to search or share your ad.`,
+            date: new Date().toISOString(),
+            read: false
+          });
+        } catch (e) {
+          console.error('Failed to send personal approval notification:', e);
+        }
+      }
+
+      // Also send approval notification to all Admins containing Event Code, Advertiser, and Attendance Count
+      try {
+        const { saveNotificationToFirestore } = await import('../../lib/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const adminsCol = collection(db, 'users');
+        const adminsQuery = query(adminsCol, where('isAdmin', '==', true));
+        const adminsSnapshot = await getDocs(adminsQuery);
+        const adminIds: string[] = [];
+        adminsSnapshot.forEach(docSnap => {
+          adminIds.push(docSnap.id);
+        });
+
+        for (const adminId of adminIds) {
+          await saveNotificationToFirestore({
+            id: `notif_appr_adm_${Date.now()}_${adminId}_${sub.id}`,
+            userId: adminId,
+            type: 'system',
+            titleAr: 'تمت الموافقة على إعلان ونشره! 📢',
+            titleEn: 'Ad Approved & Published! 📢',
+            messageAr: `تمت الموافقة على نشر إعلان "${sub.titleAr}". كود الحدث (الرقم المرجعي) الخاص به هو: ${newEventRef}. عدد الحضور الفعلي حالياً: 0. المعلن: ${sub.advertiserName || 'مستخدم'}.`,
+            messageEn: `The ad "${sub.titleEn}" has been approved. Event Code: ${newEventRef}. Actual attendees count: 0. Advertiser: ${sub.advertiserName || 'User'}.`,
+            date: new Date().toISOString(),
+            read: false
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send admin approval notification:', e);
+      }
+
+      alert(lang === 'ar' ? `✅ تم قبول ونشر الإعلان "${publishedEvent.titleAr}" بنجاح!` : `✅ Ad "${publishedEvent.titleEn}" approved and published successfully!`);
+    } catch (err) {
+      console.error('Error approving ad:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleArchive = async (sub: AdSubmission) => {
+    setActionLoading(sub.id);
+    try {
+      const updated: AdSubmission = {
+        ...sub,
+        status: 'archived',
+        archivedAt: new Date().toISOString()
+      };
+      
+      await saveAdSubmissionToFirestore(updated);
+
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAutoScanExpired = async () => {
+    const activeAds = submissions.filter(s => s.status === 'approved');
+    let archivedCount = 0;
+    for (const sub of activeAds) {
+      const expired = sub.expiresAt ? new Date(sub.expiresAt).getTime() <= Date.now() : false;
+      if (expired) {
+        await handleArchive(sub);
+        archivedCount++;
+      }
+    }
+    if (archivedCount > 0) {
+      alert(lang === 'ar' ? `تم نقل ${archivedCount} إعلان منقضي إلى الأرشيف وإرسال التنبيهات للمعلنين!` : `Successfully archived ${archivedCount} expired ads and notified advertisers!`);
+    } else {
+      alert(lang === 'ar' ? 'لا توجد إعلانات منتهية الصلاحية حالياً في قائمة المفعلة.' : 'No expired ads found in currently approved list.');
+    }
+  };
+
+  const handleReject = async (sub: AdSubmission) => {
+    setActionLoading(sub.id);
+    try {
+      const updated: AdSubmission = {
+        ...sub,
+        status: 'rejected',
+        userRead: false,
+        reviewedAt: new Date().toISOString()
+      };
+      
+      await saveAdSubmissionToFirestore(updated);
+
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePurgeEventCompletely = async (eventId: string, eventTitle: string) => {
+    const confirmed = await triggerConfirm(
+      lang === 'ar' 
+        ? `هل أنت متأكد من حذف الفعالية "${eventTitle}" وكل حجوزاتها المتعلقة بها بالكامل لتوفير المساحة؟ هذا الإجراء لا يمكن التراجع عنه!`
+        : `Are you sure you want to completely delete the event "${eventTitle}" and ALL its related bookings to save space? This action cannot be undone!`
+    );
+
+    if (confirmed) {
+      setActionLoading(eventId);
+      try {
+        const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
+        const { db } = await import('../../lib/firebase');
+
+        // 1. Delete all bookings
+        const bookingsCol = collection(db, 'bookings');
+        const bQuery = query(bookingsCol, where('eventId', '==', eventId));
+        const bSnap = await getDocs(bQuery);
+        for (const bDoc of bSnap.docs) {
+          await deleteDoc(bDoc.ref);
+        }
+
+        // 2. Clear out the event and its media (preserves the position slot)
+        deleteEvent(eventId);
+
+        // 3. Delete associated ad submission if any
+        const ev = events.find(e => e.id === eventId);
+        if (ev && ev.eventRef) {
+          const adsCol = collection(db, 'ad_submissions');
+          const adsQuery = query(adsCol, where('eventRef', '==', ev.eventRef));
+          const adsSnap = await getDocs(adsQuery);
+          for (const adDoc of adsSnap.docs) {
+            await deleteDoc(adDoc.ref);
+          }
+        }
+
+        alert(lang === 'ar' ? 'تم مسح الفعالية وكل المتعلقات بها بنجاح.' : 'Event and all related data purged successfully.');
+      } catch (err) {
+        console.error('Error purging event:', err);
+        alert(lang === 'ar' ? 'حدث خطأ أثناء مسح البيانات.' : 'Error purging data.');
+      } finally {
+        setActionLoading(null);
+      }
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const sub = submissions.find(s => s.id === id);
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من حذف هذا السجل وجميع البيانات المرتبطة به نهائياً؟' : 'Are you sure you want to delete this record and all associated data permanently?');
+    if (confirmed) {
+      updateLocalStorageItem(null, id);
+      
+      if (sub) {
+        // Delete media from Cloudinary
+        if (sub.mediaUrl) {
+          await deleteFromCloudinary(sub.mediaUrl, sub.mediaType || 'image').catch(console.error);
+        }
+        if (sub.receiptUrl) {
+          await deleteFromCloudinary(sub.receiptUrl, 'image').catch(console.error);
+        }
+        
+        // Delete associated Event if it exists
+        if (sub.eventData?.id) {
+          try {
+            const { deleteEventFromFirestore, deleteBookingFromFirestore } = await import('../../lib/firebase');
+            const eventId = sub.eventData.id;
+            await deleteEventFromFirestore(eventId);
+            
+            // Delete associated bookings
+            if (bookings) {
+              const associatedBookings = bookings.filter(b => b.eventId === eventId);
+              for (const bkg of associatedBookings) {
+                if (bkg.receiptUrl) {
+                  await deleteFromCloudinary(bkg.receiptUrl, 'image').catch(console.error);
+                }
+                await deleteBookingFromFirestore(bkg.id);
+              }
+            }
+          } catch (e) {
+            console.error('Failed to delete associated event or bookings', e);
+          }
+        }
+      }
+      
+      await deleteAdSubmissionFromFirestore(id);
+    }
+  };
+
+  const handleExportBackup = () => {
+    const backupData = {
+      project: resolvedFirebaseConfig.projectId || 'Unknown',
+      firestoreDbId: databaseId || '(default)',
+      exportedAt: new Date().toISOString(),
+      collections: {
+        events: events,
+        ad_submissions: submissions,
+        notifications: notifications
+      }
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dwm_firebase_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredSubmissions = submissions.filter(s => {
+    if (filter === 'all') return true;
+    return s.status === filter;
+  });
+
+
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notifTitleAr || !notifTitleEn || !notifMessageAr || !notifMessageEn) {
+      alert(lang === 'ar' ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields');
+      return;
+    }
+    setNotifSending(true);
+    try {
+      await saveNotificationToFirestore({
+        id: `notif_admin_${Date.now()}`,
+        titleAr: notifTitleAr,
+        titleEn: notifTitleEn,
+        messageAr: notifMessageAr,
+        messageEn: notifMessageEn,
+        type: notifType,
+        date: new Date().toISOString(),
+        read: false
+      });
+
+      let pushStatusMsg = '';
+      if (sendMobilePush) {
+        const pushRes = await sendBroadcastPushNotification({
+          title: notifTitleAr,
+          body: notifMessageAr,
+          url: '/'
+        });
+        if (pushRes.success) {
+          pushStatusMsg = lang === 'ar' 
+            ? `\n📱 وتم إرسال إشعار فوري للشاشات (${pushRes.sentCount || 0} جهاز متصل)`
+            : `\n📱 Push alert delivered to (${pushRes.sentCount || 0} devices)`;
+        }
+      }
+
+      playNotificationChime();
+      alert((lang === 'ar' ? 'تم إرسال الإشعار بنجاح!' : 'Notification sent successfully!') + pushStatusMsg);
+      setNotifTitleAr('');
+      setNotifTitleEn('');
+      setNotifMessageAr('');
+      setNotifMessageEn('');
+    } catch (err) {
+      console.error('Error sending notification:', err);
+      alert(lang === 'ar' ? 'حدث خطأ أثناء إرسال الإشعار' : 'Error sending notification');
+    } finally {
+      setNotifSending(false);
+    }
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من حذف جميع الإشعارات السابقة من قاعدة البيانات؟ لا يمكن التراجع عن هذه العملية.' : 'Are you sure you want to delete all previous notifications from the database? This cannot be undone.');
+    if (confirmed) {
+      setNotifSending(true);
+      try {
+        await deleteAllNotificationsFromFirestore();
+        alert(lang === 'ar' ? 'تم حذف جميع الإشعارات السابقة بنجاح' : 'All previous notifications deleted successfully');
+      } catch (err) {
+        console.error('Error deleting notifications:', err);
+        alert(lang === 'ar' ? 'حدث خطأ أثناء الحذف' : 'Error deleting notifications');
+      } finally {
+        setNotifSending(false);
+      }
+    }
+  };
+  return (
+    <div className="w-full max-w-5xl mx-auto pt-2 pb-36 sm:pb-44" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      {/* Receipt & JSON Preview Modals */}
+      <AnimatePresence>
+        {viewingAttendeesEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="relative max-w-4xl w-full max-h-[85vh] rounded-3xl overflow-hidden bg-neutral-900 border border-indigo-500/40 p-5 shadow-2xl flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Ticket className="h-5 w-5 text-indigo-400" />
+                  <span className="font-extrabold text-white text-base">
+                    {lang === 'ar' ? '🎟️ سجل حضور وحجوزات الفعالية:' : '🎟️ Event Guest & Attendance Sheet:'} <strong className="text-amber-400">{lang === 'ar' ? viewingAttendeesEvent.titleAr : viewingAttendeesEvent.titleEn}</strong>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setViewingAttendeesEvent(null)}
+                  className="p-1.5 rounded-full bg-neutral-800 text-white hover:bg-red-500 transition-colors cursor-pointer"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Stats Bar */}
+              {(() => {
+                const eventBookings = bookings?.filter(b => b.eventId === viewingAttendeesEvent.id) || [];
+                const totalBookedCount = eventBookings.reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                const actualAttendedCount = eventBookings
+                  .filter(b => b.status === 'approved' && b.attended === true)
+                  .reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                const totalRevenue = eventBookings
+                  .filter(b => b.status === 'approved' && b.attended === true)
+                  .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
+                return (
+                  <div className="space-y-3 my-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                        <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Registered'}</span>
+                        <span className="text-white text-lg font-black">{totalBookedCount}</span>
+                      </div>
+                      <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                        <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'الحضور الفعلي' : 'Actual Check-in'}</span>
+                        <span className="text-emerald-400 text-lg font-black">{actualAttendedCount}</span>
+                      </div>
+                      <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 text-center">
+                        <span className="text-neutral-500 text-[10px] block font-bold uppercase">{lang === 'ar' ? 'المستحقات المحسوبة' : 'Revenue Collected'}</span>
+                        <span className="text-indigo-400 text-lg font-black font-mono">{totalRevenue} EGP</span>
+                      </div>
+                    </div>
+
+                    {/* Staff Security Status Bar for Admin */}
+                    <div className="bg-neutral-950 p-3 rounded-2xl border border-indigo-500/20 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-indigo-400 shrink-0" />
+                        <span className="font-bold text-neutral-300">
+                          {lang === 'ar' ? 'إعدادات أمن البوابة:' : 'Gate Security Mode:'}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-extrabold text-[10px]">
+                          {viewingAttendeesEvent.staffSettings?.mode === 'restricted' 
+                            ? (lang === 'ar' ? '🔒 موظفين محددين برقم سري' : '🔒 Restricted (PIN required)')
+                            : (lang === 'ar' ? '🔓 السماح لأي شخص بالمسح' : '🔓 Anyone authorized')}
+                        </span>
+                      </div>
+
+                      {viewingAttendeesEvent.staffSettings?.mode === 'restricted' && viewingAttendeesEvent.staffSettings?.staffList && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {viewingAttendeesEvent.staffSettings.staffList.map((s, idx) => (
+                            <span 
+                              key={idx}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 ${
+                                s.isActive 
+                                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300' 
+                                  : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                              }`}
+                            >
+                              <span>{s.name}</span>
+                              <span className="text-amber-400 font-bold">({s.pin})</span>
+                              <span>{s.isActive ? '🟢' : '🔴'}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Table / List */}
+              <div className="flex-1 overflow-auto bg-neutral-950 rounded-2xl p-4 border border-white/5">
+                {(() => {
+                  const eventBookings = bookings?.filter(b => b.eventId === viewingAttendeesEvent.id) || [];
+                  if (eventBookings.length === 0) {
+                    return (
+                      <div className="text-center py-10 text-neutral-500 text-xs font-bold">
+                        {lang === 'ar' ? 'لا توجد حجوزات مسجلة لهذه الفعالية بعد.' : 'No reservations registered for this event yet.'}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <table className="w-full text-start text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-neutral-800 text-neutral-500 text-[10px] uppercase font-bold text-start">
+                          <th className="pb-2.5 text-start">{lang === 'ar' ? 'الاسم' : 'Name'}</th>
+                          <th className="pb-2.5 text-start">{lang === 'ar' ? 'الهاتف' : 'Phone'}</th>
+                          <th className="pb-2.5 text-center">{lang === 'ar' ? 'الأفراد' : 'Guests'}</th>
+                          <th className="pb-2.5 text-end">{lang === 'ar' ? 'المبلغ' : 'Amount'}</th>
+                          <th className="pb-2.5 text-center">{lang === 'ar' ? 'الحالة' : 'Status'}</th>
+                          <th className="pb-2.5 text-end">{lang === 'ar' ? 'تأكيد الحضور البوابة' : 'Check-In Gate'}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-900">
+                        {eventBookings.map((b) => (
+                          <tr key={b.id} className="text-neutral-300 hover:bg-neutral-900/50">
+                            <td className="py-3 font-semibold text-white">{b.userName}</td>
+                            <td className="py-3 font-mono">{b.userPhone}</td>
+                            <td className="py-3 text-center font-bold text-neutral-100">{String(b.numberOfIndividuals || 1)}</td>
+                            <td className="py-3 text-end font-mono font-bold text-amber-500">{String(b.totalAmount || 0)} ج.م</td>
+                            <td className="py-3 text-center">
+                              <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                                b.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                b.status === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              }`}>
+                                {lang === 'ar' ? 
+                                  (b.status === 'approved' ? 'مقبول' : b.status === 'rejected' ? 'مرفوض' : 'معلق') :
+                                  b.status
+                                }
+                              </span>
+                            </td>
+                            <td className="py-3 text-end">
+                              {b.attended ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="text-emerald-400 font-extrabold text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    {lang === 'ar' ? 'حضر' : 'Attended'}
+                                  </span>
+                                  {b.attendedByStaffName && (
+                                    <span className="text-[10px] text-indigo-300 font-bold mt-0.5 flex items-center gap-1">
+                                      👮 {b.attendedByStaffName}
+                                      {b.attendedByGateNumber && (
+                                        <span className="text-neutral-400 bg-neutral-800/50 px-1 rounded-sm">
+                                          ({lang === 'ar' ? 'بوابة' : 'Gate'} {b.attendedByGateNumber})
+                                        </span>
+                                      )}
+                                    </span>
+                                  )}
+                                  {b.attendedAt && (
+                                    <span className="text-[9px] text-neutral-500 font-mono mt-0.5">
+                                      {new Date(b.attendedAt).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-neutral-500 text-[10px]">
+                                  {lang === 'ar' ? 'لم يحضر بعد' : 'Not arrived yet'}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {selectedJsonDoc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="relative max-w-3xl w-full max-h-[85vh] rounded-3xl overflow-hidden bg-neutral-900 border border-blue-500/40 p-4 shadow-2xl flex flex-col"
+            >
+              <div className="flex items-center justify-between pb-3 px-2 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Code className="h-5 w-5 text-blue-400" />
+                  <span className="font-bold text-white text-sm font-mono">
+                    {selectedJsonDoc.title} ({selectedJsonDoc.id})
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedJsonDoc(null)}
+                  className="p-1.5 rounded-full bg-neutral-800 text-white hover:bg-red-500 transition-colors cursor-pointer"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-4 bg-neutral-950 rounded-2xl my-3 border border-white/5 font-mono text-xs text-blue-300 leading-relaxed text-left" dir="ltr">
+                <pre className="whitespace-pre-wrap break-words">{JSON.stringify(selectedJsonDoc.data, null, 2)}</pre>
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(selectedJsonDoc.data, null, 2));
+                    alert(lang === 'ar' ? 'تم نسخ الـ JSON للحافظة!' : 'JSON copied to clipboard!');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-500 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>{lang === 'ar' ? 'نسخ الكود (Copy JSON)' : 'Copy JSON'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {selectedReceipt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="relative max-w-2xl w-full max-h-[85vh] rounded-3xl overflow-hidden bg-neutral-900 border border-amber-500/40 p-3 shadow-2xl flex flex-col"
+            >
+              <div className="flex items-center justify-between pb-3 px-2 border-b border-white/10">
+                <span className="font-bold text-white text-sm">
+                  {lang === 'ar' ? 'إيصال التحويل البنكي أو إنستاباي' : 'Bank Transfer Receipt'}
+                </span>
+                <button
+                  onClick={() => setSelectedReceipt(null)}
+                  className="p-1.5 rounded-full bg-neutral-800 text-white hover:bg-red-500 transition-colors"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-2 flex items-center justify-center">
+                <img src={selectedReceipt} alt="Receipt" className="max-w-full max-h-[70vh] rounded-xl object-contain shadow-lg" />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Persistent Admin Quick Navigation Tabs (Pills) */}
+      <div className="mb-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md p-1.5 shadow-sm sticky top-14 sm:top-18 z-30 transition-all">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5 px-0.5" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          {[
+            {
+              id: null,
+              label: lang === 'ar' ? 'الرئيسية' : 'Overview',
+              icon: LayoutDashboard,
+              badge: null,
+            },
+            {
+              id: 'submissions',
+              label: lang === 'ar' ? 'طلبات الإعلانات' : 'Ads Submissions',
+              icon: Crown,
+              badge: submissions.filter(s => s.status === 'pending').length || null,
+              badgeColor: 'bg-amber-500 text-neutral-950',
+            },
+            {
+              id: 'bookings',
+              label: lang === 'ar' ? 'حجوزات التذاكر' : 'Bookings',
+              icon: Ticket,
+              badge: bookings.filter(b => b.status === 'pending').length || null,
+              badgeColor: 'bg-emerald-500 text-neutral-950',
+            },
+            {
+              id: 'create_ad_admin',
+              label: lang === 'ar' ? 'إنشاء إعلان' : 'Create Ad',
+              icon: Plus,
+              badge: null,
+            },
+            {
+              id: 'users',
+              label: lang === 'ar' ? 'المستخدمين' : 'Users',
+              icon: Users,
+              badge: allUsers.length > 0 ? allUsers.length : null,
+              badgeColor: 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+            },
+            {
+              id: 'support',
+              label: lang === 'ar' ? 'الدعم والمقترحات' : 'Support',
+              icon: MessageSquare,
+              badge: supportMessages.filter(m => !m.reply).length || null,
+              badgeColor: 'bg-emerald-500 text-neutral-950',
+            },
+            {
+              id: 'analytics',
+              label: lang === 'ar' ? 'الإحصائيات' : 'Analytics',
+              icon: BarChart3,
+              badge: null,
+            },
+            {
+              id: 'database',
+              label: lang === 'ar' ? 'قاعدة البيانات' : 'Database',
+              icon: Database,
+              badge: null,
+            },
+            {
+              id: 'pricing',
+              label: lang === 'ar' ? 'الأسعار' : 'Pricing',
+              icon: DollarSign,
+              badge: null,
+            },
+            {
+              id: 'branding',
+              label: lang === 'ar' ? 'الهوية والشعارات' : 'Branding',
+              icon: Sparkles,
+              badge: null,
+            },
+            {
+              id: 'security',
+              label: lang === 'ar' ? 'الأمان والاختراق' : 'Security',
+              icon: ShieldAlert,
+              badge: null,
+            },
+            {
+              id: 'send_notifications',
+              label: lang === 'ar' ? 'إرسال تنبيه' : 'Alerts',
+              icon: Bell,
+              badge: null,
+            },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = adminSection === tab.id;
+            return (
+              <button
+                key={tab.id || 'overview'}
+                onClick={() => {
+                  setAdminSection(tab.id as any);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                  isActive
+                    ? 'bg-amber-500 text-neutral-950 shadow-sm font-black'
+                    : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+              >
+                <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'stroke-[2.5]' : 'opacity-70'}`} />
+                <span className="whitespace-nowrap">{tab.label}</span>
+                {tab.badge !== null && (
+                  <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full leading-tight ${
+                    isActive ? 'bg-neutral-950 text-amber-400' : (tab.badgeColor || 'bg-amber-500 text-neutral-950')
+                  }`}>
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Admin Section View Header or welcome dashboard menu */}
+      {adminSection !== null ? (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-5 shadow-xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-colors"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 shadow-inner ${
+              adminSection === 'submissions' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400' :
+              adminSection === 'database' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-500 dark:text-blue-400' :
+              adminSection === 'support' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400' :
+              adminSection === 'security' ? 'bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-400' :
+              adminSection === 'branding' ? 'bg-pink-500/10 border border-pink-500/30 text-pink-500 dark:text-pink-400' :
+              adminSection === 'pricing' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400' :
+              adminSection === 'analytics' ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 dark:text-cyan-400' :
+              adminSection === 'create_ad_admin' ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 dark:text-indigo-400' :
+              adminSection === 'bookings' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400' :
+              adminSection === 'send_notifications' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400' :
+              'bg-purple-500/10 border border-purple-500/30 text-purple-500 dark:text-purple-400'
+            }`}>
+              {adminSection === 'submissions' && <Crown className="h-5 w-5" />}
+              {adminSection === 'database' && <Database className="h-5 w-5 animate-pulse" />}
+              {adminSection === 'support' && <MessageSquare className="h-5 w-5" />}
+              {adminSection === 'users' && <Users className="h-5 w-5" />}
+              {adminSection === 'security' && <ShieldAlert className="h-5 w-5" />}
+              {adminSection === 'branding' && <Sparkles className="h-5 w-5 animate-pulse" />}
+              {adminSection === 'pricing' && <DollarSign className="h-5 w-5" />}
+              {adminSection === 'analytics' && <BarChart3 className="h-5 w-5" />}
+              {adminSection === 'create_ad_admin' && <FilePlus className="h-5 w-5 animate-pulse" />}
+              {adminSection === 'bookings' && <FileText className="h-5 w-5" />}
+              {adminSection === 'send_notifications' && <Bell className="h-5 w-5" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black text-neutral-900 dark:text-white">
+                  {adminSection === 'submissions' && (lang === 'ar' ? 'مراجعة طلبات الإعلانات VIP' : 'VIP Ad Submissions')}
+                  {adminSection === 'database' && (lang === 'ar' ? 'مستكشف قاعدة البيانات المباشر' : 'Live Database Inspector')}
+                  {adminSection === 'support' && (lang === 'ar' ? 'صندوق رسائل ومقترحات التطبيق' : 'Support Messages & Feedback')}
+                  {adminSection === 'users' && (lang === 'ar' ? 'إدارة ومراقبة مستخدمي التطبيق' : 'App Users Management')}
+                  {adminSection === 'security' && (lang === 'ar' ? 'إدارة الأمان وجدار الحماية' : 'Security Firewall & Logs')}
+                  {adminSection === 'branding' && (lang === 'ar' ? 'هوية التطبيق والشعارات' : 'App Identity & Assets')}
+                  {adminSection === 'pricing' && (lang === 'ar' ? 'التحكم في أسعار الإعلانات' : 'Manage Ad Prices')}
+                  {adminSection === 'analytics' && (lang === 'ar' ? 'إحصائيات زوار الموقع والتفاعل' : 'Real-time Analytics')}
+                  {adminSection === 'create_ad_admin' && (lang === 'ar' ? 'إنشاء إعلان / حفلة جديدة فوراً' : 'Create & Publish Event (Admin)')}
+                  {adminSection === 'bookings' && (lang === 'ar' ? 'مراجعة وتأكيد حجوزات التذاكر' : 'Ticket Bookings Panel')}
+                  {adminSection === 'send_notifications' && (lang === 'ar' ? 'إرسال التنبيهات لجميع الأعضاء' : 'Broadcast Push Alerts')}
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-bold text-[10px] hidden sm:inline-block">
+                  SECTION
+                </span>
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                {adminSection === 'submissions' && (lang === 'ar' ? 'مراجعة وتفعيل الإعلانات الفاخرة وتتبع إيصالات التحويل البنكي.' : 'Manage premium ad campaigns, analyze bank receipts, and activate VIP slots.')}
+                {adminSection === 'database' && (lang === 'ar' ? 'استعراض البيانات والفعاليات والإشعارات وحذف المخلفات بشكل مباشر.' : 'Real-time viewer of live Firestore collections, schemas, and events.')}
+                {adminSection === 'support' && (lang === 'ar' ? 'التواصل المباشر وحل المشاكل التقنية للأعضاء وإرسال الردود الرسمية.' : 'Read user feedback and inquiries directly and send notifications.')}
+                {adminSection === 'users' && (lang === 'ar' ? 'البحث عن الحسابات بالأرقام السرية أو الإيميل، تجميد أو حذف الأعضاء.' : 'Audit member profiles, passwords, registration dates, suspend or delete records.')}
+                {adminSection === 'security' && (lang === 'ar' ? 'تغيير العبارة السرية، مراقبة محاولات الاختراق، عناوين الـ IP للمهاجمين.' : 'Update VIP secret code, monitor unauthorized access logs, and block IPs.')}
+                {adminSection === 'branding' && (lang === 'ar' ? 'تعديل وتخصيص أسماء التطبيق وشعاراته وأيقوناته وروابط الاتصال.' : 'Modify app names, icons, brand logos, support contact phone, and other static assets.')}
+                {adminSection === 'pricing' && (lang === 'ar' ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم.' : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge.')}
+                {adminSection === 'analytics' && (lang === 'ar' ? 'تحليل حركة المرور الحية، واهتمامات الراقصين بالأنماط المختلفة.' : 'Live traffic insights, style-specific popularity heatmaps, and click rates.')}
+                {adminSection === 'create_ad_admin' && (lang === 'ar' ? 'نموذج لوحة الإدارة المتكامل لإنشاء ونشر الفعاليات وتثبيتها وتحديد ترتيب ظهورها.' : 'Admin panel integrated form to compose, publish, pin, and prioritize events directly.')}
+                {adminSection === 'bookings' && (lang === 'ar' ? 'التحقق من إيصالات تحويل فودافون كاش وإنستاباي ومطابقة المبالغ وإصدار الباركود.' : 'Verify transfer receipts, match paid amounts, and activate barcodes/entry keys.')}
+                {adminSection === 'send_notifications' && (lang === 'ar' ? 'إرسال إشعار فوري في جرس التنبيهات لجميع أعضاء التطبيق.' : 'Broadcast real-time push alert to the notification bell for all members.')}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setAdminSection(null);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex items-center gap-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700/60 px-3.5 py-2 text-xs font-bold text-neutral-800 dark:text-neutral-200 transition-all cursor-pointer self-start sm:self-center shrink-0 shadow-xs"
+          >
+            <ArrowLeft className={`h-3.5 w-3.5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+            <span>{lang === 'ar' ? 'الرجوع للمركز الرئيسي' : 'Back to Overview'}</span>
+          </button>
+        </motion.div>
+      ) : (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Executive Top Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-neutral-900 via-neutral-900 to-amber-950/30 p-4 sm:p-5 shadow-md relative overflow-hidden transition-all text-white"
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-neutral-950 shadow-md shrink-0">
+                  <Crown className="h-6 w-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                      {lang === 'ar' ? 'مركز قيادة لوحة التحكم' : 'Executive Admin Dashboard'}
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500 text-neutral-950 font-black text-[10px] uppercase">
+                      ADMIN
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-300 font-medium mt-0.5">
+                    {lang === 'ar' 
+                      ? 'إدارة متكاملة لاعتماد الإعلانات، تأكيد حجوزات التذاكر، مراقبة المستخدمين، والأمان' 
+                      : 'Integrated management for ad approvals, ticket bookings, user audit, and security'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0 flex-wrap justify-end">
+                <button
+                  onClick={handleAssignAllAdsToAdmin}
+                  disabled={cleaningUp}
+                  className="flex items-center gap-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-purple-500/30 px-3 py-2 text-xs font-bold text-purple-300 transition-all cursor-pointer shadow-xs"
+                  title="نقل جميع الإعلانات الحالية لملفك الشخصي (أدمن)"
+                >
+                  <User className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
+                  <span>{cleaningUp ? (lang === 'ar' ? 'جاري النقل...' : 'Transferring...') : (lang === 'ar' ? 'نقل الإعلانات لي' : 'Assign to Me')}</span>
+                </button>
+
+                <button
+                  onClick={handleCleanUpClutter}
+                  disabled={cleaningUp}
+                  className="flex items-center gap-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-red-500/30 px-3 py-2 text-xs font-bold text-red-300 transition-all cursor-pointer shadow-xs"
+                  title="حذف الإعلانات المكررة وبدون صور لتقليل الزحمة"
+                >
+                  <Trash2 className={`h-3.5 w-3.5 ${cleaningUp ? 'animate-spin' : ''}`} />
+                  <span>{cleaningUp ? (lang === 'ar' ? 'تنظيف الزحمة' : 'Clean Clutter') : (lang === 'ar' ? '🧹 تنظيف الزحمة' : '🧹 Clean Clutter')}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('explore');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-1.5 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 px-3.5 py-2 text-xs font-bold text-neutral-200 hover:text-white transition-all border border-neutral-700/60 shadow-xs cursor-pointer"
+                >
+                  <ArrowLeft className={`h-3.5 w-3.5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                  <span>{lang === 'ar' ? 'الرئيسية' : 'Explore'}</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Interactive KPI Quick Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3.5">
+            <div 
+              onClick={() => { setAdminSection('submissions'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/80 hover:border-amber-500 dark:hover:border-amber-500/60 p-3 sm:p-3.5 text-center shadow-xs cursor-pointer group transition-all"
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                <span>{lang === 'ar' ? 'طلبات إعلانات معلقة' : 'Pending Ads'}</span>
+                <Crown className="h-3.5 w-3.5 text-amber-500 opacity-80 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                  {submissions.filter(s => s.status === 'pending').length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium">/ {submissions.length}</span>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => { setAdminSection('bookings'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/80 hover:border-emerald-500 dark:hover:border-emerald-500/60 p-3 sm:p-3.5 text-center shadow-xs cursor-pointer group transition-all"
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                <span>{lang === 'ar' ? 'حجوزات تذاكر معلقة' : 'Pending Bookings'}</span>
+                <Ticket className="h-3.5 w-3.5 text-emerald-500 opacity-80 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  {bookings.filter(b => b.status === 'pending').length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium">/ {bookings.length}</span>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => { setAdminSection('support'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/80 hover:border-cyan-500 dark:hover:border-cyan-500/60 p-3 sm:p-3.5 text-center shadow-xs cursor-pointer group transition-all"
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                <span>{lang === 'ar' ? 'رسائل دعم معلقة' : 'Unreplied Support'}</span>
+                <MessageSquare className="h-3.5 w-3.5 text-cyan-500 opacity-80 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-cyan-600 dark:text-cyan-400 font-mono">
+                  {supportMessages.filter(m => !m.reply).length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium">/ {supportMessages.length}</span>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => { setAdminSection('database'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/80 hover:border-blue-500 dark:hover:border-blue-500/60 p-3 sm:p-3.5 text-center shadow-xs cursor-pointer group transition-all"
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                <span>{lang === 'ar' ? 'فعاليات بالقاعدة' : 'Live Events'}</span>
+                <Database className="h-3.5 w-3.5 text-blue-500 opacity-80 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                  {events.length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium">{lang === 'ar' ? 'فعالية' : 'events'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Urgent Attention Banner (If pending items exist) */}
+          {(submissions.some(s => s.status === 'pending') || bookings.some(b => b.status === 'pending') || supportMessages.some(m => !m.reply)) && (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-50/70 dark:bg-amber-500/10 p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-extrabold text-amber-950 dark:text-amber-200">
+                    {lang === 'ar' ? 'تنبيه: لديك عناصر معلقة تتطلب الإجراء الآن' : 'Attention: Pending items require your review'}
+                  </h4>
+                  <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                    {lang === 'ar' 
+                      ? `${submissions.filter(s => s.status === 'pending').length} إعلان معلق • ${bookings.filter(b => b.status === 'pending').length} حجز تذاكر معلق • ${supportMessages.filter(m => !m.reply).length} رسالة دعم`
+                      : `${submissions.filter(s => s.status === 'pending').length} pending ads • ${bookings.filter(b => b.status === 'pending').length} pending bookings • ${supportMessages.filter(m => !m.reply).length} unreplied support`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {submissions.some(s => s.status === 'pending') && (
+                  <button
+                    onClick={() => { setAdminSection('submissions'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-neutral-950 text-xs font-black transition-colors cursor-pointer shadow-xs"
+                  >
+                    {lang === 'ar' ? 'مراجعة الإعلانات ➔' : 'Review Ads ➔'}
+                  </button>
+                )}
+                {bookings.some(b => b.status === 'pending') && (
+                  <button
+                    onClick={() => { setAdminSection('bookings'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors cursor-pointer shadow-xs"
+                  >
+                    {lang === 'ar' ? 'مراجعة الحجوزات ➔' : 'Review Bookings ➔'}
+                  </button>
+                )}
+                {supportMessages.some(m => !m.reply) && (
+                  <button
+                    onClick={() => { setAdminSection('support'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black transition-colors cursor-pointer shadow-xs"
+                  >
+                    {lang === 'ar' ? 'صندوق الدعم ➔' : 'Support Inbox ➔'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {usersError && (
+            <div className="rounded-2xl border border-red-500/30 bg-red-50 dark:bg-red-500/10 p-3.5 text-red-900 dark:text-red-200 text-xs space-y-1.5 shadow-xs">
+              <p className="font-bold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                <span>
+                  {lang === 'ar' 
+                    ? '⚠️ تنبيه قاعدة البيانات: فشل تحميل قائمة المستخدمين بسبب صلاحيات الوصول!' 
+                    : '⚠️ Database Warning: Failed to load user profiles due to permissions!'}
+                </span>
+              </p>
+              <p className="opacity-90 text-[11px] leading-relaxed">
+                {lang === 'ar'
+                  ? 'لم يستجب خادم Firebase بعرض بيانات الأعضاء لأنك غير مسجل الدخول ببريد المسؤول المعتمد (waelvts@gmail.com) في نظام التوثيق. يرجى الانتقال إلى قسم "حسابي" وتسجيل الدخول ببريد المسؤول أولاً.'
+                  : 'Firebase rejected reading the users collection because your session is not authenticated as the designated admin email (waelvts@gmail.com). Please sign in using the admin email.'}
+              </p>
+            </div>
+          )}
+
+          {/* Compact Modern Dashboard Grid (11 Modules) */}
+          <div>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="text-xs sm:text-sm font-black text-neutral-900 dark:text-white uppercase tracking-wider">
+                {lang === 'ar' ? 'أقسام ووحدات التحكم' : 'Control Modules'}
+              </h3>
+              <span className="text-[11px] font-bold text-neutral-400">
+                11 {lang === 'ar' ? 'وحدة متكاملة' : 'Modules'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+              {[
+                {
+                  id: 'submissions',
+                  title: lang === 'ar' ? 'طلبات الإعلانات VIP' : 'VIP Ad Submissions',
+                  desc: lang === 'ar' ? 'اعتماد الإعلانات وفحص الإيصالات' : 'Approve ads & check receipts',
+                  icon: Crown,
+                  color: 'amber',
+                  badge: submissions.filter(s => s.status === 'pending').length > 0 
+                    ? `${submissions.filter(s => s.status === 'pending').length} ${lang === 'ar' ? 'معلق' : 'Pending'}` 
+                    : null,
+                  badgeType: 'amber'
+                },
+                {
+                  id: 'bookings',
+                  title: lang === 'ar' ? 'حجوزات التذاكر' : 'Ticket Bookings',
+                  desc: lang === 'ar' ? 'مطابقة إيصالات فودافون كاش وتأكيد الباركود' : 'Match receipts & issue barcodes',
+                  icon: Ticket,
+                  color: 'emerald',
+                  badge: bookings.filter(b => b.status === 'pending').length > 0 
+                    ? `${bookings.filter(b => b.status === 'pending').length} ${lang === 'ar' ? 'معلق' : 'Pending'}` 
+                    : null,
+                  badgeType: 'emerald'
+                },
+                {
+                  id: 'create_ad_admin',
+                  title: lang === 'ar' ? 'إنشاء إعلان فوري' : 'Create Event (Admin)',
+                  desc: lang === 'ar' ? 'نشر مباشر وتثبيت وترتيب الفعاليات' : 'Instant publish & pin order',
+                  icon: Plus,
+                  color: 'indigo',
+                  badge: 'ADMIN',
+                  badgeType: 'indigo'
+                },
+                {
+                  id: 'users',
+                  title: lang === 'ar' ? 'مستخدمي التطبيق' : 'App Users Audit',
+                  desc: lang === 'ar' ? 'بحث بالحسابات، تجميد وحذف الأعضاء' : 'Search profiles & suspend users',
+                  icon: Users,
+                  color: 'purple',
+                  badge: allUsers.length > 0 ? `${allUsers.length} ${lang === 'ar' ? 'عضو' : 'Users'}` : null,
+                  badgeType: 'purple'
+                },
+                {
+                  id: 'support',
+                  title: lang === 'ar' ? 'رسائل ومقترحات الدعم' : 'Support Inbox',
+                  desc: lang === 'ar' ? 'الرد على الأعضاء وإرسال التنبيهات' : 'Reply & send system alerts',
+                  icon: MessageSquare,
+                  color: 'cyan',
+                  badge: supportMessages.filter(m => !m.reply).length > 0 
+                    ? `${supportMessages.filter(m => !m.reply).length} ${lang === 'ar' ? 'جديد' : 'New'}` 
+                    : null,
+                  badgeType: 'cyan'
+                },
+                {
+                  id: 'analytics',
+                  title: lang === 'ar' ? 'الإحصائيات والتفاعل' : 'Real-time Analytics',
+                  desc: lang === 'ar' ? 'زوار الموقع واهتمامات الجمهور' : 'Traffic, styles interest, clicks',
+                  icon: BarChart3,
+                  color: 'teal',
+                  badge: 'LIVE',
+                  badgeType: 'teal'
+                },
+                {
+                  id: 'database',
+                  title: lang === 'ar' ? 'مستكشف قاعدة البيانات' : 'Database Inspector',
+                  desc: lang === 'ar' ? 'مستندات Firestore الحية وتعديلها' : 'Inspect & export Firestore collections',
+                  icon: Database,
+                  color: 'blue',
+                  badge: 'FIRESTORE',
+                  badgeType: 'blue'
+                },
+                {
+                  id: 'pricing',
+                  title: lang === 'ar' ? 'أسعار الإعلانات' : 'Manage Ad Prices',
+                  desc: lang === 'ar' ? 'تعديل أسعار الإعلانات الأسبوعية واليومية' : 'Configure ad rates & video surcharges',
+                  icon: DollarSign,
+                  color: 'emerald',
+                  badge: 'CONFIG',
+                  badgeType: 'neutral'
+                },
+                {
+                  id: 'branding',
+                  title: lang === 'ar' ? 'الهوية والشعارات' : 'Visual Branding',
+                  desc: lang === 'ar' ? 'اسم التطبيق، الشعار، وأيقونات العرض' : 'App title, logos, assets',
+                  icon: Sparkles,
+                  color: 'pink',
+                  badge: 'ASSETS',
+                  badgeType: 'pink'
+                },
+                {
+                  id: 'security',
+                  title: lang === 'ar' ? 'الأمان وجدار الحماية' : 'Security & Firewall',
+                  desc: lang === 'ar' ? 'تعديل العبارة السرية وسجلات الاختراق' : 'Secret phrase & attack logs',
+                  icon: ShieldAlert,
+                  color: 'red',
+                  badge: 'SECURE',
+                  badgeType: 'red'
+                },
+                {
+                  id: 'send_notifications',
+                  title: lang === 'ar' ? 'إرسال تنبيه عام' : 'Broadcast Push',
+                  desc: lang === 'ar' ? 'إشعار فوري لجميع الأعضاء بالجرس' : 'Instant bell push to all members',
+                  icon: Bell,
+                  color: 'amber',
+                  badge: 'PUSH',
+                  badgeType: 'amber'
+                },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.id}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => {
+                      setAdminSection(item.id as any);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-amber-500/70 dark:hover:border-amber-400/60 bg-white dark:bg-neutral-900 p-3 sm:p-3.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group h-auto min-h-[96px] sm:min-h-[108px]"
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        item.color === 'amber' ? 'bg-amber-500/10 text-amber-500' :
+                        item.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-500' :
+                        item.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-500' :
+                        item.color === 'purple' ? 'bg-purple-500/10 text-purple-500' :
+                        item.color === 'cyan' ? 'bg-cyan-500/10 text-cyan-500' :
+                        item.color === 'teal' ? 'bg-teal-500/10 text-teal-500' :
+                        item.color === 'blue' ? 'bg-blue-500/10 text-blue-500' :
+                        item.color === 'pink' ? 'bg-pink-500/10 text-pink-500' :
+                        'bg-red-500/10 text-red-500'
+                      }`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+
+                      {item.badge && (
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md leading-tight ${
+                          item.badgeType === 'amber' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono' :
+                          item.badgeType === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono' :
+                          item.badgeType === 'indigo' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300' :
+                          item.badgeType === 'purple' ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 font-mono' :
+                          item.badgeType === 'cyan' ? 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-mono' :
+                          item.badgeType === 'teal' ? 'bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300' :
+                          item.badgeType === 'blue' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300' :
+                          item.badgeType === 'pink' ? 'bg-pink-100 dark:bg-pink-500/20 text-pink-800 dark:text-pink-300' :
+                          item.badgeType === 'red' ? 'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300' :
+                          'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-2">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-neutral-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                        {item.title}
+                      </h4>
+                      <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                        {item.desc}
+                      </p>
+                    </div>
+
+                    <div className="mt-1 flex items-center justify-end text-[10px] font-black text-amber-600 dark:text-amber-400 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span>{lang === 'ar' ? 'فتح ➔' : 'Open ➔'}</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'bookings' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Section Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Bookings'}
+              </span>
+              <span className="text-xl font-black text-amber-400 mt-1 block font-mono">
+                {bookings ? bookings.length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '🎟️ تذاكر قيد المراجعة' : '🎟️ Pending Review'}
+              </span>
+              <span className="text-xl font-black text-yellow-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'pending').length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '✅ الحجوزات المقبولة' : '✅ Approved Bookings'}
+              </span>
+              <span className="text-xl font-black text-emerald-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'approved').length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '❌ طلبات مرفوضة' : '❌ Rejected Bookings'}
+              </span>
+              <span className="text-xl font-black text-red-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'rejected').length : 0}
+              </span>
+            </div>
+          </div>
+
+          {/* Purge reminder info card for Admins */}
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex gap-3 items-start">
+            <span className="text-lg text-amber-500 shrink-0 mt-0.5">⚠️</span>
+            <div className="space-y-1">
+              <h5 className="text-xs font-black text-amber-400">
+                {lang === 'ar' ? 'سياسة توفير المساحة التلقائية وتأمين البيانات' : 'Automated Storage Optimization Policy'}
+              </h5>
+              <p className="text-[11px] text-neutral-300 leading-relaxed font-sans">
+                {lang === 'ar' 
+                  ? 'برجاء العلم أنه بعد مرور 24 ساعة من تاريخ الاحتفال/الحدث، يتم مسح صور إيصالات الدفع والتحويلات تلقائياً من خوادم قاعدة البيانات لتوفير مساحة الاستضافة وحماية خصوصية العملاء. تأكد من مطابقة ومراجعة الإيصالات وتفعيل الحجوزات قبل انتهاء الحدث.' 
+                  : 'Please note: 24 hours after an event date has passed, all associated receipt screenshots are automatically deleted to optimize database storage and preserve client privacy. Ensure all bookings are verified and approved before the event begins.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Actions for Admins */}
+          {!viewingBookedAds && !viewingCancellationRequests && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => setViewingBookedAds(true)}
+                className="flex items-center justify-between gap-4 p-5 rounded-3xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all text-left cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-neutral-950 shadow-md shrink-0">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-extrabold text-white text-sm">
+                      {lang === 'ar' ? '📊 مراجعة الإعلانات المحجوزة' : '📊 Review Booked Ads'}
+                    </h4>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' ? 'عرض الفعاليات النشطة وإجمالي الحجوزات والحضور والتفاصيل.' : 'View active events, total bookings, attendance rates and attendee details.'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-amber-500 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">➔</span>
+              </button>
+
+              <button
+                onClick={() => setViewingCancellationRequests(true)}
+                className="flex items-center justify-between gap-4 p-5 rounded-3xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/10 transition-all text-left cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500 text-neutral-950 shadow-md shrink-0">
+                    <XCircle className="h-6 w-6" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-extrabold text-white text-sm">
+                      {lang === 'ar' ? '🚨 طلبات إلغاء الحجز' : '🚨 Cancellation Requests'}
+                    </h4>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' ? 'عرض المستخدمين الراغبين في إلغاء الحجز للتواصل معهم.' : 'View users requesting cancellation and their contact details.'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-red-500 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">➔</span>
+              </button>
+            </div>
+          )}
+
+          {viewingBookedAds ? (
+            // --- BOOKED ADS REVIEW SUBVIEW ---
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (selectedBookedAdId) {
+                        setSelectedBookedAdId(null);
+                      } else {
+                        setViewingBookedAds(false);
+                      }
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 transition-all cursor-pointer shrink-0"
+                  >
+                    <ArrowLeft className={`h-5 w-5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <div className="text-left">
+                    <h3 className="text-lg font-black text-white">
+                      {selectedBookedAdId 
+                        ? (lang === 'ar' ? '👥 تفاصيل الحضور والحجوزات للفعالية' : '👥 Event Booking & Attendance Details')
+                        : (lang === 'ar' ? '📊 مراجعة الإعلانات التي تم عليها الحجز' : '📊 Booked Ads Review')}
+                    </h3>
+                    <p className="text-xs text-neutral-400">
+                      {selectedBookedAdId
+                        ? (lang === 'ar' ? 'عرض قائمة المشتركين المسجلين وحالة حضورهم لكل تذكرة.' : 'List of registered members and their check-in status per ticket.')
+                        : (lang === 'ar' ? 'عرض جميع الفعاليات التي تم عليها حجز تذاكر مع إحصائيات الحضور.' : 'All events with registered tickets and attendance rates.')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedBookedAdId ? (
+                // --- ATTENDEE LIST FOR SELECTED EVENT ---
+                (() => {
+                  const eventBookings = bookings.filter(b => b.eventId === selectedBookedAdId && b.status !== 'rejected');
+                  const currentEvent = events.find(e => e.id === selectedBookedAdId);
+                  const eventTitle = currentEvent 
+                    ? (lang === 'ar' ? currentEvent.titleAr : currentEvent.titleEn)
+                    : (eventBookings[0] ? (lang === 'ar' ? eventBookings[0].eventTitleAr : eventBookings[0].eventTitleEn) : '');
+
+                  const eventRevenue = eventBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+                  const eventIndividuals = eventBookings.reduce((sum, b) => sum + (Number(b.numberOfIndividuals) || 1), 0);
+                  const eventIndividualsAttended = eventBookings.filter(b => b.attended).reduce((sum, b) => sum + (Number(b.numberOfIndividuals) || 1), 0);
+
+                  return (
+                    <div className="space-y-6 animate-fadeIn">
+                      <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4 text-left">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                          <div className="text-left">
+                            <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase font-black">
+                              {lang === 'ar' ? 'الفعالية المحددة' : 'SELECTED EVENT'}
+                            </span>
+                            <h4 className="text-base font-black text-white mt-0.5">{eventTitle}</h4>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 w-full lg:w-auto shrink-0">
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Booked'}</span>
+                              <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                {eventBookings.length} <span className="text-[10px] text-neutral-400 font-normal font-sans">({eventIndividuals} {lang === 'ar' ? 'فرد' : 'pax'})</span>
+                              </span>
+                            </div>
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'حضروا بالفعل' : 'Checked In'}</span>
+                              <span className="text-sm font-black text-emerald-400 font-mono mt-0.5 block">
+                                {eventBookings.filter(b => b.attended).length} <span className="text-[10px] text-emerald-500/70 font-normal font-sans">({eventIndividualsAttended} {lang === 'ar' ? 'فرد' : 'pax'})</span>
+                              </span>
+                            </div>
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'المبلغ المستحق' : 'Total Price'}</span>
+                              <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                {eventRevenue.toLocaleString()} <span className="text-[9px] font-normal text-neutral-400 font-sans">{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {eventBookings.length === 0 ? (
+                          <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20">
+                            <p className="text-neutral-400 text-sm">
+                              {lang === 'ar' ? '🚫 لا توجد حجوزات نشطة لهذه الفعالية حالياً.' : '🚫 No active bookings for this event yet.'}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {eventBookings.map((b) => (
+                              <div
+                                key={b.id}
+                                className="p-5 rounded-3xl border border-neutral-800 bg-neutral-900 flex flex-col justify-between space-y-4 shadow-lg hover:border-neutral-700 transition-all text-left"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="text-left">
+                                    <h5 className="text-sm font-extrabold text-white">{b.userName}</h5>
+                                    <p className="text-xs text-neutral-400 mt-0.5 font-mono">Ref: {b.refNumber}</p>
+                                  </div>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                                    b.status === 'approved' 
+                                      ? 'bg-emerald-500/20 text-emerald-300' 
+                                      : b.status === 'pending'
+                                      ? 'bg-amber-500/20 text-amber-300 animate-pulse'
+                                      : 'bg-red-500/20 text-red-300'
+                                  }`}>
+                                    {b.status === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
+                                    {b.status === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending')}
+                                    {b.status === 'cancelled' && (lang === 'ar' ? '⚠️ ملغي' : 'Cancelled')}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 text-xs">
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '📞 رقم التواصل' : '📞 Phone'}</span>
+                                    <span className="text-white font-bold font-mono">{b.userPhone}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '👥 عدد الأفراد' : '👥 Pax'}</span>
+                                    <span className="text-white font-bold font-mono">{String(b.numberOfIndividuals || 1)} {lang === 'ar' ? 'أفراد' : 'person(s)'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '💰 قيمة الحجز' : '💰 Booking Price'}</span>
+                                    <span className="text-white font-bold font-mono">{String(b.totalAmount || 0)} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '🚪 حالة الحضور' : '🚪 Attendance'}</span>
+                                    <span className={`font-bold ${b.attended ? 'text-emerald-400' : 'text-neutral-400'}`}>
+                                      {b.attended 
+                                        ? (lang === 'ar' ? '✅ حضر' : 'Checked In') 
+                                        : (lang === 'ar' ? '❌ لم يحضر بعد' : 'Not Checked In')}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2 pt-2 border-t border-neutral-850">
+                                  <a
+                                    href={`tel:${b.userPhone}`}
+                                    className="flex-1 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-center text-[11px] font-bold text-white flex items-center justify-center gap-1 transition-all"
+                                  >
+                                    <Phone className="h-3.5 w-3.5 text-neutral-400" />
+                                    <span>{lang === 'ar' ? 'اتصال هاتف' : 'Call'}</span>
+                                  </a>
+                                  <a
+                                    href={`https://wa.me/${b.userPhone.startsWith('0') ? '2' + b.userPhone : b.userPhone}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex-1 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-center text-[11px] font-bold text-emerald-400 flex items-center justify-center gap-1 transition-all"
+                                  >
+                                    <span className="text-xs">💬</span>
+                                    <span>واتساب</span>
+                                  </a>
+                                  <button
+                                    onClick={async () => {
+                                      if (actionLoading) return;
+                                      const confirmed = await triggerConfirm(
+                                        lang === 'ar' 
+                                          ? '⚠️ هل أنت متأكد تماماً من حذف هذا الحجز نهائياً من قاعدة البيانات؟ لا يمكن استعادته لاحقاً!' 
+                                          : '⚠️ Are you absolutely sure you want to permanently delete this booking? This action cannot be undone!'
+                                      );
+                                      if (confirmed) {
+                                        setActionLoading(b.id);
+                                        await deleteBooking(b.id);
+                                        setActionLoading(null);
+                                      }
+                                    }}
+                                    disabled={actionLoading !== null}
+                                    className="flex-1 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-center text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <span>{lang === 'ar' ? 'حذف الحجز' : 'Delete'}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                // --- LIST OF EVENTS THAT HAVE BOOKINGS ---
+                (() => {
+                  const groups: Record<string, { 
+                    eventId: string; 
+                    titleAr: string; 
+                    titleEn: string; 
+                    totalBookings: number; 
+                    totalAttendance: number; 
+                    totalRevenue: number;
+                    totalIndividuals: number;
+                    totalIndividualsAttended: number;
+                    bookings: any[] 
+                  }> = {};
+                  bookings.forEach(b => {
+                    if (b.status === 'rejected') return;
+                    if (!groups[b.eventId]) {
+                      groups[b.eventId] = {
+                        eventId: b.eventId,
+                        titleAr: b.eventTitleAr || 'فعالية غير معروفة',
+                        titleEn: b.eventTitleEn || 'Unknown Event',
+                        totalBookings: 0,
+                        totalAttendance: 0,
+                        totalRevenue: 0,
+                        totalIndividuals: 0,
+                        totalIndividualsAttended: 0,
+                        bookings: []
+                      };
+                    }
+                    groups[b.eventId].bookings.push(b);
+                    groups[b.eventId].totalBookings += 1;
+                    groups[b.eventId].totalRevenue += Number(b.totalAmount) || 0;
+                    const pCount = Number(b.numberOfIndividuals) || 1;
+                    groups[b.eventId].totalIndividuals += pCount;
+                    if (b.attended) {
+                      groups[b.eventId].totalAttendance += 1;
+                      groups[b.eventId].totalIndividualsAttended += pCount;
+                    }
+                  });
+
+                  const list = Object.values(groups);
+
+                  const overallBookingsCount = list.reduce((sum, g) => sum + g.totalBookings, 0);
+                  const overallAttendanceCount = list.reduce((sum, g) => sum + g.totalAttendance, 0);
+                  const overallRevenue = list.reduce((sum, g) => sum + g.totalRevenue, 0);
+                  const overallIndividuals = list.reduce((sum, g) => sum + g.totalIndividuals, 0);
+                  const overallIndividualsAttended = list.reduce((sum, g) => sum + g.totalIndividualsAttended, 0);
+
+                  if (list.length === 0) {
+                    return (
+                      <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 animate-fadeIn">
+                        <p className="text-neutral-400 text-sm">
+                          {lang === 'ar' ? '🚫 لا توجد فعاليات مسجلة بها حجوزات حالياً.' : '🚫 No events with registered bookings found.'}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-6 animate-fadeIn text-left text-neutral-100">
+                      {/* Overall stats summary widget */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 rounded-3xl bg-neutral-900 border border-neutral-800">
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-neutral-400 block font-bold">
+                            {lang === 'ar' ? '🎟️ إجمالي التذاكر المحجوزة' : '🎟️ Total Booked Tickets'}
+                          </span>
+                          <span className="text-xl font-black text-white font-mono mt-1 block">
+                            {overallBookingsCount} {lang === 'ar' ? 'حجز' : 'booking(s)'} <span className="text-xs text-neutral-400 font-normal font-sans">({overallIndividuals} {lang === 'ar' ? 'أفراد' : 'pax'})</span>
+                          </span>
+                        </div>
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-emerald-400 block font-bold">
+                            {lang === 'ar' ? '🚪 حضروا بالفعل' : '🚪 Checked In / Attended'}
+                          </span>
+                          <span className="text-xl font-black text-emerald-400 font-mono mt-1 block">
+                            {overallAttendanceCount} {lang === 'ar' ? 'حجز' : 'booking(s)'} <span className="text-xs text-emerald-500/70 font-normal font-sans">({overallIndividualsAttended} {lang === 'ar' ? 'أفراد' : 'pax'})</span>
+                          </span>
+                        </div>
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-amber-400 block font-bold">
+                            {lang === 'ar' ? '💰 إجمالي المبالغ المستحقة' : '💰 Total Revenue Due'}
+                          </span>
+                          <span className="text-xl font-black text-amber-400 font-mono mt-1 block">
+                            {overallRevenue.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {list.map((group) => (
+                          <div
+                            key={group.eventId}
+                            onClick={() => setSelectedBookedAdId(group.eventId)}
+                            className="p-5 sm:p-6 rounded-3xl border border-neutral-800 bg-neutral-900 hover:border-amber-500/40 hover:bg-neutral-850/50 transition-all cursor-pointer group flex flex-col justify-between space-y-4 shadow-xl"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase font-black">
+                                  {lang === 'ar' ? 'الفعالية / الإعلان' : 'EVENT / AD'}
+                                </span>
+                                <h4 className="text-base font-black text-white group-hover:text-amber-400 transition-colors mt-0.5 line-clamp-1">
+                                  {lang === 'ar' ? group.titleAr : group.titleEn}
+                                </h4>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePurgeEventCompletely(group.eventId, lang === 'ar' ? group.titleAr : group.titleEn);
+                                }}
+                                className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all shrink-0"
+                                title={lang === 'ar' ? 'حذف الفعالية وكل الحجوزات المتعلقة بها نهائياً' : 'Purge event and all related data completely'}
+                                disabled={actionLoading === group.eventId}
+                              >
+                                {actionLoading === group.eventId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 bg-neutral-950/60 p-3 rounded-2xl border border-neutral-800/40 text-left">
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '🎟️ إجمالي الحجوزات' : '🎟️ Bookings'}
+                                </span>
+                                <span className="text-sm font-black text-white font-mono mt-0.5 block">
+                                  {group.totalBookings} <span className="text-[10px] text-neutral-400 font-normal font-sans">({group.totalIndividuals})</span>
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '🚪 حضروا بالفعل' : '🚪 Attended'}
+                                </span>
+                                <span className="text-sm font-black text-emerald-400 font-mono mt-0.5 block">
+                                  {group.totalAttendance} <span className="text-[10px] text-emerald-500/70 font-normal font-sans">({group.totalIndividualsAttended})</span>
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '💰 إجمالي المبالغ' : '💰 Total Price'}
+                                </span>
+                                <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                  {group.totalRevenue.toLocaleString()} <span className="text-[9px] font-normal text-neutral-400 font-sans">{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs font-bold text-amber-400 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1 pt-1">
+                              <span>{lang === 'ar' ? 'عرض تفاصيل الحضور والمشتركين ➔' : 'View attendance & subscribers list ➔'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          ) : viewingCancellationRequests ? (
+            // --- CANCELLATION REQUESTS SUBVIEW ---
+            <div className="space-y-6 animate-fadeIn text-left">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setViewingCancellationRequests(false)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 transition-all cursor-pointer shrink-0"
+                  >
+                    <ArrowLeft className={`h-5 w-5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <div>
+                    <h3 className="text-lg font-black text-white">
+                      {lang === 'ar' ? '🚨 طلبات إلغاء الحجز والـ Refund' : '🚨 Booking Cancellation Requests'}
+                    </h3>
+                    <p className="text-xs text-neutral-400">
+                      {lang === 'ar' ? 'قائمة بجميع المستخدمين الذين طلبوا إلغاء حجزهم مع تفاصيل المبالغ والاتصال.' : 'All users who submitted cancellation requests with booking value and contact info.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {(() => {
+                const cancelRequests = bookings.filter(b => (b.status || 'pending').toLowerCase() === 'cancelled');
+
+                if (cancelRequests.length === 0) {
+                  return (
+                    <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 animate-fadeIn">
+                      <p className="text-neutral-400 text-sm">
+                        {lang === 'ar' ? '🎉 لا توجد طلبات إلغاء حجز حالياً.' : '🎉 No cancellation requests found.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+                    {cancelRequests.map((b) => (
+                      <div
+                        key={b.id}
+                        className="p-5 sm:p-6 rounded-3xl border border-red-500/20 bg-neutral-900 hover:border-red-500/40 transition-all shadow-xl space-y-4 relative overflow-hidden flex flex-col justify-between text-left"
+                      >
+                        <div className="absolute top-0 right-0 h-1 bg-red-500 w-full" />
+                        
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <span className="text-[10px] font-mono tracking-wider text-red-400 font-black block">
+                              {lang === 'ar' ? 'طلب إلغاء حجز' : 'CANCELLATION REQUEST'}
+                            </span>
+                            <h4 className="text-sm font-black text-white mt-0.5">{b.userName}</h4>
+                            <p className="text-xs text-neutral-400 font-mono mt-0.5">Ref: {b.refNumber}</p>
+                          </div>
+                          {b.cancelledAt && (
+                            <span className="text-[10px] text-neutral-400 font-bold bg-neutral-950 px-2 py-1 rounded-lg shrink-0">
+                              🕒 {new Date(b.cancelledAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 border-y border-neutral-800 py-3 text-xs">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-neutral-400 shrink-0">{lang === 'ar' ? 'اسم الفعالية:' : 'Event Name:'}</span>
+                            <span className="text-white font-extrabold text-right line-clamp-1 max-w-[200px]">
+                              {lang === 'ar' ? b.eventTitleAr : b.eventTitleEn}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-400">{lang === 'ar' ? 'قيمة الحجز المدفوعة:' : 'Paid Amount:'}</span>
+                            <span className="text-white font-bold font-mono">
+                              {String(b.totalAmount || 0)} {lang === 'ar' ? 'ج.م' : 'EGP'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-400">{lang === 'ar' ? 'رقم موبايل للتواصل:' : 'Contact Phone:'}</span>
+                            <span className="text-amber-400 font-bold font-mono select-all">
+                              {b.userPhone}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                          <a
+                            href={`tel:${b.userPhone}`}
+                            className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-center text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <Phone className="h-4 w-4 text-neutral-400" />
+                            <span>{lang === 'ar' ? 'اتصال بالهاتف' : 'Call'}</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/${b.userPhone.startsWith('0') ? '2' + b.userPhone : b.userPhone}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-center text-xs font-bold text-emerald-400 flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <span className="text-sm">💬</span>
+                            <span>واتساب العميل</span>
+                          </a>
+                          <button
+                            onClick={async () => {
+                              if (actionLoading) return;
+                              const confirmed = await triggerConfirm(
+                                lang === 'ar' 
+                                  ? '⚠️ هل أنت متأكد من حذف هذا الحجز وحذف طلب الإلغاء نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء!' 
+                                  : '⚠️ Are you sure you want to permanently delete this booking and cancellation request from the database? This action cannot be undone!'
+                              );
+                              if (confirmed) {
+                                setActionLoading(b.id);
+                                await deleteBooking(b.id);
+                                setActionLoading(null);
+                              }
+                            }}
+                            disabled={actionLoading !== null}
+                            className="flex-1 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-center text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4 shrink-0" />
+                            <span>{lang === 'ar' ? 'حذف نهائياً' : 'Delete'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            // --- DEFAULT BOOKINGS SECTION CONTENT ---
+            <>
+              {/* Filters and Search Bar */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-4 sm:p-6 space-y-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              {/* Tab Filters */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setBookingsFilter(tab)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      bookingsFilter === tab
+                        ? 'bg-emerald-500 text-neutral-950 shadow-lg shadow-emerald-500/15'
+                        : 'bg-neutral-800 hover:bg-neutral-750 text-neutral-300 border border-neutral-700/60'
+                    }`}
+                  >
+                    {tab === 'all' && (lang === 'ar' ? '📋 الكل' : '📋 All')}
+                    {tab === 'pending' && (lang === 'ar' ? '⏳ معلق' : '⏳ Pending')}
+                    {tab === 'approved' && (lang === 'ar' ? '✅ مقبول' : '✅ Approved')}
+                    {tab === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : '❌ Rejected')}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Field */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder={
+                    lang === 'ar' 
+                      ? 'البحث برقم الحجز، اسم العميل، الموبايل...' 
+                      : 'Search by booking ID, customer name, mobile...'
+                  }
+                  value={bookingsSearch}
+                  onChange={(e) => setBookingsSearch(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500 transition-all font-medium"
+                />
+                {bookingsSearch && (
+                  <button
+                    onClick={() => setBookingsSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bookings List */}
+          <div className="space-y-4">
+            {(() => {
+              const list = bookings || [];
+              const filtered = list.filter((b) => {
+                const currentStatus = (b.status || 'pending').toLowerCase();
+                // Status Filter
+                if (bookingsFilter !== 'all' && currentStatus !== bookingsFilter) return false;
+
+                // Search Filter
+                if (bookingsSearch.trim()) {
+                  const query = bookingsSearch.toLowerCase();
+                  const refNum = b.refNumber.toLowerCase();
+                  const name = b.userName.toLowerCase();
+                  const phone = b.userPhone.toLowerCase();
+                  const titleAr = (b.eventTitleAr || '').toLowerCase();
+                  const titleEn = (b.eventTitleEn || '').toLowerCase();
+
+                  return (
+                    refNum.includes(query) ||
+                    name.includes(query) ||
+                    phone.includes(query) ||
+                    titleAr.includes(query) ||
+                    titleEn.includes(query)
+                  );
+                }
+
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 p-12 text-center">
+                    <p className="text-neutral-400 text-sm">
+                      {lang === 'ar' 
+                        ? '🚫 لا توجد طلبات حجز مطابقة للخيارات الحالية.' 
+                        : '🚫 No bookings match your selected filters.'}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {filtered.map((b) => {
+                    return (
+                      <motion.div
+                        key={b.id}
+                        layout
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-3xl border border-neutral-800 bg-neutral-900 p-5 sm:p-6 shadow-xl relative overflow-hidden flex flex-col justify-between"
+                      >
+                        {/* Status bar top */}
+                        <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500" />
+                        <div className="flex items-start justify-between gap-4 border-b border-neutral-800 pb-4 mb-4">
+                          <div>
+                            <span className="text-[10px] font-mono tracking-wider text-neutral-400 uppercase">
+                              {lang === 'ar' ? 'رقم حجز مرجعي' : 'REFERENCE NUMBER'}
+                            </span>
+                            <h4 className="text-base font-black text-emerald-400 tracking-wider mt-0.5 select-all font-mono">
+                              {b.refNumber}
+                            </h4>
+                            {b.submittedAt && (
+                              <div className="text-[10px] text-neutral-400 font-bold mt-1 flex items-center gap-1">
+                                <span>📅</span>
+                                <span>
+                                  {lang === 'ar' ? 'تقديم الحجز:' : 'Submitted:'} {new Date(b.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <span className={`px-3 py-1 rounded-full text-[11px] font-black ${
+                            b.status === 'approved' 
+                              ? 'bg-emerald-500/20 text-emerald-300' 
+                              : b.status === 'rejected'
+                              ? 'bg-red-500/20 text-red-300'
+                              : 'bg-amber-500/20 text-amber-300 animate-pulse'
+                          }`}>
+                            {b.status === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
+                            {b.status === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : 'Rejected')}
+                            {b.status === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending Review')}
+                          </span>
+                        </div>
+
+                        {/* Booking Details */}
+                        <div className="space-y-4 flex-1">
+                          {/* Attendee details */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold">
+                                {lang === 'ar' ? '👤 اسم العميل (كامل بالبطاقة)' : '👤 Full Customer Name'}
+                              </span>
+                              <span className="text-sm font-extrabold text-white mt-1 block">
+                                {b.userName}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold">
+                                {lang === 'ar' ? '📞 رقم الموبايل للتواصل' : '📞 Contact Phone'}
+                              </span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs font-mono font-bold text-white select-all">
+                                  {b.userPhone}
+                                </span>
+                                <a
+                                  href={`tel:${b.userPhone}`}
+                                  className="h-6 w-6 rounded-md bg-neutral-800 hover:bg-neutral-750 flex items-center justify-center text-neutral-300 hover:text-white transition-all"
+                                  title="اتصال مباشر"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                </a>
+                                <a
+                                  href={`https://wa.me/${b.userPhone.replace('+', '').replace(/^0/, '20')}`}
+                                  target="_blank"
+                                  referrerPolicy="no-referrer"
+                                  className="h-6 w-6 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 flex items-center justify-center text-emerald-400 transition-all"
+                                  title="مراسلة واتساب"
+                                >
+                                  <MessageCircle className="h-3 w-3" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Event details */}
+                          <div className="rounded-2xl bg-neutral-950 p-3.5 space-y-2 border border-neutral-800/50">
+                            <div className="flex justify-between items-start gap-4">
+                              <div>
+                                <span className="text-[10px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? '🎟️ الفعالية المطلوبة' : '🎟️ Reserved Event'}
+                                </span>
+                                <span className="text-xs font-extrabold text-neutral-200 mt-1 block line-clamp-1">
+                                  {lang === 'ar' ? b.eventTitleAr : b.eventTitleEn}
+                                </span>
+                              </div>
+                              {(() => {
+                                const matchedEvent = events.find(e => e.id === b.eventId);
+                                const evDate = b.eventDate || matchedEvent?.eventDate;
+                                if (!evDate) return null;
+                                return (
+                                  <div className="text-right shrink-0">
+                                    <span className="text-[10px] text-amber-500 block font-black">
+                                      {lang === 'ar' ? '📅 تاريخ الفعالية' : '📅 Event Date'}
+                                    </span>
+                                    <span className="text-xs font-extrabold text-neutral-200 mt-1 block font-mono">
+                                      {new Date(evDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-900 text-center">
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'عدد الأفراد' : 'Guests'}
+                                </span>
+                                <span className="text-xs font-extrabold text-amber-400 mt-0.5 block">
+                                  {b.numberOfIndividuals} {lang === 'ar' ? 'أفراد' : 'people'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'سعر الفرد' : 'Price / Individual'}
+                                </span>
+                                <span className="text-xs font-extrabold text-neutral-300 mt-0.5 block font-mono">
+                                  {b.eventPrice} ج.م
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'الإجمالي المطلوب' : 'Grand Total'}
+                                </span>
+                                <span className="text-xs font-black text-emerald-400 mt-0.5 block font-mono">
+                                  {String(b.totalAmount || 0)} ج.م
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Receipt Image */}
+                          {b.receiptImage && (
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold mb-1.5">
+                                {lang === 'ar' ? '📄 إيصال تحويل فودافون كاش / انستاباي' : '📄 Payment Receipt Screenshot'}
+                              </span>
+                              <div 
+                                onClick={() => setSelectedBookingReceipt(b.receiptImage)}
+                                className="relative rounded-2xl overflow-hidden border border-neutral-800 h-28 bg-neutral-950 hover:border-emerald-500/50 transition-all cursor-zoom-in group"
+                              >
+                                <img
+                                  src={b.receiptImage}
+                                  alt="Payment Receipt"
+                                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-center p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                                    <Eye className="h-3 w-3" />
+                                    {lang === 'ar' ? 'تكبير وعرض الإيصال' : 'View full size'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Status timestamps / codes */}
+                          <div className="text-[10px] text-neutral-400 space-y-1 pt-1">
+                            <div className="flex justify-between">
+                              <span>{lang === 'ar' ? 'تاريخ تقديم الحجز:' : 'Submitted At:'}</span>
+                              <span className="font-mono text-neutral-300">
+                                {new Date(b.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                              </span>
+                            </div>
+                            {b.status === 'approved' && b.accessCode && (
+                              <div className="flex justify-between bg-emerald-500/5 px-2 py-1 rounded-md border border-emerald-500/10">
+                                <span className="text-emerald-300 font-bold">{lang === 'ar' ? 'كود الدخول المعتمد:' : 'Access Code Issued:'}</span>
+                                <span className="font-mono font-black text-emerald-400 select-all tracking-wider">{b.accessCode}</span>
+                              </div>
+                            )}
+                            {b.status === 'rejected' && b.adminNotes && (
+                              <div className="bg-red-500/5 px-2 py-1 rounded-md border border-red-500/10 text-red-300">
+                                <span className="font-bold">{lang === 'ar' ? 'سبب الرفض:' : 'Rejection Note:'} </span>
+                                <span>{b.adminNotes}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Delete Button for all statuses */}
+                        <div className="border-t border-neutral-850 pt-3.5 mt-3.5 flex items-center justify-between gap-3">
+                          <span className="text-[10px] text-neutral-500 font-mono">
+                            {lang === 'ar' ? 'إجراءات المشرف' : 'Admin Action'}
+                          </span>
+                          <button
+                            onClick={async () => {
+                              const confirmed = await triggerConfirm(
+                                lang === 'ar' 
+                                  ? '⚠️ هل أنت متأكد تماماً من حذف هذا الحجز نهائياً من قاعدة البيانات؟ لا يمكن استعادة هذا الحجز بعد حذفه!' 
+                                  : '⚠️ Are you absolutely sure you want to permanently delete this booking from the database? This action cannot be undone!'
+                              );
+                              if (confirmed) {
+                                setActionLoading(b.id);
+                                await deleteBooking(b.id);
+                                setActionLoading(null);
+                              }
+                            }}
+                            disabled={actionLoading !== null}
+                            className="bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-neutral-950 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border border-red-500/20 hover:border-red-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>{lang === 'ar' ? 'حذف الحجز نهائياً' : 'Delete Booking'}</span>
+                          </button>
+                        </div>
+
+                        {/* Action buttons */}
+                        {b.status === 'pending' && (
+                          <div className="border-t border-neutral-800 pt-4 mt-4 space-y-3">
+                            {/* Rejection input toggle */}
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder={lang === 'ar' ? 'أدخل سبب الرفض أو كود الحجز المخصص هنا...' : 'Enter rejection reason or custom booking code here...'}
+                                value={rejectionReasonMap[b.id] || ''}
+                                onChange={(e) => {
+                                  setRejectionReasonMap(prev => ({
+                                    ...prev,
+                                    [b.id]: e.target.value
+                                  }));
+                                }}
+                                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500 transition-all"
+                              />
+                            </div>
+
+                            <div className="flex gap-3">
+                              <button
+                                onClick={async () => {
+                                  if (actionLoading) return;
+                                  setActionLoading(b.id);
+                                  // Rejection reason
+                                  const reason = rejectionReasonMap[b.id]?.trim() || (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.');
+                                  await rejectBooking(b.id, reason);
+                                  setActionLoading(null);
+                                }}
+                                disabled={actionLoading !== null}
+                                className="flex-1 bg-neutral-800 hover:bg-red-500/20 hover:text-red-300 text-neutral-300 border border-neutral-700/60 hover:border-red-500/40 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <XCircle className="h-4 w-4 shrink-0" />
+                                <span>{lang === 'ar' ? 'رفض الحجز' : 'Decline Booking'}</span>
+                              </button>
+
+                              <button
+                                onClick={async () => {
+                                  if (actionLoading) return;
+                                  setActionLoading(b.id);
+                                  const typedVal = rejectionReasonMap[b.id]?.trim() || '';
+                                  const code = typedVal || `DWM-${b.refNumber.replace('#', '')}`;
+                                  const qrUrl = 'https://cityeve.online' + '/?verify=' + b.id;
+                                  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+                                  await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
+                                  setActionLoading(null);
+                                }}
+                                disabled={actionLoading !== null}
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-neutral-950 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <CheckCircle className="h-4 w-4 shrink-0" />
+                                <span>{lang === 'ar' ? 'تأكيد الحجز وإصدار التذكرة' : 'Confirm & Issue Ticket'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </>
+      )}
+    </div>
+  )}
+
+      {/* Booking Receipt Lightbox Modal Overlay */}
+      <AnimatePresence>
+        {selectedBookingReceipt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedBookingReceipt(null)}
+            className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <button
+              onClick={() => setSelectedBookingReceipt(null)}
+              className="absolute top-4 right-4 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full p-2"
+            >
+              <XCircle className="h-6 w-6" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              src={selectedBookingReceipt}
+              alt="Expanded Payment Receipt Screenshot"
+              className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-neutral-800"
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {adminSection === 'database' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Firebase Connection Card */}
+          <div className="rounded-3xl border border-blue-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-blue-950/40 p-6 shadow-xl">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+                  <Database className="h-7 w-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-extrabold text-white">
+                      {lang === 'ar' ? 'قاعدة بيانات Google Cloud Firestore الخاصة بك' : 'Your Google Cloud Firestore Database'}
+                    </h3>
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold font-mono">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      CONNECTED (Realtime Sync)
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono text-neutral-400 mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1">
+                    <span>Project ID: <strong className="text-blue-300 select-all">{resolvedFirebaseConfig.projectId || 'Unknown'}</strong></span>
+                    <span>Database ID: <strong className="text-blue-300 select-all">{databaseId || '(default)'}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                {(() => {
+                  const isDefaultDb = !databaseId || databaseId === '(default)' || databaseId === 'default';
+                  const firebaseConsoleUrl = isDefaultDb
+                    ? `https://console.firebase.google.com/project/${resolvedFirebaseConfig.projectId || 'Unknown'}/firestore/data`
+                    : `https://console.firebase.google.com/project/${resolvedFirebaseConfig.projectId || 'Unknown'}/firestore/databases/${databaseId}/data`;
+                  const cloudConsoleUrl = `https://console.cloud.google.com/firestore/databases/${isDefaultDb ? '(default)' : databaseId}/data?project=${resolvedFirebaseConfig.projectId || 'Unknown'}`;
+
+                  return (
+                    <>
+                      <a
+                        href={firebaseConsoleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20 cursor-pointer border border-blue-400/30"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        <span>{lang === 'ar' ? 'فتح في كونسول Firebase الرسمي 🚀' : 'Open Firebase Console 🚀'}</span>
+                      </a>
+
+                      <a
+                        href={cloudConsoleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-bold transition-all border border-white/10"
+                      >
+                        <ExternalLink className="h-4 w-4 text-neutral-400" />
+                        <span>{lang === 'ar' ? 'Google Cloud Console ☁️' : 'Cloud Console ☁️'}</span>
+                      </a>
+                    </>
+                  );
+                })()}
+
+                <button
+                  onClick={handleExportBackup}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer border border-emerald-400/30 w-full sm:w-auto"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>{lang === 'ar' ? 'تصدير نسخة JSON 📥' : 'Export JSON Backup 📥'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Collection Sub-Tabs */}
+          <div className="flex flex-wrap items-center gap-2 p-2 rounded-2xl bg-neutral-900 border border-neutral-800">
+            <button
+              onClick={() => setDbSubTab('events')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dbSubTab === 'events' ? 'bg-blue-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <Table className="h-4 w-4" />
+              <span className="font-mono">events/</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-mono">{events.length}</span>
+            </button>
+
+            <button
+              onClick={() => setDbSubTab('submissions')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dbSubTab === 'submissions' ? 'bg-blue-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <Table className="h-4 w-4" />
+              <span className="font-mono">ad_submissions/</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-mono">{submissions.length}</span>
+            </button>
+
+            <button
+              onClick={() => setDbSubTab('notifications')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dbSubTab === 'notifications' ? 'bg-blue-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <Table className="h-4 w-4" />
+              <span className="font-mono">notifications/</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-mono">{notifications.length}</span>
+            </button>
+
+            <button
+              onClick={() => setDbSubTab('schema')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dbSubTab === 'schema' ? 'bg-indigo-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span>{lang === 'ar' ? '🛡️ هيكل القاعدة والأمان (Rules & Blueprint)' : '🛡️ Schema & ABAC Rules'}</span>
+            </button>
+          </div>
+
+          {/* Tab 1: events/ */}
+          {dbSubTab === 'events' && (
+            <div className="space-y-3">
+              {/* Force Clear Cache Banner */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <RefreshCw className="h-5 w-5 text-amber-400 mt-0.5 animate-spin-slow shrink-0" />
+                  <div>
+                    <h5 className="font-bold text-amber-300 text-sm">
+                      {lang === 'ar' ? 'حل نهائي لمشكلة الكاش وتحديث الإعلانات القديمة' : 'Permanent Fix for Stale Ad Cache'}
+                    </h5>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' 
+                        ? 'إذا كان المتصفح يحتفظ بالإعلان القديم أو لم يتم تحديث التعديلات بسبب الحظر في بيئة الـ iframe، اضغط هنا لتنظيف ذاكرة التخزين المحلية بالكامل ومزامنة الفعاليات مباشرة من سيرفر Firestore.' 
+                        : 'If your browser is caching stale ads or updates fail due to iframe cookie blocks, click this button to completely wipe local cache and hard-sync everything directly with the live server.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.clear();
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500 text-neutral-950 font-bold text-xs hover:bg-amber-400 active:scale-95 transition-all shadow-md flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 font-bold" />
+                  <span>{lang === 'ar' ? 'تنظيف الكاش والتحميل النهائي' : 'Force Clear & Reload'}</span>
+                </button>
+              </div>
+
+                            <div className="flex justify-end px-2 mb-2 gap-2">
+                <button
+                  onClick={() => setIsFullscreenEvents(true)}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Maximize2 className="h-3 w-3" />
+                  {lang === 'ar' ? 'تكبير القائمة' : 'Expand List'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-400 px-2">
+                <span>{lang === 'ar' ? `مجموعة الفعاليات والحفلات المخزنة (${events.length} وثيقة في Firestore)` : `Stored Events Collection (${events.length} docs in Firestore)`}</span>
+                <span className="font-mono text-[11px] text-blue-400 select-all">/databases/(default)/documents/events</span>
+              </div>
+              
+              {/* Event Stats */}
+              {(() => {
+                const usedPos = new Set<number>(events.filter(e => !e.isEmpty && typeof e.position === 'number' && e.position !== 999999).map(e => e.position as number));
+                const maxPos = usedPos.size > 0 ? Math.max(...Array.from(usedPos)) : 0;
+                const availablePos: number[] = [];
+                for (let i = 2; i <= maxPos; i++) {
+                  if (!usedPos.has(i)) {
+                    availablePos.push(i);
+                  }
+                }
+                
+                return (
+                  <>
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-2">
+                      <button onClick={() => setAdminEventsFilter('all')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'all' ? 'border-blue-500 bg-blue-500/10' : 'border-neutral-800'} hover:border-blue-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-blue-400">{events.length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'إجمالي الإعلانات' : 'Total Ads'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('empty')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'empty' ? 'border-red-500 bg-red-500/10' : 'border-neutral-800'} hover:border-red-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-red-400">{events.filter(e => e.isEmpty).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'إعلانات مفرغة (محذوفة)' : 'Empty Ads'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('paused')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'paused' ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-800'} hover:border-amber-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-amber-400">{events.filter(e => e.isPaused).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'موقوفة (مخفية)' : 'Paused (Hidden)'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('active')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'active' ? 'border-emerald-500 bg-emerald-500/10' : 'border-neutral-800'} hover:border-emerald-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-emerald-400">{events.filter(e => !e.isEmpty && !e.isPaused).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'نشطة (متاحة للعرض)' : 'Active (Visible)'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('available')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'available' ? 'border-purple-500 bg-purple-500/10' : 'border-neutral-800'} hover:border-purple-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-purple-400">{availablePos.length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'مساحات متاحة (فارغة)' : 'Available Slots'}</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {adminEventsFilter === 'available' ? (
+                        availablePos.length === 0 ? (
+                          <div className="p-8 text-center text-neutral-500 text-sm font-bold bg-neutral-900/50 rounded-2xl border border-neutral-800">
+                            {lang === 'ar' ? 'لا توجد مساحات فارغة بين الإعلانات حالياً.' : 'No available slots found between ads.'}
+                          </div>
+                        ) : (
+                          availablePos.map(pos => (
+                            <div key={`avail-${pos}`} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900 border ${pos <= 19 ? 'border-amber-500/30' : 'border-purple-500/30'} shadow-md`}>
+                              <div className="flex items-center gap-3.5">
+                                <div className={`h-14 w-14 rounded-xl bg-neutral-800 border ${pos <= 19 ? 'border-amber-500/20' : 'border-purple-500/20'} flex items-center justify-center shrink-0 shadow`}>
+                                   <span className={`text-[10px] font-bold ${pos <= 19 ? 'text-amber-400' : 'text-purple-400'}`}>{lang === 'ar' ? 'متاح' : 'Available'}</span>
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2.5 py-1 rounded-md text-sm font-black ${pos <= 19 ? 'bg-amber-600 border-amber-400' : 'bg-purple-600 border-purple-400'} text-white border font-mono shadow-md`}>
+                                      #{pos}
+                                    </span>
+                                    {pos <= 19 && (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>
+                                    )}
+                                  </div>
+                                  <h4 className="font-bold text-white text-sm mt-1">
+                                    {lang === 'ar' ? (pos <= 19 ? 'مساحة إعلانية VIP متاحة' : 'مساحة إعلانية عادية متاحة') : (pos <= 19 ? 'Available VIP Ad Slot' : 'Available Normal Ad Slot')}
+                                  </h4>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )
+                      ) : (
+                        (adminEventsFilter === 'all' ? events : events.filter(e => {
+                           if (adminEventsFilter === 'empty') return e.isEmpty;
+                           if (adminEventsFilter === 'paused') return e.isPaused;
+                           if (adminEventsFilter === 'active') return !e.isEmpty && !e.isPaused;
+                           return true;
+                        })).map((ev) => (
+                  <div key={ev.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border ${ev.isEmpty ? 'border-red-500/40 opacity-70' : 'border-white/10 hover:border-blue-500/40'} transition-all shadow-md`}>
+                    <div className="flex items-center gap-3.5 overflow-hidden">
+                      {ev.isEmpty ? (
+                        <div className="h-14 w-14 rounded-xl bg-neutral-800 border border-red-500/20 flex items-center justify-center shrink-0 shadow">
+                           <span className="text-[10px] font-bold text-red-400">فارغ</span>
+                        </div>
+                      ) : (
+                        <img src={ev.thumbnailUrl || ev.mediaUrl} alt="" className="h-14 w-14 rounded-xl object-cover border border-white/10 shrink-0 shadow" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-1 rounded-md text-sm font-black bg-indigo-600 text-white border border-indigo-400 font-mono shadow-md" title={lang === 'ar' ? 'الرقم التسلسلي' : 'Serial Number'}>
+                             #{ev.position && ev.position !== 999999 ? ev.position : '-'}
+                          </span>
+                          <span className="font-mono text-[10px] text-neutral-500 font-bold select-all">{ev.id}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-neutral-800 text-neutral-300 uppercase">{ev.category}</span>
+                          {((ev.isFeatured || (typeof ev.position === 'number' && ev.position <= 19))) && !ev.isEmpty && <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>}
+                        </div>
+                        <h4 className="font-bold text-white text-sm mt-1 truncate">{ev.isEmpty ? (lang === 'ar' ? 'مساحة إعلان فارغة (تم المسح)' : 'Empty Ad Slot (Deleted)') : (lang === 'ar' ? ev.titleAr : ev.titleEn)}</h4>
+                        {!ev.isEmpty && (
+                          <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                            <span>💰 <strong className="text-white">{lang === 'ar' ? ev.priceAr : ev.priceEn}</strong></span>
+                            <span>❤️ <strong className="text-white">{String(ev.likesCount || 0)}</strong> {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
+                            <span>📍 {lang === 'ar' ? ev.location?.nameAr : ev.location?.nameEn}</span>
+                            {ev.eventRef && <span>🔢 {lang === 'ar' ? 'المرجع:' : 'Ref:'} <strong className="text-amber-400 font-mono">#{ev.eventRef}</strong></span>}
+                          </div>
+                        )}
+                        {!ev.isEmpty && (
+                          (() => {
+                            const eventBookings = bookings?.filter(b => b.eventId === ev.id) || [];
+                            const totalBookedCount = eventBookings.reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                            const actualAttendedCount = eventBookings
+                              .filter(b => b.status === 'approved' && b.attended === true)
+                              .reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                            
+                            return (
+                              <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 bg-neutral-950/40 p-2 rounded-lg border border-neutral-800/40">
+                                <span className="text-indigo-400 font-bold">{lang === 'ar' ? '🎟️ إجمالي الحجوزات:' : '🎟️ Bookings:'} <strong className="text-white font-sans">{totalBookedCount}</strong></span>
+                                <span className="text-emerald-400 font-bold">{lang === 'ar' ? '✅ الحاضرين فعلياً:' : '✅ Attended:'} <strong className="text-white font-sans">{actualAttendedCount}</strong></span>
+                                {eventBookings.length > 0 && (
+                                  <button
+                                    onClick={() => setViewingAttendeesEvent(ev)}
+                                    className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 font-bold text-[10px] transition-colors cursor-pointer border border-blue-500/20"
+                                  >
+                                    {lang === 'ar' ? '🔍 تفاصيل الحاضرين' : '🔍 Guest List'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <button
+                        onClick={() => setQrEventDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn })}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold text-xs transition-all cursor-pointer border border-amber-500/30"
+                      >
+                        <QrCode className="h-3.5 w-3.5" />
+                        <span>{lang === 'ar' ? 'QR الدخول' : 'Check-in QR'}</span>
+                      </button>
+                      <button
+                        onClick={() => setSelectedJsonDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn, data: ev })}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs transition-all cursor-pointer border border-blue-500/30"
+                      >
+                        <Code className="h-3.5 w-3.5" />
+                        <span>{lang === 'ar' ? 'عرض وثيقة JSON' : 'Inspect Doc'}</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من مسح بيانات هذه الفعالية بالكامل وتفريغ الخانة؟ لن تظهر للمستخدمين بعد الآن.' : 'Are you sure you want to delete this event data and empty the slot? It will no longer show to users.');
+                          if (confirmed) {
+                            deleteEvent(ev.id);
+                            alert(lang === 'ar' ? 'تم مسح الإعلان بنجاح وتفريغ الخانة! لن يظهر للمستخدمين.' : 'Ad deleted and slot emptied successfully! It is now hidden from users.');
+                          }
+                        }}
+                        className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                        title={lang === 'ar' ? 'حذف من القاعدة' : 'Delete Document'}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+              </div>
+            </>
+          );
+        })()}
+            </div>
+          )}
+
+          {/* Tab 2: ad_submissions/ */}
+          {dbSubTab === 'submissions' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-400 px-2">
+                <span>{lang === 'ar' ? `طلبات وفواتير إعلانات VIP (${submissions.length} وثيقة في Firestore)` : `Stored Ad Submissions (${submissions.length} docs in Firestore)`}</span>
+                <span className="font-mono text-[11px] text-blue-400 select-all">/databases/(default)/documents/ad_submissions</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {submissions.map((sub) => (
+                  <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border border-white/10 hover:border-blue-500/40 transition-all shadow-md">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs text-amber-400 font-bold select-all">INV: #{sub.invoiceNumber}</span>
+                        <span className="font-mono text-[11px] text-neutral-500 select-all">ID: {sub.id}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          sub.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                          sub.status === 'rejected' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                          sub.status === 'archived' ? 'bg-amber-600/20 text-amber-300 border border-amber-600/30' :
+                          'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}>
+                          {sub.status}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-sky-500/10 text-sky-300 border border-sky-500/30">
+                          {sub.contentLangMode === 'both' ? '🌐 عربي + EN' : sub.contentLangMode === 'ar' ? '🇸🇦 عربي فقط' : sub.contentLangMode === 'en' ? '🇬🇧 English Only' : '🌐 عربي + EN'}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-white text-sm mt-1.5">{sub.titleAr} <span className="text-neutral-400 font-normal">({sub.advertiserName})</span></h4>
+                      <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                        <span>📱 <strong className="text-white font-mono">{sub.phone}</strong></span>
+                        <span>💵 <strong className="text-emerald-400 font-mono">{sub.amount} EGP</strong></span>
+                        <span>📅 {new Date(sub.submittedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <button
+                        onClick={() => setSelectedJsonDoc({ id: sub.id, title: `Invoice #${sub.invoiceNumber}`, data: sub })}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs transition-all cursor-pointer border border-blue-500/30"
+                      >
+                        <Code className="h-3.5 w-3.5" />
+                        <span>{lang === 'ar' ? 'عرض وثيقة JSON' : 'Inspect Doc'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(sub.id)}
+                        className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tab 3: notifications/ */}
+          {dbSubTab === 'notifications' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-400 px-2">
+                <span>{lang === 'ar' ? `إشعارات النظام المخزنة (${notifications.length} وثيقة)` : `Stored Notifications (${notifications.length} docs)`}</span>
+                <span className="font-mono text-[11px] text-blue-400 select-all">/databases/(default)/documents/notifications</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {notifications.map((notif) => (
+                  <div key={notif.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border border-white/10 hover:border-blue-500/40 transition-all">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-blue-400 font-bold select-all">{notif.id}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-neutral-800 text-neutral-300">{notif.type || 'system'}</span>
+                        {notif.read ? <span className="text-neutral-500 text-[10px]">Read ✓</span> : <span className="text-amber-400 text-[10px] font-bold">Unread •</span>}
+                      </div>
+                      <h4 className="font-bold text-white text-sm mt-1">{lang === 'ar' ? notif.titleAr : notif.titleEn}</h4>
+                      <p className="text-xs text-neutral-300 mt-0.5">{lang === 'ar' ? notif.messageAr : notif.messageEn}</p>
+                      <span className="text-[10px] text-neutral-500 font-mono mt-1 block">{new Date(notif.date).toLocaleString()}</span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedJsonDoc({ id: notif.id, title: lang === 'ar' ? notif.titleAr : notif.titleEn, data: notif })}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs transition-all cursor-pointer border border-blue-500/30 shrink-0"
+                    >
+                      <Code className="h-3.5 w-3.5" />
+                      <span>JSON</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tab 4: schema/ */}
+          {dbSubTab === 'schema' && (
+            <div className="rounded-3xl bg-neutral-900 border border-white/10 p-6 space-y-6 text-left dir-ltr">
+              <div>
+                <h4 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-indigo-400" />
+                  <span>Zero-Trust ABAC Firestore Security & Schema Blueprint</span>
+                </h4>
+                <p className="text-xs text-neutral-400 mt-1">
+                  This application utilizes Google Cloud Firestore with real-time WebSocket synchronization and offline persistence. Below is the configured architectural blueprint and security validation model.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5 font-mono text-xs space-y-2">
+                  <div className="text-indigo-400 font-bold">// 1. Collection: /events/ (DanceEvent Schema)</div>
+                  <div className="text-neutral-300">
+                    Fields: id (string), titleAr/En (string), category (enum: party|course|trip), styles (list&lt;string&gt;), priceAr/En (string), location (map), likesCount (int), isFeatured (bool)
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5 font-mono text-xs space-y-2">
+                  <div className="text-amber-400 font-bold">// 2. Collection: /ad_submissions/ (VIP Ad Invoices Schema)</div>
+                  <div className="text-neutral-300">
+                    Fields: id (string), titleAr/En (string), invoiceNumber (string), advertiserName (string), phone (string), amount (number), status (enum: pending|approved|rejected|archived), receiptUrl (string), submittedAt (timestamp)
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5 font-mono text-xs space-y-2">
+                  <div className="text-emerald-400 font-bold">// 3. Collection: /notifications/ (System & Ad Alerts Schema)</div>
+                  <div className="text-neutral-300">
+                    Fields: id (string), titleAr/En (string), messageAr/En (string), date (timestamp), read (bool), type (enum: system|promo|ad_status)
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {adminSection === 'submissions' && (
+        <div>
+          {/* Filter Tabs */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-neutral-950 border border-neutral-800 w-fit">
+              <button
+                onClick={() => setSubmissionView('new_ads')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold ${submissionView === 'new_ads' ? 'bg-amber-500 text-neutral-950' : 'text-neutral-400'}`}
+              >
+                {lang === 'ar' ? 'طلبات الإعلانات الجديدة' : 'New ads'}
+              </button>
+              <button
+                onClick={() => setSubmissionView('changes')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold ${submissionView === 'changes' ? 'bg-sky-500 text-white' : 'text-neutral-400'}`}
+              >
+                {lang === 'ar' ? `طلبات التعديل والتجديد (${adChangeRequests.filter(item => item.status === 'pending').length})` : `Changes (${adChangeRequests.filter(item => item.status === 'pending').length})`}
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-neutral-900 border border-neutral-800 text-xs font-bold w-full lg:w-auto">
+              <button
+                onClick={() => setFilter('pending')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'pending' ? 'bg-amber-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'قيد المراجعة' : 'Pending'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.filter(s => s.status === 'pending').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFilter('approved')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'approved' ? 'bg-emerald-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'المفعلة (مقبول)' : 'Approved'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.filter(s => s.status === 'approved').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFilter('rejected')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'rejected' ? 'bg-red-500 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'المرفوضة' : 'Rejected'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.filter(s => s.status === 'rejected').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFilter('archived')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'archived' ? 'bg-amber-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'الأرشيف (بحد أقصى شهر)' : 'Archived (Max 1 Mo)'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.filter(s => s.status === 'archived').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'all' ? 'bg-neutral-700 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <span>{lang === 'ar' ? 'الكل' : 'All'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.length}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+              <button
+                onClick={handleAutoScanExpired}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-extrabold text-xs hover:from-amber-400 hover:to-amber-500 shadow-md gold-glow transition-all cursor-pointer w-full sm:w-auto"
+                title="Scan approved ads and move expired ones to archive with instant advertiser alert"
+              >
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span>{lang === 'ar' ? '⚡ فحص ونقل المنتهي للأرشيف وتنبيه المعلن' : '⚡ Auto-Archive Expired & Notify'}</span>
+              </button>
+
+              <button
+                onClick={handleManualRefresh}
+                disabled={manualRefreshing || loading}
+                title={lang === 'ar' ? 'تحديث ومزامنة البيانات من فليستور الآن' : 'Force refresh data from Firestore now'}
+                className="text-xs text-neutral-300 font-mono flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800/60 hover:bg-neutral-800 hover:border-amber-500/30 transition-all cursor-pointer shadow-md disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-amber-400 ${(loading || manualRefreshing) ? 'animate-spin' : ''}`} />
+                <span>
+                  {manualRefreshing 
+                    ? (lang === 'ar' ? 'جاري التحديث...' : 'Syncing...') 
+                    : (lang === 'ar' ? 'تحديث تلقائي لحظي' : 'Live Firebase Sync')}
+                </span>
+              </button>
+            </div>
+          </div>
+
+      {/* Change requests keep the original ad and event identifiers unchanged. */}
+      {submissionView === 'changes' ? (
+        <div className="space-y-4">
+          {adChangeRequests.filter(item => item.status === 'pending').length === 0 ? (
+            <div className="rounded-3xl border border-neutral-800 bg-neutral-900/60 p-12 text-center text-neutral-400">
+              <FileText className="h-12 w-12 mx-auto text-neutral-600 mb-3" />
+              <h3 className="text-lg font-bold text-white mb-1">{lang === 'ar' ? 'لا توجد طلبات تعديل أو تجديد معلقة' : 'No pending change requests'}</h3>
+            </div>
+          ) : adChangeRequests.filter(item => item.status === 'pending').map((request) => {
+            const current = submissions.find(sub => sub.id === request.targetId);
+            const proposed = request.proposedData || {};
+            const currentImage = current?.eventData?.mediaUrl || current?.mediaUrl;
+            const proposedImage = proposed.eventData?.mediaUrl || proposed.mediaUrl || currentImage;
+            return (
+              <div key={request.id} className="rounded-2xl border border-sky-500/30 bg-neutral-900 p-5 space-y-4">
+                <div className="flex flex-wrap justify-between gap-3">
+                  <div>
+                    <div className="text-sky-300 font-bold text-sm">{lang === 'ar' ? 'طلب تغيير إعلان' : 'Ad change request'} · {request.requestType}</div>
+                    <div className="text-xs text-neutral-400 mt-1">{current?.titleAr || request.targetId} — {current?.advertiserName || request.advertiserId}</div>
+                  </div>
+                  <div className="text-[11px] text-neutral-500">{new Date(request.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="rounded-xl bg-neutral-950 border border-white/10 p-3">
+                    <div className="text-neutral-500 mb-2">{lang === 'ar' ? 'الحالي' : 'Current'}</div>
+                    <div className="font-bold text-white">{current?.titleAr || '-'}</div>
+                    <div className="text-amber-300 mt-1">{current?.eventData?.priceAr || '-'}</div>
+                    {currentImage && <img src={currentImage} alt="Current ad" className="mt-3 w-full h-32 object-cover rounded-lg" />}
+                  </div>
+                  <div className="rounded-xl bg-sky-950/30 border border-sky-500/20 p-3">
+                    <div className="text-sky-300 mb-2">{lang === 'ar' ? 'المطلوب بعد الموافقة' : 'Requested after approval'}</div>
+                    <div className="font-bold text-white">{proposed.titleAr || proposed.eventData?.titleAr || current?.titleAr || '-'}</div>
+                    <div className="text-amber-300 mt-1">{proposed.eventData?.priceAr || current?.eventData?.priceAr || '-'}</div>
+                    {proposedImage && <img src={proposedImage} alt="Requested ad" className="mt-3 w-full h-32 object-cover rounded-lg" />}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-end border-t border-white/10 pt-3">
+                  <button onClick={() => handleReviewAdChange(request, 'reject')} disabled={actionLoading === `change-${request.id}`} className="px-4 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 text-xs font-bold disabled:opacity-50">
+                    {lang === 'ar' ? 'رفض الطلب' : 'Reject'}
+                  </button>
+                  <button onClick={() => handleReviewAdChange(request, 'approve')} disabled={actionLoading === `change-${request.id}`} className="px-4 py-2 rounded-xl bg-emerald-500 text-neutral-950 text-xs font-black disabled:opacity-50">
+                    {lang === 'ar' ? 'قبول التغييرات' : 'Approve changes'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : loading ? (
+        <div className="py-20 text-center text-neutral-400">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto text-amber-400 mb-3" />
+          <p className="text-sm font-bold">{lang === 'ar' ? 'جاري جلب الفواتير وطلبات الإعلانات من فايبر بيز...' : 'Loading submissions from Firebase...'}</p>
+        </div>
+      ) : filteredSubmissions.length === 0 ? (
+        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/60 p-12 text-center text-neutral-400">
+          <FileText className="h-12 w-12 mx-auto text-neutral-600 mb-3" />
+          <h3 className="text-lg font-bold text-white mb-1">
+            {lang === 'ar' ? 'لا توجد طلبات في هذه القائمة' : 'No submissions found in this list'}
+          </h3>
+          <p className="text-xs text-neutral-500">
+            {lang === 'ar' ? 'عندما يرسل المدربون والمنظمون إعلانات ومراجعة فواتير، ستظهر هنا فوراً.' : 'When organizers submit ads and invoices, they will appear here instantly.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredSubmissions.map((sub) => {
+            const displayAdType = sub.adType || (sub.pricing?.total === 0 ? 'free' : 'standard');
+            
+            // Smart language detection: Explicit selection or inferred from titles/data
+            const adLangMode: 'both' | 'ar' | 'en' = (() => {
+              if (sub.contentLangMode) return sub.contentLangMode;
+              const titleArVal = (sub.titleAr || sub.eventData?.titleAr || '').trim();
+              const titleEnVal = (sub.titleEn || sub.eventData?.titleEn || '').trim();
+              const descArVal = (sub.eventData?.descriptionAr || '').trim();
+              const descEnVal = (sub.eventData?.descriptionEn || '').trim();
+
+              const hasAr = Boolean(titleArVal && !/^[A-Za-z0-9\s.,!?'"()-]+$/.test(titleArVal)) || Boolean(descArVal && /[\u0600-\u06FF]/.test(descArVal));
+              const hasEn = Boolean(titleEnVal && !/[\u0600-\u06FF]/.test(titleEnVal)) || Boolean(descEnVal && /[A-Za-z]/.test(descEnVal));
+
+              if (titleArVal && titleEnVal && titleArVal.toLowerCase() === titleEnVal.toLowerCase()) {
+                if (/[\u0600-\u06FF]/.test(titleArVal)) return 'ar';
+                return 'en';
+              }
+
+              if (hasAr && hasEn) return 'both';
+              if (hasAr) return 'ar';
+              if (hasEn) return 'en';
+              return 'both';
+            })();
+
+            return (
+            <motion.div
+              key={sub.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`rounded-2xl border p-5 sm:p-6 transition-all ${
+                sub.status === 'pending'
+                  ? 'border-amber-500/40 bg-gradient-to-r from-neutral-900 to-amber-950/20 shadow-lg'
+                  : sub.status === 'approved'
+                  ? 'border-emerald-500/30 bg-neutral-900/80'
+                  : 'border-red-500/30 bg-neutral-900/50 opacity-80'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className={`px-3 py-1 rounded-xl text-xs font-mono font-bold border ${
+                    sub.status === 'pending'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      : sub.status === 'approved'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-red-500/20 text-red-300 border-red-500/40'
+                  }`}>
+                    {sub.invoiceNumber}
+                  </div>
+                  
+                  <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold border flex items-center gap-1.5 shadow-sm ${
+                    displayAdType === 'vip' 
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/40' 
+                      : displayAdType === 'free'
+                      ? 'bg-green-500/10 text-green-400 border-green-500/40'
+                      : 'bg-neutral-800/60 text-neutral-300 border-neutral-600'
+                  }`}>
+                    {displayAdType === 'vip' && <Crown className="h-3.5 w-3.5" />}
+                    {displayAdType === 'free' && <CheckCircle className="h-3.5 w-3.5" />}
+                    {displayAdType !== 'vip' && displayAdType !== 'free' && <FileText className="h-3.5 w-3.5" />}
+                    {displayAdType === 'vip' ? (lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Ad') : displayAdType === 'free' ? (lang === 'ar' ? 'إعلان مجاني' : 'Free Ad') : (lang === 'ar' ? 'إعلان عادي' : 'Standard Ad')}
+                  </span>
+
+                  {/* Selected Language Badge */}
+                  <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold border flex items-center gap-1.5 shadow-sm ${
+                    adLangMode === 'both' 
+                      ? 'bg-sky-500/15 text-sky-300 border-sky-500/40' 
+                      : adLangMode === 'ar'
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                      : 'bg-purple-500/15 text-purple-300 border-purple-500/40'
+                  }`}>
+                    <Globe className="h-3.5 w-3.5" />
+                    {adLangMode === 'both' ? (
+                      <span>{lang === 'ar' ? '🌐 كِلا اللغتين (عربي + English)' : '🌐 Both (AR + EN)'}</span>
+                    ) : adLangMode === 'ar' ? (
+                      <span>{lang === 'ar' ? '🇸🇦 عربي فقط' : '🇸🇦 Arabic Only'}</span>
+                    ) : (
+                      <span>{lang === 'ar' ? '🇬🇧 إنجليزي فقط' : '🇬🇧 English Only'}</span>
+                    )}
+                  </span>
+
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
+                    sub.status === 'pending' ? 'bg-amber-500 text-neutral-950 animate-pulse' :
+                    sub.status === 'approved' ? 'bg-emerald-500 text-neutral-950' : 'bg-red-500 text-white'
+                  }`}>
+                    {sub.status === 'pending' ? (lang === 'ar' ? 'قيد المراجعة' : 'Pending') : 
+                     sub.status === 'approved' ? (lang === 'ar' ? 'مفعل ومقبول' : 'Approved') : 
+                     (lang === 'ar' ? 'مرفوض' : 'Rejected')}
+                  </span>
+                </div>
+                <div className="text-xs text-neutral-400 font-mono flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{new Date(sub.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</span>
+                </div>
+              </div>
+              {/* Grid Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
+                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
+                    <User className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? 'اسم المعلن:' : 'Advertiser Name:'}</span>
+                  </span>
+                  <span className="text-sm font-bold text-white block">{sub.advertiserName}</span>
+                  <span className="text-xs font-mono text-neutral-400 block">{sub.phone}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1.5">
+                  <span className="text-[11px] text-neutral-400 flex items-center justify-between font-medium">
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      <span>{lang === 'ar' ? 'عنوان وتفاصيل الإعلان:' : 'Ad Title & Details:'}</span>
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                      adLangMode === 'both' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                      adLangMode === 'ar' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                      'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                    }`}>
+                      {adLangMode === 'both' ? (lang === 'ar' ? 'لغتين' : 'Both') : adLangMode === 'ar' ? (lang === 'ar' ? 'عربي فقط' : 'AR Only') : (lang === 'ar' ? 'إنجليزي فقط' : 'EN Only')}
+                    </span>
+                  </span>
+
+                  {adLangMode === 'both' ? (
+                    <div className="space-y-1">
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-800 text-amber-400 border border-amber-500/20 shrink-0">عربي</span>
+                        <span className="truncate">{sub.titleAr || sub.eventData?.titleAr || '—'}</span>
+                      </div>
+                      <div className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-800 text-sky-400 border border-sky-500/20 shrink-0 font-mono">EN</span>
+                        <span className="truncate font-sans">{sub.titleEn || sub.eventData?.titleEn || '—'}</span>
+                      </div>
+                    </div>
+                  ) : adLangMode === 'ar' ? (
+                    <div className="text-sm font-bold text-white block truncate">
+                      {sub.titleAr || sub.eventData?.titleAr || sub.titleEn}
+                    </div>
+                  ) : (
+                    <div className="text-sm font-bold text-white block truncate font-sans">
+                      {sub.titleEn || sub.eventData?.titleEn || sub.titleAr}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 mt-1 pt-1 border-t border-white/5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      displayAdType === 'vip' 
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
+                        : displayAdType === 'free'
+                        ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                        : 'bg-neutral-800 text-neutral-300 border-neutral-600'
+                    }`}>
+                      {displayAdType === 'vip' ? (lang === 'ar' ? 'VIP مميز' : 'VIP Ad') : displayAdType === 'free' ? (lang === 'ar' ? 'مجاني' : 'Free') : (lang === 'ar' ? 'عادي' : 'Standard')}
+                    </span>
+                    <span className="text-xs text-amber-300 font-medium block">
+                      {sub.pricing?.days || 3} {lang === 'ar' ? 'أيام ترويج' : 'Days Promo'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
+                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
+                    <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>{lang === 'ar' ? 'المبلغ المطلوب:' : 'Total Amount:'}</span>
+                  </span>
+                  <span className="text-lg font-black text-emerald-400 block">
+                    {sub.pricing?.total || 250} {lang === 'ar' ? 'جنيه مصري' : 'EGP'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Visual Ad Media Preview */}
+              {(sub.mediaUrl || sub.eventData?.mediaUrl) && (
+                <div className="mb-5 p-4 rounded-xl bg-neutral-950/60 border border-white/5">
+                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-bold mb-2.5">
+                    <ImageIcon className="h-4 w-4 text-amber-400" />
+                    <span>{lang === 'ar' ? '🖼️ الصورة أو الفيديو الإعلاني المرفق:' : '🖼️ Attached Ad Image / Video:'}</span>
+                  </span>
+                  
+                  <div className="relative max-w-xs aspect-[16/10] rounded-2xl overflow-hidden bg-neutral-950 border border-white/10 group/media shadow-md">
+                    {(sub.mediaType === 'video' || sub.eventData?.mediaType === 'video') ? (
+                      <video 
+                        src={sub.mediaUrl || sub.eventData?.mediaUrl} 
+                        className="h-full w-full object-cover" 
+                        controls 
+                        muted 
+                        playsInline
+                      />
+                    ) : (
+                      <img 
+                        src={sub.mediaUrl || sub.eventData?.mediaUrl} 
+                        alt="Attached Ad Media" 
+                        className="h-full w-full object-cover" 
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
+                        }}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/media:opacity-100 flex items-center justify-center transition-all pointer-events-none">
+                      <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                        {lang === 'ar' ? 'معاينة الإعلان الفني' : 'Media Preview'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Receipt Preview & Actions */}
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pt-3 border-t border-white/5">
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+                  {sub.receiptImage ? (
+                    <button
+                      onClick={() => setSelectedReceipt(sub.receiptImage || null)}
+                      className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25 transition-all text-xs font-bold cursor-pointer w-full sm:w-auto"
+                    >
+                      <ImageIcon className="h-4 w-4 shrink-0" />
+                      <span>{lang === 'ar' ? 'عرض إيصال التحويل البنكي' : 'View Transfer Receipt'}</span>
+                      <Eye className="h-3.5 w-3.5 ml-1 shrink-0" />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-neutral-500 italic py-2 text-center sm:text-left">
+                      {lang === 'ar' ? 'لم يتم إرفاق صورة إيصال' : 'No receipt image attached'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Admin Approval Buttons */}
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto justify-end">
+                  {sub.status === 'pending' && (
+                    <>
+                      <div className="flex items-center gap-2 mr-2">
+                        <label className="text-xs font-bold text-neutral-400">{lang === 'ar' ? 'رقم الإعلان:' : 'Position:'}</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder={String(adminPosition)}
+                          value={submissionPositions[sub.id] !== undefined ? submissionPositions[sub.id] : (sub.eventData?.position || '')}
+                          onChange={(e) => setSubmissionPositions({ ...submissionPositions, [sub.id]: e.target.value === '' ? '' : Number(e.target.value) })}
+                          className="w-16 rounded-lg bg-neutral-900 border border-neutral-700 py-2 px-2 text-xs text-white text-center focus:border-amber-500 outline-none"
+                        />
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={actionLoading === sub.id}
+                        onClick={() => handleApprove(sub)}
+                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs hover:bg-emerald-400 shadow-md transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                      >
+                        <Check className="h-4 w-4 stroke-[3] shrink-0" />
+                        <span>{actionLoading === sub.id ? '...' : (lang === 'ar' ? 'قبول ونشر الإعلان فوراً' : 'Approve & Publish Ad')}</span>
+                      </motion.button>
+
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={actionLoading === sub.id}
+                        onClick={() => handleReject(sub)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-600/20 text-red-300 border border-red-500/40 font-bold text-xs hover:bg-red-600/30 transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                      >
+                        <XCircle className="h-4 w-4 shrink-0" />
+                        <span>{lang === 'ar' ? 'رفض' : 'Reject'}</span>
+                      </motion.button>
+                    </>
+                  )}
+
+                  {sub.status === 'approved' && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      disabled={actionLoading === sub.id}
+                      onClick={() => handleArchive(sub)}
+                      className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold text-xs hover:bg-amber-500/30 transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                      title={lang === 'ar' ? 'نقل للأرشيف بحد أقصى شهر مع تنبيه المعلن' : 'Move to Archive (Max 1 Mo) & Alert Advertiser'}
+                    >
+                      <Clock className="h-4 w-4 shrink-0" />
+                      <span>{actionLoading === sub.id ? '...' : (lang === 'ar' ? '📦 نقل للأرشيف (انتهاء الصلاحية)' : '📦 Move to Archive')}</span>
+                    </motion.button>
+                  )}
+
+                  <button
+                    onClick={() => handleDelete(sub.id)}
+                    className="flex items-center justify-center p-2.5 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer w-full sm:w-auto"
+                    title={lang === 'ar' ? 'حذف السجل' : 'Delete'}
+                  >
+                    <Trash2 className="h-4 w-4 shrink-0" />
+                    <span className="inline sm:hidden text-xs font-bold ml-1">{lang === 'ar' ? 'حذف السجل' : 'Delete Record'}</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+            );
+          })}
+        </div>
+      )}
+        </div>
+      )}
+
+      {adminSection === 'support' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header Card */}
+          <div className="rounded-3xl border border-emerald-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/40 p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+                  <MessageSquare className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white">
+                    {lang === 'ar' ? 'صندوق رسائل ومقترحات وشكاوى المستخدمين' : 'User Support & Feedback Inbox'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-300 mt-1">
+                    {lang === 'ar'
+                      ? 'مراجعة الرسائل والمقترحات المباشرة، وتوجيه الرد الرسمي ليتم إشعاره في ملف المستخدم الشخصي.'
+                      : 'Review direct feedback and send official replies notified directly to the user profile.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-neutral-900 border border-neutral-800 w-fit">
+            <button
+              onClick={() => setSupportFilter('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                supportFilter === 'all' ? 'bg-emerald-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span>{lang === 'ar' ? 'الكل' : 'All'}</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/20 text-[10px] font-mono">{supportMessages.length}</span>
+            </button>
+            <button
+              onClick={() => setSupportFilter('pending')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                supportFilter === 'pending' ? 'bg-amber-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span>{lang === 'ar' ? 'قيد الانتظار' : 'Pending'}</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/20 text-[10px] font-mono">
+                {supportMessages.filter(m => m.status === 'pending').length}
+              </span>
+            </button>
+            <button
+              onClick={() => setSupportFilter('replied')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                supportFilter === 'replied' ? 'bg-blue-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span>{lang === 'ar' ? 'تم الرد' : 'Replied'}</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/20 text-[10px] font-mono">
+                {supportMessages.filter(m => m.status === 'replied').length}
+              </span>
+            </button>
+          </div>
+
+          {/* Messages List */}
+          {supportMessages.length === 0 ? (
+            <div className="rounded-3xl bg-neutral-900/60 border border-neutral-800 p-12 text-center text-neutral-400 font-medium">
+              {lang === 'ar' ? 'لا توجد رسائل دعم ومقترحات واردة حتى الآن.' : 'No support messages received yet.'}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {supportMessages
+                .filter(m => supportFilter === 'all' ? true : m.status === supportFilter)
+                .map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`rounded-3xl border p-6 transition-all ${
+                      msg.status === 'pending'
+                        ? 'bg-neutral-900 border-amber-500/40 shadow-lg'
+                        : 'bg-neutral-900/80 border-neutral-800'
+                    }`}
+                  >
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-neutral-800">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={msg.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                          alt={msg.userName}
+                          className="h-12 w-12 rounded-full object-cover border border-amber-500/30"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-white text-base">{msg.userName}</h4>
+                            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono text-xs font-bold shadow-inner">
+                              {msg.refNumber}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400 mt-1 font-mono">
+                            <span>📧 {msg.userEmail}</span>
+                            <span>📱 {msg.userPhone}</span>
+                            <span>🕒 {new Date(msg.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        {msg.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/40">
+                            <Clock className="h-3.5 w-3.5" />
+                            {lang === 'ar' ? 'بانتظار الرد' : 'Pending Reply'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/40">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            {lang === 'ar' ? 'تم الرد الرسمي' : 'Replied Official'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Message Content */}
+                    <div className="py-4 space-y-2">
+                      <span className="text-xs font-bold text-amber-400 font-mono">
+                        {lang === 'ar' ? '💬 نص الشكوى / المقترح:' : '💬 User Message:'}
+                      </span>
+                      <p className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800 text-sm text-neutral-200 leading-relaxed">
+                        {msg.message}
+                      </p>
+                    </div>
+
+                    {/* Previous Reply if exists */}
+                    {msg.status === 'replied' && msg.replyText && (
+                      <div className="py-2 space-y-2">
+                        <span className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1">
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          {lang === 'ar' ? `📢 رد الإدارة المُرسل للإشعارات (${msg.repliedAt ? new Date(msg.repliedAt).toLocaleDateString() : ''}):` : '📢 Sent Admin Reply:'}
+                        </span>
+                        <p className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 text-sm text-emerald-300 leading-relaxed font-medium">
+                          {msg.replyText}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Reply Action Form */}
+                    <div className="pt-4 border-t border-neutral-800/80 space-y-3">
+                      <label className="block text-xs font-bold text-neutral-300">
+                        {lang === 'ar'
+                          ? (msg.status === 'replied' ? 'تحديث الرد أو إرسال رد إضافي للمستخدم:' : 'توجيه الرد إلى قسم الإشعارات في ملف المستخدم:')
+                          : 'Send official reply to user profile notifications:'}
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <input
+                          type="text"
+                          value={replyInputMap[msg.id] || ''}
+                          onChange={(e) => setReplyInputMap({ ...replyInputMap, [msg.id]: e.target.value })}
+                          placeholder={
+                            lang === 'ar'
+                              ? `اكتب الرد الرسمي على (${msg.userName}) هنا...`
+                              : `Write official reply to (${msg.userName})...`
+                          }
+                          className="flex-1 rounded-xl bg-neutral-950 px-4 py-3 text-sm text-white placeholder-neutral-500 border border-neutral-800 focus:border-emerald-500 focus:outline-none transition-all"
+                        />
+                        <button
+                          onClick={async () => {
+                            const text = replyInputMap[msg.id]?.trim();
+                            if (!text) {
+                              alert(lang === 'ar' ? 'يرجى كتابة نص الرد أولاً' : 'Please enter reply text first');
+                              return;
+                            }
+                            const success = await replyToSupportMessage(msg.id, text);
+                            if (success) {
+                              setReplyInputMap({ ...replyInputMap, [msg.id]: '' });
+                              alert(lang === 'ar' ? '✅ تم توجيه الرد بنجاح إلى صندوق الإشعارات في ملف المستخدم الشخصي!' : '✅ Reply sent and user notified successfully!');
+                            }
+                          }}
+                          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-3 text-xs font-bold text-black shadow-lg hover:from-emerald-400 hover:to-teal-500 transition-all shrink-0 cursor-pointer"
+                        >
+                          <Send className="h-4 w-4" />
+                          <span>{lang === 'ar' ? 'إرسال الرد وإشعار المستخدم' : 'Send Reply & Notify'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {adminSection === 'users' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header Card */}
+          <div className="rounded-3xl border border-purple-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-purple-950/40 p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 shadow-inner">
+                  <Users className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white">
+                    {lang === 'ar' ? 'إدارة ومراقبة مستخدمي التطبيق' : 'App Users Management & Monitoring'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-300 mt-1">
+                    {lang === 'ar'
+                      ? 'مراقبة حسابات الأعضاء والمنظمين، البحث عن بياناتهم، إيقاف الحسابات المؤذيّة أو حذفها بالكامل.'
+                      : 'Monitor member and organizer accounts, search user details, suspend temporary access or delete completely.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-tabs Selector */}
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-neutral-900 border border-neutral-800 w-fit">
+            <button
+              onClick={() => {
+                setUsersSubTab('all');
+                setUserSearchQuery('');
+              }}
+              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                usersSubTab === 'all' ? 'bg-purple-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Table className="h-4 w-4" />
+                {lang === 'ar' ? 'جميع مستخدمي التطبيق' : 'All App Users'}
+              </span>
+            </button>
+            <button
+              onClick={() => setUsersSubTab('search')}
+              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                usersSubTab === 'search' ? 'bg-purple-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Search className="h-4 w-4" />
+                {lang === 'ar' ? 'البحث عن مستخدم' : 'Search for a User'}
+              </span>
+            </button>
+          </div>
+
+          {/* Search View Specific Inputs */}
+          {usersSubTab === 'search' && (
+            <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-6 space-y-4 shadow-lg">
+              <h4 className="text-sm font-black text-white flex items-center gap-2">
+                <Search className="h-4 w-4 text-purple-400" />
+                {lang === 'ar' ? 'البحث بالاسم، البريد الإلكتروني أو الرقم السري' : 'Search by Name, Email, or Password'}
+              </h4>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  placeholder={
+                    lang === 'ar'
+                      ? 'اكتب بريد المستخدم، اسمه، أو الرقم السري هنا للبحث المباشر...'
+                      : 'Type user email, name, or password to search instantly...'
+                  }
+                  className="w-full rounded-2xl bg-neutral-950 px-5 py-4 pl-12 text-sm text-white placeholder-neutral-500 border border-neutral-800 focus:border-purple-500 focus:outline-none transition-all font-medium"
+                />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-500" />
+              </div>
+            </div>
+          )}
+
+          {/* Display Users Table / List */}
+          <div className="rounded-3xl bg-neutral-900/60 border border-neutral-800 shadow-xl overflow-hidden">
+            {usersError ? (
+              <div className="p-8 text-center space-y-4">
+                <div className="mx-auto h-12 w-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <div className="max-w-md mx-auto space-y-2">
+                  <h4 className="text-base font-extrabold text-red-400">
+                    {lang === 'ar' ? '⚠️ فشل تحميل المستخدمين من قاعدة البيانات' : '⚠️ Failed to load users from Firestore'}
+                  </h4>
+                  <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+                    {lang === 'ar'
+                      ? 'تم حظر عملية قراءة كوليكشن المستخدمين بسبب صلاحيات الحماية بـ Firebase Rules. لعرض الحسابات وإدارتها، يجب أولاً تسجيل الدخول ببريد المسؤول waelvts@gmail.com في قسم "حسابي".'
+                      : 'This read query is restricted by Firebase Security Rules. To review, search, and manage registered members, please sign in with your official admin email (waelvts@gmail.com) in the "Account" tab.'}
+                  </p>
+                  <p className="text-[10px] font-mono text-neutral-500 bg-neutral-950 p-2.5 rounded-xl border border-neutral-800 mt-2 select-text">
+                    {usersError}
+                  </p>
+                </div>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="p-12 text-center text-neutral-400 font-medium">
+                {lang === 'ar' 
+                  ? 'لا يوجد مستخدمون متطابقون مع شروط البحث أو قاعدة البيانات فارغة.' 
+                  : 'No users matching search criteria or database is empty.'}
+              </div>
+            ) : (
+              <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+                <table className="w-full border-collapse text-right select-none">
+                  <thead>
+                    <tr className="bg-neutral-900/90 border-b border-neutral-800 text-neutral-400 font-bold text-xs uppercase tracking-wider">
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'المستخدم' : 'User'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'البريد الإلكتروني' : 'Email'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الباقة / العضوية' : 'Account Tier'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الرمز السري' : 'Password'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Creation Date'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الحالة' : 'Status'}</th>
+                      <th className="px-6 py-4 text-center">{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800/60">
+                    {filteredUsers.map((u) => {
+                      const isOwner = u.id === user?.id;
+                      return (
+                        <tr 
+                          key={u.id} 
+                          className={`hover:bg-neutral-900/30 transition-all ${
+                            u.isSuspended ? 'bg-red-950/10' : ''
+                          }`}
+                        >
+                          {/* User Column */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                                alt={u.name}
+                                className="h-10 w-10 rounded-full object-cover border border-purple-500/30"
+                              />
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-extrabold text-white text-sm">{u.name}</span>
+                                  {u.isAdmin && (
+                                    <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-black font-mono">
+                                      ADMIN
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-neutral-400 font-mono block mt-0.5 select-all">
+                                  ID: {u.id}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Email Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-300 select-all">
+                            {u.email}
+                          </td>
+
+                          {/* Account Tier Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-xs font-bold">
+                            <div className="flex flex-col gap-1.5 items-start">
+                              <div className="flex items-center gap-1">
+                                {u.accountTier === 'vip' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                    <Crown className="h-3 w-3 text-amber-400" />
+                                    {lang === 'ar' ? 'حساب VIP' : 'VIP Tier'}
+                                  </span>
+                                ) : u.accountTier === 'featured' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                                    <Sparkles className="h-3 w-3 text-sky-400" />
+                                    {lang === 'ar' ? 'حساب مميز' : 'Featured Tier'}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                    <ShieldCheck className="h-3 w-3 text-emerald-400" />
+                                    {lang === 'ar' ? 'حساب مجاني' : 'Free Tier'}
+                                  </span>
+                                )}
+                              </div>
+
+                              {u.requestedTier && u.requestedTier !== u.accountTier && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] animate-pulse">
+                                  <span>⏳ يطلب ترقية إلى:</span>
+                                  <strong className="underline font-black">{u.requestedTier === 'vip' ? 'VIP 👑' : 'مميز 🌟'}</strong>
+                                </span>
+                              )}
+
+                              {/* Admin Change Tier selector */}
+                              <select
+                                value={u.accountTier || 'free'}
+                                onChange={async (e) => {
+                                  const newTier = e.target.value as AccountTier;
+                                  const confirmMsg = lang === 'ar' 
+                                    ? `هل تريد تغيير باقة حساب (${u.name}) إلى (${newTier === 'vip' ? 'VIP 👑' : newTier === 'featured' ? 'مميز 🌟' : 'مجاني 🟢'})؟`
+                                    : `Do you want to change (${u.name})'s tier to (${newTier})?`;
+                                  
+                                  const confirmed = await triggerConfirm(confirmMsg);
+                                  if (confirmed) {
+                                    const ok = await updateUserTierInFirestore(u.id, newTier);
+                                    if (ok) {
+                                      setAllUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, accountTier: newTier, requestedTier: undefined } : usr));
+                                      alert(lang === 'ar' ? '✅ تم تحديث باقة الحساب وتفعيل الصلاحيات بنجاح!' : '✅ User tier updated successfully!');
+                                    } else {
+                                      alert(lang === 'ar' ? '❌ حدث خطأ أثناء تحديث الباقة' : '❌ Failed to update user tier');
+                                    }
+                                  }
+                                }}
+                                className="bg-neutral-950 text-neutral-200 border border-neutral-700 text-[11px] rounded-lg px-2 py-1 outline-none focus:border-purple-500 cursor-pointer mt-0.5 font-sans"
+                              >
+                                <option value="free">{lang === 'ar' ? 'تحويل إلى: مجاني 🟢' : 'Set to: Free 🟢'}</option>
+                                <option value="featured">{lang === 'ar' ? 'تفعيل: مميز 🌟 (مدفوع)' : 'Activate: Featured 🌟'}</option>
+                                <option value="vip">{lang === 'ar' ? 'تفعيل: VIP 👑 (مدفوع)' : 'Activate: VIP 👑'}</option>
+                              </select>
+                            </div>
+                          </td>
+
+                          {/* Authentication provider column. Passwords are never stored in Firestore. */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-300 select-all">
+                            <span className="text-neutral-500 italic text-xs">
+                              {lang === 'ar' ? 'محمي بواسطة Firebase' : 'Protected by Firebase'}
+                            </span>
+                          </td>
+
+                          {/* Date Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-400">
+                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : '-'}
+                          </td>
+
+                          {/* Status Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-xs font-bold">
+                            {u.isSuspended ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/30">
+                                <Ban className="h-3 w-3" />
+                                {lang === 'ar' ? 'موقوف مؤقتاً' : 'Suspended'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <ShieldCheck className="h-3 w-3" />
+                                {lang === 'ar' ? 'نشط' : 'Active'}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Actions Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {/* View Profile button */}
+                              <button
+                                onClick={() => setSelectedUserProfile(u)}
+                                className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20 hover:border-purple-500 transition-all cursor-pointer"
+                                title={lang === 'ar' ? 'عرض الملف الشخصي' : 'View Profile'}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+
+                              {/* Toggle Suspension button */}
+                              <button
+                                onClick={async () => {
+                                  if (isOwner) {
+                                    alert(lang === 'ar' ? '❌ لا يمكنك إيقاف حسابك الأساسي!' : '❌ You cannot suspend your own main account!');
+                                    return;
+                                  }
+                                  const confirmMsg = u.isSuspended
+                                    ? (lang === 'ar' ? `هل أنت متأكد من تفعيل حساب (${u.name})؟` : `Are you sure you want to activate (${u.name})'s account?`)
+                                    : (lang === 'ar' ? `هل أنت متأكد من إيقاف حساب (${u.name}) مؤقتاً؟` : `Are you sure you want to temporarily suspend (${u.name})'s account?`);
+                                  
+                                  const confirmed = await triggerConfirm(confirmMsg);
+                                  if (confirmed) {
+                                    const success = await toggleUserSuspensionInFirestore(u.id, !u.isSuspended);
+                                    if (success) {
+                                      alert(lang === 'ar' ? '✅ تم تحديث حالة المستخدم بنجاح!' : '✅ User status updated successfully!');
+                                    }
+                                  }
+                                }}
+                                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                                  u.isSuspended
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500'
+                                    : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500'
+                                }`}
+                                title={u.isSuspended ? (lang === 'ar' ? 'تفعيل الحساب' : 'Activate User') : (lang === 'ar' ? 'إيقاف الحساب' : 'Suspend User')}
+                              >
+                                <Ban className="h-4 w-4" />
+                              </button>
+
+                              {/* Delete button */}
+                              <button
+                                onClick={async () => {
+                                  if (isOwner) {
+                                    alert(lang === 'ar' ? '❌ لا يمكنك حذف حسابك الأساسي!' : '❌ You cannot delete your own main account!');
+                                    return;
+                                  }
+                                  const confirmed = await triggerConfirm(lang === 'ar' ? `⚠️ تحذير: هل أنت متأكد تماماً من حذف حساب (${u.name}) نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء!` : `⚠️ Warning: Are you absolutely sure you want to permanently delete (${u.name})'s account from the database? This action cannot be undone!`);
+                                  if (confirmed) {
+                                    const success = await deleteUserFromFirestore(u.id);
+                                    if (success) {
+                                      alert(lang === 'ar' ? '✅ تم حذف الحساب بنجاح!' : '✅ User deleted successfully!');
+                                    }
+                                  }
+                                }}
+                                className="p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500 transition-all cursor-pointer"
+                                title={lang === 'ar' ? 'حذف نهائي' : 'Delete permanently'}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'security' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir="rtl">
+          {/* Active Codes & Code update card */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 rounded-3xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white mb-2 flex items-center gap-2">
+                  <Key className="h-5 w-5 text-amber-400" />
+                  <span>{lang === 'ar' ? 'حماية رمز الإدارة' : 'Admin unlock protection'}</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                  {lang === 'ar' 
+                    ? 'رمز الإدارة لا يتم عرضه أو حفظه في Firestore. يتم التحقق منه بأمان داخل Vercel Backend، مع اشتراط تسجيل الدخول بحساب الإدارة أولاً.' 
+                    : 'The unlock code is not displayed or stored in Firestore. It is verified securely by the Vercel Backend after admin sign-in.'}
+                </p>
+                <div className="rounded-xl bg-neutral-950 border border-neutral-800 p-3 text-xs text-amber-300">
+                  {lang === 'ar' ? 'لتغيير الرمز: Vercel ← Settings ← Environment Variables ← ADMIN_UNLOCK_CODE.' : 'To change the code: Vercel → Settings → Environment Variables → ADMIN_UNLOCK_CODE.'}
+                </div>
+              </div>
+              <div className="border-t border-white/5 pt-4 mt-4 text-[10px] text-amber-500/70 leading-relaxed">
+                ℹ️ {lang === 'ar' 
+                  ? 'لا يوجد أي رمز افتراضي داخل التطبيق أو قاعدة البيانات.' 
+                  : 'No default code exists in the app or database.'}
+              </div>
+            </div>
+
+            {/* WhatsApp security alerts configuration card */}
+            <div className="lg:col-span-4 rounded-3xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white mb-2 flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-emerald-400" />
+                  <span>{lang === 'ar' ? 'رقم واتساب الإشعارات الأمنية' : 'WhatsApp Security Alerts Phone'}</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mb-4">
+                  {lang === 'ar' 
+                    ? 'الرقم الذي سيتم توجيه تقارير وبلاغات الاختراق والشرطة إليه مباشرة عبر واتساب.' 
+                    : 'The target WhatsApp phone number that will receive firewall alert reports and system logs.'}
+                </p>
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-neutral-300 block">{lang === 'ar' ? 'رقم الهاتف المعتمد (مع كود الدولة):' : 'Phone Number (with Country Code):'}</label>
+                  <input
+                    type="text"
+                    value={adminAlertPhone}
+                    onChange={(e) => handleAlertPhoneChange(e.target.value)}
+                    placeholder="e.g. 201015112185"
+                    className="w-full text-center rounded-2xl border border-white/10 bg-neutral-950 py-3 px-4 text-sm font-semibold text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
+                  />
+                  <p className="text-[10px] text-neutral-500 leading-relaxed">
+                    {lang === 'ar' 
+                      ? '⚠️ يرجى التأكد من كتابة الرقم بدون فواصل أو علامة + (مثال لمصر: 201015112185).' 
+                      : '⚠️ Enter digits only with country code, no + or spaces (e.g., 201015112185).'}
+                  </p>
+                </div>
+              </div>
+              <div className="border-t border-white/5 pt-4 mt-4 text-[10px] text-emerald-500/70 leading-relaxed font-bold">
+                ✅ {lang === 'ar' ? 'تم الحفظ والمزامنة تلقائياً مع جدار الحماية!' : 'Automatically saved and synced with Firewall!'}
+              </div>
+            </div>
+          </div>
+
+          {/* Security Violations Log Table */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 shadow-xl text-right">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-red-500 animate-pulse" />
+                  <span>{lang === 'ar' ? 'سجلات محاولات الاختراق وجدار الحماية' : 'Firewall & Intrusion Attempts Log'}</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  {lang === 'ar' 
+                    ? 'قائمة بجميع المحاولات الفاشلة التي تجاوزت 3 مرات وتم رصدها وحظرها تلقائياً مع تفاصيل الأجهزة وعناوين الـ IP.'
+                    : 'Real-time record of blocked intrusion attempts, failing more than 3 times, with detailed metadata.'}
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-black font-mono">
+                {securityViolations.length} {lang === 'ar' ? 'محاولة اختراق معزولة' : 'Attempts Blocked'}
+              </span>
+            </div>
+
+            {securityViolations.length === 0 ? (
+              <div className="text-center py-12 border border-dashed border-neutral-800 rounded-2xl bg-neutral-900/10">
+                <ShieldCheck className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
+                <p className="text-sm text-neutral-400 font-bold">{lang === 'ar' ? 'النظام آمن تماماً!' : 'The system is 100% secure!'}</p>
+                <p className="text-xs text-neutral-500 mt-1">{lang === 'ar' ? 'لا توجد أي محاولات دخول خاطئة مسجلة في جدار الحماية حتى الآن.' : 'No failed login violations recorded on the firewall yet.'}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-2xl border border-neutral-800/80 bg-neutral-950/40">
+                <table className="w-full border-collapse text-right select-none" dir="rtl">
+                  <thead>
+                    <tr className="border-b border-neutral-800 text-neutral-400 text-xs font-bold bg-neutral-900/40">
+                      <th className="px-6 py-3 text-right">{lang === 'ar' ? 'التوقيت' : 'Timestamp'}</th>
+                      <th className="px-6 py-3 text-right">{lang === 'ar' ? 'العنوان والموقع' : 'IP & Location'}</th>
+                      <th className="px-6 py-3 text-left">{lang === 'ar' ? 'المتصفح/الجهاز' : 'Browser/Device'}</th>
+                      <th className="px-6 py-3 text-center">{lang === 'ar' ? 'المحاولات' : 'Attempts'}</th>
+                      <th className="px-6 py-3 text-center">{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-900">
+                    {securityViolations.map((v) => {
+                      const policeReport = `🚨 --- تقرير بلاغ أمني عاجل للشرطة أو تكنولوجيا المعلومات 🚨 ---\n` +
+                        `• التوقيت: ${v.timestamp ? new Date(v.timestamp).toLocaleString('ar-EG') : '-'}\n` +
+                        `• عنوان الـ IP المهاجم: ${v.ip || 'غير معروف'}\n` +
+                        `• الموقع التقريبي: ${v.city || 'غير محدد'}، ${v.country || 'غير محدد'}\n` +
+                        `• مزود الخدمة (ISP): ${v.org || 'غير معروف'}\n` +
+                        `• عدد المحاولات الفاشلة قبل القفل: ${v.attempts || 3}\n` +
+                        `• المتصفح/الجهاز المستخدم: ${v.userAgent || 'غير معروف'}\n` +
+                        `• الإيميل المشتبه به: ${v.userEmail || 'زائر غير مسجل'}\n` +
+                        `-----------------------------------------\n` +
+                        `تم قفل جدار الحماية تلقائياً وعزل عنوان الـ IP عن الدخول.`;
+
+                      return (
+                        <tr key={v.id} className="hover:bg-neutral-900/30 transition-all">
+                          {/* Timestamp */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-400">
+                            {v.timestamp ? new Date(v.timestamp).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US') : '-'}
+                          </td>
+
+                          {/* IP & Location */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-sm font-bold text-white font-mono select-all">{v.ip}</span>
+                              <span className="text-[10px] text-neutral-500 font-sans">
+                                {v.city || 'Unknown'}, {v.country || 'Unknown'} {v.org ? `(${v.org})` : ''}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Device Agent */}
+                          <td className="px-6 py-4 max-w-xs truncate text-xs text-neutral-400 font-mono select-all text-left" dir="ltr" title={v.userAgent}>
+                            {v.userAgent || '-'}
+                          </td>
+
+                          {/* Attempts */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="px-2.5 py-1 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-black font-mono">
+                              {v.attempts || 3} / 3
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {/* Copy report */}
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(policeReport);
+                                  alert(lang === 'ar' ? '📋 تم نسخ التقرير الأمني بالكامل إلى الحافظة لعمل بلاغ أمني!' : '📋 Security report copied to clipboard successfully!');
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition-all cursor-pointer border border-neutral-700/60"
+                                title="نسخ تفاصيل بلاغ أمني"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                <span>{lang === 'ar' ? 'نسخ البلاغ' : 'Copy Report'}</span>
+                              </button>
+
+                              {/* Direct WhatsApp report */}
+                              <button
+                                onClick={() => {
+                                  const rawPhone = adminAlertPhone || '201015112185';
+                                  const cleanPhone = rawPhone.replace(/\D/g, '');
+                                  const formattedPhone = (cleanPhone.length === 11 && cleanPhone.startsWith('01')) ? '2' + cleanPhone : cleanPhone;
+                                  const encodedMsg = encodeURIComponent(policeReport);
+                                  window.open(`https://api.whatsapp.com/send?phone=${formattedPhone || '201015112185'}&text=${encodedMsg}`, '_blank');
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500 text-xs font-bold transition-all cursor-pointer"
+                                title="إرسال البلاغ فوراً للواتساب"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5" />
+                                <span>{lang === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'branding' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="rounded-3xl border border-pink-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-pink-950/20 p-6 shadow-xl relative overflow-hidden">
+            <h3 className="text-lg sm:text-xl font-extrabold text-white mb-2 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-pink-400 animate-pulse" />
+              <span>{lang === 'ar' ? '🎨 إدارة الهوية والشعارات والأصول بقاعدة البيانات' : '🎨 Live Identity & Assets Manager'}</span>
+            </h3>
+            <p className="text-xs text-neutral-400 leading-relaxed mb-6">
+              {lang === 'ar'
+                ? 'تحكم في المظهر والشعارات واسم التطبيق وأي صور قديمة عبر استبدالها بروابط صور ويب حية. يتم تخزين وتحديث هذه الروابط فورياً في كوليكشن app_assets وتحت مستند باسم current_branding لتسهيل الهجرة والتحكم المستقبلي.'
+                : 'Control application branding, logos, display names, and local images by converting them to online links. All changes are stored under the "app_assets" collection with document ID "current_branding".'}
+            </p>
+
+            <form onSubmit={handleSaveBranding} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* App Name */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'اسم التطبيق الموحد (بالإنكليزية أو العربية دون ترجمة):' : 'Unified App Name (No translation, used for all languages):'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formAppNameEn}
+                    onChange={(e) => {
+                      setFormAppNameEn(e.target.value);
+                      setFormAppNameAr(e.target.value);
+                    }}
+                    required
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm transition-all outline-none"
+                    placeholder="CityEve"
+                  />
+                </div>
+
+                {/* App Icon URL */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط أيقونة التطبيق (App Icon URL):' : 'App Icon Image URL:'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formAppIconUrl}
+                      onChange={(e) => setFormAppIconUrl(e.target.value)}
+                      required
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://.../icon.svg"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingIcon ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع' : 'Upload'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'icon')}
+                        disabled={isUploadingIcon}
+                      />
+                    </label>
+                    <div className="h-12 w-12 rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                      <img
+                        src={formAppIconUrl || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"}
+                        alt="Icon Preview"
+                        className="h-full w-full object-cover rounded-xl"
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png'; }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الأيقونة المربعة المستخدمة في واجهة التطبيق، الهيدر وبانر التثبيت PWA.' : '💡 Square icon used in app navbar header, install prompts and banners.'}
+                  </p>
+                </div>
+
+                {/* App Logo URL */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط شعار العلامة الكامل (App Logo URL):' : 'App Full Logo Image URL:'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formAppLogoUrl}
+                      onChange={(e) => setFormAppLogoUrl(e.target.value)}
+                      required
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://.../logo.svg"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingLogo ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع' : 'Upload'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'logo')}
+                        disabled={isUploadingLogo}
+                      />
+                    </label>
+                    <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                      <img
+                        src={formAppLogoUrl || "https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png"}
+                        alt="Logo Preview"
+                        className="h-full w-full object-contain"
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png'; }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الشعار المستطيل الكامل المستخدم في صفحات الدخول والبانرات الاحترافية.' : '💡 Full rectangle brand logo used in premium banners and auth landing pages.'}
+                  </p>
+                </div>
+
+                {/* Hero Header Banner Image URL (Arabic) */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'صورة بانر الهيدر الرئيسي - عربي (Hero Banner Image AR):' : 'Hero Header Banner Image URL (Arabic):'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formHeroBannerUrl}
+                      onChange={(e) => setFormHeroBannerUrl(e.target.value)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://res.cloudinary.com/.../banner_ar.jpg (أو اتركه فارغاً للتصميم التلقائي الذكي)"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingHeroBanner ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع بانر عربي' : 'Upload AR Banner'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'banner')}
+                        disabled={isUploadingHeroBanner}
+                      />
+                    </label>
+                    {formHeroBannerUrl && (
+                      <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                        <img
+                          src={formHeroBannerUrl}
+                          alt="Hero Banner Preview AR"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 صورة البانر العريض باللغة العربية (أكبر الحفلات والفعاليات في جيبك).' : '💡 Wide hero banner image for Arabic language.'}
+                  </p>
+                </div>
+
+                {/* Hero Header Banner Image URL (English) */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'صورة بانر الهيدر الرئيسي - إنجليزي (Hero Banner Image EN - اختياري):' : 'Hero Header Banner Image URL (English - Optional):'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formHeroBannerUrlEn}
+                      onChange={(e) => setFormHeroBannerUrlEn(e.target.value)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://res.cloudinary.com/.../banner_en.jpg (اختياري - يتم ترجمته تلقائياً إن ترك فارغاً)"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingHeroBannerEn ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع بانر إنجليزي' : 'Upload EN Banner'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'banner_en')}
+                        disabled={isUploadingHeroBannerEn}
+                      />
+                    </label>
+                    {formHeroBannerUrlEn && (
+                      <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                        <img
+                          src={formHeroBannerUrlEn}
+                          alt="Hero Banner Preview EN"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 صورة البانر باللغة الإنجليزية. إذا تركتها فارغة سيتم ترجمة النص وتطبيقه تلقائياً عند اختيار الإنجليزية.' : '💡 Optional English banner image. If empty, English text will automatically overlay cleanly.'}
+                  </p>
+                </div>
+
+                {/* Mobile-safe Hero Backgrounds */}
+                <div className="space-y-2 col-span-1 md:col-span-2 rounded-2xl border border-amber-500/20 bg-amber-950/10 p-4">
+                  <label className="text-xs font-bold text-amber-200 block">
+                    {lang === 'ar' ? 'صور أرضية البانر للموبايل (تُظهر الراقصين بدون قص):' : 'Mobile-safe hero backgrounds (keeps dancers visible):'}
+                  </label>
+                  <p className="text-[10px] text-neutral-500 mb-3">
+                    {lang === 'ar' ? 'ارفع نسخة الموبايل المصممة بالطول إلى Cloudinary. إذا تركتها فارغة سيستخدم الموقع صورة الكمبيوتر تلقائياً.' : 'Upload the portrait/mobile floor to Cloudinary. If empty, the desktop image is used as fallback.'}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex gap-2 items-center">
+                      <input type="url" value={formHeroBannerMobileUrl} onChange={(e) => setFormHeroBannerMobileUrl(e.target.value)} className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-neutral-950 text-white border border-neutral-800 text-[10px] font-mono outline-none" placeholder="Cloudinary mobile AR URL" dir="ltr" />
+                      <label className="flex items-center justify-center px-3 h-[38px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white cursor-pointer shrink-0">
+                        {isUploadingHeroBannerMobile ? <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : <span className="text-[10px] font-bold">{lang === 'ar' ? 'رفع موبايل' : 'Upload'}</span>}
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadBrandingImage(e, 'banner_mobile')} disabled={isUploadingHeroBannerMobile} />
+                      </label>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <input type="url" value={formHeroBannerMobileUrlEn} onChange={(e) => setFormHeroBannerMobileUrlEn(e.target.value)} className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-neutral-950 text-white border border-neutral-800 text-[10px] font-mono outline-none" placeholder="Cloudinary mobile EN URL (optional)" dir="ltr" />
+                      <label className="flex items-center justify-center px-3 h-[38px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white cursor-pointer shrink-0">
+                        {isUploadingHeroBannerMobileEn ? <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : <span className="text-[10px] font-bold">{lang === 'ar' ? 'رفع EN' : 'Upload EN'}</span>}
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadBrandingImage(e, 'banner_mobile_en')} disabled={isUploadingHeroBannerMobileEn} />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WhatsApp Support Number */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رقم الدعم الفني للواتساب (بدون كود الدولة أو رموزه):' : 'WhatsApp Support Number (Raw, digits only):'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formWhatsappSupport}
+                    onChange={(e) => setFormWhatsappSupport(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm font-mono transition-all outline-none"
+                    placeholder="201012345678"
+                    dir="ltr"
+                  />
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الرقم الموجه له زر الاستفسار عبر الواتساب للأعضاء.' : '💡 The WhatsApp phone number used for general member inquiries and complaints.'}
+                  </p>
+                </div>
+
+                {/* Instagram URL */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط حساب إنستجرام الرسمي:' : 'Official Instagram Account URL:'}
+                  </label>
+                  <input
+                    type="url"
+                    value={formInstagramUrl}
+                    onChange={(e) => setFormInstagramUrl(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm font-mono transition-all outline-none"
+                    placeholder="https://instagram.com/..."
+                    dir="ltr"
+                  />
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 رابط حساب إنستجرام الرسمي لتثبيت المتابعين والوصول إليه.' : '💡 Instagram account URL for official social integration.'}
+                  </p>
+                </div>
+
+                <div className="border-t border-white/5 pt-6 mt-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="col-span-1 md:col-span-2">
+                    <h4 className="text-sm font-bold text-amber-400 mb-2 flex items-center gap-2">
+                      <Crown className="h-4 w-4" />
+                      {lang === 'ar' ? 'إعدادات نصوص الإعلان الفاخر (فيديو الأسبوع الحصري)' : 'Weekly Promo Ad Settings'}
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الرئيسي (بالعربية):' : 'Main Title (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoTitleAr}
+                      onChange={(e) => setFormPromoTitleAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="فيديو الأسبوع الحصري المميز VIP"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الرئيسي (بالإنجليزية):' : 'Main Title (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoTitleEn}
+                      onChange={(e) => setFormPromoTitleEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="EXCLUSIVE WEEKLY VIP FEATURED VIDEO"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الفرعي (بالعربية):' : 'Subtitle (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoSubtitleAr}
+                      onChange={(e) => setFormPromoSubtitleAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="إعلان خاص"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الفرعي (بالإنجليزية):' : 'Subtitle (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoSubtitleEn}
+                      onChange={(e) => setFormPromoSubtitleEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="SPECIAL AD"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'نص الشارة العائمة (بالعربية):' : 'Floating Badge (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoBadgeAr}
+                      onChange={(e) => setFormPromoBadgeAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="فيديو الأسبوع الحصري"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'نص الشارة العائمة (بالإنجليزية):' : 'Floating Badge (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoBadgeEn}
+                      onChange={(e) => setFormPromoBadgeEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="Weekly Featured Video"
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminSection(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-5 py-3 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white font-bold text-sm transition-all cursor-pointer"
+                >
+                  {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBranding}
+                  className="px-6 py-3 rounded-xl bg-pink-600 text-white hover:bg-pink-500 font-extrabold text-sm transition-all flex items-center gap-2 shadow-lg hover:shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <RefreshCw className={`h-4 w-4 ${savingBranding ? 'animate-spin' : ''}`} />
+                  <span>{lang === 'ar' ? (savingBranding ? 'جاري الحفظ...' : 'حفظ التغييرات بقاعدة البيانات') : (savingBranding ? 'Saving...' : 'Save Changes to Firestore')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'pricing' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="rounded-3xl border border-emerald-500/30 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-md dark:shadow-xl relative overflow-hidden">
+            <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mb-2 flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-emerald-500 animate-pulse" />
+              <span>{lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}</span>
+            </h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-6">
+              {lang === 'ar' ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم، مع تحديد نسبة الزيادة الخاصة بإعلانات الفيديو.' : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge percentage.'}
+            </p>
+            
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* VIP Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-amber-500/30 shadow-xs">
+                <h4 className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-2 mb-4">
+                  <Crown className="h-4 w-4" />
+                  {lang === 'ar' ? 'أسعار الإعلان المميز (VIP)' : 'VIP Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.basePrice ?? 100}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.extraDayPrice ?? 20}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.videoSurchargePercentage ?? 20}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Standard Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-neutral-300 dark:border-neutral-700 shadow-xs">
+                <h4 className="text-neutral-900 dark:text-white font-bold flex items-center gap-2 mb-4">
+                  <FileText className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                  {lang === 'ar' ? 'أسعار الإعلان العادي (Standard)' : 'Standard Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.basePrice ?? 50}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.extraDayPrice ?? 10}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.videoSurchargePercentage ?? 10}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Free Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-green-500/30 shadow-xs">
+                <h4 className="text-green-600 dark:text-green-400 font-bold flex items-center gap-2 mb-4">
+                  <CheckCircle className="h-4 w-4" />
+                  {lang === 'ar' ? 'الإعلان المجاني (Free)' : 'Free Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.basePrice ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.extraDayPrice ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.videoSurchargePercentage ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={async () => {
+                  setSavingPricing(true);
+                  await updatePricingConfig(localPricingConfig as any);
+                  setSavingPricing(false);
+                }}
+                disabled={savingPricing}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 dark:text-neutral-950 px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-md cursor-pointer"
+              >
+                {savingPricing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                {lang === 'ar' ? 'حفظ الأسعار في قاعدة البيانات' : 'Save Prices to Database'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'analytics' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          {/* Summary KPIs Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* KPI 1: App Installs PWA */}
+            <div className="rounded-3xl border border-purple-500/30 bg-purple-950/20 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-20 group-hover:scale-110 transition-transform text-purple-400">
+                <Smartphone className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-purple-300 tracking-wider">
+                {lang === 'ar' ? '📲 تثبيتات التطبيق على الهواتف' : '📲 PWA APP INSTALLS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.pwa_installs || 0}
+              </h4>
+              <p className="text-[10px] text-purple-300 mt-2 font-medium">
+                {lang === 'ar' ? '📱 أجهزة قامت بتثبيت التطبيق PWA' : '📱 PWA installed phone instances'}
+              </p>
+            </div>
+
+            {/* KPI 2: Unique Sessions */}
+            <div className="rounded-3xl border border-cyan-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-cyan-400">
+                <Users className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '👥 زوار فريدون (أجهزة)' : '👥 UNIQUE VISITORS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.unique_sessions || 0}
+              </h4>
+              <p className="text-[10px] text-cyan-400 mt-2 font-medium">
+                {lang === 'ar' ? '✨ تحديث مباشر فوري مجاني' : '✨ Live real-time & completely free'}
+              </p>
+            </div>
+
+            {/* KPI 3: Total Page Views */}
+            <div className="rounded-3xl border border-pink-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-pink-400">
+                <Eye className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '📊 إجمالي المشاهدات' : '📊 TOTAL PAGE VIEWS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.total_page_views || 0}
+              </h4>
+              <p className="text-[10px] text-pink-400 mt-2 font-medium">
+                {lang === 'ar' ? '🔥 نشاط تصفح ومشاركات حقيقي' : '🔥 Active browser impressions'}
+              </p>
+            </div>
+
+            {/* KPI 4: Engagement Factor */}
+            <div className="rounded-3xl border border-amber-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-amber-400">
+                <TrendingUp className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '⚡ متوسط التفاعل' : '⚡ ENGAGEMENT METRIC'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {((analyticsCounters.total_page_views || 0) / (analyticsCounters.unique_sessions || 1)).toFixed(1)}
+              </h4>
+              <p className="text-[10px] text-amber-400 mt-2 font-medium">
+                {lang === 'ar' ? '🔄 معدل زيارة الصفحات لكل مستخدم' : '🔄 Page views per active session'}
+              </p>
+            </div>
+
+            {/* KPI 5: Outbound Contacts */}
+            <div className="rounded-3xl border border-emerald-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-emerald-400">
+                <MousePointerClick className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '🎯 نقرات التواصل السريع' : '🎯 CALL-TO-ACTION CLICKS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {(analyticsCounters.clicks_whatsapp || 0) + (analyticsCounters.clicks_phone || 0) + (analyticsCounters.clicks_maps || 0)}
+              </h4>
+              <p className="text-[10px] text-emerald-400 mt-2 font-medium">
+                {lang === 'ar' ? '✅ واتساب واتصالات وخرائط' : '✅ Active Maps & Chat actions'}
+              </p>
+            </div>
+          </div>
+
+          {/* Core Analytics Details Split Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left/Right Column: Dance Styles Popularity / Audience Interest (7 Cols) */}
+            <div className="lg:col-span-7 rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  {lang === 'ar' ? '🔥 اهتمام الجمهور بحسب نوع الرقصة والأنماط' : '🔥 Audience Interest & Dance Styles Preference'}
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  {lang === 'ar' 
+                    ? 'ترتيب تنازلي فوري لأنواع الرقصات الأكثر طلباً وبحثاً وتصفية من قبل زوار الموقع والجمهور الحقيقي.' 
+                    : 'Real-time ranking of music and dance genres selected by active visitors.'}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {(() => {
+                  const rawStyles = [
+                    { name: 'Salsa', count: analyticsCounters.style_salsa || 0, color: 'bg-amber-500' },
+                    { name: 'Bachata', count: analyticsCounters.style_bachata || 0, color: 'bg-purple-500' },
+                    { name: 'Kizomba', count: analyticsCounters.style_kizomba || 0, color: 'bg-pink-500' },
+                    { name: 'Merengue', count: analyticsCounters.style_merengue || 0, color: 'bg-emerald-500' },
+                    { name: 'Tango', count: analyticsCounters.style_tango || 0, color: 'bg-red-500' },
+                    { name: 'Zouk', count: analyticsCounters.style_zouk || 0, color: 'bg-blue-500' },
+                    { name: 'Cha-Cha', count: analyticsCounters.style_cha_cha || 0, color: 'bg-indigo-500' },
+                    { name: 'Reggaeton', count: analyticsCounters.style_reggaeton || 0, color: 'bg-rose-500' },
+                    { name: 'Ballroom', count: analyticsCounters.style_ballroom || 0, color: 'bg-yellow-500' },
+                    { name: 'Mix & Latin', count: (analyticsCounters.style_mix___latin || analyticsCounters.style_mix_latin || 0), color: 'bg-teal-500' },
+                    { name: 'Arabic & Oriental', count: (analyticsCounters.style_arabic___oriental || analyticsCounters.style_arabic_oriental || 0), color: 'bg-cyan-500' }
+                  ];
+                  const sortedStyles = [...rawStyles].sort((a, b) => b.count - a.count);
+                  const maxStyleCount = Math.max(...sortedStyles.map(s => s.count), 1);
+
+                  return sortedStyles.map((item, index) => {
+                    const safeCount = Number(item.count) || 0;
+                    const pct = maxStyleCount > 0 ? Math.min(Math.round((safeCount / maxStyleCount) * 100), 100) : 0;
+                    return (
+                      <div key={item.name} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-neutral-500 w-5 text-center">
+                              #{index + 1}
+                            </span>
+                            <span className="font-extrabold text-neutral-200">
+                              {getStyleLabel(item.name, lang)}
+                            </span>
+                          </div>
+                          <span className="font-bold text-neutral-400">
+                            {Number(item.count) || 0} {lang === 'ar' ? 'نقرة' : 'clicks'} ({Number.isNaN(pct) ? 0 : pct}%)
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/50">
+                          <div 
+                            className={`h-full ${item.color} rounded-full transition-all duration-1000`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+
+            {/* Right Column: Interaction Clicks & Tab Navigation Breakdown (5 Cols) */}
+            <div className="lg:col-span-5 flex flex-col gap-6 text-right">
+              {/* Box 1: Clicks Breakdown */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <MousePointerClick className="h-4.5 w-4.5 text-emerald-400" />
+                    <span>{lang === 'ar' ? '🎯 الإجراءات المتخذة (CTA)' : '🎯 Customer Call-to-Actions'}</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {lang === 'ar' ? 'تتبع أزرار الاتصال الأكثر استخداماً للوصول إلى المنظمين.' : 'Metrics on actual customer conversions and outreach.'}
+                  </p>
+                </div>
+
+                <div className="space-y-3.5 pt-2">
+                  {/* WhatsApp */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <MessageCircle className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'نقرات التواصل عبر واتساب' : 'WhatsApp Chats Started'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">wa.me outbound link clicks</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-emerald-400">{analyticsCounters.clicks_whatsapp || 0}</span>
+                  </div>
+
+                  {/* Google Maps */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <MapPin className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'خرائط جوجل ومواقع الفعاليات' : 'Google Maps Open'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">location map navigation requests</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-cyan-400">{analyticsCounters.clicks_maps || 0}</span>
+                  </div>
+
+                  {/* Phone Calls */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <Phone className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'المكالمات الهاتفية المباشرة' : 'Direct Phone Calls'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">tel: links launched</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-amber-400">{analyticsCounters.clicks_phone || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Box 2: Sections engagement */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <Layers className="h-4.5 w-4.5 text-purple-400" />
+                    <span>{lang === 'ar' ? '🗺️ نشاط تصفح أقسام التطبيق' : '🗺️ Section & Navigation Usage'}</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {lang === 'ar' ? 'توزع الزوار بين الأبواب الرئيسية في التطبيق.' : 'Page view count breakdown across system tabs.'}
+                  </p>
+                </div>
+
+                <div className="space-y-2 font-mono text-xs text-right">
+                  {/* Explore */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '✨ قسم الاستكشاف الرئيسي' : 'Explore Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_explore || 0}</span>
+                  </div>
+                  {/* Trips */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '🌴 قسم الرحلات والمصايف' : 'Trips Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_trips || 0}</span>
+                  </div>
+                  {/* Profile */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '👤 صفحة الحساب والمجتمع' : 'Profile/Account Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_profile || 0}</span>
+                  </div>
+                  {/* Create Ad */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '➕ صفحة إنشاء الإعلانات' : 'Create Ad Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_create_ad || 0}</span>
+                  </div>
+                  {/* Admin Panel */}
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '⚙️ لوحة تحكم الإدارة' : 'Admin Panel Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_admin || 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Most Favorited Events & Ads Leaderboard */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-500 fill-red-500" />
+                <span>{lang === 'ar' ? '💖 إعلانات الحفلات الأكثر حفظاً في المفضلة للجمهور' : '💖 Most Favorited (Saved) Events & Ads Leaderboard'}</span>
+              </h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                {lang === 'ar' 
+                  ? 'قائمة مرتبة تنازلياً توضح عدد المستخدمين الفعليين الذين قاموا بحفظ كل إعلان في قائمتهم المفضلة الخاصة.' 
+                  : 'Real-time leaderboard showing how many unique user accounts saved each active event or ad.'}
+              </p>
+            </div>
+
+            {events.length === 0 ? (
+              <div className="py-12 text-center text-xs text-neutral-500 font-mono">
+                {lang === 'ar' ? '📭 لا توجد إعلانات نشطة حالياً في قاعدة البيانات.' : '📭 No active events found in the database.'}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                  <thead>
+                    <tr className="border-b border-neutral-800/60 text-neutral-400 font-bold text-neutral-300">
+                      <th className="py-3 px-4 text-center w-12">#</th>
+                      <th className="py-3 px-4 text-right">{lang === 'ar' ? 'اسم الإعلان / الحفلة' : 'Event / Ad Title'}</th>
+                      <th className="py-3 px-4 text-center">{lang === 'ar' ? 'التصنيف' : 'Category'}</th>
+                      <th className="py-3 px-4 text-center">{lang === 'ar' ? 'تاريخ الفعالية' : 'Event Date'}</th>
+                      <th className="py-3 px-4 text-center w-36">{lang === 'ar' ? 'مرات الحفظ في المفضلة' : 'Favorite Count'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const sortedEvents = [...events].sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
+                      const maxLikes = Math.max(...sortedEvents.map(e => e.likesCount || 0), 1);
+
+                      return sortedEvents.map((ev, index) => {
+                        const likes = ev.likesCount || 0;
+                        const pct = Math.min(Math.round((likes / maxLikes) * 100), 100);
+                        const isTop3 = index < 3;
+                        const medalColors = ['text-yellow-500', 'text-slate-300', 'text-amber-600'];
+
+                        return (
+                          <tr key={ev.id} className="border-b border-neutral-800/40 hover:bg-neutral-950/40 transition-colors">
+                            {/* Rank Column */}
+                            <td className="py-3.5 px-4 text-center font-bold font-mono">
+                              {isTop3 ? (
+                                <span className={`text-sm font-black`}>
+                                  {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                                </span>
+                              ) : (
+                                <span className="text-neutral-500">#{index + 1}</span>
+                              )}
+                            </td>
+
+                            {/* Title & Styles */}
+                            <td className="py-3.5 px-4 font-extrabold text-white text-right">
+                              <div>
+                                <p className="text-sm line-clamp-1">
+                                  {lang === 'ar' ? ev.titleAr || ev.titleEn : ev.titleEn || ev.titleAr}
+                                </p>
+                                <div className="flex flex-wrap gap-1 mt-1 justify-start">
+                                  {ev.styles?.slice(0, 3).map(style => (
+                                    <span key={style} className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-neutral-800 text-neutral-400 font-mono">
+                                      {getStyleLabel(style, lang)}
+                                    </span>
+                                  ))}
+                                  {ev.isWeeklyPromo && (
+                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                                      VIP PROMO
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Category Badge */}
+                            <td className="py-3.5 px-4 text-center">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono ${
+                                ev.category === 'party' 
+                                  ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                                  : ev.category === 'course' 
+                                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                                    : ev.category === 'trip'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              }`}>
+                                {ev.category === 'party' 
+                                  ? (lang === 'ar' ? 'حفلة' : 'Party') 
+                                  : ev.category === 'course' 
+                                    ? (lang === 'ar' ? 'دورة' : 'Course') 
+                                    : ev.category === 'trip'
+                                      ? (lang === 'ar' ? 'رحلة' : 'Trip')
+                                      : (lang === 'ar' ? 'معارض ومؤتمرات' : 'Exhibition')}
+                              </span>
+                            </td>
+
+                            {/* Event Date */}
+                            <td className="py-3.5 px-4 text-center text-[11px] font-mono font-bold text-neutral-400">
+                              {(() => {
+                                try {
+                                  return new Date(ev.eventDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  });
+                                } catch (e) {
+                                  return ev.eventDate;
+                                }
+                              })()}
+                            </td>
+
+                            {/* Favorite Clicks & Visual Indicator */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-3 justify-center">
+                                {/* Favorite count bubble */}
+                                <div className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-2xl text-red-400 shrink-0">
+                                  <Heart className="h-3 w-3 fill-current text-red-500" />
+                                  <span className="font-extrabold font-mono text-sm">{String(likes)}</span>
+                                </div>
+                                {/* Progress visualizer */}
+                                <div className="hidden sm:block h-1.5 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/50">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-pink-500 to-red-500 rounded-full transition-all duration-1000"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Daily Traffic Chart Card (Full Width) */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Activity className="h-5 w-5 text-cyan-400" />
+                <span>{lang === 'ar' ? '📈 مخطط حركة المرور والزوار اليومي' : '📈 Daily Visitor & Traffic Timeline'}</span>
+              </h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                {lang === 'ar' 
+                  ? 'رسم بياني يعرض نشاط الزوار الفريدين (بالأزرق 🔷) وإجمالي مشاهدات الصفحات (بالوردي 🌸) للـ 10 أيام الماضية.' 
+                  : 'Time-series bar visualization tracking active unique sessions (cyan) vs total page impressions (pink).'}
+              </p>
+            </div>
+
+            {dailyAnalytics.length === 0 ? (
+              <div className="py-12 text-center text-xs text-neutral-500 font-mono">
+                {lang === 'ar' ? '📭 لا توجد بيانات مسجلة في السجل اليومي بعد.' : '📭 No daily history records found in Firestore yet.'}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Horizontal Bar Chart representation */}
+                <div className="space-y-4">
+                  {(() => {
+                    const maxSessions = Math.max(...dailyAnalytics.map(d => d.unique_sessions || 0), 1);
+                    const maxPageViews = Math.max(...dailyAnalytics.map(d => d.total_page_views || 0), 1);
+
+                    return [...dailyAnalytics].reverse().slice(0, 10).map((day) => {
+                      const sessionPct = Math.min(Math.round(((day.unique_sessions || 0) / maxSessions) * 100), 100);
+                      const viewsPct = Math.min(Math.round(((day.total_page_views || 0) / maxPageViews) * 100), 100);
+
+                      return (
+                        <div key={day.date} className="grid grid-cols-1 md:grid-cols-12 items-center gap-3 border-b border-neutral-800/40 pb-3 text-right">
+                          {/* Date Label */}
+                          <div className="md:col-span-2 text-xs font-bold font-mono text-neutral-300">
+                            📅 {day.date}
+                          </div>
+
+                          {/* Dual Bar Render */}
+                          <div className="md:col-span-8 space-y-1.5">
+                            {/* Sessions (Cyan) */}
+                            <div className="flex items-center gap-2">
+                              <div className="h-2.5 bg-cyan-500 rounded-full transition-all duration-1000" style={{ width: `${sessionPct}%` }} />
+                              <span className="text-[10px] font-mono font-bold text-cyan-400">{day.unique_sessions || 0}</span>
+                            </div>
+
+                            {/* Pageviews (Pink) */}
+                            <div className="flex items-center gap-2">
+                              <div className="h-2.5 bg-pink-500 rounded-full transition-all duration-1000" style={{ width: `${viewsPct}%` }} />
+                              <span className="text-[10px] font-mono font-bold text-pink-400">{day.total_page_views || 0}</span>
+                            </div>
+                          </div>
+
+                          {/* Quick details */}
+                          <div className="md:col-span-2 text-left md:text-right text-[11px] font-mono text-neutral-400 flex md:flex-col justify-between">
+                            <div><strong className="text-cyan-400">{day.unique_sessions || 0}</strong> {lang === 'ar' ? ' زائر فريد' : ' visitors'}</div>
+                            <div><strong className="text-pink-400">{day.total_page_views || 0}</strong> {lang === 'ar' ? ' مشاهدة' : ' views'}</div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Chart Legend */}
+                <div className="flex items-center justify-center gap-6 pt-4 border-t border-neutral-800 text-xs font-mono">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 w-3.5 rounded bg-cyan-500" />
+                    <span className="text-cyan-400 font-extrabold">{lang === 'ar' ? 'الزوار الفريدين (Unique sessions)' : 'Unique visitors'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 w-3.5 rounded bg-pink-500" />
+                    <span className="text-pink-400 font-extrabold">{lang === 'ar' ? 'إجمالي المشاهدات (Page views)' : 'Total page impressions'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Back Button */}
+          <div className="flex justify-end pt-4 border-t border-neutral-800">
+            <button
+              onClick={() => {
+                setAdminSection(null);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-5 py-3 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white font-extrabold text-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>{lang === 'ar' ? 'الرجوع للوحة التحكم' : 'Back to Dashboard'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'create_ad_admin' && (
+        <div className="space-y-6 animate-fadeIn" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <form onSubmit={handleAdminPublish} className="space-y-6">
+            
+            {/* Master Control Notice */}
+            <div className="rounded-3xl border border-indigo-500/30 bg-neutral-900 p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute right-0 top-0 h-full w-1/3 bg-indigo-500/5 blur-3xl pointer-events-none" />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <Sparkles className="h-6 w-6 animate-pulse" />
+                  </div>
+                  <div className="text-right">
+                    <h3 className="text-base sm:text-lg font-black text-white">
+                      {lang === 'ar' ? 'نظام النشر المباشر للإدارة' : 'Admin Instant Publisher'}
+                    </h3>
+                    <p className="text-xs text-neutral-400 mt-1">
+                      {lang === 'ar' 
+                        ? 'أنت تقوم بإنشاء إعلان بشكل مباشر في قاعدة البيانات. سيتجاوز هذا الإعلان المراجعة والدفع ويظهر للجمهور فوراً.' 
+                        : 'You are composing an event directly inside Firestore. This bypasses the payment/review queue and updates live feeds instantly.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-mono font-black">
+                    BYPASS ACTIVE
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Tab Switcher for Full Live Preview (A separate page/tab of its own because of space/area constraints) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-3xl bg-neutral-950/80 border-2 border-indigo-500/30 shadow-2xl relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="text-right flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+                </span>
+                <div>
+                  <h4 className="text-sm font-black text-white">
+                    {lang === 'ar' ? '👀 معاينة مباشرة تفاعلية بالكامل' : '👀 Live Interactive Preview'}
+                  </h4>
+                  <p className="text-[11px] text-neutral-400">
+                    {lang === 'ar' ? 'اعرض مظهر الإعلان النهائي للجمهور أثناء تعبئة الحقول لتعديله فوراً.' : 'See exactly how the final ad renders to dancers as you type.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex rounded-2xl bg-neutral-900 p-1 border border-neutral-800 w-full sm:w-auto shrink-0 relative z-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminCreateTab('form');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    adminCreateTab === 'form'
+                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>{lang === 'ar' ? '📝 نموذج البيانات' : '📝 Form Builder'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminCreateTab('preview');
+                    setPreviewAlert(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    adminCreateTab === 'preview'
+                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>{lang === 'ar' ? '👁️ المعاينة الحية للجمهور' : '👁️ Live Preview'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Removed Floating Action Button per user request to move it near action buttons */}
+
+            {adminCreateTab === 'form' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
+              
+              {/* LEFT COLUMN: Main Form Details */}
+              <div className="lg:col-span-8 space-y-6">
+                
+                {/* Section 1: Titles & Descriptions */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '📝 تفاصيل ونص الإعلان' : '📝 Event Content & Copy'}</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Title Arabic */}
+                    <div className="space-y-2 text-right">
+                      <div className="flex items-center justify-between flex-row-reverse">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالعربية) *' : 'Event Title (Arabic) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminTitleEn, 'ar', setAdminTitleAr, 'adminTitleAr')}
+                          disabled={!adminTitleEn || isTranslating === 'adminTitleAr'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminTitleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={adminTitleAr}
+                        onChange={(e) => setAdminTitleAr(e.target.value)}
+                        placeholder="مثال: سهرة سالسا فخمة في الزمالك"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
+                      />
+                    </div>
+
+                    {/* Title English */}
+                    <div className="space-y-2 text-left">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالإنجليزية) *' : 'Event Title (English) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminTitleAr, 'en', setAdminTitleEn, 'adminTitleEn')}
+                          disabled={!adminTitleAr || isTranslating === 'adminTitleEn'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminTitleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={adminTitleEn}
+                        onChange={(e) => setAdminTitleEn(e.target.value)}
+                        placeholder="e.g. Luxury Salsa Night in Zamalek"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-left"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Desc Arabic */}
+                    <div className="space-y-2 text-right">
+                      <div className="flex items-center justify-between flex-row-reverse">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالعربية) *' : 'Event Description (Arabic) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminDescEn, 'ar', setAdminDescAr, 'adminDescAr')}
+                          disabled={!adminDescEn || isTranslating === 'adminDescAr'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminDescAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                        </button>
+                      </div>
+                      <textarea
+                        required
+                        rows={4}
+                        value={adminDescAr}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 500) {
+                            setAdminDescAr(e.target.value);
+                          }
+                        }}
+                        maxLength={500}
+                        placeholder="اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور..."
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
+                      />
+                      <div className="flex justify-between items-center mt-1 px-1 text-right" dir="rtl">
+                        <span className={`text-[11px] transition-colors duration-200 ${500 - adminDescAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                          {lang === 'ar' 
+                            ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - adminDescAr.length}` 
+                            : `Maximum 500 characters | Remaining: ${500 - adminDescAr.length} characters`}
+                        </span>
+                        {500 - adminDescAr.length === 0 && (
+                          <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                            {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Desc English */}
+                    <div className="space-y-2 text-left">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالإنجليزية) *' : 'Event Description (English) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminDescAr, 'en', setAdminDescEn, 'adminDescEn')}
+                          disabled={!adminDescAr || isTranslating === 'adminDescEn'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminDescEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                        </button>
+                      </div>
+                      <textarea
+                        required
+                        rows={4}
+                        value={adminDescEn}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 500) {
+                            setAdminDescEn(e.target.value);
+                          }
+                        }}
+                        maxLength={500}
+                        placeholder="Write details of the event, instructors, music styles, dress codes..."
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-left"
+                      />
+                      <div className="flex justify-between items-center mt-1 px-1 text-left" dir="ltr">
+                        <span className={`text-[11px] transition-colors duration-200 ${500 - adminDescEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                          {lang === 'ar' 
+                            ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - adminDescEn.length}` 
+                            : `Maximum 500 characters | Remaining: ${500 - adminDescEn.length} characters`}
+                        </span>
+                        {500 - adminDescEn.length === 0 && (
+                          <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                            {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Category & Dance Styles */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '🏷️ تصنيف وموديل الرقص' : '🏷️ Category & Dance Styles'}</span>
+                  </h4>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-neutral-300">
+                      {lang === 'ar' ? 'تصنيف الفعالية الرئيسي' : 'Main Event Category'}
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {(['party', 'course', 'trip'] as DanceCategory[]).map((cat) => (
+                        <button
+                          type="button"
+                          key={cat}
+                          onClick={() => setAdminCategory(cat)}
+                          className={`py-3 rounded-2xl text-xs font-bold transition-all border cursor-pointer ${
+                            adminCategory === cat
+                              ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400 font-extrabold shadow-md'
+                              : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white'
+                          }`}
+                        >
+                          {cat === 'party' 
+                            ? (lang === 'ar' ? '🎉 سهرة / حفلة' : '🎉 Party / Social') 
+                            : cat === 'course' 
+                              ? (lang === 'ar' ? '🎓 كورس / تدريب' : '🎓 Course / Workshop') 
+                              : (lang === 'ar' ? '✈️ رحلة / مهرجان' : '✈️ Trip / Festival')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-neutral-300">
+                      {lang === 'ar' ? 'أنماط الرقص المتوفرة (اختر نمطاً واحداً أو أكثر)' : 'Styles / Dance Genres (Multi-select)'}
+                    </label>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {ALL_DANCE_STYLES.map((style) => {
+                        const isSelected = adminSelectedStyles.includes(style);
+                        return (
+                          <button
+                            type="button"
+                            key={style}
+                            onClick={() => {
+                              if (isSelected) {
+                                setAdminSelectedStyles(prev => prev.filter(s => s !== style));
+                              } else {
+                                setAdminSelectedStyles(prev => [...prev, style]);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                              isSelected 
+                                ? 'bg-indigo-500 text-white border border-indigo-400 shadow-md shadow-indigo-500/20' 
+                                : 'bg-neutral-950 text-neutral-400 border border-neutral-800 hover:text-neutral-200'
+                            }`}
+                          >
+                            {getStyleLabel(style, lang)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Time & Price & Contact */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '🕒 الوقت والأسعار ومعلومات التواصل' : '🕒 Schedule, Prices & Outreach'}</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Event Date */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'تاريخ الفعالية *' : 'Event Date *'}
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={adminEventDate}
+                        onChange={(e) => setAdminEventDate(e.target.value)}
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                      />
+                    </div>
+
+                    {/* Price Arabic */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'السعر المقترح بالعربية' : 'Price text (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminPriceAr}
+                        onChange={(e) => setAdminPriceAr(e.target.value)}
+                        placeholder="مثال: 250 ج.م شامل المشروب"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* Price English */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'السعر المقترح بالإنجليزية' : 'Price text (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminPriceEn}
+                        onChange={(e) => setAdminPriceEn(e.target.value)}
+                        placeholder="e.g. 250 EGP (Includes Soft Drink)"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Phone */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300 font-mono">
+                        {lang === 'ar' ? 'رقم هاتف المنظم' : 'Organizer Phone'}
+                      </label>
+                      <input
+                        type="tel"
+                        value={adminPhone}
+                        onChange={(e) => setAdminPhone(e.target.value)}
+                        placeholder="+201011223344"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                      />
+                    </div>
+
+                    {/* WhatsApp */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300 font-mono">
+                        {lang === 'ar' ? 'رقم واتساب (بدون أصفار أو علامة +)' : 'WhatsApp (Clean format)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminWhatsapp}
+                        onChange={(e) => setAdminWhatsapp(e.target.value)}
+                        placeholder="201011223344"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                      />
+                    </div>
+
+                    {/* Organizer Name */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'اسم منظم الفعالية' : 'Organizer Name'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminOrganizerName}
+                        onChange={(e) => setAdminOrganizerName(e.target.value)}
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Booking Button & Price Subtext ON / OFF Toggle */}
+                  <div className="pt-3 border-t border-neutral-800">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
+                      <div>
+                        <h5 className="text-xs font-black text-white flex items-center gap-2">
+                          <span>🎟️ {lang === 'ar' ? 'إظهار زر "احجز الآن" والسعر/العروض المصاحبة' : 'Show "Book Now" Button & Price/Promo Info'}</span>
+                        </h5>
+                        <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                          {lang === 'ar'
+                            ? 'عند اختيار (أون) يظهر زر احجز الآن والسعر/العرض المصاحب له بالصفحة الرئيسية. عند (أوف) يتم إخفاء زر احجز الآن وتفاصيل السعر تماماً من الإعلان.'
+                            : 'Toggle whether the "Book Now" button and accompanying price/discount text appear on the main feed.'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setAdminShowBookingButton(true)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            adminShowBookingButton
+                              ? 'bg-emerald-500 text-neutral-950 shadow-lg shadow-emerald-500/20 font-extrabold'
+                              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                          <span>ON ({lang === 'ar' ? 'مفعّل' : 'Show'})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAdminShowBookingButton(false)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            !adminShowBookingButton
+                              ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 font-extrabold'
+                              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                          <span>OFF ({lang === 'ar' ? 'معطّل' : 'Hide'})</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Custom Subtext Input Field below the button */}
+                    {adminShowBookingButton && (
+                      <div className="mt-3 pt-3 border-t border-neutral-800/80 space-y-3 animate-fadeIn">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-extrabold text-amber-400 flex items-center gap-1.5">
+                            <span>✏️ {lang === 'ar' ? 'النص المصاحب أسفل زر احجز الآن (بالعربية):' : 'Booking Subtext below button (Arabic):'}</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={adminBookingSubtextAr}
+                            onChange={e => setAdminBookingSubtextAr(e.target.value)}
+                            placeholder={lang === 'ar' ? 'مثال: 500 بدل 700 أو احجز واحصل على 10% خصم' : 'e.g. 500 بدل 700'}
+                            className="w-full bg-neutral-900 border border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold transition-all"
+                          />
+                          <p className="text-[11px] text-neutral-500">
+                            {lang === 'ar'
+                              ? 'إذا تركته فارغاً، سيتم عرض السعر الإفتراضي المحدد بأعلى (مثل 250 ج.م).'
+                              : 'If left empty, the default price specified above will be displayed.'}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-extrabold text-amber-400/90 flex items-center gap-1.5">
+                            <span>✏️ {lang === 'ar' ? 'النص المصاحب أسفل زر احجز الآن (بالإنجليزية):' : 'Booking Subtext below button (English):'}</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={adminBookingSubtextEn}
+                            onChange={e => setAdminBookingSubtextEn(e.target.value)}
+                            placeholder="e.g. 500 instead of 700 or Book & Get 10% OFF"
+                            className="w-full bg-neutral-900 border border-neutral-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold transition-all text-left"
+                            dir="ltr"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ad Views Count Toggle Setting */}
+                  <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h5 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
+                          <Eye className="w-4 h-4 text-blue-400 shrink-0" />
+                          <span>{lang === 'ar' ? 'إظهار عداد المشاهدات لمستخدمي التطبيق' : 'Show Views Count to App Users'}</span>
+                        </h5>
+                        <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                          {lang === 'ar'
+                            ? 'عند اختيار (أون) يظهر زر المشاهدات مع العداد لكافة مستخدمي التطبيق. عند (أوف) يتم إخفاء العداد عن الجمهور ويبقى متاحاً لك وللإدارة فقط.'
+                            : 'Toggle whether the views counter badge is publicly visible to users or private for admin/organizer.'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setAdminShowViewsCount(true)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            adminShowViewsCount
+                              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 font-extrabold'
+                              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-blue-300 animate-pulse"></span>
+                          <span>ON ({lang === 'ar' ? 'مفعّل' : 'Show'})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAdminShowViewsCount(false)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            !adminShowViewsCount
+                              ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 font-extrabold'
+                              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                          <span>OFF ({lang === 'ar' ? 'معطّل' : 'Hide'})</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 4: Location details */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '📍 تفاصيل الموقع الجغرافي والخرائط' : '📍 Geographic Location & Maps'}</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Location Name Ar */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'اسم قاعة المكان / الاستوديو بالعربية' : 'Venue/Studio Name (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminLocationNameAr}
+                        onChange={(e) => setAdminLocationNameAr(e.target.value)}
+                        placeholder="مثال: أستوديو الرقص بالزمالك"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* Location Name En */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'اسم قاعة المكان / الاستوديو بالإنجليزية' : 'Venue/Studio Name (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminLocationNameEn}
+                        onChange={(e) => setAdminLocationNameEn(e.target.value)}
+                        placeholder="e.g. Dance Studio - Zamalek"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Address Ar */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'العنوان التفصيلي بالعربية' : 'Detailed Address (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminAddressAr}
+                        onChange={(e) => setAdminAddressAr(e.target.value)}
+                        placeholder="مثال: الزمالك، عمارة المرعشلي، الدور الرابع"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* Address En */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'العنوان التفصيلي بالإنجليزية' : 'Detailed Address (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminAddressEn}
+                        onChange={(e) => setAdminAddressEn(e.target.value)}
+                        placeholder="e.g. Zamalek, El-Maraashly St, 4th Floor"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-neutral-800">
+                    {/* Governorate Ar */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-amber-400">
+                        {lang === 'ar' ? '📍 المحافظة (بالعربية) - مثل: القاهرة، الإسكندرية' : 'Governorate (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminGovernorateAr}
+                        onChange={(e) => setAdminGovernorateAr(e.target.value)}
+                        placeholder="مثال: القاهرة"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors"
+                      />
+                    </div>
+
+                    {/* Governorate En */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-amber-400">
+                        {lang === 'ar' ? '📍 المحافظة (بالإنجليزية)' : 'Governorate (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminGovernorateEn}
+                        onChange={(e) => setAdminGovernorateEn(e.target.value)}
+                        placeholder="e.g. Cairo"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Area Ar */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-amber-400">
+                        {lang === 'ar' ? '📍 المنطقة / الحي (بالعربية) - مثل: الزمالك، سموحة' : 'Area / District (Arabic)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminAreaAr}
+                        onChange={(e) => setAdminAreaAr(e.target.value)}
+                        placeholder="مثال: الزمالك"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors"
+                      />
+                    </div>
+
+                    {/* Area En */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-amber-400">
+                        {lang === 'ar' ? '📍 المنطقة / الحي (بالإنجليزية)' : 'Area / District (English)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={adminAreaEn}
+                        onChange={(e) => setAdminAreaEn(e.target.value)}
+                        placeholder="e.g. Zamalek"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Google Maps Link */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-neutral-300 flex items-center gap-1.5">
+                      <span>{lang === 'ar' ? 'رابط خرائط جوجل (Google Maps Link)' : 'Google Maps Link'}</span>
+                      <span className="text-[10px] text-neutral-500 font-mono font-normal">({lang === 'ar' ? 'لتحميل الإحداثيات تلقائياً' : 'autodetects lat/lng coords'})</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={adminGoogleMapsUrl}
+                      onChange={(e) => setAdminGoogleMapsUrl(e.target.value)}
+                      placeholder="https://maps.google.com/?q=..."
+                      className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono animate-pulse"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Media Uploads, Priority, & Pinned (Featured) Settings */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* Section A: Banner Media File / Video / Image */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '🖼️ صورة أو فيديو الإعلان' : '🖼️ Event Flyer / Video'}</span>
+                  </h4>
+
+                  {/* Media type toggle (Image/Video) like the user form */}
+                  <div className="flex bg-neutral-950 p-1 rounded-2xl border border-neutral-800">
+                    <button
+                      type="button"
+                      onClick={() => setAdminMediaType('image')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all ${
+                        adminMediaType === 'image'
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                          : 'text-neutral-500 hover:text-neutral-300'
+                      }`}
+                    >
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      <span>{lang === 'ar' ? 'صورة إعلان' : 'Image Ad'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdminMediaType('video')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all ${
+                        adminMediaType === 'video'
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                          : 'text-neutral-500 hover:text-neutral-300'
+                      }`}
+                    >
+                      <PlayCircle className="h-3.5 w-3.5" />
+                      <span>{lang === 'ar' ? 'فيديو إعلان' : 'Video Ad'}</span>
+                    </button>
+                  </div>
+
+                  {/* Media upload area */}
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border-2 border-dashed border-neutral-800 hover:border-indigo-500/50 bg-neutral-950 p-4 transition-all text-center relative overflow-hidden group">
+                      
+                      {adminIsUploadingMedia ? (
+                        <div className="py-8 space-y-3">
+                          <RefreshCw className="h-8 w-8 text-indigo-400 animate-spin mx-auto" />
+                          <p className="text-xs text-indigo-300 font-bold">
+                            {lang === 'ar' ? `جاري ضغط ورفع الملف... ${adminUploadProgress}%` : `Uploading... ${adminUploadProgress}%`}
+                          </p>
+                          <div className="h-1.5 w-3/4 bg-neutral-900 rounded-full mx-auto overflow-hidden border border-neutral-800">
+                            <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${adminUploadProgress}%` }} />
+                          </div>
+                        </div>
+                      ) : adminMediaUrl ? (
+                        <div className="space-y-3">
+                          {adminMediaType === 'video' ? (
+                            <video src={adminMediaUrl} className="max-h-48 w-full rounded-xl object-cover bg-neutral-950" controls />
+                          ) : (
+                            <img src={adminMediaUrl} alt="Flyer Preview" className="max-h-48 w-full rounded-xl object-cover bg-neutral-950" referrerPolicy="no-referrer" />
+                          )}
+                          <div className="flex items-center justify-between gap-2 px-2">
+                            <span className="text-[10px] text-neutral-500 truncate max-w-[150px] font-mono">
+                              {adminUploadedFileName || 'Uploaded File'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAdminMediaUrl('');
+                                setAdminUploadedFileName(null);
+                                setAdminPendingFile(null);
+                              }}
+                              className="text-xs text-red-400 hover:text-red-300 font-bold transition-colors cursor-pointer"
+                            >
+                              {lang === 'ar' ? 'إزالة' : 'Remove'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-6 space-y-2">
+                          <p className="text-xs text-neutral-400">
+                            {lang === 'ar' ? 'اختر ملف الصورة أو الفيديو للنشر المباشر' : 'Upload custom flyer or video presentation'}
+                          </p>
+                          <div className="flex justify-center gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => adminFileInputRef.current?.click()}
+                              className="px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-bold border border-indigo-500/20 transition-all cursor-pointer"
+                            >
+                              {lang === 'ar' ? '📁 تصفح المعرض' : '📁 Choose File'}
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-neutral-600 font-mono">Max size 50MB (Images compressed automatically)</p>
+                        </div>
+                      )}
+
+                      <input
+                        type="file"
+                        ref={adminFileInputRef}
+                        onChange={handleAdminFileSelect}
+                        accept={adminMediaType === 'video' ? 'video/*' : 'image/*'}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section B: Display Position & Sorting Priority */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '🔢 أولوية وترتيب ظهور الإعلان' : '🔢 Display Sort Position'}</span>
+                  </h4>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1.5 text-right">
+                      <label className="text-xs font-black text-neutral-300">
+                        {lang === 'ar' ? 'الرقم التسلسلي للإعلان' : 'Homepage Display Sort Order'}
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={adminPosition}
+                        onChange={(e) => setAdminPosition(e.target.value)}
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm font-mono font-bold text-indigo-400 focus:outline-none focus:border-indigo-500 transition-colors text-right"
+                      />
+                    </div>
+                    <p className="text-[10px] text-neutral-400 leading-relaxed text-right">
+                      {lang === 'ar' 
+                        ? '💡 الأرقام الصغيرة تظهر أولاً (مثال: الإعلانات ذات الرقم 1 أو 2 أو 3 تظهر دائماً في بداية الصفحة الرئيسية وتتفوق على الإعلانات العادية).' 
+                        : '💡 Lower numbers appear first. Setting this to 1, 2, or 3 will force this ad to remain pinned at the very top of the homepage.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Section C: VIP & Banner Placement Flags */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '⭐ مميزات ومواضع ظهور الـ VIP' : '⭐ Premium VIP Toggles'}</span>
+                  </h4>
+
+                  <div className="space-y-3.5">
+                    {/* Weekly Promo Toggle */}
+                    <label className="flex items-start gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800/80 hover:border-indigo-500/30 transition-all cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={adminIsWeeklyPromo}
+                        onChange={(e) => setAdminIsWeeklyPromo(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-neutral-800 text-indigo-500 bg-neutral-900 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                      />
+                      <div className="text-right">
+                        <p className="text-xs font-extrabold text-white">
+                          {lang === 'ar' ? 'تثبيت في البنر العلوي كإعلان VIP مميز' : 'Pin to VIP Banner Slider'}
+                        </p>
+                        <p className="text-[10px] text-neutral-500 mt-0.5">
+                          {lang === 'ar' ? 'سيعرض هذا الإعلان في شريط العرض الدائري الرئيسي في هيدر الموقع.' : 'Showcases this ad inside the dynamic sliding header on the home feed.'}
+                        </p>
+                      </div>
+                    </label>
+
+                    {/* Featured Status Toggle */}
+                    <label className="flex items-start gap-3 p-3 rounded-2xl bg-neutral-950 border border-neutral-800/80 hover:border-indigo-500/30 transition-all cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={adminIsFeatured}
+                        onChange={(e) => setAdminIsFeatured(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-neutral-800 text-indigo-500 bg-neutral-900 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                      />
+                      <div className="text-right">
+                        <p className="text-xs font-extrabold text-white">
+                          {lang === 'ar' ? 'تفعيل كإعلان VIP نشط ومميز' : 'Activate as VIP Featured Card'}
+                        </p>
+                        <p className="text-[10px] text-neutral-500 mt-0.5">
+                          {lang === 'ar' ? 'يمنح الإعلان إطاراً ذهبياً ووسم VIP متوهجاً لزيادة جذب انتباه الراقصين.' : 'Surrounds the event card with an glowing border and golden VIP badges.'}
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+            {adminCreateTab === 'preview' && (
+              <div className="space-y-6 animate-fadeIn text-right" dir={previewLang === 'ar' ? 'rtl' : 'ltr'}>
+                
+                {/* Preview Controls Header Block */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="text-right">
+                      <h4 className="text-base sm:text-lg font-black text-white flex items-center justify-start gap-2">
+                        <Eye className="h-5 w-5 text-indigo-400 animate-pulse" />
+                        <span>
+                          {lang === 'ar' 
+                            ? '📱 المعاينة التفاعلية الكاملة كما يظهر للجمهور' 
+                            : '📱 Complete Interactive Public Preview'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-neutral-400 mt-1">
+                        {lang === 'ar' 
+                          ? 'هذا عرض حقيقي ومطابق تماماً لكيفية ظهور إعلانك للجمهور في صفحة الخلاصة والبحث. جميع الأزرار والروابط تعمل للمعاينة والتدقيق.' 
+                          : 'This is a high-fidelity real-time simulation of your event exactly as visitors will see it. Test interactive components instantly.'}
+                      </p>
+                    </div>
+
+                    {/* Language Switcher for Preview Card rendering */}
+                    <div className="flex items-center gap-2 bg-neutral-950 p-1.5 rounded-2xl border border-neutral-800 shrink-0 self-center">
+                      <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider px-2 font-mono">
+                        {lang === 'ar' ? 'لغة المعاينة:' : 'Preview Lang:'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewLang('ar');
+                          setPreviewAlert(null);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          previewLang === 'ar'
+                            ? 'bg-indigo-500 text-white shadow-md'
+                            : 'text-neutral-400 hover:text-neutral-200'
+                        }`}
+                      >
+                        العربية (AR)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewLang('en');
+                          setPreviewAlert(null);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          previewLang === 'en'
+                            ? 'bg-indigo-500 text-white shadow-md'
+                            : 'text-neutral-400 hover:text-neutral-200'
+                        }`}
+                      >
+                        English (EN)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Simulation Toast */}
+                  {previewAlert && (
+                    <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-xs font-bold text-indigo-300 flex items-center gap-2.5 animate-fadeIn">
+                      <Sparkles className="h-4 w-4 text-indigo-400 animate-spin" />
+                      <span>{previewAlert}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setPreviewAlert(null)} 
+                        className="mr-auto text-neutral-400 hover:text-white cursor-pointer font-sans text-sm font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Grid Layout containing Simulated Device Frame & Checkpoint details */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-right">
+                  
+                  {/* LEFT: Feed Card Preview */}
+                  <div className="lg:col-span-6 flex flex-col items-center justify-start space-y-4">
+                    <span className="text-[11px] font-black tracking-wider uppercase text-neutral-500 font-mono">
+                      {lang === 'ar' ? '🔍 مظهر الإعلان في بطاقة الخلاصة والشبكة:' : '🔍 Live feed card representation:'}
+                    </span>
+                    
+                    {/* Phone-sized Viewport for maximum realistic feeling */}
+                    <div className="w-full max-w-[430px] rounded-[36px] bg-neutral-950 border border-neutral-800 p-4 shadow-2xl relative overflow-hidden ring-4 ring-neutral-900/50">
+                      
+                      {/* Interactive Camera notch indicator */}
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 h-4 w-28 bg-neutral-900 rounded-b-2xl border-x border-b border-neutral-800/80 z-40 flex items-center justify-center pointer-events-none">
+                        <div className="h-1.5 w-1.5 rounded-full bg-neutral-800 mr-2" />
+                        <div className="h-1 w-8 rounded bg-neutral-800" />
+                      </div>
+                      
+                    <div className="pt-4 relative group/media">
+                        {/* Quick Media Edit Button */}
+                        <div className={`absolute top-10 z-50 ${lang === 'ar' ? 'right-10' : 'left-10'} animate-pulse`}>
+                          <label className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-indigo-600 text-white text-sm font-black cursor-pointer hover:bg-indigo-500 transition-all shadow-[0_0_30px_rgba(79,70,229,0.8)] backdrop-blur-md border-2 border-white/20">
+                            <Pencil className="h-5 w-5" />
+                            <span>{lang === 'ar' ? 'تعديل الصورة' : 'Edit Image'}</span>
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept={adminMediaType === 'video' ? 'video/*' : 'image/*'}
+                              onChange={handleAdminFileSelect}
+                            />
+                          </label>
+                        </div>
+                        <EventCard
+                          event={{
+                            id: 'preview-id',
+                            titleAr: adminTitleAr.trim() || (lang === 'ar' ? 'سهرة سالسا فخمة في الزمالك' : 'Luxury Salsa Night in Zamalek'),
+                            titleEn: adminTitleEn.trim() || 'Luxury Salsa Night in Zamalek',
+                            descriptionAr: adminDescAr.trim() || (lang === 'ar' ? 'اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور...' : 'Event details and description goes here...'),
+                            descriptionEn: adminDescEn.trim() || 'Event details and description goes here...',
+                            category: adminCategory,
+                            styles: adminSelectedStyles,
+                            mediaType: adminMediaType,
+                            mediaUrl: adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
+                            thumbnailUrl: adminMediaType === 'video' ? 
+                              (adminMediaUrl.includes('cloudinary.com') ? adminMediaUrl.trim().replace(/\.[^.]+$/, '.jpg') : 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200')
+                              : adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
+                            uploadDate: new Date().toISOString(),
+                            eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
+                            priceAr: adminPriceAr.trim() || '250 ج.م',
+                            priceEn: adminPriceEn.trim() || '250 EGP',
+                            showBookingButton: adminShowBookingButton,
+                            showViewsCount: adminShowViewsCount,
+                            location: {
+                              nameAr: adminLocationNameAr.trim() || 'أستوديو الرقص - الزمالك',
+                              nameEn: adminLocationNameEn.trim() || 'Dance Studio - Zamalek',
+                              addressAr: adminAddressAr.trim() || 'القاهرة، مصر',
+                              addressEn: adminAddressEn.trim() || 'Cairo, Egypt',
+                              googleMapsUrl: adminGoogleMapsUrl.trim(),
+                              lat: 30.0444,
+                              lng: 31.2357
+                            },
+                            contact: {
+                              phone: adminPhone.trim() || '+201011223344',
+                              whatsapp: adminWhatsapp.trim() || '201011223344',
+                              organizerName: adminOrganizerName.trim() || 'الإدارة'
+                            },
+                            likesCount: 15,
+                            isFeatured: adminIsFeatured,
+                            isWeeklyPromo: adminIsWeeklyPromo,
+                            position: Number(adminPosition) || 999999
+                          }}
+                          index={0}
+                          onOpenMap={(ev) => setPreviewAlert(
+                            previewLang === 'ar' 
+                              ? `📍 [محاكاة الخريطة]: تم التعرف على رابط العنوان والخرائط لـ "${ev.location.nameAr}" بنجاح!` 
+                              : `📍 [Maps Simulation]: Handled click for location link "${ev.location.nameEn}" successfully!`
+                          )}
+                          onOpenShare={(ev) => setPreviewAlert(
+                            previewLang === 'ar' 
+                              ? `🔗 [محاكاة المشاركة]: تم توليد رابط ومستند المشاركة التفاعلي للإعلان!` 
+                              : `🔗 [Share Simulation]: Generated share prompt payload and copied link to workspace.`
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* RIGHT: Checklist, Metadata & Direct Publishing Summary */}
+                  <div className="lg:col-span-6 space-y-6">
+                    <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-4">
+                      <h5 className="text-xs font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center justify-start gap-2">
+                        <Activity className="h-4 w-4 text-indigo-400" />
+                        <span>
+                          {lang === 'ar' ? '🔍 فحص الجاهزية والبيانات الفنية للإعلان' : '🔍 Composed Blueprint & Verification'}
+                        </span>
+                      </h5>
+
+                      <div className="space-y-3.5 text-xs text-neutral-300">
+                        {/* Rendered Language title */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className={`flex items-center gap-3 ${lang === 'ar' ? 'flex-row' : 'flex-row'}`}>
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('titleAr'); setAdminEditValue(adminTitleAr); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الاسم (عربي):' : 'Title (Ar):'}</span>
+                          </div>
+                          {adminEditingField === 'titleAr' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminTitleAr(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminTitleAr(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-white truncate max-w-[220px]">{adminTitleAr || '⚠️ غير مكتمل / Empty'}</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('titleEn'); setAdminEditValue(adminTitleEn); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الاسم (إنجليزي):' : 'Title (En):'}</span>
+                          </div>
+                          {adminEditingField === 'titleEn' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminTitleEn(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminTitleEn(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-white truncate max-w-[220px]">{adminTitleEn || '⚠️ غير مكتمل / Empty'}</span>
+                          )}
+                        </div>
+
+                        {/* Venue details */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { 
+                                setAdminEditingField('location'); 
+                                setAdminEditValue(previewLang === 'ar' ? adminLocationNameAr : adminLocationNameEn); 
+                              }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الموقع:' : 'Venue:'}</span>
+                          </div>
+                          {adminEditingField === 'location' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (previewLang === 'ar') setAdminLocationNameAr(adminEditValue);
+                                    else setAdminLocationNameEn(adminEditValue);
+                                    setAdminEditingField(null);
+                                  }
+                                }}
+                              />
+                              <button type="button" onClick={() => { 
+                                if (previewLang === 'ar') setAdminLocationNameAr(adminEditValue);
+                                else setAdminLocationNameEn(adminEditValue);
+                                setAdminEditingField(null);
+                              }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-indigo-300">
+                              {previewLang === 'ar' ? adminLocationNameAr : adminLocationNameEn}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Price rendering */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { 
+                                setAdminEditingField('price'); 
+                                setAdminEditValue(previewLang === 'ar' ? adminPriceAr : adminPriceEn); 
+                              }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'السعر:' : 'Price:'}</span>
+                          </div>
+                          {adminEditingField === 'price' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-24 px-1"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (previewLang === 'ar') setAdminPriceAr(adminEditValue);
+                                    else setAdminPriceEn(adminEditValue);
+                                    setAdminEditingField(null);
+                                  }
+                                }}
+                              />
+                              <button type="button" onClick={() => { 
+                                if (previewLang === 'ar') setAdminPriceAr(adminEditValue);
+                                else setAdminPriceEn(adminEditValue);
+                                setAdminEditingField(null);
+                              }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+                              {previewLang === 'ar' ? adminPriceAr : adminPriceEn}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Scheduled Date */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('date'); setAdminEditValue(adminEventDate); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'التاريخ:' : 'Date:'}</span>
+                          </div>
+                          {adminEditingField === 'date' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="date" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[10px] outline-none px-1"
+                                autoFocus
+                              />
+                              <button type="button" onClick={() => { setAdminEventDate(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400 hover:text-emerald-300">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-mono font-black text-white">{adminEventDate || '⚠️ لم يحدد بعد / Missing'}</span>
+                          )}
+                        </div>
+
+                        {/* Description Ar */}
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('descAr'); setAdminEditValue(adminDescAr); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الوصف (عربي):' : 'Desc (Ar):'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'descAr' ? (
+                            <div className="flex flex-col gap-2 bg-neutral-900 border border-indigo-500/50 p-2 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200 w-full">
+                              <textarea 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[11px] outline-none w-full min-h-[80px] resize-none"
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2 border-t border-neutral-800 pt-2">
+                                <button type="button" onClick={() => setAdminEditingField(null)} className="text-xs text-neutral-500 hover:text-white px-2 py-1">
+                                  {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => { setAdminDescAr(adminEditValue); setAdminEditingField(null); }} 
+                                  className="text-xs bg-indigo-500 text-white px-3 py-1 rounded-md font-bold"
+                                >
+                                  {lang === 'ar' ? 'حفظ' : 'Save'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-neutral-400 leading-relaxed text-right line-clamp-2">
+                              {adminDescAr || '⚠️ غير مكتمل / Empty'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Description En */}
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('descEn'); setAdminEditValue(adminDescEn); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الوصف (إنجليزي):' : 'Desc (En):'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'descEn' ? (
+                            <div className="flex flex-col gap-2 bg-neutral-900 border border-indigo-500/50 p-2 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200 w-full">
+                              <textarea 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[11px] outline-none w-full min-h-[80px] resize-none"
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2 border-t border-neutral-800 pt-2">
+                                <button type="button" onClick={() => setAdminEditingField(null)} className="text-xs text-neutral-500 hover:text-white px-2 py-1">
+                                  {lang === 'ar' ? 'Cancel' : 'إلغاء'}
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => { setAdminDescEn(adminEditValue); setAdminEditingField(null); }} 
+                                  className="text-xs bg-indigo-500 text-white px-3 py-1 rounded-md font-bold"
+                                >
+                                  {lang === 'ar' ? 'Save' : 'حفظ'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-neutral-400 leading-relaxed line-clamp-2">
+                              {adminDescEn || '⚠️ Empty / غير مكتمل'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Category */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('category'); setAdminEditValue(adminCategory); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'النوع:' : 'Category:'}</span>
+                          </div>
+                          {adminEditingField === 'category' ? (
+                            <div className="flex items-center gap-1 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl">
+                              {(['party', 'course', 'trip', 'exhibition'] as DanceCategory[]).map((cat) => (
+                                <button
+                                  type="button"
+                                  key={cat}
+                                  onClick={() => { setAdminCategory(cat); setAdminEditingField(null); }}
+                                  className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                                    adminCategory === cat ? 'bg-indigo-500 text-white' : 'text-neutral-400 hover:bg-neutral-800'
+                                  }`}
+                                >
+                                  {cat === 'party' ? '🎉' : cat === 'course' ? '🎓' : cat === 'trip' ? '🌴' : '🏛️'}
+                                </button>
+                              ))}
+                              <button type="button" onClick={() => setAdminEditingField(null)} className="text-neutral-500 hover:text-white ml-1">
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 uppercase">
+                              {adminCategory}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Styles */}
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('styles'); setAdminEditValue(adminSelectedStyles.join(', ')); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الأنماط:' : 'Styles:'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'styles' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl w-full">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                placeholder="Salsa, Bachata, ..."
+                                className="bg-transparent text-white text-[10px] outline-none w-full px-1"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const styles = adminEditValue.split(',').map(s => s.trim()) as DanceStyle[];
+                                    setAdminSelectedStyles(styles.filter(s => s.length > 0));
+                                    setAdminEditingField(null);
+                                  }
+                                }}
+                              />
+                              <button type="button" onClick={() => { 
+                                const styles = adminEditValue.split(',').map(s => s.trim()) as DanceStyle[];
+                                setAdminSelectedStyles(styles.filter(s => s.length > 0));
+                                setAdminEditingField(null);
+                              }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {adminSelectedStyles.map(s => (
+                                <span key={s} className="text-[9px] px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Organizer Name */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('organizer'); setAdminEditValue(adminOrganizerName); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'المنظم:' : 'Organizer:'}</span>
+                          </div>
+                          {adminEditingField === 'organizer' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminOrganizerName(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminOrganizerName(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-white truncate max-w-[150px]">{adminOrganizerName}</span>
+                          )}
+                        </div>
+
+                        {/* Phone */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('phone'); setAdminEditValue(adminPhone); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الهاتف:' : 'Phone:'}</span>
+                          </div>
+                          {adminEditingField === 'phone' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="tel" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1 font-mono"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminPhone(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminPhone(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-mono text-white">{adminPhone}</span>
+                          )}
+                        </div>
+
+                        {/* WhatsApp */}
+                        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => { setAdminEditingField('whatsapp'); setAdminEditValue(adminWhatsapp); }}
+                              className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                              title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'واتساب:' : 'WhatsApp:'}</span>
+                          </div>
+                          {adminEditingField === 'whatsapp' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl animate-in fade-in zoom-in duration-200">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-xs outline-none w-32 px-1 font-mono"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminWhatsapp(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminWhatsapp(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="font-mono text-white">{adminWhatsapp}</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('addressAr'); setAdminEditValue(adminAddressAr); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'العنوان (عربي):' : 'Address (Ar):'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'addressAr' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl w-full">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[10px] outline-none w-full px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminAddressAr(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminAddressAr(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-neutral-400 text-right">{adminAddressAr || '⚠️ غير مكتمل'}</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group text-left hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('addressEn'); setAdminEditValue(adminAddressEn); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'العنوان (إنجليزي):' : 'Address (En):'}</span>
+                            </div>
+                          </div>
+                          {adminEditingField === 'addressEn' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl w-full">
+                              <input 
+                                type="text" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[10px] outline-none w-full px-1"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminAddressEn(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminAddressEn(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-neutral-400">{adminAddressEn || '⚠️ Empty'}</span>
+                          )}
+                        </div>
+
+                        {/* Location map coordinates status */}
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/60 group hover:border-indigo-500/50 transition-all">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => { setAdminEditingField('mapsUrl'); setAdminEditValue(adminGoogleMapsUrl); }}
+                                className="p-2 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-500 transition-all cursor-pointer shrink-0 animate-pulse-slow"
+                                title={lang === 'ar' ? 'تعديل سريع' : 'Quick Edit'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <span className="text-neutral-200 font-black text-sm">{lang === 'ar' ? 'الخريطة:' : 'Map:'}</span>
+                            </div>
+                            {adminGoogleMapsUrl ? (
+                              <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                                OK ✔
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                                MISSING
+                              </span>
+                            )}
+                          </div>
+                          {adminEditingField === 'mapsUrl' ? (
+                            <div className="flex items-center gap-2 bg-neutral-900 border border-indigo-500/50 p-1 rounded-lg shadow-xl w-full">
+                              <input 
+                                type="url" 
+                                value={adminEditValue}
+                                onChange={(e) => setAdminEditValue(e.target.value)}
+                                className="bg-transparent text-white text-[10px] outline-none w-full px-1 font-mono"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAdminGoogleMapsUrl(adminEditValue); setAdminEditingField(null); } }}
+                              />
+                              <button type="button" onClick={() => { setAdminGoogleMapsUrl(adminEditValue); setAdminEditingField(null); }} className="text-emerald-400">
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[9px] text-neutral-500 truncate font-mono">{adminGoogleMapsUrl || 'No Link Provided'}</span>
+                          )}
+                        </div>
+
+                        {/* Featured Toggles details */}
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-neutral-950/60 border border-neutral-800/60 group">
+                          <div className="flex items-center gap-2">
+                            <span className="text-neutral-400">{lang === 'ar' ? 'المظهر الإداري الخاص (VIP):' : 'VIP featured options:'}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={() => setAdminIsFeatured(!adminIsFeatured)}
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded border transition-all cursor-pointer ${
+                                adminIsFeatured ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-neutral-900 text-neutral-600 border-neutral-800'
+                              }`}
+                            >
+                              Featured VIP
+                            </button>
+                            <button 
+                              onClick={() => setAdminIsWeeklyPromo(!adminIsWeeklyPromo)}
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded border transition-all cursor-pointer ${
+                                adminIsWeeklyPromo ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40' : 'bg-neutral-900 text-neutral-600 border-neutral-800'
+                              }`}
+                            >
+                              Slide Banner
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Helper tips and direct save prompt */}
+                    <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-5 text-xs text-neutral-400 leading-relaxed space-y-2">
+                      <p className="font-bold text-white">
+                        {lang === 'ar' ? '💡 هل كل شيء يبدو ممتازاً وجاهزاً؟' : '💡 Everything looks clean?'}
+                      </p>
+                      <p>
+                        {lang === 'ar' 
+                          ? 'بإمكانك المراجعة والتعديل اللانهائي. إذا كانت الأبعاد والألوان والنصوص صحيحة ومضبوطة تماماً، يمكنك النقر مباشرة على زر النشر الملون بالأسفل لبث هذا الإعلان فوراً وبشكل حي لكافة المستخدمين وتنبيههم!' 
+                          : 'Verify spacing and text fitting. If you are satisfied with both translations, you can hit the Publish button below to instantly write the ad to Firestore and broadcast notifications.'}
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Action Footer Bar */}
+            <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-5 shadow-xl flex flex-col sm:flex-row items-center gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminSection(null);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs sm:text-sm font-extrabold transition-all cursor-pointer text-center"
+              >
+                {lang === 'ar' ? '❌ إلغاء' : '❌ Cancel'}
+              </button>
+
+              <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminCreateTab(adminCreateTab === 'form' ? 'preview' : 'form');
+                    setPreviewAlert(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex-1 rounded-2xl py-2.5 px-6 text-xs sm:text-sm font-bold bg-neutral-950 text-indigo-400 border border-indigo-500/30 hover:bg-neutral-800 transition-all flex items-center justify-center gap-2.5 shadow-xl"
+                >
+                  <Eye className="h-4.5 w-4.5" />
+                  <span>
+                    {adminCreateTab === 'form' 
+                      ? (lang === 'ar' ? 'معاينة الإعلان (Live)' : 'Live Preview Ad') 
+                      : (lang === 'ar' ? 'العودة للتعديل' : 'Back to Editing')}
+                  </span>
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={adminSaveStatus === 'loading' || adminIsUploadingMedia}
+                  className="flex-[2] px-10 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {adminSaveStatus === 'loading' ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>{lang === 'ar' ? 'جاري الحفظ...' : 'Saving...'}</span>
+                      </div>
+                      {adminUploadProgress > 0 && adminUploadProgress < 100 && (
+                        <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-white transition-all duration-300" 
+                            style={{ width: `${adminUploadProgress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      <span>{lang === 'ar' ? '🚀 نشر الإعلان فوراً' : '🚀 Publish Now'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      )}
+
+      {adminSection === 'send_notifications' && (
+        <div className="space-y-6 animate-fadeIn" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-neutral-900 border border-amber-500/30 p-6 rounded-3xl shadow-xl">
+            <div>
+              <h3 className="text-xl font-bold text-white mb-1">
+                {lang === 'ar' ? '🔔 إرسال تنبيهات لجميع الأعضاء' : '🔔 Send Alerts to All Members'}
+              </h3>
+              <p className="text-sm text-neutral-400">
+                {lang === 'ar' ? 'الإشعار سيظهر فوراً في جرس التنبيهات أعلى الموقع لجميع المستخدمين.' : 'Notification will appear immediately in the top bell icon for all users.'}
+              </p>
+            </div>
+            <button
+              onClick={handleDeleteAllNotifications}
+              disabled={notifSending}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30 transition-colors shrink-0"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="text-sm font-bold">{lang === 'ar' ? 'حذف جميع الإشعارات السابقة' : 'Delete All Old Notifications'}</span>
+            </button>
+          </div>
+
+          <form onSubmit={handleSendNotification} className="bg-neutral-900 border border-white/5 p-6 rounded-3xl shadow-xl space-y-6 relative overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'عنوان الإشعار (عربي) *' : 'Title (Arabic) *'}</label>
+                <input
+                  type="text"
+                  required
+                  value={notifTitleAr}
+                  onChange={(e) => setNotifTitleAr(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors"
+                  placeholder={lang === 'ar' ? 'مثال: خصم جديد على الحفلات' : 'Example: New discount on events'}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'عنوان الإشعار (إنجليزي) *' : 'Title (English) *'}</label>
+                <input
+                  type="text"
+                  required
+                  value={notifTitleEn}
+                  onChange={(e) => setNotifTitleEn(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors"
+                  placeholder={lang === 'ar' ? 'مثال: New Party Discount' : 'Example: New Party Discount'}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'محتوى الإشعار (عربي) *' : 'Message (Arabic) *'}</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={notifMessageAr}
+                  onChange={(e) => setNotifMessageAr(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors resize-none"
+                  placeholder={lang === 'ar' ? 'اكتب تفاصيل الإشعار هنا...' : 'Type notification details here...'}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'محتوى الإشعار (إنجليزي) *' : 'Message (English) *'}</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={notifMessageEn}
+                  onChange={(e) => setNotifMessageEn(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors resize-none"
+                  placeholder={lang === 'ar' ? 'Type notification details here...' : 'Type notification details here...'}
+                  dir="ltr"
+                />
+              </div>
+              
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-bold text-neutral-300">{lang === 'ar' ? 'نوع الإشعار (يحدد الأيقونة واللون)' : 'Notification Type (determines icon & color)'}</label>
+                <select
+                  value={notifType}
+                  onChange={(e) => setNotifType(e.target.value as any)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors"
+                >
+                  <option value="system">{lang === 'ar' ? 'تنبيه نظام عام (رمادي)' : 'General System (Gray)'}</option>
+                  <option value="new_party">{lang === 'ar' ? 'حفلة جديدة (بنفسجي)' : 'New Party (Purple)'}</option>
+                  <option value="course_alert">{lang === 'ar' ? 'تنبيه كورس (أزرق)' : 'Course Alert (Blue)'}</option>
+                  <option value="trip">{lang === 'ar' ? 'رحلة / مهرجان (أخضر)' : 'Trip / Festival (Green)'}</option>
+                  <option value="expiry_warning">{lang === 'ar' ? 'تنبيه هام / انتهاء (أصفر)' : 'Warning / Expiry (Yellow)'}</option>
+                </select>
+              </div>
+
+              {/* Mobile Push Notification Broadcast Switch */}
+              <div className="md:col-span-2 bg-neutral-950/60 border border-amber-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+                    <Smartphone className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white text-sm">
+                        {lang === 'ar' ? 'إرسال إشعار فوري لشاشات الهواتف (Web Push)' : 'Broadcast Live Phone Push Notification'}
+                      </span>
+                      <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full">
+                        {lang === 'ar' ? `${pushSubscribersCount} مشترك مسجل` : `${pushSubscribersCount} subscribers`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      {lang === 'ar' ? 'يصل مباشرة على شاشة قفل الموبايل مع رنة مميزة واهتزاز حتى لو التطبيق مغلق' : 'Reaches user lock screens with custom chime & vibration even if app is closed'}
+                    </p>
+                  </div>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={sendMobilePush}
+                    onChange={(e) => setSendMobilePush(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+            </div>
+            
+            <button
+              type="submit"
+              disabled={notifSending}
+              className="w-full py-4 rounded-xl font-black text-lg bg-amber-500 text-neutral-950 hover:bg-amber-400 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 mt-4"
+            >
+              {notifSending ? (
+                <>
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  <span>{lang === 'ar' ? 'جاري الإرسال...' : 'Sending...'}</span>
+                </>
+              ) : (
+                <>
+                  <Bell className="h-5 w-5" />
+                  <span>{lang === 'ar' ? 'إرسال الإشعار لجميع الأعضاء الآن' : 'Broadcast to All Members Now'}</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      )}
+
+
+      {/* Fullscreen Events List Overlay */}
+      {isFullscreenEvents && (
+        <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col">
+          <div className="p-4 bg-neutral-900 border-b border-white/10 flex items-center justify-between shadow-md shrink-0">
+             <div className="flex items-center gap-4">
+               <h2 className="text-xl font-black text-amber-500">
+                 {lang === 'ar' ? 'إدارة الإعلانات (عرض مكبر)' : 'Ads Management (Expanded)'}
+               </h2>
+               <div className="flex gap-3">
+                 <div className="bg-neutral-800 rounded-lg px-3 py-1 flex items-center gap-2">
+                   <span className="text-blue-400 font-bold">{events.length}</span>
+                   <span className="text-xs text-neutral-400">{lang === 'ar' ? 'إجمالي' : 'Total'}</span>
+                 </div>
+                 <div className="bg-neutral-800 rounded-lg px-3 py-1 flex items-center gap-2">
+                   <span className="text-red-400 font-bold">{events.filter(e => e.isEmpty).length}</span>
+                   <span className="text-xs text-neutral-400">{lang === 'ar' ? 'مفرغ' : 'Empty'}</span>
+                 </div>
+               </div>
+             </div>
+             <button
+               onClick={() => setIsFullscreenEvents(false)}
+               className="p-2 rounded-xl bg-neutral-800 text-neutral-300 hover:text-white hover:bg-red-500/80 transition-all"
+             >
+               <Minimize2 className="h-6 w-6" />
+             </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {events.map((ev) => (
+                  <div key={ev.id} className={`flex flex-col gap-4 p-5 sm:p-6 rounded-3xl bg-neutral-900/90 border ${ev.isEmpty ? 'border-red-500/40 opacity-70' : 'border-white/10 hover:border-blue-500/40'} transition-all shadow-xl`}>
+                    <div className="flex items-start gap-4">
+                      {ev.isEmpty ? (
+                        <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-neutral-800 border-2 border-red-500/20 flex flex-col items-center justify-center shrink-0 shadow-lg">
+                           <span className="text-xs font-bold text-red-400 mb-1">فارغ</span>
+                           <span className="text-[10px] text-neutral-500">Deleted</span>
+                        </div>
+                      ) : (
+                        <img src={ev.thumbnailUrl || ev.mediaUrl} alt="" className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl object-cover border border-white/10 shrink-0 shadow-lg" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className="px-3 py-1.5 rounded-lg text-sm sm:text-base font-black bg-indigo-600 text-white border border-indigo-400 font-mono shadow-md" title={lang === 'ar' ? 'الرقم التسلسلي' : 'Serial Number'}>
+                             #{ev.position && ev.position !== 999999 ? ev.position : '-'}
+                          </span>
+                          <span className="font-mono text-[10px] sm:text-xs text-neutral-500 font-bold select-all">{ev.id}</span>
+                        </div>
+                        <h4 className="font-bold text-white text-base sm:text-lg leading-tight line-clamp-2">
+                           {ev.isEmpty ? (lang === 'ar' ? 'مساحة إعلان فارغة (تم المسح)' : 'Empty Ad Slot (Deleted)') : (lang === 'ar' ? ev.titleAr : ev.titleEn)}
+                        </h4>
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                           <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-neutral-800 text-neutral-300 uppercase tracking-wider">{ev.category}</span>
+                           {((ev.isFeatured || (typeof ev.position === 'number' && ev.position <= 19))) && !ev.isEmpty && <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {!ev.isEmpty && (
+                      <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm text-neutral-400 bg-neutral-950/50 p-3 rounded-xl border border-white/5">
+                        <div className="flex flex-col">
+                           <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'السعر' : 'Price'}</span>
+                           <span className="font-bold text-emerald-400 truncate">{lang === 'ar' ? ev.priceAr : ev.priceEn}</span>
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'المكان' : 'Location'}</span>
+                           <span className="text-white truncate">{lang === 'ar' ? ev.location?.nameAr : ev.location?.nameEn}</span>
+                        </div>
+                        <div className="flex flex-col mt-1">
+                           <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'التفاعل' : 'Engagement'}</span>
+                           <span className="text-pink-400 font-bold">❤️ {String(ev.likesCount || 0)} {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
+                        </div>
+                        <div className="flex flex-col mt-1">
+                           <span className="text-[10px] uppercase font-bold text-neutral-500 mb-0.5">{lang === 'ar' ? 'التاريخ' : 'Date'}</span>
+                           <span className="text-blue-300 truncate">{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : '-'}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-white/5">
+                      <button
+                        onClick={() => setQrEventDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn })}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold text-xs sm:text-sm transition-all cursor-pointer border border-amber-500/30 shadow-sm"
+                        title={lang === 'ar' ? 'QR الدخول' : 'Check-in QR'}
+                      >
+                        <QrCode className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => setSelectedJsonDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn, data: ev })}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs sm:text-sm transition-all cursor-pointer border border-blue-500/30 shadow-sm"
+                      >
+                        <Code className="h-4 w-4" />
+                        <span>{lang === 'ar' ? 'عرض وثيقة JSON' : 'Inspect Doc'}</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من مسح بيانات هذه الفعالية بالكامل وتفريغ الخانة؟ لن تظهر للمستخدمين بعد الآن.' : 'Are you sure you want to delete this event data and empty the slot? It will no longer show to users.');
+                          if (confirmed) {
+                            deleteEvent(ev.id);
+                            alert(lang === 'ar' ? 'تم مسح الإعلان بنجاح وتفريغ الخانة! لن يظهر للمستخدمين.' : 'Ad deleted and slot emptied successfully! It is now hidden from users.');
+                          }
+                        }}
+                        className="p-2.5 sm:p-3 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer shadow-sm"
+                        title={lang === 'ar' ? 'حذف من القاعدة' : 'Delete Document'}
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Profile View Modal */}
+      {selectedUserProfile && (
+        <div className="fixed inset-0 z-[9999] bg-neutral-950 overflow-y-auto" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="max-w-4xl mx-auto w-full p-4 sm:p-6 lg:p-8 min-h-screen">
+            <ProfileView 
+              onOpenCreateModal={() => {}}
+              onOpenAuth={() => {}}
+              onOpenMap={() => {}}
+              onOpenShare={() => {}}
+              adminViewUser={selectedUserProfile}
+              onCloseAdminView={() => setSelectedUserProfile(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal for Event Check-in */}
+      {qrEventDoc && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="bg-zinc-900 border border-amber-500/40 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 relative shadow-2xl">
+            <button
+              onClick={() => setQrEventDoc(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="space-y-1 pt-2">
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
+                {lang === 'ar' ? 'باركود الدخول للفعالية' : 'Event Check-in QR'}
+              </span>
+              <h3 className="text-base font-extrabold text-white line-clamp-1">
+                {qrEventDoc.title}
+              </h3>
+              <p className="text-[10px] text-zinc-400 font-sans px-2">
+                {lang === 'ar' 
+                  ? 'اطبع هذا الباركود أو اعرضه ليقوم الحاضرون بمسحه عبر هواتفهم لتسجيل الدخول السريع.' 
+                  : 'Print or display this QR code so attendees can scan it to check in.'}
+              </p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border-4 border-amber-500 shadow-2xl mx-auto w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&color=245-158-11&data=${encodeURIComponent(
+                  'https://cityeve.online' + '/?eventCheckin=' + qrEventDoc.id
+                )}`}
+                className="w-full h-full object-contain"
                 alt="Event Check-in QR"
               />
             </div>

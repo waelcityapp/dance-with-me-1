@@ -1,4 +1,39 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíï}Ó¢Ö¥¢ëiºÙbë5import { auth } from './firebase';
+import { auth } from './firebase';
 
 export type MarketingRuleValue = { type: 'fixed' | 'percentage'; value: number };
-export type TestWallet = { availë}í¢G§²ÚîÆ­yÖ—F†G&vÄ–BÂG&ç6fW%&VfW&Væ6S¢uDU5BÔ”å5D’rÒ’À¢vWEvÆÆWC¢‚’Óâ6ÆÃÇ²vÆÆWC¢FW7EvÆÆWC²ÆVFvW#¢FW7DÆVFvW$VçG'•µÒÓâ‚vvWE÷FW7E÷vÆÆWBr’À§Ó°
+export type TestWallet = { available: number; pending: number; paid: number };
+export type TestLedgerEntry = {
+  id: string;
+  type: string;
+  status: string;
+  amount: number;
+  originalAmount?: number;
+  customerDiscount?: number;
+  customerFinalAmount?: number;
+  targetType?: 'event' | 'advertisement';
+  targetId?: string;
+  createdAt?: string;
+};
+
+async function call<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error('ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ø­Ø³Ø§Ø¨Ùƒ Ø£ÙˆÙ„Ø§Ù‹.');
+  const response = await fetch('/api/marketer-test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action, ...payload }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.ok) throw new Error(body.error || 'ØªØ¹Ø°Ø± ØªÙ†ÙÙŠØ° Ø§Ù„Ø¹Ù…Ù„ÙŠØ© Ø§Ù„ØªØ¬Ø±ÙŠØ¨ÙŠØ©.');
+  return body as T;
+}
+
+export const marketerTestApi = {
+  activateOwner: () => call<{ ok: true }>('activate_test_owner'),
+  saveRule: (input: { targetType: 'event' | 'advertisement'; targetId: string; customerDiscount: MarketingRuleValue; marketerReward: MarketingRuleValue }) => call('save_test_rule', input),
+  simulateConversion: (input: { targetType: 'event' | 'advertisement'; targetId: string; originalAmount: number; clientRequestId: string }) => call<{ wallet: TestWallet; entry: TestLedgerEntry }>('simulate_test_conversion', input),
+  approveCommission: (ledgerId: string) => call<{ wallet: TestWallet }>('approve_test_commission', { ledgerId }),
+  requestWithdrawal: (amount: number, clientRequestId: string) => call<{ wallet: TestWallet; withdrawal: { id: string } }>('request_test_withdrawal', { amount, clientRequestId }),
+  markWithdrawalPaid: (withdrawalId: string) => call<{ wallet: TestWallet }>('mark_test_withdrawal_paid', { withdrawalId, transferReference: 'TEST-INSTAPAY' }),
+  getWallet: () => call<{ wallet: TestWallet; ledger: TestLedgerEntry[] }>('get_test_wallet'),
+};
