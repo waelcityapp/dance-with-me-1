@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Check, Clock3, Copy, LockKeyhole, Megaphone, WalletCards } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Check, Clock3, Copy, FlaskConical, LockKeyhole, Megaphone, WalletCards } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useApp } from '../../context/AppContext';
 import { db } from '../../lib/firebase';
+import { marketerTestApi, type MarketingRuleValue, type TestLedgerEntry } from '../../lib/marketerTestApi';
 
 interface MarketerWalletPageProps {
   onBack: () => void;
@@ -27,6 +28,17 @@ export const MarketerWalletPage: React.FC<MarketerWalletPageProps> = ({ onBack }
   const [wallet, setWallet] = useState<WalletSnapshot>({});
   const [copied, setCopied] = useState(false);
   const [showDecision, setShowDecision] = useState(false);
+  const [testEnabled, setTestEnabled] = useState(false);
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMessage, setTestMessage] = useState<string | null>(null);
+  const [testLedger, setTestLedger] = useState<TestLedgerEntry[]>([]);
+  const [targetType, setTargetType] = useState<'event' | 'advertisement'>('event');
+  const [targetId, setTargetId] = useState('test-event-1');
+  const [originalAmount, setOriginalAmount] = useState('1000');
+  const [discountType, setDiscountType] = useState<MarketingRuleValue['type']>('fixed');
+  const [discountValue, setDiscountValue] = useState('50');
+  const [rewardType, setRewardType] = useState<MarketingRuleValue['type']>('fixed');
+  const [rewardValue, setRewardValue] = useState('20');
 
   useEffect(() => {
     if (!user?.id) return;
@@ -61,6 +73,33 @@ export const MarketerWalletPage: React.FC<MarketerWalletPageProps> = ({ onBack }
       setCopied(false);
     }
   };
+
+  const refreshTestWallet = async () => {
+    const result = await marketerTestApi.getWallet();
+    setTestLedger(result.ledger || []);
+  };
+
+  const runTestAction = async (task: () => Promise<void>) => {
+    setTestBusy(true);
+    setTestMessage(null);
+    try {
+      await task();
+      await refreshTestWallet();
+    } catch (error) {
+      setTestMessage(error instanceof Error ? error.message : 'تعذر إتمام الاختبار.');
+    } finally {
+      setTestBusy(false);
+    }
+  };
+
+  const testRule = () => ({
+    targetType,
+    targetId: targetId.trim(),
+    customerDiscount: { type: discountType, value: Number(discountValue) },
+    marketerReward: { type: rewardType, value: Number(rewardValue) },
+  });
+
+  const requestId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   if (!user || !hasMarketerHistory) {
     return (
@@ -215,6 +254,64 @@ export const MarketerWalletPage: React.FC<MarketerWalletPageProps> = ({ onBack }
           <p className="mt-1 text-xs text-neutral-400">{lang === 'ar' ? 'ستظهر هنا العمولات بمجرد ربط الكود التسويقي بعملية الحجز.' : 'Commissions will appear here once the marketing code is linked to bookings.'}</p>
         </div>
       </div>
+
+      {user.isAdmin && (
+        <div className="rounded-3xl border border-violet-500/30 bg-violet-500/5 p-5 sm:p-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <FlaskConical className="h-5 w-5 shrink-0 text-violet-600 dark:text-violet-400 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <h2 className="font-black text-neutral-900 dark:text-white">{lang === 'ar' ? 'اختبارات المالك' : 'Owner tests'}</h2>
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                {lang === 'ar' ? 'كل العمليات هنا اختبارية ولا تدخل في عمولات أو سحب حقيقي.' : 'Every action here is test-only and never counts as a real commission or payout.'}
+              </p>
+
+              {!testEnabled ? (
+                <button type="button" disabled={testBusy} onClick={() => void runTestAction(async () => { await marketerTestApi.activateOwner(); setTestEnabled(true); setTestMessage(lang === 'ar' ? 'تم تفعيل وضع الاختبار لهذا الحساب.' : 'Test mode enabled for this account.'); })} className="mt-4 h-11 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 text-sm font-black text-white">
+                  {lang === 'ar' ? 'تفعيل وضع الاختبار' : 'Enable test mode'}
+                </button>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{lang === 'ar' ? 'نوع العملية' : 'Target type'}
+                      <select value={targetType} onChange={(event) => setTargetType(event.target.value as 'event' | 'advertisement')} className="mt-1 h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 text-sm">
+                        <option value="event">{lang === 'ar' ? 'فعالية / حجز' : 'Event / booking'}</option>
+                        <option value="advertisement">{lang === 'ar' ? 'إعلان مدفوع' : 'Paid advertisement'}</option>
+                      </select>
+                    </label>
+                    <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{lang === 'ar' ? 'رمز الفعالية أو الإعلان' : 'Event or ad ID'}
+                      <input value={targetId} onChange={(event) => setTargetId(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 text-sm" />
+                    </label>
+                    <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{lang === 'ar' ? 'نوع خصم العميل' : 'Customer discount type'}
+                      <select value={discountType} onChange={(event) => setDiscountType(event.target.value as MarketingRuleValue['type'])} className="mt-1 h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 text-sm"><option value="fixed">{lang === 'ar' ? 'مبلغ ثابت' : 'Fixed amount'}</option><option value="percentage">{lang === 'ar' ? 'نسبة مئوية' : 'Percentage'}</option></select>
+                    </label>
+                    <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{lang === 'ar' ? 'قيمة خصم العميل' : 'Customer discount value'}
+                      <input inputMode="decimal" value={discountValue} onChange={(event) => setDiscountValue(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 text-sm" />
+                    </label>
+                    <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{lang === 'ar' ? 'نوع عمولة المسوق' : 'Marketer reward type'}
+                      <select value={rewardType} onChange={(event) => setRewardType(event.target.value as MarketingRuleValue['type'])} className="mt-1 h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 text-sm"><option value="fixed">{lang === 'ar' ? 'مبلغ ثابت' : 'Fixed amount'}</option><option value="percentage">{lang === 'ar' ? 'نسبة مئوية' : 'Percentage'}</option></select>
+                    </label>
+                    <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{lang === 'ar' ? 'قيمة عمولة المسوق' : 'Marketer reward value'}
+                      <input inputMode="decimal" value={rewardValue} onChange={(event) => setRewardValue(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 text-sm" />
+                    </label>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={testBusy || !targetId.trim()} onClick={() => void runTestAction(async () => { await marketerTestApi.saveRule(testRule()); setTestMessage(lang === 'ar' ? 'تم حفظ الاتفاق التجريبي.' : 'Test agreement saved.'); })} className="h-11 rounded-xl border border-violet-500/40 px-4 text-sm font-black text-violet-700 dark:text-violet-300 disabled:opacity-50">{lang === 'ar' ? 'حفظ الاتفاق' : 'Save agreement'}</button>
+                    <input inputMode="decimal" value={originalAmount} onChange={(event) => setOriginalAmount(event.target.value)} className="h-11 w-28 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 text-sm" aria-label={lang === 'ar' ? 'قيمة العملية' : 'Original amount'} />
+                    <button type="button" disabled={testBusy || !targetId.trim()} onClick={() => void runTestAction(async () => { await marketerTestApi.simulateConversion({ targetType, targetId: targetId.trim(), originalAmount: Number(originalAmount), clientRequestId: requestId('conversion') }); setTestMessage(lang === 'ar' ? 'تم إنشاء عملية تجريبية بعمولة معلّقة.' : 'Test conversion created with a pending commission.'); })} className="h-11 rounded-xl bg-violet-600 hover:bg-violet-500 px-4 text-sm font-black text-white disabled:opacity-50">{lang === 'ar' ? 'محاكاة عملية' : 'Simulate conversion'}</button>
+                  </div>
+                  {testLedger.length > 0 && (
+                    <div className="space-y-2 rounded-2xl border border-violet-500/20 bg-white/60 dark:bg-neutral-950/20 p-3">
+                      {testLedger.slice(0, 5).map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 text-xs"><span>{entry.type === 'commission' ? (lang === 'ar' ? 'عمولة اختبارية' : 'Test commission') : entry.type} · {formatter.format(Number(entry.amount || 0))} {currency} · {entry.status}</span>{entry.status === 'pending' && <button type="button" disabled={testBusy} onClick={() => void runTestAction(async () => { await marketerTestApi.approveCommission(entry.id); setTestMessage(lang === 'ar' ? 'تم اعتماد العمولة التجريبية.' : 'Test commission approved.'); })} className="rounded-lg bg-emerald-600 px-3 py-1.5 font-black text-white disabled:opacity-50">{lang === 'ar' ? 'اعتماد' : 'Approve'}</button>}</div>)}
+                      <button type="button" disabled={testBusy || available <= 0} onClick={() => void runTestAction(async () => { const request = await marketerTestApi.requestWithdrawal(available, requestId('withdrawal')); await marketerTestApi.markWithdrawalPaid(request.withdrawal.id); setTestMessage(lang === 'ar' ? 'تم تسجيل سحب وتحويل تجريبي.' : 'Test withdrawal and transfer recorded.'); })} className="mt-2 h-10 rounded-xl bg-sky-600 px-4 text-xs font-black text-white disabled:opacity-50">{lang === 'ar' ? 'اختبار السحب والتحويل' : 'Test withdrawal and transfer'}</button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {testMessage && <p className="mt-3 rounded-xl bg-white/70 dark:bg-neutral-950/30 p-3 text-xs font-bold text-neutral-700 dark:text-neutral-200">{testMessage}</p>}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

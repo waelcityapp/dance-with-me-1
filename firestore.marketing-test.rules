@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isPlatformOwner() {
+      return isSignedIn()
+        && request.auth.token.email == 'waelvts@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function personalProfileFieldsOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'name',
+        'phone',
+        'avatar',
+        'favoriteStyles',
+        'likedEventIds',
+        'bookedEventIds',
+        'requestedTier'
+      ])
+      && request.resource.data.accountTier == resource.data.accountTier
+      && (!request.resource.data.keys().hasAny(['requestedTier'])
+        || request.resource.data.requestedTier in ['free', 'featured', 'vip']);
+    }
+
+    function ownsResource(fieldName) {
+      return isSignedIn() && resource.data[fieldName] == request.auth.uid;
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isPlatformOwner();
+      // An owner may remove only their own event; edits and republication stay protected.
+      allow delete: if isPlatformOwner() || (isSignedIn() && resource.data.creatorId == request.auth.uid);
+      allow update: if isPlatformOwner()
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewsCount'])
+        || (isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount']));
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId) || isPlatformOwner();
+
+      allow create: if isSelf(userId)
+        && request.resource.data.keys().hasOnly([
+          'id', 'name', 'email', 'phone', 'avatar', 'favoriteStyles',
+          'likedEventIds', 'bookedEventIds', 'isAdmin', 'accountTier',
+          'requestedTier', 'createdAt'
+        ])
+        && request.resource.data.id == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.isAdmin == isPlatformOwner()
+        && request.resource.data.accountTier == (isPlatformOwner() ? 'vip' : 'free')
+        && (!request.resource.data.keys().hasAny(['requestedTier'])
+          || request.resource.data.requestedTier in ['featured', 'vip']);
+
+      allow update: if isPlatformOwner() || (isSelf(userId) && personalProfileFieldsOnly());
+      allow delete: if isPlatformOwner();
+    }
+
+    match /ad_submissions/{submissionId} {
+      allow read: if isPlatformOwner() || ownsResource('advertiserId');
+
+      allow create: if isSignedIn()
+        && request.resource.data.advertiserId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && !request.resource.data.keys().hasAny([
+          'reviewedAt', 'reviewedBy', 'approvedAt', 'archivedAt',
+          'expiresAt', 'commissionAmount', 'discountAmount'
+        ]);
+
+      // Once submitted, every edit, renewal, activation or republish request
+      // must go through ad_change_requests and administration review.
+      allow update: if isPlatformOwner();
+      // Deleting an own ad is allowed; changing it still requires administration review.
+      allow delete: if isPlatformOwner() || ownsResource('advertiserId');
+    }
+
+    match /ad_change_requests/{requestId} {
+      allow read: if isPlatformOwner() || ownsResource('advertiserId');
+      // Requests are created by the Backend so it can enforce the daily limit.
+      allow create, update, delete: if false;
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isPlatformOwner() || ownsResource('userId');
+      // Price, discount, commission and booking status are written by Backend.
+      allow create, update, delete: if false;
+    }
+
+    match /booking_requests/{requestId} {
+      allow read: if isPlatformOwner() || ownsResource('userId');
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update, delete: if isPlatformOwner();
+    }
+
+    match /marketer_wallets/{userId} {
+      allow read: if isSelf(userId) || isPlatformOwner();
+      allow write: if false;
+    }
+
+    match /marketer_ledger/{entryId} {
+      allow read: if isPlatformOwner() || ownsResource('marketerId');
+      allow write: if false;
+    }
+
+    match /marketer_rules/{ruleId} {
+      allow read: if isPlatformOwner() || ownsResource('marketerId');
+      allow write: if false;
+    }
+
+    match /marketer_withdrawal_requests/{withdrawalId} {
+      allow read: if isPlatformOwner() || ownsResource('marketerId');
+      allow write: if false;
+    }
+
+    match /admin_codes/{codeId} {
+      allow read, write: if false;
+    }
+
+    match /app_assets/{assetId} {
+      allow read: if true;
+      allow write: if isPlatformOwner();
+    }
+
+    match /app_config/{configId} {
+      allow read: if true;
+      allow write: if isPlatformOwner();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isPlatformOwner()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /support_messages/{messageId} {
+      allow read: if isPlatformOwner() || ownsResource('userId');
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isPlatformOwner();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
