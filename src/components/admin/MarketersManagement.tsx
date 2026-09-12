@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BadgeCheck, Ban, Copy, Search, UserCheck, Users, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, Ban, Copy, Search, Settings, UserCheck, Users, X } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useApp } from '../../context/AppContext';
 import { db, subscribeToAllUsers } from '../../lib/firebase';
 import { ensureAccountReference } from '../../lib/accountReferenceBootstrap';
 import { MarketerStatus, MarketerWalletStatus, UserProfile } from '../../types';
+import { MarketerSettingsPage } from './MarketerSettingsPage';
 
 interface MarketersManagementProps {
   onBack: () => void;
@@ -69,6 +70,7 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
   const [walletStatus, setWalletStatus] = useState<MarketerWalletStatus>('active');
   const [statusReason, setStatusReason] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
+  const [settingsMarketer, setSettingsMarketer] = useState<UserProfile | null>(null);
   const migrationStarted = useRef(false);
 
   useEffect(() => {
@@ -335,6 +337,10 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
 
   if (!adminUser?.isAdmin) return null;
 
+  if (settingsMarketer) {
+    return <MarketerSettingsPage marketer={settingsMarketer} onBack={() => setSettingsMarketer(null)} />;
+  }
+
   return (
     <section className="space-y-5 animate-fadeIn" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <div className="rounded-3xl border border-amber-500/25 bg-white dark:bg-neutral-900 p-4 sm:p-6 shadow-lg">
@@ -448,6 +454,12 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    {hasMarketerHistory && (
+                      <button type="button" onClick={() => setSettingsMarketer(item)} className="h-10 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 text-xs font-black flex items-center gap-2 text-amber-700 dark:text-amber-300" aria-label={lang === 'ar' ? `إعدادات المسوق ${item.name}` : `Settings for ${item.name}`}>
+                        <Settings className="h-4 w-4" />
+                        {lang === 'ar' ? 'الإعدادات' : 'Settings'}
+                      </button>
+                    )}
                     {item.marketerCode && (
                       <button
                         type="button"
