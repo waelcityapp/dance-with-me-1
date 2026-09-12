@@ -31,10 +31,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const [selectedArea, setSelectedArea] = useState('all');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState<'month' | 'week' | 'today'>('month');
 
-  // Reset pagination when category, search, or style filter changes
+  // Reset pagination whenever any result filter changes.
   useEffect(() => {
     setVisibleCount(5);
-  }, [selectedCategory, searchQuery, selectedStyleFilter]);
+  }, [selectedCategory, searchQuery, selectedStyleFilter, selectedTimeFilter, selectedGovernorate, selectedArea]);
 
   // Apply the hierarchical category selection made in the mobile hero menu.
   useEffect(() => {
@@ -279,9 +279,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       const endOfMonth = new Date(startOfToday);
       endOfMonth.setDate(endOfMonth.getDate() + 30);
       const filterEnd = selectedTimeFilter === 'today' ? endOfToday : selectedTimeFilter === 'week' ? endOfWeek : endOfMonth;
-      if (!normalizedSearchQuery && (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd)) return false;
-      if (!normalizedSearchQuery && selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
-      if (!normalizedSearchQuery && selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
+      if (Number.isNaN(eventDate.getTime()) || eventDate < startOfToday || eventDate >= filterEnd) return false;
+      if (selectedGovernorate !== 'all' && ev.location?.governorateAr !== selectedGovernorate) return false;
+      if (selectedArea !== 'all' && ev.location?.areaAr !== selectedArea) return false;
 
       // Subcategory / Style filter check
       if (!normalizedSearchQuery && selectedStyleFilter !== 'all') {
@@ -442,7 +442,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         </div>
 
         {/* Compact Mobile Date & Location Filters */}
-        <div className="grid grid-cols-4 items-stretch gap-1.5 pb-0.5 pt-0.5 w-full" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="relative z-10 grid grid-cols-4 items-stretch gap-1.5 pb-0.5 pt-0.5 w-full pointer-events-auto" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           <button
             type="button"
             onClick={() => setSelectedTimeFilter('month')}
