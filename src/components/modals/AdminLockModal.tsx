@@ -152,6 +152,10 @@ export const AdminLockModal: React.FC = () => {
           ar: 'المتغير FIREBASE_PRIVATE_KEY غير متاح للـBackend في هذا النشر.',
           en: 'FIREBASE_PRIVATE_KEY is unavailable to the Backend in this deployment.',
         },
+        FIREBASE_PRIVATE_KEY_INVALID_FORMAT: {
+          ar: 'قيمة FIREBASE_PRIVATE_KEY موجودة لكنها ناقصة أو منسوخة بتنسيق غير صالح.',
+          en: 'FIREBASE_PRIVATE_KEY exists but is incomplete or has an invalid format.',
+        },
         ADMIN_ACCOUNT_REQUIRED: {
           ar: 'الحساب الحالي غير معتمد كحساب إدارة في الـBackend.',
           en: 'The current account is not recognized as an administrator by the Backend.',
