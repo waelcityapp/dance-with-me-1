@@ -1,22 +1,5 @@
-import { createRequire } from 'node:module';
 import { calculateConversion, money } from './_lib/marketingMath.js';
-
-const require = createRequire(import.meta.url);
-const admin = require('firebase-admin');
-
-function getAdminApp() {
-  if (admin.apps.length) return admin.app();
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  if (!projectId || !clientEmail || !privateKey) throw new Error('FIREBASE_ADMIN_NOT_CONFIGURED');
-  return admin.initializeApp({ credential: admin.credential.cert({ projectId, clientEmail, privateKey }) });
-}
-
-function db() {
-  const databaseId = process.env.FIREBASE_DATABASE_ID;
-  return admin.firestore(getAdminApp(), databaseId && databaseId !== '(default)' ? databaseId : undefined);
-}
+import { admin, getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
 
 function now() { return new Date().toISOString(); }
 function id(value, field) {
@@ -34,10 +17,8 @@ function ruleValue(input, field) {
 function reply(res, status, body) { return res.status(status).json(body); }
 
 async function actor(req) {
-  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  if (!token) throw new Error('UNAUTHENTICATED');
-  const decoded = await admin.auth(getAdminApp()).verifyIdToken(token);
-  const profile = await db().collection('users').doc(decoded.uid).get();
+  const decoded = await verifyRequestUser(req);
+  const profile = await getAdminDb().collection('users').doc(decoded.uid).get();
   if (!profile.exists || profile.data()?.isAdmin !== true) throw new Error('ADMIN_REQUIRED');
   return { uid: decoded.uid, email: String(decoded.email || '').toLowerCase(), profile: profile.data() || {} };
 }
@@ -50,7 +31,7 @@ function testOwner(actorData) {
 function ledgerId(uid, clientRequestId) { return `test_${id(uid, 'UID')}_${id(clientRequestId, 'REQUEST_ID')}`; }
 
 async function getWallet(uid) {
-  const user = await db().collection('users').doc(uid).get();
+  const user = await getAdminDb().collection('users').doc(uid).get();
   return {
     available: Number(user.data()?.marketerWalletAvailable || 0),
     pending: Number(user.data()?.marketerWalletPending || 0),
@@ -59,7 +40,7 @@ async function getWallet(uid) {
 }
 
 async function latestLedger(uid) {
-  const snapshot = await db().collection('marketer_ledger').where('marketerId', '==', uid).where('testMode', '==', true).limit(30).get();
+  const snapshot = await getAdminDb().collection('marketer_ledger').where('marketerId', '==', uid).where('testMode', '==', true).limit(30).get();
   return snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
@@ -68,7 +49,7 @@ export default async function handler(req, res) {
   try {
     const action = String(req.body?.action || '');
     const user = await actor(req);
-    const firestore = db();
+    const firestore = getAdminDb();
 
     if (action === 'activate_test_owner') {
       const configuredEmail = String(process.env.MARKETER_TEST_OWNER_EMAIL || '').trim().toLowerCase();
