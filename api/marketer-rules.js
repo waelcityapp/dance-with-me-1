@@ -3,11 +3,45 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
 
+function firebaseCredentials() {
+  const serviceAccountJson = String(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '').trim();
+  if (serviceAccountJson) {
+    const parsed = JSON.parse(serviceAccountJson);
+    return {
+      projectId: parsed.project_id || parsed.projectId,
+      clientEmail: parsed.client_email || parsed.clientEmail,
+      privateKey: parsed.private_key || parsed.privateKey,
+    };
+  }
+
+  let privateKey = String(process.env.FIREBASE_PRIVATE_KEY || '').trim();
+  if (privateKey.startsWith('{')) {
+    const parsed = JSON.parse(privateKey);
+    privateKey = parsed.private_key || parsed.privateKey || '';
+  } else if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
+    try {
+      privateKey = JSON.parse(privateKey);
+    } catch {
+      privateKey = privateKey.slice(1, -1);
+    }
+  }
+
+  privateKey = String(privateKey)
+    .replace(/^FIREBASE_PRIVATE_KEY\s*=\s*/i, '')
+    .replace(/\\r\\n|\\n|\\r/g, '\n')
+    .replace(/\r/g, '')
+    .trim();
+
+  return {
+    projectId: String(process.env.FIREBASE_PROJECT_ID || '').trim(),
+    clientEmail: String(process.env.FIREBASE_CLIENT_EMAIL || '').trim(),
+    privateKey,
+  };
+}
+
 function getAdminApp() {
   if (admin.apps.length) return admin.app();
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const { projectId, clientEmail, privateKey } = firebaseCredentials();
   if (!projectId || !clientEmail || !privateKey) throw new Error('FIREBASE_ADMIN_NOT_CONFIGURED');
   return admin.initializeApp({ credential: admin.credential.cert({ projectId, clientEmail, privateKey }) });
 }
