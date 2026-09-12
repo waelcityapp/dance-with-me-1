@@ -43,6 +43,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-video');
+  const [imageAspectRatioClass, setImageAspectRatioClass] = useState('aspect-video');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
@@ -78,6 +79,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
 
   useEffect(() => {
     setAspectRatioClass('aspect-video');
+    setImageAspectRatioClass('aspect-video');
   }, [promoEvent.mediaUrl]);
 
   const openFullscreenVideo = (e?: React.MouseEvent) => {
@@ -290,7 +292,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         </div>
       )}
       {/* Media Player Container (Video/Image) */}
-      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${isGoogleDriveUrl(promoEvent.mediaUrl) || getSafePlayableVideoUrl(promoEvent.mediaUrl) ? aspectRatioClass : ''}`}>
+      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${isGoogleDriveUrl(promoEvent.mediaUrl) || getSafePlayableVideoUrl(promoEvent.mediaUrl) ? aspectRatioClass : imageAspectRatioClass}`}>
         {/* Paused Overlay with 'X' mark */}
         {promoEvent.isPaused && (
           <div className="absolute inset-0 z-20 bg-neutral-950/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
@@ -339,7 +341,13 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             <img
               src={promoEvent.mediaUrl}
               alt={lang === 'ar' ? promoEvent.titleAr : promoEvent.titleEn}
-              className="w-full h-auto max-h-[650px] object-contain transition-transform duration-700 group-hover:scale-[1.02] block"
+              onLoad={(e) => {
+                const image = e.currentTarget;
+                const ratio = image.naturalWidth / image.naturalHeight;
+                setImageAspectRatioClass(ratio >= 1.2 ? 'aspect-video' : ratio <= 0.85 ? 'aspect-[4/5] max-h-[760px]' : 'aspect-square max-h-[720px]');
+              }}
+              decoding="async"
+              className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-[1.02] block"
             />
             {/* Subtle Zoom Pill Badge */}
             <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-950/75 hover:bg-neutral-950/90 text-white text-[11px] font-bold backdrop-blur-md border border-white/15 shadow-lg transition-all transform opacity-80 group-hover/img:opacity-100 group-hover/img:scale-105">
@@ -399,7 +407,9 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             <Maximize2 className="h-4.5 w-4.5" />
           </button>
         )}
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent opacity-80" />
+        {getSafePlayableVideoUrl(promoEvent.mediaUrl) && (
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent opacity-80" />
+        )}
       </div>
         <div className="flex flex-col p-4 sm:p-5 relative z-10 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 transition-colors">
           <div className="mb-3.5">
