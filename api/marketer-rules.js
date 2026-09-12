@@ -1,55 +1,4 @@
-import { createRequire } from 'node:module';
-
-const require = createRequire(import.meta.url);
-const admin = require('firebase-admin');
-
-function firebaseCredentials() {
-  const serviceAccountJson = String(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '').trim();
-  if (serviceAccountJson) {
-    const parsed = JSON.parse(serviceAccountJson);
-    return {
-      projectId: parsed.project_id || parsed.projectId,
-      clientEmail: parsed.client_email || parsed.clientEmail,
-      privateKey: parsed.private_key || parsed.privateKey,
-    };
-  }
-
-  let privateKey = String(process.env.FIREBASE_PRIVATE_KEY || '').trim();
-  if (privateKey.startsWith('{')) {
-    const parsed = JSON.parse(privateKey);
-    privateKey = parsed.private_key || parsed.privateKey || '';
-  } else if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
-    try {
-      privateKey = JSON.parse(privateKey);
-    } catch {
-      privateKey = privateKey.slice(1, -1);
-    }
-  }
-
-  privateKey = String(privateKey)
-    .replace(/^FIREBASE_PRIVATE_KEY\s*=\s*/i, '')
-    .replace(/\\r\\n|\\n|\\r/g, '\n')
-    .replace(/\r/g, '')
-    .trim();
-
-  return {
-    projectId: String(process.env.FIREBASE_PROJECT_ID || '').trim(),
-    clientEmail: String(process.env.FIREBASE_CLIENT_EMAIL || '').trim(),
-    privateKey,
-  };
-}
-
-function getAdminApp() {
-  if (admin.apps.length) return admin.app();
-  const { projectId, clientEmail, privateKey } = firebaseCredentials();
-  if (!projectId || !clientEmail || !privateKey) throw new Error('FIREBASE_ADMIN_NOT_CONFIGURED');
-  return admin.initializeApp({ credential: admin.credential.cert({ projectId, clientEmail, privateKey }) });
-}
-
-function db() {
-  const databaseId = process.env.FIREBASE_DATABASE_ID;
-  return admin.firestore(getAdminApp(), databaseId && databaseId !== '(default)' ? databaseId : undefined);
-}
+import { getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
 
 function cleanId(value, field) {
   const result = String(value || '').trim();
@@ -65,10 +14,8 @@ function ruleValue(input, field) {
 }
 
 async function requireAdmin(req) {
-  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  if (!token) throw new Error('UNAUTHENTICATED');
-  const decoded = await admin.auth(getAdminApp()).verifyIdToken(token);
-  const profile = await db().collection('users').doc(decoded.uid).get();
+  const decoded = await verifyRequestUser(req);
+  const profile = await getAdminDb().collection('users').doc(decoded.uid).get();
   if (!profile.exists || profile.data()?.isAdmin !== true) throw new Error('ADMIN_REQUIRED');
   return decoded.uid;
 }
@@ -80,7 +27,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return reply(res, 405, { error: 'METHOD_NOT_ALLOWED' });
   try {
     const adminId = await requireAdmin(req);
-    const firestore = db();
+    const firestore = getAdminDb();
     const action = String(req.body?.action || '');
     const marketerId = cleanId(req.body?.marketerId, 'MARKETER_ID');
     const marketer = await firestore.collection('users').doc(marketerId).get();
