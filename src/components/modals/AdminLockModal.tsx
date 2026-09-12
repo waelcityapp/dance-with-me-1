@@ -130,7 +130,43 @@ export const AdminLockModal: React.FC = () => {
         }
       }
     } catch (err) {
-      setErrorMsg(lang === 'ar' ? 'عذراً، حدث خطأ أثناء التحقق.' : 'Sorry, an error occurred during verification.');
+      const code = err instanceof Error ? err.message : 'UNKNOWN_ERROR';
+      const messages: Record<string, { ar: string; en: string }> = {
+        FIREBASE_SESSION_REQUIRED: {
+          ar: 'جلسة تسجيل الدخول غير مكتملة. سجّل الخروج ثم ادخل بحساب الإدارة مرة أخرى.',
+          en: 'Your sign-in session is incomplete. Sign out and sign in with the admin account again.',
+        },
+        FIREBASE_ADMIN_NOT_CONFIGURED: {
+          ar: 'إعدادات Firebase الخاصة بالـBackend غير مكتملة في بيئة النشر الحالية.',
+          en: 'Firebase Backend settings are incomplete in the current deployment environment.',
+        },
+        FIREBASE_PROJECT_ID_MISSING: {
+          ar: 'المتغير FIREBASE_PROJECT_ID غير متاح للـBackend في هذا النشر.',
+          en: 'FIREBASE_PROJECT_ID is unavailable to the Backend in this deployment.',
+        },
+        FIREBASE_CLIENT_EMAIL_MISSING: {
+          ar: 'المتغير FIREBASE_CLIENT_EMAIL غير متاح للـBackend في هذا النشر.',
+          en: 'FIREBASE_CLIENT_EMAIL is unavailable to the Backend in this deployment.',
+        },
+        FIREBASE_PRIVATE_KEY_MISSING: {
+          ar: 'المتغير FIREBASE_PRIVATE_KEY غير متاح للـBackend في هذا النشر.',
+          en: 'FIREBASE_PRIVATE_KEY is unavailable to the Backend in this deployment.',
+        },
+        FIREBASE_PRIVATE_KEY_INVALID_FORMAT: {
+          ar: 'قيمة FIREBASE_PRIVATE_KEY موجودة لكنها ناقصة أو منسوخة بتنسيق غير صالح.',
+          en: 'FIREBASE_PRIVATE_KEY exists but is incomplete or has an invalid format.',
+        },
+        ADMIN_ACCOUNT_REQUIRED: {
+          ar: 'الحساب الحالي غير معتمد كحساب إدارة في الـBackend.',
+          en: 'The current account is not recognized as an administrator by the Backend.',
+        },
+        ADMIN_UNLOCK_NOT_CONFIGURED: {
+          ar: 'رمز فتح الإدارة غير مضبوط في بيئة النشر الحالية.',
+          en: 'The admin unlock code is not configured in the current deployment environment.',
+        },
+      };
+      const message = messages[code];
+      setErrorMsg(message ? message[lang] : (lang === 'ar' ? `تعذر الاتصال بحماية الإدارة (${code}). لم تُحتسب محاولة.` : `Admin protection failed (${code}). No attempt was counted.`));
     } finally {
       setLoading(false);
     }
