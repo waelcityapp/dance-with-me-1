@@ -3,6 +3,34 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
 
+export function normalizeServiceAccountField(input, fieldName) {
+  let value = String(input || '').trim();
+  if (!value) return '';
+
+  if (value.startsWith('{')) {
+    try {
+      value = String(JSON.parse(value)?.[fieldName] || '').trim();
+    } catch {
+      return value;
+    }
+  }
+
+  const escapedFieldName = fieldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const jsonLine = value.match(new RegExp(`^["']?${escapedFieldName}["']?\\s*:\\s*["']([^"']+)["']\\s*,?$`));
+  if (jsonLine) return jsonLine[1].trim();
+
+  const jsonString = value.replace(/,\s*$/, '');
+  if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
+    try {
+      return String(JSON.parse(jsonString)).trim();
+    } catch {
+      return jsonString.slice(1, -1).trim();
+    }
+  }
+
+  return value;
+}
+
 export function normalizePrivateKey(input) {
   let value = String(input || '').trim();
   if (!value) return '';
@@ -36,8 +64,8 @@ export function normalizePrivateKey(input) {
 
 export function getAdminApp() {
   if (admin.apps.length) return admin.app();
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = normalizeServiceAccountField(process.env.FIREBASE_PROJECT_ID, 'project_id');
+  const clientEmail = normalizeServiceAccountField(process.env.FIREBASE_CLIENT_EMAIL, 'client_email');
   const privateKeyInput = process.env.FIREBASE_PRIVATE_KEY;
   if (!projectId) throw new Error('FIREBASE_PROJECT_ID_MISSING');
   if (!clientEmail) throw new Error('FIREBASE_CLIENT_EMAIL_MISSING');
