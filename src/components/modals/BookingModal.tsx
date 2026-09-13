@@ -5,6 +5,7 @@ import {
   Camera, Ticket, QrCode, AlertTriangle, Info, Calendar, DollarSign, Clock, ExternalLink
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { fetchMarketingQuote, validateMarketerCode } from '../../lib/marketerCodeApi';
 
 export const BookingModal: React.FC = () => {
   const { 
@@ -24,6 +25,10 @@ export const BookingModal: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [bookingResult, setBookingResult] = useState<any | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [marketerCodeInput, setMarketerCodeInput] = useState('');
+  const [marketerCodeStatus, setMarketerCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [customerDiscount, setCustomerDiscount] = useState(0);
+  const [quoteWarning, setQuoteWarning] = useState(false);
 
   // Reset local state when modal opens/closes
   useEffect(() => {
@@ -35,6 +40,10 @@ export const BookingModal: React.FC = () => {
       setBookingResult(null);
       setIsSubmitting(false);
       setCopiedLink(false);
+      setMarketerCodeInput('');
+      setMarketerCodeStatus('idle');
+      setCustomerDiscount(0);
+      setQuoteWarning(false);
     }
   }, [selectedBookingEvent]);
 
@@ -77,6 +86,15 @@ export const BookingModal: React.FC = () => {
     return () => window.removeEventListener('paste', handlePaste);
   }, [selectedBookingEvent]);
 
+  useEffect(() => {
+    if (!selectedBookingEvent || marketerCodeStatus !== 'valid' || !marketerCodeInput.trim()) return;
+    let cancelled = false;
+    fetchMarketingQuote(marketerCodeInput.trim(), selectedBookingEvent.id, individuals)
+      .then((quote) => { if (!cancelled) { setCustomerDiscount(quote.customerDiscount); setQuoteWarning(quote.ruleReason === 'no_applicable_rule'); } })
+      .catch(() => { if (!cancelled) { setCustomerDiscount(0); setQuoteWarning(true); setMarketerCodeStatus('invalid'); } });
+    return () => { cancelled = true; };
+  }, [individuals, marketerCodeStatus, marketerCodeInput, selectedBookingEvent?.id]);
+
   if (!selectedBookingEvent) return null;
 
   // Extract event price and parse it to numerical value
@@ -89,13 +107,35 @@ export const BookingModal: React.FC = () => {
 
   const basePrice = parsePrice(selectedBookingEvent.priceAr, selectedBookingEvent.priceEn);
   const totalAmount = basePrice * individuals;
+  const customerTotal = Math.max(0, totalAmount - customerDiscount);
 
   const isPhoneValid = phone.trim().length >= 11 && /^\d+$/.test(phone.trim());
   const isNameValid = name.trim().split(' ').filter(Boolean).length >= 2;
-  const isFormValid = isNameValid && isPhoneValid && receiptImage !== null && !isSubmitting;
+  const isMarketerCodeValid = !marketerCodeInput.trim() || (marketerCodeStatus === 'valid' && !quoteWarning);
+  const isFormValid = isNameValid && isPhoneValid && receiptImage !== null && isMarketerCodeValid && !isSubmitting;
 
   const INSTAPAY_LINK = 'https://ipn.eg/S/wael1011/instapay/2dvaYQ';
   const INSTAPAY_HANDLE = 'wael1011@instapay';
+
+  const handleVerifyMarketerCode = async () => {
+    const code = marketerCodeInput.trim().toUpperCase();
+    if (!code) {
+      setMarketerCodeStatus('idle');
+      return;
+    }
+    setMarketerCodeStatus('checking');
+    try {
+      await validateMarketerCode(code);
+      const quote = await fetchMarketingQuote(code, selectedBookingEvent.id, individuals);
+      setCustomerDiscount(quote.customerDiscount);
+      setQuoteWarning(quote.ruleReason === 'no_applicable_rule');
+      setMarketerCodeStatus('valid');
+    } catch {
+      setCustomerDiscount(0);
+      setQuoteWarning(true);
+      setMarketerCodeStatus('invalid');
+    }
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(INSTAPAY_LINK);
@@ -198,7 +238,8 @@ export const BookingModal: React.FC = () => {
         numberOfIndividuals: individuals,
         totalAmount: totalAmount,
         receiptImage: receiptImage!,
-        eventDate: selectedBookingEvent.eventDate
+        eventDate: selectedBookingEvent.eventDate,
+        marketerCode: marketerCodeInput.trim() || undefined
       });
 
       if (result) {
@@ -222,20 +263,20 @@ export const BookingModal: React.FC = () => {
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-8"
+        className="relative w-full max-w-2xl bg-neutral-100 dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-8"
         dir={isArabic ? 'rtl' : 'ltr'}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-zinc-800 bg-zinc-950/40">
+        <div className="flex items-center justify-between p-5 border-b border-neutral-200 dark:border-zinc-800 bg-neutral-50 dark:bg-zinc-950/40">
           <div className="flex items-center gap-2.5">
             <Ticket className="w-6 h-6 text-amber-500" />
-            <h3 className="text-lg font-bold text-zinc-100 font-sans">
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-zinc-100 font-sans">
               {isArabic ? 'بوابة حجز التذاكر الفورية' : 'Instant Ticket Booking Portal'}
             </h3>
           </div>
           <button 
             onClick={() => setSelectedBookingEvent(null)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-neutral-500 dark:text-zinc-400 hover:text-neutral-900 dark:hover:text-zinc-100 hover:bg-neutral-200 dark:hover:bg-zinc-800 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -246,9 +287,9 @@ export const BookingModal: React.FC = () => {
           {!bookingResult ? (
             <div className="space-y-6">
               {/* Event Info Card */}
-              <div className="flex gap-4 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/80 relative overflow-hidden">
+              <div className="flex gap-4 p-4 bg-neutral-50 dark:bg-zinc-950/50 rounded-xl border border-neutral-200 dark:border-zinc-800/80 relative overflow-hidden">
                 <div className="absolute top-0 bottom-0 left-0 w-1 bg-red-600"></div>
-                <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-zinc-800 bg-zinc-900">
+                <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-neutral-200 dark:border-zinc-800 bg-neutral-100 dark:bg-zinc-900">
                   {selectedBookingEvent.mediaType === 'video' ? (
                     <video 
                       src={selectedBookingEvent.mediaUrl} 
@@ -266,12 +307,12 @@ export const BookingModal: React.FC = () => {
                   )}
                 </div>
                 <div className="space-y-1 flex-1">
-                  <h4 className="text-base font-bold text-zinc-100 line-clamp-1">
+                  <h4 className="text-base font-bold text-neutral-900 dark:text-zinc-100 line-clamp-1">
                     {isArabic ? selectedBookingEvent.titleAr : selectedBookingEvent.titleEn}
                   </h4>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400 font-mono">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-zinc-400 font-mono">
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                      <Calendar className="w-3.5 h-3.5 text-neutral-400 dark:text-zinc-500" />
                       {new Date(selectedBookingEvent.eventDate).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', {
                         weekday: 'short',
                         month: 'short',
@@ -279,7 +320,7 @@ export const BookingModal: React.FC = () => {
                       })}
                     </span>
                     <span className="flex items-center gap-1">
-                      <DollarSign className="w-3.5 h-3.5 text-zinc-500" />
+                      <DollarSign className="w-3.5 h-3.5 text-neutral-400 dark:text-zinc-500" />
                       {isArabic ? selectedBookingEvent.priceAr : selectedBookingEvent.priceEn}
                     </span>
                   </div>
@@ -294,7 +335,7 @@ export const BookingModal: React.FC = () => {
                     <h5 className="text-sm font-bold text-red-400">
                       {isArabic ? '📜 سياسة الإلغاء والاسترجاع الهامة:' : '📜 Important Cancellation & Refund Policy:'}
                     </h5>
-                    <ul className="text-xs text-zinc-300 mt-2 space-y-1.5 list-disc list-inside">
+                    <ul className="text-xs text-neutral-700 dark:text-zinc-300 mt-2 space-y-1.5 list-disc list-inside">
                       <li>
                         {isArabic 
                           ? 'يحق للمستخدم إلغاء الحجز في أي وقت قبل بدء الحدث واسترداد المبلغ، مع خصم 5% فقط من إجمالي قيمة الحجز كرسوم تحويل وإدارية.' 
@@ -312,7 +353,7 @@ export const BookingModal: React.FC = () => {
 
               {/* Form Input: Name */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                <label className="text-sm font-medium text-neutral-700 dark:text-zinc-300 flex items-center gap-2">
                   <User className="w-4 h-4 text-amber-500" />
                   {isArabic ? 'اسمك بالكامل (كما بالبطاقة الشخصية)' : 'Full Name (as on your National ID)'}
                   <span className="text-red-500">*</span>
@@ -324,7 +365,7 @@ export const BookingModal: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={isArabic ? 'يرجى إدخال اسمك كما هو موضح بالبطاقة الشخصية' : 'Enter your name as shown on your ID'}
-                    className="w-full p-3 pl-4 pr-4 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition font-sans text-sm"
+                    className="w-full p-3 pl-4 pr-4 bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-xl text-neutral-900 dark:text-zinc-100 placeholder-neutral-400 dark:placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition font-sans text-sm"
                   />
                 </div>
                 {name && !isNameValid && (
@@ -337,7 +378,7 @@ export const BookingModal: React.FC = () => {
 
               {/* Form Input: Phone */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                <label className="text-sm font-medium text-neutral-700 dark:text-zinc-300 flex items-center gap-2">
                   <Phone className="w-4 h-4 text-amber-500" />
                   {isArabic ? 'رقم الموبايل للتواصل' : 'Mobile Number for Contact'}
                   <span className="text-red-500">*</span>
@@ -348,7 +389,7 @@ export const BookingModal: React.FC = () => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder={isArabic ? 'رقم موبايل صحيح في حالة الاتصال بك للتأكيد' : 'Valid mobile number in case we need to call you'}
-                  className="w-full p-3 pl-4 pr-4 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition font-mono text-sm text-left"
+                  className="w-full p-3 pl-4 pr-4 bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-xl text-neutral-900 dark:text-zinc-100 placeholder-neutral-400 dark:placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition font-mono text-sm text-left"
                   dir="ltr"
                 />
                 {phone && !isPhoneValid && (
@@ -359,50 +400,110 @@ export const BookingModal: React.FC = () => {
                 )}
               </div>
 
+              {/* Marketer Code: Manual validation only */}
+              <div className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
+                <label className="text-sm font-medium text-neutral-700 dark:text-zinc-300 flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-amber-500" />
+                  {isArabic ? 'كود المسوق (اختياري)' : 'Marketer Code (Optional)'}
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={marketerCodeInput}
+                    onChange={(e) => {
+                      setMarketerCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32));
+                      setCustomerDiscount(0);
+                      setQuoteWarning(false);
+                      setMarketerCodeStatus('idle');
+                    }}
+                    placeholder={isArabic ? 'اكتب الكود يدويًا' : 'Enter code manually'}
+                    className="min-w-0 flex-1 p-3 bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-xl text-neutral-900 dark:text-zinc-100 placeholder-neutral-400 dark:placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition font-mono text-sm"
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyMarketerCode}
+                    disabled={!marketerCodeInput.trim() || marketerCodeStatus === 'checking'}
+                    className="rounded-xl border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm font-bold text-amber-300 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {marketerCodeStatus === 'checking'
+                      ? (isArabic ? 'جارٍ التحقق...' : 'Checking...')
+                      : (isArabic ? 'تحقق' : 'Verify')}
+                  </button>
+                </div>
+                {marketerCodeStatus === 'valid' && !quoteWarning && (
+                  <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    {isArabic ? 'الكود فعال' : 'Code is active'}
+                  </p>
+                )}
+                {marketerCodeStatus === 'valid' && quoteWarning && (
+                  <p className="text-xs font-semibold text-amber-600 dark:text-amber-400" role="alert">
+                    {isArabic ? 'الكود فعال، لكن لا يوجد اتفاق حجز ينطبق على هذه الفعالية. لن يُطبّق خصم؛ راجع الإدارة قبل الدفع.' : 'The code is active, but no booking agreement applies to this event. No discount will be applied; check with the organizer before paying.'}
+                  </p>
+                )}
+                {marketerCodeStatus === 'invalid' && (
+                  <p className="text-xs font-semibold text-red-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {isArabic ? 'الكود غير فعال أو غير موجود' : 'Code is inactive or not found'}
+                  </p>
+                )}
+              </div>
+
               {/* Individuals Selector & Pricing */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                  <label className="text-sm font-medium text-neutral-700 dark:text-zinc-300 flex items-center gap-2">
                     <Users className="w-4 h-4 text-amber-500" />
                     {isArabic ? 'عدد الأفراد' : 'Number of Individuals'}
                   </label>
-                  <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-xl p-1.5 max-w-[200px]">
+                  <div className="flex items-center gap-3 bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-xl p-1.5 max-w-[200px]">
                     <button
                       type="button"
                       disabled={individuals <= 1}
                       onClick={() => setIndividuals(prev => Math.max(1, prev - 1))}
-                      className="w-8 h-8 flex items-center justify-center bg-zinc-900 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-zinc-900 rounded-lg font-bold text-lg transition"
+                      className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-zinc-900 text-neutral-700 dark:text-zinc-300 hover:bg-neutral-200 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-neutral-100 dark:bg-zinc-900 rounded-lg font-bold text-lg transition"
                     >
                       -
                     </button>
-                    <span className="flex-1 text-center font-mono font-bold text-zinc-100">
+                    <span className="flex-1 text-center font-mono font-bold text-neutral-900 dark:text-zinc-100">
                       {individuals}
                     </span>
                     <button
                       type="button"
                       onClick={() => setIndividuals(prev => prev + 1)}
-                      className="w-8 h-8 flex items-center justify-center bg-zinc-900 text-zinc-300 hover:bg-zinc-800 rounded-lg font-bold text-lg transition"
+                      className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-zinc-900 text-neutral-700 dark:text-zinc-300 hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded-lg font-bold text-lg transition"
                     >
                       +
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 flex flex-col justify-center">
+                <div className="bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-xl p-4 flex flex-col justify-center">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-zinc-400">
+                    <span className="text-sm text-neutral-500 dark:text-zinc-400">
                       {isArabic ? 'قيمة الحجز للفرد:' : 'Price per person:'}
                     </span>
-                    <span className="font-bold text-zinc-200 font-mono">
+                    <span className="font-bold text-neutral-800 dark:text-zinc-200 font-mono">
                       {basePrice} {isArabic ? 'ج.م' : 'EGP'}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-zinc-800/60">
-                    <span className="text-sm text-zinc-100 font-medium">
+                  {customerDiscount > 0 && (
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-neutral-200 dark:border-zinc-800/60">
+                      <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                        {isArabic ? 'خصم كود المسوق:' : 'Marketer code discount:'}
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                        -{customerDiscount} {isArabic ? 'ج.م' : 'EGP'}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-neutral-200 dark:border-zinc-800/60">
+                    <span className="text-sm text-neutral-900 dark:text-zinc-100 font-medium">
                       {isArabic ? 'إجمالي المبلغ المستحق:' : 'Total Amount Due:'}
                     </span>
                     <span className="text-xl font-bold text-amber-500 font-mono">
-                      {totalAmount} {isArabic ? 'ج.م' : 'EGP'}
+                      {customerTotal} {isArabic ? 'ج.م' : 'EGP'}
                     </span>
                   </div>
                 </div>
@@ -413,10 +514,10 @@ export const BookingModal: React.FC = () => {
                 <div className="flex gap-2.5">
                   <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="text-sm font-bold text-zinc-200">
+                    <h5 className="text-sm font-bold text-neutral-800 dark:text-zinc-200">
                       {isArabic ? 'تعليمات الدفع والتحويل' : 'Payment & Transfer Instructions'}
                     </h5>
-                    <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    <p className="text-xs text-neutral-500 dark:text-zinc-400 mt-1 leading-relaxed">
                       {isArabic 
                         ? 'وسيلة الدفع المتاحة حالياً هي انستاباي (InstaPay). يمكنك الضغط على الزر أدناه للتحويل المباشر إلى تطبيق أو موقع انستاباي، أو نسخ رابط الدفع، ثم أرفق لقطة شاشة لإيصال التحويل بالأسفل لتفعيل الحجز فوراً:' 
                         : 'The payment method currently available is InstaPay. Click the button below to pay directly on InstaPay or copy the payment link, then attach the receipt screenshot below:'}
@@ -433,7 +534,7 @@ export const BookingModal: React.FC = () => {
                 </div>
 
                 {/* InstaPay Direct Pay & Copy Box */}
-                <div className="p-3.5 bg-zinc-950/90 border border-amber-500/30 rounded-2xl space-y-3 shadow-inner">
+                <div className="p-3.5 bg-white dark:bg-zinc-950/90 border border-amber-500/30 rounded-2xl space-y-3 shadow-inner">
                   {/* Direct Link Button */}
                   <a
                     href={INSTAPAY_LINK}
@@ -449,7 +550,7 @@ export const BookingModal: React.FC = () => {
                         <span className="block text-xs sm:text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
                           {isArabic ? 'اضغط الرابط لإرسال نقود إلى' : 'Click link to send money to'} <span className="font-mono text-amber-400">{INSTAPAY_HANDLE}</span>
                         </span>
-                        <span className="block text-[10px] text-zinc-400 font-medium tracking-wide">
+                        <span className="block text-[10px] text-neutral-500 dark:text-zinc-400 font-medium tracking-wide">
                           Powered by InstaPay
                         </span>
                       </div>
@@ -465,7 +566,7 @@ export const BookingModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleCopyLink}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-amber-500/40 text-zinc-300 hover:text-white transition text-xs font-semibold cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-neutral-100 dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 hover:border-amber-500/40 text-neutral-700 dark:text-zinc-300 hover:text-white transition text-xs font-semibold cursor-pointer"
                     >
                       {copiedLink ? (
                         <>
@@ -485,7 +586,7 @@ export const BookingModal: React.FC = () => {
 
               {/* Receipt File Upload */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                <label className="text-sm font-medium text-neutral-700 dark:text-zinc-300 flex items-center gap-2">
                   <Upload className="w-4 h-4 text-amber-500" />
                   {isArabic ? 'إرفاق صورة إيصال الدفع' : 'Attach Transfer Receipt Screenshot'}
                   <span className="text-red-500">*</span>
@@ -496,7 +597,7 @@ export const BookingModal: React.FC = () => {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-xl p-6 text-center transition flex flex-col items-center justify-center cursor-pointer ${
-                    isDragging ? 'border-amber-500 bg-amber-500/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950'
+                    isDragging ? 'border-amber-500 bg-amber-500/5' : 'border-neutral-200 dark:border-zinc-800 hover:border-zinc-700 bg-white dark:bg-zinc-950'
                   }`}
                 >
                   <input
@@ -509,7 +610,7 @@ export const BookingModal: React.FC = () => {
 
                   {receiptImage ? (
                     <div className="w-full space-y-4">
-                      <div className="relative w-40 h-40 mx-auto rounded-lg overflow-hidden border border-zinc-800">
+                      <div className="relative w-40 h-40 mx-auto rounded-lg overflow-hidden border border-neutral-200 dark:border-zinc-800">
                         <img 
                           src={receiptImage} 
                           alt="Receipt Preview" 
@@ -518,31 +619,31 @@ export const BookingModal: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setReceiptImage(null)}
-                          className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-black rounded-full text-zinc-300 hover:text-white transition"
+                          className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-black rounded-full text-neutral-700 dark:text-zinc-300 hover:text-white transition"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
-                      <p className="text-xs text-zinc-400 font-sans">
+                      <p className="text-xs text-neutral-500 dark:text-zinc-400 font-sans">
                         {isArabic ? '✅ تم تحميل الإيصال بنجاح. يمكنك استبداله بالضغط مجدداً.' : '✅ Receipt loaded successfully. Click below to replace.'}
                       </p>
                       <button
                         type="button"
                         onClick={() => document.getElementById('receipt-file-input')?.click()}
-                        className="py-1 px-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded-lg text-xs transition"
+                        className="py-1 px-3 bg-neutral-100 dark:bg-zinc-900 hover:bg-neutral-200 dark:hover:bg-zinc-800 text-neutral-800 dark:text-zinc-200 rounded-lg text-xs transition"
                       >
                         {isArabic ? 'تغيير الصورة' : 'Change Image'}
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-3" onClick={() => document.getElementById('receipt-file-input')?.click()}>
-                      <div className="p-3 bg-zinc-900 rounded-full w-12 h-12 flex items-center justify-center mx-auto text-zinc-400">
+                      <div className="p-3 bg-neutral-100 dark:bg-zinc-900 rounded-full w-12 h-12 flex items-center justify-center mx-auto text-neutral-500 dark:text-zinc-400">
                         <Camera className="w-6 h-6" />
                       </div>
-                      <p className="text-sm font-sans text-zinc-300">
+                      <p className="text-sm font-sans text-neutral-700 dark:text-zinc-300">
                         {isArabic ? 'اسحب صورتك هنا أو تصفح من الموبايل أو الكاميرا' : 'Drag screenshot here or browse from mobile / camera'}
                       </p>
-                      <p className="text-xs text-zinc-500 font-sans">
+                      <p className="text-xs text-neutral-400 dark:text-zinc-500 font-sans">
                         {isArabic ? 'يدعم الصور فقط (JPG, PNG, WEBP)' : 'Supports image formats only (JPG, PNG, WEBP)'}
                       </p>
                     </div>
@@ -555,7 +656,7 @@ export const BookingModal: React.FC = () => {
                 type="button"
                 disabled={!isFormValid || isSubmitting}
                 onClick={handleSubmit}
-                className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 disabled:bg-zinc-800 disabled:opacity-50 disabled:text-zinc-500 text-black font-bold rounded-xl transition flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 disabled:bg-neutral-200 dark:disabled:bg-zinc-800 disabled:opacity-50 disabled:text-neutral-400 dark:disabled:text-zinc-500 text-black font-bold rounded-xl transition flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -581,10 +682,10 @@ export const BookingModal: React.FC = () => {
               </div>
 
               <div className="text-center space-y-1.5">
-                <h4 className="text-xl font-bold text-zinc-100">
+                <h4 className="text-xl font-bold text-neutral-900 dark:text-zinc-100">
                   {isArabic ? 'تم إرسال طلب الحجز بنجاح!' : 'Booking Request Sent Successfully!'}
                 </h4>
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-neutral-500 dark:text-zinc-400">
                   {isArabic 
                     ? 'جاري مراجعة الدفع من قِبل المشرفين وسوف يتم تفعيل تذكرتك قريباً.' 
                     : 'Admins are verifying your payment, your ticket will be activated shortly.'}
@@ -592,12 +693,12 @@ export const BookingModal: React.FC = () => {
               </div>
 
               {/* Graphic Ticket Card */}
-              <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden relative shadow-lg">
+              <div className="w-full max-w-sm bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-2xl overflow-hidden relative shadow-lg">
                 {/* Sideline red accent for style */}
                 <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-red-600"></div>
 
                 {/* Ticket header */}
-                <div className="p-4 border-b border-zinc-800/60 bg-zinc-900/40 flex justify-between items-center">
+                <div className="p-4 border-b border-neutral-200 dark:border-zinc-800/60 bg-neutral-100 dark:bg-zinc-900/40 flex justify-between items-center">
                   <span className="text-xs font-mono font-bold text-amber-500 tracking-wider">
                     {bookingResult.refNumber}
                   </span>
@@ -609,28 +710,28 @@ export const BookingModal: React.FC = () => {
                 {/* Ticket Details */}
                 <div className="p-5 space-y-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">
+                    <span className="text-[10px] text-neutral-400 dark:text-zinc-500 uppercase tracking-wider block">
                       {isArabic ? 'اسم الفعالية' : 'Event'}
                     </span>
-                    <h5 className="text-sm font-bold text-zinc-100 line-clamp-1">
+                    <h5 className="text-sm font-bold text-neutral-900 dark:text-zinc-100 line-clamp-1">
                       {isArabic ? bookingResult.eventTitleAr : bookingResult.eventTitleEn}
                     </h5>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">
+                      <span className="text-[10px] text-neutral-400 dark:text-zinc-500 uppercase tracking-wider block">
                         {isArabic ? 'اسم الحاجز' : 'Name'}
                       </span>
-                      <span className="text-xs text-zinc-300 font-medium font-sans">
+                      <span className="text-xs text-neutral-700 dark:text-zinc-300 font-medium font-sans">
                         {bookingResult.userName}
                       </span>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">
+                      <span className="text-[10px] text-neutral-400 dark:text-zinc-500 uppercase tracking-wider block">
                         {isArabic ? 'رقم الهاتف' : 'Phone'}
                       </span>
-                      <span className="text-xs text-zinc-300 font-mono">
+                      <span className="text-xs text-neutral-700 dark:text-zinc-300 font-mono">
                         {bookingResult.userPhone}
                       </span>
                     </div>
@@ -638,15 +739,15 @@ export const BookingModal: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">
+                      <span className="text-[10px] text-neutral-400 dark:text-zinc-500 uppercase tracking-wider block">
                         {isArabic ? 'الأفراد' : 'Guests'}
                       </span>
-                      <span className="text-xs text-zinc-300 font-medium font-sans">
+                      <span className="text-xs text-neutral-700 dark:text-zinc-300 font-medium font-sans">
                         {bookingResult.numberOfIndividuals} {isArabic ? 'أفراد' : 'people'}
                       </span>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">
+                      <span className="text-[10px] text-neutral-400 dark:text-zinc-500 uppercase tracking-wider block">
                         {isArabic ? 'المبلغ الإجمالي' : 'Total Price'}
                       </span>
                       <span className="text-xs font-mono font-bold text-amber-500">
@@ -658,13 +759,13 @@ export const BookingModal: React.FC = () => {
 
                 {/* Dotted separator with ticket cuts on sides */}
                 <div className="relative flex items-center justify-center px-4 my-2">
-                  <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-zinc-900 border-r border-zinc-800"></div>
-                  <div className="w-full border-t border-dashed border-zinc-800"></div>
-                  <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-zinc-900 border-l border-zinc-800"></div>
+                  <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-neutral-100 dark:bg-zinc-900 border-r border-neutral-200 dark:border-zinc-800"></div>
+                  <div className="w-full border-t border-dashed border-neutral-200 dark:border-zinc-800"></div>
+                  <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-neutral-100 dark:bg-zinc-900 border-l border-neutral-200 dark:border-zinc-800"></div>
                 </div>
 
                 {/* Booking Submitted Status Badge (QR code generated in user profile upon approval) */}
-                <div className="p-5 flex flex-col items-center justify-center bg-zinc-900/30 text-center space-y-3">
+                <div className="p-5 flex flex-col items-center justify-center bg-neutral-100 dark:bg-zinc-900/30 text-center space-y-3">
                   <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                     <Clock className="w-8 h-8 animate-pulse" />
                   </div>
@@ -672,7 +773,7 @@ export const BookingModal: React.FC = () => {
                     <span className="text-xs font-bold text-amber-400 block">
                       {isArabic ? '⏳ تم استلام الطلب وبانتظار موافقة الإدارة' : '⏳ Booking Received - Pending Admin Review'}
                     </span>
-                    <p className="text-[11px] text-zinc-400 max-w-xs mx-auto leading-relaxed">
+                    <p className="text-[11px] text-neutral-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
                       {isArabic 
                         ? 'سيتم إصدار وتفعيل رمز الـ QR وكود الدخول الخاص بك في ملفك الشخصي فور مراجعة الإيصال والموافقة.' 
                         : 'Your activation QR code and passcode will be issued in your profile as soon as the receipt is verified.'}
@@ -682,9 +783,9 @@ export const BookingModal: React.FC = () => {
               </div>
 
               {/* Informative notification statement */}
-              <div className="p-4 bg-zinc-950 border border-zinc-800/80 rounded-xl max-w-md text-center flex gap-2 items-start">
+              <div className="p-4 bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800/80 rounded-xl max-w-md text-center flex gap-2 items-start">
                 <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-zinc-400 text-start leading-relaxed">
+                <p className="text-xs text-neutral-500 dark:text-zinc-400 text-start leading-relaxed">
                   {isArabic 
                     ? 'سوف تجد إشعاراً في حسابك الشخصي وقريباً كود الدخول الخاص بك والباركود بعد تأكيد المسؤولين لمراجعة إيصال التحويل المرفق.' 
                     : 'You will receive an in-app notification and your access passcode as soon as our administrators verify your attached transfer receipt.'}
@@ -695,7 +796,7 @@ export const BookingModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedBookingEvent(null)}
-                className="py-2.5 px-6 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white rounded-xl text-sm transition font-sans font-medium"
+                className="py-2.5 px-6 bg-neutral-200 dark:bg-zinc-800 hover:bg-zinc-700 dark:hover:bg-zinc-700 text-neutral-800 dark:text-zinc-200 hover:text-white rounded-xl text-sm transition font-sans font-medium"
               >
                 {isArabic ? 'العودة للصفحة الرئيسية' : 'Return to Home Page'}
               </button>

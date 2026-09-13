@@ -29,6 +29,7 @@ import {
   DEFAULT_PRICING_CONFIG,
   logAnalyticsEvent,
   saveBookingToFirestore,
+  createBookingToFirestore,
   subscribeToBookings,
   subscribeToAdSubmissions,
   deleteBookingFromFirestore,
@@ -125,6 +126,7 @@ interface AppContextType {
     numberOfIndividuals: number;
     totalAmount: number;
     receiptImage: string;
+    marketerCode?: string;
     eventDate?: string;
   }) => Promise<EventBooking | null>;
   approveBooking: (bookingId: string, barcodeUrl: string, accessCode: string, discountAmount: number, adminNotes?: string) => Promise<boolean>;
@@ -1082,6 +1084,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     numberOfIndividuals: number;
     totalAmount: number;
     receiptImage: string;
+    marketerCode?: string;
     eventDate?: string;
   }): Promise<EventBooking | null> => {
     if (!user) {
@@ -1107,16 +1110,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'pending',
       refNumber,
       submittedAt: new Date().toISOString(),
-      eventDate: bookingData.eventDate
+      eventDate: bookingData.eventDate,
+      marketerCode: bookingData.marketerCode || '',
     };
 
-    const success = await saveBookingToFirestore(newBooking);
-    if (success) {
+    const savedBooking = await createBookingToFirestore(newBooking);
+    if (savedBooking) {
       setBookings(prev => {
         if (prev.some(b => b.id === newBooking.id || (b.refNumber && b.refNumber === newBooking.refNumber))) {
           return prev;
         }
-        return [newBooking, ...prev];
+        return [savedBooking, ...prev];
       });
 
       // Add to user's booked event IDs
@@ -1151,7 +1155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       } catch (e) {}
 
-      return newBooking;
+      return savedBooking;
     }
     return null;
   };
