@@ -85,7 +85,7 @@ export default async function handler(req, res) {
       if (code) {
         marketer = await findActiveMarketerByCode(firestore, code);
         if (!marketer) return reply(res, 400, { error: 'MARKETER_CODE_INACTIVE' });
-        resolved = await resolveBookingRule(firestore, { marketerId: marketer.id, eventId });
+        resolved = await resolveBookingRule(firestore, { marketerId: marketer.id, eventId, eventReference: text(event.eventRef || event.adNumber || '') });
       }
       const quote = marketer ? (resolved.rule ? calculateConversion(originalAmount, resolved.rule) : noMarketingQuote(originalAmount)) : noMarketingQuote(originalAmount);
       const refNumber = text(incoming.refNumber, 80);
