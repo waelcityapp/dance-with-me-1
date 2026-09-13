@@ -36,6 +36,7 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
   const [reference, setReference] = useState('');
   const [eventDiscount, setEventDiscount] = useState<FormValue>(emptyValue);
   const [eventReward, setEventReward] = useState<FormValue>(emptyValue);
+  const [eventTarget, setEventTarget] = useState<'advertisement' | 'booking'>('booking');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
 
@@ -73,7 +74,7 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
       await marketerRulesApi.save({
         marketerId: marketer.id,
         scope,
-        targetType: scope === 'event' ? 'event' : defaultTarget,
+        targetType: scope === 'event' ? eventTarget : defaultTarget,
         targetId: scope === 'event' ? matchedEvent!.id : 'default',
         targetReference: scope === 'event' ? String(matchedEvent!.eventRef || matchedEvent!.adNumber || '') : '',
         customerDiscount: { type: discount.type, value: Number(discount.value || 0) },
@@ -110,6 +111,7 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
       setReference(rule.targetReference || '');
       setEventDiscount(discount);
       setEventReward(reward);
+      setEventTarget(rule.targetType === 'advertisement' ? 'advertisement' : 'booking');
       setStartsAt(rule.startsAt || '');
       setEndsAt(rule.endsAt || '');
     } else {
@@ -180,6 +182,11 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
         <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
           <h2 className="font-black flex items-center gap-2"><CalendarDays className="h-5 w-5 text-amber-500" /> اتفاق خاص بفاعلية</h2>
           <p className="mt-1 text-xs text-neutral-500">هذا الاتفاق له الأولوية على الإعداد الافتراضي.</p>
+          <label className="mt-5 block text-sm font-black">نوع العملية
+            <select value={eventTarget} onChange={(event) => setEventTarget(event.target.value as typeof eventTarget)} className="mt-2 h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-3">
+              <option value="booking">حجز فعالية</option><option value="advertisement">إضافة إعلان</option>
+            </select>
+          </label>
           <label className="mt-5 block text-sm font-black">الرقم المرجعي للفاعلية
             <div className="relative mt-2"><Search className="absolute right-3 top-3.5 h-4 w-4 text-neutral-400" /><input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="مثال: 3869" className="h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 pr-10 pl-3" /></div>
           </label>
@@ -200,7 +207,7 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
         {loading ? <p className="mt-4 text-sm text-neutral-500">جاري التحميل...</p> : rules.length === 0 ? <p className="mt-4 text-sm text-neutral-500">لا توجد اتفاقات محفوظة لهذا المسوق.</p> : <div className="mt-4 grid gap-3">{rules.map((rule) => (
           <article key={rule.id} className="rounded-2xl border border-neutral-200 dark:border-neutral-700 p-3 flex flex-col sm:flex-row gap-3 sm:items-center">
             {rule.eventSnapshot ? <img src={rule.eventSnapshot.thumbnailUrl || rule.eventSnapshot.mediaUrl} alt="" className="h-16 w-20 rounded-xl object-cover" /> : <div className="h-16 w-20 rounded-xl bg-amber-500/10 flex items-center justify-center"><Tag className="text-amber-500" /></div>}
-            <div className="min-w-0 flex-1"><div className="font-black truncate">{rule.eventSnapshot?.titleAr || (rule.targetType === 'advertisement' ? 'افتراضي: إضافة إعلان' : 'افتراضي: حجز فاعلية')}</div><div className="mt-1 text-xs text-neutral-500">{rule.targetReference ? `مرجع #${rule.targetReference} · ` : ''}خصم {valueText(rule.customerDiscount)} · عمولة {valueText(rule.marketerReward)}</div><span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${rule.active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-neutral-500/10 text-neutral-500'}`}>{rule.active ? 'نشط' : 'متوقف'}</span></div>
+            <div className="min-w-0 flex-1"><div className="font-black truncate">{rule.eventSnapshot?.titleAr || (rule.scope === 'event' ? (rule.targetType === 'advertisement' ? 'اتفاق خاص: إضافة إعلان' : 'اتفاق خاص: حجز فعالية') : (rule.targetType === 'advertisement' ? 'افتراضي: إضافة إعلان' : 'افتراضي: حجز فعالية'))}</div><div className="mt-1 text-xs text-neutral-500">{rule.targetReference ? `مرجع #${rule.targetReference} · ` : ''}خصم {valueText(rule.customerDiscount)} · عمولة {valueText(rule.marketerReward)}</div><span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${rule.active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-neutral-500/10 text-neutral-500'}`}>{rule.active ? 'نشط' : 'متوقف'}</span></div>
             <div className="flex gap-2"><button type="button" onClick={() => editRule(rule)} className="h-10 rounded-xl border border-neutral-200 dark:border-neutral-700 px-3 text-xs font-black flex items-center justify-center gap-2"><Pencil className="h-4 w-4" />تعديل</button><button type="button" disabled={saving} onClick={() => void toggleRule(rule)} className="h-10 rounded-xl border border-neutral-200 dark:border-neutral-700 px-3 text-xs font-black flex items-center justify-center gap-2">{rule.active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}{rule.active ? 'إيقاف' : 'تفعيل'}</button></div>
           </article>
         ))}</div>}
