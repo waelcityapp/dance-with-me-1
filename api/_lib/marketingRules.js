@@ -19,13 +19,13 @@ export async function findActiveMarketerByCode(firestore, code) {
   return { id: marketer.id, code: normalized, data };
 }
 
-export async function resolveBookingRule(firestore, { marketerId, eventId, at = new Date() }) {
+export async function resolveBookingRule(firestore, { marketerId, eventId, eventReference, at = new Date() }) {
   const snapshot = await firestore.collection('marketer_rules').where('marketerId', '==', marketerId).limit(100).get();
   const rules = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))
-    .filter((rule) => rule.configurationSource === 'admin_marketer_settings' && inWindow(rule, at));
+    .filter((rule) => rule.testMode !== true && inWindow(rule, at));
 
   const specific = rules
-    .filter((rule) => (rule.targetType === 'booking' || rule.targetType === 'event') && rule.targetId === eventId)
+     .filter((rule) => (rule.targetType === 'booking' || rule.targetType === 'event') && (rule.targetId === eventId || (eventReference && String(rule.targetReference || '').trim() === String(eventReference).trim())))
     .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))[0];
   if (specific) return { rule: specific, reason: 'marketer_event_booking' };
 
