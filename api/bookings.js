@@ -25,7 +25,7 @@ function noMarketingQuote(amount) {
   return { originalAmount: amount, customerDiscount: 0, customerFinalAmount: amount, marketerReward: 0 };
 }
 
-async function settleCommission(tx, firestore, booking, nextStatus) {
+export async function settleCommission(tx, firestore, booking, nextStatus) {
   const ledgerId = String(booking.commissionLedgerId || '').trim();
   const marketerId = String(booking.marketerId || '').trim();
   const amount = Number(booking.marketerCommissionAmount || 0);
@@ -33,10 +33,13 @@ async function settleCommission(tx, firestore, booking, nextStatus) {
 
   const ledgerRef = firestore.collection('marketer_ledger').doc(ledgerId);
   const ledgerSnap = await tx.get(ledgerRef);
-  if (!ledgerSnap.exists || ledgerSnap.data()?.status !== 'pending') return;
+  if (!ledgerSnap.exists) return;
+  const currentStatus = ledgerSnap.data()?.status;
+  if (currentStatus === nextStatus || currentStatus === 'reversed') return;
+  if (currentStatus !== 'pending' && currentStatus !== 'available') return;
 
   const userRef = firestore.collection('users').doc(marketerId);
-  if (nextStatus === 'available') {
+  if (nextStatus === 'available' && currentStatus === 'pending') {
     tx.update(ledgerRef, { status: 'available', approvedAt: new Date().toISOString() });
     tx.set(userRef, {
       marketerWalletPending: admin.firestore.FieldValue.increment(-amount),
@@ -44,7 +47,10 @@ async function settleCommission(tx, firestore, booking, nextStatus) {
     }, { merge: true });
   } else if (nextStatus === 'reversed') {
     tx.update(ledgerRef, { status: 'reversed', reversedAt: new Date().toISOString(), reversalReason: booking.status });
-    tx.set(userRef, { marketerWalletPending: admin.firestore.FieldValue.increment(-amount) }, { merge: true });
+    tx.set(userRef, {
+      [currentStatus === 'available' ? 'marketerWalletAvailable' : 'marketerWalletPending']:
+        admin.firestore.FieldValue.increment(-amount),
+    }, { merge: true });
   }
 }
 
@@ -66,7 +72,12 @@ export default async function handler(req, res) {
       const existing = await bookingRef.get();
       if (!existing.exists) return reply(res, 404, { error: 'BOOKING_NOT_FOUND' });
       if (!isAdmin && existing.data()?.userId !== actor.uid) return reply(res, 403, { error: 'FORBIDDEN' });
-      await bookingRef.delete();
+      await firestore.runTransaction(async (tx) => {
+        const fresh = await tx.get(bookingRef);
+        if (!fresh.exists) return;
+        await settleCommission(tx, firestore, fresh.data() || {}, 'reversed');
+        tx.delete(bookingRef);
+      });
       return reply(res, 200, { ok: true });
     }
 
