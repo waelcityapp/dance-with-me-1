@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
     if (action === 'save') {
       const scope = req.body?.scope === 'event' ? 'event' : 'default';
-      const targetType = scope === 'event' ? 'event' : (req.body?.targetType === 'booking' ? 'booking' : 'advertisement');
+      const targetType = req.body?.targetType === 'booking' ? 'booking' : 'advertisement';
       let targetId = 'default';
       let targetReference = '';
       let eventSnapshot;
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
         active: req.body?.active !== false,
         startsAt: String(req.body?.startsAt || ''), endsAt: String(req.body?.endsAt || ''),
         eventSnapshot: eventSnapshot || null,
-        configurationSource: 'admin_marketer_settings', appliedToLivePricing: false,
+        configurationSource: 'admin_marketer_settings', appliedToLivePricing: true,
         updatedAt: now(), updatedBy: adminId,
       };
       await firestore.collection('marketer_rules').doc(ruleId).set(rule, { merge: true });
