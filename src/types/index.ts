@@ -251,8 +251,18 @@ export interface EventBooking {
   userPhone: string;
   numberOfIndividuals: number;
   totalAmount: number;
+  originalTotalAmount?: number;
+  marketingDiscountAmount?: number;
   receiptImage: string;
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  marketerCode?: string;
+  marketerId?: string;
+  marketerRuleId?: string;
+  marketerRuleReason?: string;
+  marketerCommissionAmount?: number;
+  commissionStatus?: 'none' | 'pending' | 'available' | 'reversed';
+  commissionLedgerId?: string;
+  marketingRuleSnapshot?: Record<string, unknown> | null;
   userRead?: boolean;
   refNumber: string;
   submittedAt: string;
