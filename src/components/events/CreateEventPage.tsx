@@ -2407,21 +2407,45 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         className="h-12 min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-4 font-mono text-sm font-black tracking-wider text-neutral-900 outline-none focus:border-emerald-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
                       />
                       {marketerCodeInput && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMarketerCodeInput('');
-                            setVerifiedMarketer(null);
-                            setMarketerCodeStatus('idle');
-                          }}
-                          className="h-12 rounded-xl border border-neutral-300 px-4 text-xs font-black text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                        >
-                          {lang === 'ar' ? 'مسح الكود' : 'Clear code'}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const code = marketerCodeInput.trim().toUpperCase();
+                              if (!code) return;
+                              setMarketerCodeStatus('checking');
+                              try {
+                                const result = await validateMarketerCode(code);
+                                setVerifiedMarketer({ code: result.code, marketerId: result.marketerId });
+                                setMarketerCodeStatus('valid');
+                              } catch {
+                                setVerifiedMarketer(null);
+                                setMarketerCodeStatus('invalid');
+                              }
+                            }}
+                            disabled={marketerCodeStatus === 'checking'}
+                            className="h-12 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 text-xs font-black text-emerald-700 hover:bg-emerald-500/20 disabled:cursor-wait disabled:opacity-60 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                          >
+                            {marketerCodeStatus === 'checking'
+                              ? (lang === 'ar' ? 'جارٍ التحقق...' : 'Checking...')
+                              : (lang === 'ar' ? 'تحقق من الكود' : 'Verify code')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMarketerCodeInput('');
+                              setVerifiedMarketer(null);
+                              setMarketerCodeStatus('idle');
+                            }}
+                            className="h-12 rounded-xl border border-neutral-300 px-4 text-xs font-black text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                          >
+                            {lang === 'ar' ? 'مسح الكود' : 'Clear code'}
+                          </button>
+                        </>
                       )}
                     </div>
                     {marketerCodeStatus === 'checking' && <p className="mt-2 text-xs font-bold text-amber-600 dark:text-amber-400">{lang === 'ar' ? 'جارٍ التحقق من الكود...' : 'Checking code...'}</p>}
-                    {marketerCodeStatus === 'valid' && <p className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ {lang === 'ar' ? 'تم قبول كود المسوق وربطه بطلب الإعلان.' : 'Marketer code accepted and linked to the ad request.'}</p>}
+                    {marketerCodeStatus === 'valid' && <p className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ {lang === 'ar' ? 'كود المسوق فعال.' : 'Marketer code is active.'}</p>}
                     {marketerCodeStatus === 'invalid' && <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">{lang === 'ar' ? 'الكود غير صحيح أو المسوق غير نشط. امسح الكود للمتابعة بدونه.' : 'The code is invalid or inactive. Clear it to continue without a code.'}</p>}
                   </div>
                 </div>
