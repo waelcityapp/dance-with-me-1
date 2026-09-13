@@ -2378,7 +2378,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
 
           {/* Optional marketer attribution for paid and free ad submissions. */}
-          {!editingEvent && !user?.isAdmin && !isAdminUnlocked && (
+          {!editingEvent && (
             <div className="space-y-3 border-t border-amber-200/60 dark:border-white/10 pt-6">
               <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/5 p-5 sm:p-6 shadow-sm">
                 <div className="flex items-start gap-3">
