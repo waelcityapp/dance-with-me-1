@@ -5,6 +5,7 @@ import {
   Camera, Ticket, QrCode, AlertTriangle, Info, Calendar, DollarSign, Clock, ExternalLink
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { validateMarketerCode } from '../../lib/marketerCodeApi';
 
 export const BookingModal: React.FC = () => {
   const { 
@@ -24,6 +25,8 @@ export const BookingModal: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [bookingResult, setBookingResult] = useState<any | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [marketerCodeInput, setMarketerCodeInput] = useState('');
+  const [marketerCodeStatus, setMarketerCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
 
   // Reset local state when modal opens/closes
   useEffect(() => {
@@ -35,6 +38,8 @@ export const BookingModal: React.FC = () => {
       setBookingResult(null);
       setIsSubmitting(false);
       setCopiedLink(false);
+      setMarketerCodeInput('');
+      setMarketerCodeStatus('idle');
     }
   }, [selectedBookingEvent]);
 
@@ -96,6 +101,21 @@ export const BookingModal: React.FC = () => {
 
   const INSTAPAY_LINK = 'https://ipn.eg/S/wael1011/instapay/2dvaYQ';
   const INSTAPAY_HANDLE = 'wael1011@instapay';
+
+  const handleVerifyMarketerCode = async () => {
+    const code = marketerCodeInput.trim().toUpperCase();
+    if (!code) {
+      setMarketerCodeStatus('idle');
+      return;
+    }
+    setMarketerCodeStatus('checking');
+    try {
+      await validateMarketerCode(code);
+      setMarketerCodeStatus('valid');
+    } catch {
+      setMarketerCodeStatus('invalid');
+    }
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(INSTAPAY_LINK);
@@ -355,6 +375,49 @@ export const BookingModal: React.FC = () => {
                   <p className="text-xs text-red-500/90 flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
                     {isArabic ? 'يرجى إدخال رقم هاتف صحيح مكون من 11 رقم' : 'Please enter a valid 11-digit mobile number'}
+                  </p>
+                )}
+              </div>
+
+              {/* Marketer Code: Manual validation only */}
+              <div className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
+                <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-amber-500" />
+                  {isArabic ? 'كود المسوق (اختياري)' : 'Marketer Code (Optional)'}
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={marketerCodeInput}
+                    onChange={(e) => {
+                      setMarketerCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32));
+                      setMarketerCodeStatus('idle');
+                    }}
+                    placeholder={isArabic ? 'اكتب الكود يدويًا' : 'Enter code manually'}
+                    className="min-w-0 flex-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition font-mono text-sm"
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyMarketerCode}
+                    disabled={!marketerCodeInput.trim() || marketerCodeStatus === 'checking'}
+                    className="rounded-xl border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm font-bold text-amber-300 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {marketerCodeStatus === 'checking'
+                      ? (isArabic ? 'جارٍ التحقق...' : 'Checking...')
+                      : (isArabic ? 'تحقق' : 'Verify')}
+                  </button>
+                </div>
+                {marketerCodeStatus === 'valid' && (
+                  <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    {isArabic ? 'الكود فعال' : 'Code is active'}
+                  </p>
+                )}
+                {marketerCodeStatus === 'invalid' && (
+                  <p className="text-xs font-semibold text-red-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {isArabic ? 'الكود غير فعال أو غير موجود' : 'Code is inactive or not found'}
                   </p>
                 )}
               </div>
