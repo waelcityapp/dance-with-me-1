@@ -28,6 +28,7 @@ export const BookingModal: React.FC = () => {
   const [marketerCodeInput, setMarketerCodeInput] = useState('');
   const [marketerCodeStatus, setMarketerCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
   const [customerDiscount, setCustomerDiscount] = useState(0);
+  const [quoteWarning, setQuoteWarning] = useState(false);
 
   // Reset local state when modal opens/closes
   useEffect(() => {
@@ -42,6 +43,7 @@ export const BookingModal: React.FC = () => {
       setMarketerCodeInput('');
       setMarketerCodeStatus('idle');
       setCustomerDiscount(0);
+      setQuoteWarning(false);
     }
   }, [selectedBookingEvent]);
 
@@ -88,8 +90,8 @@ export const BookingModal: React.FC = () => {
     if (!selectedBookingEvent || marketerCodeStatus !== 'valid' || !marketerCodeInput.trim()) return;
     let cancelled = false;
     fetchMarketingQuote(marketerCodeInput.trim(), selectedBookingEvent.id, individuals)
-      .then((quote) => { if (!cancelled) setCustomerDiscount(quote.customerDiscount); })
-      .catch(() => { if (!cancelled) setCustomerDiscount(0); });
+      .then((quote) => { if (!cancelled) { setCustomerDiscount(quote.customerDiscount); setQuoteWarning(quote.ruleReason === 'no_applicable_rule'); } })
+      .catch(() => { if (!cancelled) { setCustomerDiscount(0); setQuoteWarning(true); setMarketerCodeStatus('invalid'); } });
     return () => { cancelled = true; };
   }, [individuals, marketerCodeStatus, marketerCodeInput, selectedBookingEvent?.id]);
 
@@ -109,7 +111,7 @@ export const BookingModal: React.FC = () => {
 
   const isPhoneValid = phone.trim().length >= 11 && /^\d+$/.test(phone.trim());
   const isNameValid = name.trim().split(' ').filter(Boolean).length >= 2;
-  const isMarketerCodeValid = !marketerCodeInput.trim() || marketerCodeStatus === 'valid';
+  const isMarketerCodeValid = !marketerCodeInput.trim() || (marketerCodeStatus === 'valid' && !quoteWarning);
   const isFormValid = isNameValid && isPhoneValid && receiptImage !== null && isMarketerCodeValid && !isSubmitting;
 
   const INSTAPAY_LINK = 'https://ipn.eg/S/wael1011/instapay/2dvaYQ';
@@ -126,9 +128,11 @@ export const BookingModal: React.FC = () => {
       await validateMarketerCode(code);
       const quote = await fetchMarketingQuote(code, selectedBookingEvent.id, individuals);
       setCustomerDiscount(quote.customerDiscount);
+      setQuoteWarning(quote.ruleReason === 'no_applicable_rule');
       setMarketerCodeStatus('valid');
     } catch {
       setCustomerDiscount(0);
+      setQuoteWarning(true);
       setMarketerCodeStatus('invalid');
     }
   };
@@ -409,6 +413,7 @@ export const BookingModal: React.FC = () => {
                     onChange={(e) => {
                       setMarketerCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32));
                       setCustomerDiscount(0);
+                      setQuoteWarning(false);
                       setMarketerCodeStatus('idle');
                     }}
                     placeholder={isArabic ? 'اكتب الكود يدويًا' : 'Enter code manually'}
@@ -426,10 +431,15 @@ export const BookingModal: React.FC = () => {
                       : (isArabic ? 'تحقق' : 'Verify')}
                   </button>
                 </div>
-                {marketerCodeStatus === 'valid' && (
+                {marketerCodeStatus === 'valid' && !quoteWarning && (
                   <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
                     <CheckCircle className="w-3.5 h-3.5" />
                     {isArabic ? 'الكود فعال' : 'Code is active'}
+                  </p>
+                )}
+                {marketerCodeStatus === 'valid' && quoteWarning && (
+                  <p className="text-xs font-semibold text-amber-600 dark:text-amber-400" role="alert">
+                    {isArabic ? 'الكود فعال، لكن لا يوجد اتفاق حجز ينطبق على هذه الفعالية. لن يُطبّق خصم؛ راجع الإدارة قبل الدفع.' : 'The code is active, but no booking agreement applies to this event. No discount will be applied; check with the organizer before paying.'}
                   </p>
                 )}
                 {marketerCodeStatus === 'invalid' && (
