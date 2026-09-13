@@ -21,3 +21,26 @@ export async function validateMarketerCode(code: string): Promise<ValidatedMarke
   if (!response.ok || !body.valid) throw new Error(body.error || 'INVALID_MARKETER_CODE');
   return { code: String(body.code), marketerId: String(body.marketerId) };
 }
+
+export type MarketingQuote = {
+  originalAmount: number;
+  customerDiscount: number;
+  customerFinalAmount: number;
+  marketerReward: number;
+  code: string;
+  marketerId: string;
+  ruleReason: string;
+};
+
+export async function fetchMarketingQuote(code: string, eventId: string, quantity: number): Promise<MarketingQuote> {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error('AUTH_REQUIRED');
+  const response = await fetch('/api/marketing-quote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ code, eventId, quantity }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.ok) throw new Error(body.error || 'MARKETING_QUOTE_FAILED');
+  return body as MarketingQuote;
+}
