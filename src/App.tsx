@@ -26,7 +26,7 @@ import { PushPermissionPrompt } from './components/pwa/PushPermissionPrompt';
 import { FloatingNotificationBanner } from './components/pwa/FloatingNotificationBanner';
 import { AdViewsDetailsModal } from './components/modals/AdViewsDetailsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
-import { MarketersManagement } from './components/admin/MarketersManagement';
+import { MarketerAdminWorkspace } from './components/admin/MarketerAdminWorkspace';
 import { MarketerWalletPage } from './components/marketer/MarketerWalletPage';
 import { MainHeroHeaderBanner } from './components/home/MainHeroHeaderBanner';
 import { WhyBookModal } from './components/modals/WhyBookModal';
@@ -207,7 +207,7 @@ const AppContent: React.FC = () => {
           {lang === 'ar' ? 'قسم المسوقين' : 'Marketers Section'}
         </h4>
         <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
-          {lang === 'ar' ? 'البحث عن المسوقين وتفعيل أو إيقاف الحسابات' : 'Search, activate & pause marketer accounts'}
+          {lang === 'ar' ? 'التعيين والخطط العامة ومراجعة الحسابات' : 'Assignments, general plans & accounts'}
         </p>
       </div>
       <div className="mt-1 flex items-center justify-end text-[10px] font-black text-orange-600 dark:text-orange-400 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -317,7 +317,7 @@ const AppContent: React.FC = () => {
             )}
             {activeTab === 'admin' && (
               adminWorkspace === 'marketers' ? (
-                <MarketersManagement onBack={() => setAdminWorkspace('main')} />
+                <MarketerAdminWorkspace onBack={() => setAdminWorkspace('main')} />
               ) : (
                 <>
                   <AdminPanel />
