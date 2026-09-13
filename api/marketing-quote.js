@@ -27,8 +27,9 @@ export default async function handler(req, res) {
     if (!marketer) return reply(res, 404, { ok: false, error: 'MARKETER_CODE_INACTIVE' });
     const eventSnap = await firestore.collection('events').doc(eventId).get();
     if (!eventSnap.exists) return reply(res, 404, { ok: false, error: 'EVENT_NOT_FOUND' });
-    const originalAmount = Math.round(eventUnitPrice(eventSnap.data()) * quantity * 100) / 100;
-    const resolved = await resolveBookingRule(firestore, { marketerId: marketer.id, eventId });
+    const event = eventSnap.data() || {};
+    const originalAmount = Math.round(eventUnitPrice(event) * quantity * 100) / 100;
+    const resolved = await resolveBookingRule(firestore, { marketerId: marketer.id, eventId, eventReference: text(event.eventRef || event.adNumber || '') });
     const quote = marketingQuote(originalAmount, resolved.rule);
     return reply(res, 200, { ok: true, code: marketer.code, marketerId: marketer.id, ...quote, ruleReason: resolved.reason });
   } catch (error) {
