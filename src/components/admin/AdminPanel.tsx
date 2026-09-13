@@ -3385,8 +3385,15 @@ export const AdminPanel: React.FC = () => {
                                   const code = typedVal || `DWM-${b.refNumber.replace('#', '')}`;
                                   const qrUrl = 'https://cityeve.online' + '/?verify=' + b.id;
                                   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
-                                  await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
-                                  setActionLoading(null);
+                                  try {
+                                    const approved = await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
+                                    if (!approved) alert(lang === 'ar' ? 'تعذر تأكيد الحجز. راجع الاتصال وصلاحية الإدارة، ثم حاول مجددًا.' : 'Could not confirm this booking. Check your connection and admin access, then try again.');
+                                  } catch (error) {
+                                    console.error('Booking approval failed:', error);
+                                    alert(lang === 'ar' ? 'حدث خطأ أثناء تأكيد الحجز.' : 'An error occurred while confirming the booking.');
+                                  } finally {
+                                    setActionLoading(null);
+                                  }
                                 }}
                                 disabled={actionLoading !== null}
                                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-neutral-950 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
