@@ -1029,10 +1029,32 @@ export async function saveBookingToFirestore(booking: EventBooking): Promise<boo
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ action: 'save', booking: sanitizeForFirestore(booking) }),
     });
+    if (!response.ok) console.error('Booking API rejected request:', response.status, await response.text());
     return response.ok;
   } catch (error) {
     console.error('Error saving booking to Firestore:', error);
     return false;
+  }
+}
+
+export async function createBookingToFirestore(booking: EventBooking): Promise<EventBooking | null> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return null;
+  try {
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await currentUser.getIdToken()}` },
+      body: JSON.stringify({ action: 'save', booking: sanitizeForFirestore(booking) }),
+    });
+    if (!response.ok) {
+      console.error('Booking API rejected request:', response.status, await response.text());
+      return null;
+    }
+    const result = await response.json();
+    return result.booking as EventBooking;
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    return null;
   }
 }
 
