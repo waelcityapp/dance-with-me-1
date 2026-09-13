@@ -5,7 +5,7 @@ import {
   Camera, Ticket, QrCode, AlertTriangle, Info, Calendar, DollarSign, Clock, ExternalLink
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { validateMarketerCode } from '../../lib/marketerCodeApi';
+import { fetchMarketingQuote, validateMarketerCode } from '../../lib/marketerCodeApi';
 
 export const BookingModal: React.FC = () => {
   const { 
@@ -27,6 +27,7 @@ export const BookingModal: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [marketerCodeInput, setMarketerCodeInput] = useState('');
   const [marketerCodeStatus, setMarketerCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [customerDiscount, setCustomerDiscount] = useState(0);
 
   // Reset local state when modal opens/closes
   useEffect(() => {
@@ -40,6 +41,7 @@ export const BookingModal: React.FC = () => {
       setCopiedLink(false);
       setMarketerCodeInput('');
       setMarketerCodeStatus('idle');
+      setCustomerDiscount(0);
     }
   }, [selectedBookingEvent]);
 
@@ -82,6 +84,15 @@ export const BookingModal: React.FC = () => {
     return () => window.removeEventListener('paste', handlePaste);
   }, [selectedBookingEvent]);
 
+  useEffect(() => {
+    if (!selectedBookingEvent || marketerCodeStatus !== 'valid' || !marketerCodeInput.trim()) return;
+    let cancelled = false;
+    fetchMarketingQuote(marketerCodeInput.trim(), selectedBookingEvent.id, individuals)
+      .then((quote) => { if (!cancelled) setCustomerDiscount(quote.customerDiscount); })
+      .catch(() => { if (!cancelled) setCustomerDiscount(0); });
+    return () => { cancelled = true; };
+  }, [individuals, marketerCodeStatus, marketerCodeInput, selectedBookingEvent?.id]);
+
   if (!selectedBookingEvent) return null;
 
   // Extract event price and parse it to numerical value
@@ -94,6 +105,7 @@ export const BookingModal: React.FC = () => {
 
   const basePrice = parsePrice(selectedBookingEvent.priceAr, selectedBookingEvent.priceEn);
   const totalAmount = basePrice * individuals;
+  const customerTotal = Math.max(0, totalAmount - customerDiscount);
 
   const isPhoneValid = phone.trim().length >= 11 && /^\d+$/.test(phone.trim());
   const isNameValid = name.trim().split(' ').filter(Boolean).length >= 2;
@@ -112,8 +124,11 @@ export const BookingModal: React.FC = () => {
     setMarketerCodeStatus('checking');
     try {
       await validateMarketerCode(code);
+      const quote = await fetchMarketingQuote(code, selectedBookingEvent.id, individuals);
+      setCustomerDiscount(quote.customerDiscount);
       setMarketerCodeStatus('valid');
     } catch {
+      setCustomerDiscount(0);
       setMarketerCodeStatus('invalid');
     }
   };
@@ -219,7 +234,8 @@ export const BookingModal: React.FC = () => {
         numberOfIndividuals: individuals,
         totalAmount: totalAmount,
         receiptImage: receiptImage!,
-        eventDate: selectedBookingEvent.eventDate
+        eventDate: selectedBookingEvent.eventDate,
+        marketerCode: marketerCodeInput.trim() || undefined
       });
 
       if (result) {
@@ -392,6 +408,7 @@ export const BookingModal: React.FC = () => {
                     value={marketerCodeInput}
                     onChange={(e) => {
                       setMarketerCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32));
+                      setCustomerDiscount(0);
                       setMarketerCodeStatus('idle');
                     }}
                     placeholder={isArabic ? 'اكتب الكود يدويًا' : 'Enter code manually'}
@@ -461,12 +478,22 @@ export const BookingModal: React.FC = () => {
                       {basePrice} {isArabic ? 'ج.م' : 'EGP'}
                     </span>
                   </div>
+                  {customerDiscount > 0 && (
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-neutral-200 dark:border-zinc-800/60">
+                      <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                        {isArabic ? 'خصم كود المسوق:' : 'Marketer code discount:'}
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                        -{customerDiscount} {isArabic ? 'ج.م' : 'EGP'}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center mt-2 pt-2 border-t border-neutral-200 dark:border-zinc-800/60">
                     <span className="text-sm text-neutral-900 dark:text-zinc-100 font-medium">
                       {isArabic ? 'إجمالي المبلغ المستحق:' : 'Total Amount Due:'}
                     </span>
                     <span className="text-xl font-bold text-amber-500 font-mono">
-                      {totalAmount} {isArabic ? 'ج.م' : 'EGP'}
+                      {customerTotal} {isArabic ? 'ج.م' : 'EGP'}
                     </span>
                   </div>
                 </div>
