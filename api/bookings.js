@@ -166,8 +166,8 @@ export default async function handler(req, res) {
         const fresh = await tx.get(bookingRef);
         if (!fresh.exists) throw new Error('BOOKING_NOT_FOUND');
         const freshBooking = fresh.data() || {};
-        tx.set(bookingRef, update, { merge: true });
         await settleCommission(tx, firestore, freshBooking, nextStatus === 'approved' ? 'available' : 'reversed');
+        tx.set(bookingRef, update, { merge: true });
       });
       return reply(res, 200, { ok: true });
     }
@@ -177,8 +177,8 @@ export default async function handler(req, res) {
         const fresh = await tx.get(bookingRef);
         if (!fresh.exists) throw new Error('BOOKING_NOT_FOUND');
         const freshBooking = fresh.data() || {};
-        tx.set(bookingRef, { status: 'cancelled', userRead: false, cancelledAt: new Date().toISOString() }, { merge: true });
         await settleCommission(tx, firestore, freshBooking, 'reversed');
+        tx.set(bookingRef, { status: 'cancelled', userRead: false, cancelledAt: new Date().toISOString() }, { merge: true });
       });
       return reply(res, 200, { ok: true });
     }
