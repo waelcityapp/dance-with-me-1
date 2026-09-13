@@ -256,7 +256,7 @@ export const BookingModal: React.FC = () => {
           </div>
           <button 
             onClick={() => setSelectedBookingEvent(null)}
-            className="p-1.5 rounded-lg text-neutral-500 dark:text-zinc-400 hover:text-neutral-900 dark:text-zinc-100 hover:bg-neutral-200 dark:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-neutral-500 dark:text-zinc-400 hover:text-neutral-900 dark:hover:text-zinc-100 hover:bg-neutral-200 dark:hover:bg-zinc-800 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -435,7 +435,7 @@ export const BookingModal: React.FC = () => {
                       type="button"
                       disabled={individuals <= 1}
                       onClick={() => setIndividuals(prev => Math.max(1, prev - 1))}
-                      className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-zinc-900 text-neutral-700 dark:text-zinc-300 hover:bg-neutral-200 dark:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-neutral-100 dark:bg-zinc-900 rounded-lg font-bold text-lg transition"
+                      className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-zinc-900 text-neutral-700 dark:text-zinc-300 hover:bg-neutral-200 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-neutral-100 dark:bg-zinc-900 rounded-lg font-bold text-lg transition"
                     >
                       -
                     </button>
@@ -445,7 +445,7 @@ export const BookingModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setIndividuals(prev => prev + 1)}
-                      className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-zinc-900 text-neutral-700 dark:text-zinc-300 hover:bg-neutral-200 dark:bg-zinc-800 rounded-lg font-bold text-lg transition"
+                      className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-zinc-900 text-neutral-700 dark:text-zinc-300 hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded-lg font-bold text-lg transition"
                     >
                       +
                     </button>
@@ -593,7 +593,7 @@ export const BookingModal: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => document.getElementById('receipt-file-input')?.click()}
-                        className="py-1 px-3 bg-neutral-100 dark:bg-zinc-900 hover:bg-neutral-200 dark:bg-zinc-800 text-neutral-800 dark:text-zinc-200 rounded-lg text-xs transition"
+                        className="py-1 px-3 bg-neutral-100 dark:bg-zinc-900 hover:bg-neutral-200 dark:hover:bg-zinc-800 text-neutral-800 dark:text-zinc-200 rounded-lg text-xs transition"
                       >
                         {isArabic ? 'تغيير الصورة' : 'Change Image'}
                       </button>
@@ -619,7 +619,7 @@ export const BookingModal: React.FC = () => {
                 type="button"
                 disabled={!isFormValid || isSubmitting}
                 onClick={handleSubmit}
-                className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 disabled:bg-neutral-200 dark:bg-zinc-800 disabled:opacity-50 disabled:text-neutral-400 dark:text-zinc-500 text-black font-bold rounded-xl transition flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 disabled:bg-neutral-200 dark:disabled:bg-zinc-800 disabled:opacity-50 disabled:text-neutral-400 dark:disabled:text-zinc-500 text-black font-bold rounded-xl transition flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -759,7 +759,7 @@ export const BookingModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedBookingEvent(null)}
-                className="py-2.5 px-6 bg-neutral-200 dark:bg-zinc-800 hover:bg-zinc-700 text-neutral-800 dark:text-zinc-200 hover:text-white rounded-xl text-sm transition font-sans font-medium"
+                className="py-2.5 px-6 bg-neutral-200 dark:bg-zinc-800 hover:bg-zinc-700 dark:hover:bg-zinc-700 text-neutral-800 dark:text-zinc-200 hover:text-white rounded-xl text-sm transition font-sans font-medium"
               >
                 {isArabic ? 'العودة للصفحة الرئيسية' : 'Return to Home Page'}
               </button>
