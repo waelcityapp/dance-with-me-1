@@ -125,6 +125,7 @@ interface AppContextType {
     numberOfIndividuals: number;
     totalAmount: number;
     receiptImage: string;
+    marketerCode?: string;
     eventDate?: string;
   }) => Promise<EventBooking | null>;
   approveBooking: (bookingId: string, barcodeUrl: string, accessCode: string, discountAmount: number, adminNotes?: string) => Promise<boolean>;
@@ -1085,7 +1086,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'pending',
       refNumber,
       submittedAt: new Date().toISOString(),
-      eventDate: bookingData.eventDate
+      eventDate: bookingData.eventDate,
+      marketerCode: bookingData.marketerCode || '',
     };
 
     const success = await saveBookingToFirestore(newBooking);
