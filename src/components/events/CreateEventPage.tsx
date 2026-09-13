@@ -2441,7 +2441,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                           {lang === 'ar' ? 'مسح الكود' : 'Clear code'}
                         </button>
                       )}
-{marketerCodeStatus === 'checking' && <p className="mt-2 text-xs font-bold text-amber-600 dark:text-amber-400">{lang === 'ar' ? 'جارٍ التحقق من الكود...' : 'Checking code...'}</p>}
+                    </div>
+                    {marketerCodeStatus === 'checking' && <p className="mt-2 text-xs font-bold text-amber-600 dark:text-amber-400">{lang === 'ar' ? 'جارٍ التحقق من الكود...' : 'Checking code...'}</p>}
                     {marketerCodeStatus === 'valid' && <p className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ {lang === 'ar' ? 'كود المسوق فعال.' : 'Marketer code is active.'}</p>}
                     {marketerCodeStatus === 'invalid' && <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">{lang === 'ar' ? 'الكود غير صحيح أو المسوق غير نشط. امسح الكود للمتابعة بدونه.' : 'The code is invalid or inactive. Clear it to continue without a code.'}</p>}
                   </div>
