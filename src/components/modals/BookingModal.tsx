@@ -97,7 +97,8 @@ export const BookingModal: React.FC = () => {
 
   const isPhoneValid = phone.trim().length >= 11 && /^\d+$/.test(phone.trim());
   const isNameValid = name.trim().split(' ').filter(Boolean).length >= 2;
-  const isFormValid = isNameValid && isPhoneValid && receiptImage !== null && !isSubmitting;
+  const isMarketerCodeValid = !marketerCodeInput.trim() || marketerCodeStatus === 'valid';
+  const isFormValid = isNameValid && isPhoneValid && receiptImage !== null && isMarketerCodeValid && !isSubmitting;
 
   const INSTAPAY_LINK = 'https://ipn.eg/S/wael1011/instapay/2dvaYQ';
   const INSTAPAY_HANDLE = 'wael1011@instapay';
