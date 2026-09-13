@@ -83,7 +83,7 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
         startsAt,
         endsAt,
       });
-      setMessage('تم حفظ الاتفاق بنجاح للتجربة. لا يغيّر السعر الحقيقي حاليًا.');
+      setMessage('تم حفظ الاتفاق. سيُطبق على الحجوزات المطابقة بعد التحقق من كود المسوّق.');
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'تعذر حفظ الاتفاق.');
