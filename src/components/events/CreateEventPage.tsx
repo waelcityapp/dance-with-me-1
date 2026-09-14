@@ -2370,10 +2370,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   </div>
                 </div>
               </div>
+          )}
             </div>
           </div>
-
-          )}
 
           {/* SECTION 6: Subscription Plan & Dynamic Calculation */}
           <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
