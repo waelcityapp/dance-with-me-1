@@ -703,7 +703,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             const rawSubtext = lang === 'ar'
               ? (event.bookingSubtextAr || event.priceAr || event.bookingSubtextEn || event.priceEn)
               : (event.bookingSubtextEn || event.priceEn || event.bookingSubtextAr || event.priceAr);
-            const cleanSubtext = rawSubtext && String(rawSubtext).trim() !== '0' ? String(rawSubtext).trim() : null;
+            const cleanSubtext = (event.priceAr?.trim() || event.priceEn?.trim()) && rawSubtext && String(rawSubtext).trim() !== '0' ? String(rawSubtext).trim() : null;
 
             return (
               <div className="w-full flex flex-col items-center gap-1 pt-0.5">
@@ -713,7 +713,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                   onClick={() => bookTicket(event.id)}
                   className="w-full flex h-11 items-center justify-center rounded-xl px-4 text-sm font-black transition-all bg-amber-500 text-neutral-950 hover:bg-amber-400 active:scale-[0.99] shadow-sm hover:shadow-md cursor-pointer"
                 >
-                  <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
+                  <span>{!event.priceAr?.trim() && !event.priceEn?.trim() ? (lang === 'ar' ? 'احجز باسمك' : 'Book by name') : (lang === 'ar' ? 'احجز الآن' : 'Book Now')}</span>
                 </motion.button>
                 {cleanSubtext && (
                   <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-400 text-center max-w-full leading-tight break-words" title={cleanSubtext}>

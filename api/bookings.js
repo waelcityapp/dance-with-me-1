@@ -89,8 +89,12 @@ export default async function handler(req, res) {
       const event = eventSnapshot.data() || {};
       const quantity = Math.max(1, Math.min(20, Math.trunc(Number(incoming.numberOfIndividuals || 1))));
       const unitPrice = eventUnitPrice(event);
+      const nameOnlyBooking = !String(event.priceAr || event.priceEn || event.price || event.ticketPrice || '').trim();
+      if (incoming.bookingMode && incoming.bookingMode !== (nameOnlyBooking ? 'name_only' : 'priced')) return reply(res, 409, { error: 'BOOKING_PRICE_CHANGED' });
+      if (!nameOnlyBooking && unitPrice <= 0) return reply(res, 400, { error: 'EVENT_PRICE_INVALID' });
+      if (nameOnlyBooking && text(incoming.receiptImage, 1500)) return reply(res, 400, { error: 'NAME_ONLY_RECEIPT_NOT_ALLOWED' });
       const originalAmount = Math.round(unitPrice * quantity * 100) / 100;
-      const code = text(incoming.marketerCode, 32).toUpperCase();
+      const code = nameOnlyBooking ? '' : text(incoming.marketerCode, 32).toUpperCase();
       let marketer = null;
       let resolved = { rule: null, reason: 'no_marketer_code' };
       if (code) {
@@ -103,6 +107,7 @@ export default async function handler(req, res) {
       const booking = {
         id: bookingId,
         eventId,
+        bookingMode: nameOnlyBooking ? 'name_only' : 'priced',
         eventTitleAr: text(event.titleAr || incoming.eventTitleAr),
         eventTitleEn: text(event.titleEn || incoming.eventTitleEn),
         eventPrice: unitPrice,
@@ -113,7 +118,7 @@ export default async function handler(req, res) {
         userName: text(incoming.userName, 120),
         userPhone: text(incoming.userPhone, 30),
         numberOfIndividuals: quantity,
-        receiptImage: text(incoming.receiptImage, 1500),
+        receiptImage: nameOnlyBooking ? '' : text(incoming.receiptImage, 1500),
         status: 'pending',
         refNumber,
         submittedAt: new Date().toISOString(),

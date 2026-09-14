@@ -325,8 +325,8 @@ export const AdminPanel: React.FC = () => {
   const [adminCategory, setAdminCategory] = useState<DanceCategory>('party');
   const [adminMediaType, setAdminMediaType] = useState<'video' | 'image'>('image');
   const [adminMediaUrl, setAdminMediaUrl] = useState('');
-  const [adminPriceAr, setAdminPriceAr] = useState('250 ج.م');
-  const [adminPriceEn, setAdminPriceEn] = useState('250 EGP');
+  const [adminPriceAr, setAdminPriceAr] = useState('');
+  const [adminPriceEn, setAdminPriceEn] = useState('');
   const [adminEventDate, setAdminEventDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
   const [adminPhone, setAdminPhone] = useState('+201011223344');
   const [adminWhatsapp, setAdminWhatsapp] = useState('201011223344');
@@ -770,8 +770,8 @@ export const AdminPanel: React.FC = () => {
         uploadDate: new Date().toISOString(),
         eventRef: newEventRef,
         eventDate: safeDateStr,
-        priceAr: (adminPriceAr || '').trim() || '250 ج.م',
-        priceEn: (adminPriceEn || '').trim() || '250 EGP',
+        priceAr: (adminPriceAr || '').trim(),
+        priceEn: (adminPriceEn || '').trim(),
         location: {
           nameAr: (adminLocationNameAr || '').trim() || 'أستوديو الرقص - الزمالك',
           nameEn: (adminLocationNameEn || '').trim() || 'Dance Studio - Zamalek',
@@ -1319,8 +1319,8 @@ export const AdminPanel: React.FC = () => {
         uploadDate: new Date().toISOString(),
         createdSource: 'approved_submission',
         eventDate: safeEventDate,
-        priceAr: sub.eventData?.priceAr || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'دخول مجاني' : `${sub.pricing.total} ج.م`) : '250 ج.م'),
-        priceEn: sub.eventData?.priceEn || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'Free Entry' : `${sub.pricing.total} EGP`) : '250 EGP'),
+        priceAr: sub.eventData?.priceAr?.trim() || '',
+        priceEn: sub.eventData?.priceEn?.trim() || '',
         location: sub.eventData?.location || {
           nameAr: 'القاهرة، مصر',
           nameEn: 'Cairo, Egypt',
@@ -3252,7 +3252,7 @@ export const AdminPanel: React.FC = () => {
                                   {lang === 'ar' ? 'سعر الفرد' : 'Price / Individual'}
                                 </span>
                                 <span className="text-xs font-extrabold text-neutral-300 mt-0.5 block font-mono">
-                                  {b.eventPrice} ج.م
+                                  {b.bookingMode === 'name_only' ? (lang === 'ar' ? 'لم يُحدَّد' : 'Not set') : `${b.eventPrice} ${lang === 'ar' ? 'ج.م' : 'EGP'}`}
                                 </span>
                               </div>
                               <div>
@@ -3260,7 +3260,7 @@ export const AdminPanel: React.FC = () => {
                                   {lang === 'ar' ? 'الإجمالي المطلوب' : 'Grand Total'}
                                 </span>
                                 <span className="text-xs font-black text-emerald-400 mt-0.5 block font-mono">
-                                  {String(b.totalAmount || 0)} ج.م
+                                  {b.bookingMode === 'name_only' ? (lang === 'ar' ? 'حجز بالاسم' : 'Name-only booking') : `${String(b.totalAmount || 0)} ${lang === 'ar' ? 'ج.م' : 'EGP'}`}
                                 </span>
                               </div>
                             </div>
@@ -3366,7 +3366,7 @@ export const AdminPanel: React.FC = () => {
                                   if (actionLoading) return;
                                   setActionLoading(b.id);
                                   // Rejection reason
-                                  const reason = rejectionReasonMap[b.id]?.trim() || (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.');
+                                  const reason = rejectionReasonMap[b.id]?.trim() || (b.bookingMode === 'name_only' ? (lang === 'ar' ? 'تعذر تأكيد طلب الحجز.' : 'The booking request could not be confirmed.') : (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.'));
                                   await rejectBooking(b.id, reason);
                                   setActionLoading(null);
                                 }}
@@ -6535,8 +6535,8 @@ export const AdminPanel: React.FC = () => {
                           />
                           <p className="text-[11px] text-neutral-500">
                             {lang === 'ar'
-                              ? 'إذا تركته فارغاً، سيتم عرض السعر الإفتراضي المحدد بأعلى (مثل 250 ج.م).'
-                              : 'If left empty, the default price specified above will be displayed.'}
+                              ? 'إذا تركته فارغاً، يظهر السعر فقط إذا أدخلته في حقل السعر أعلاه.'
+                              : 'If left empty, the price appears only if entered in the price field above.'}
                           </p>
                         </div>
 
@@ -7052,8 +7052,8 @@ export const AdminPanel: React.FC = () => {
                               : adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                             uploadDate: new Date().toISOString(),
                             eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
-                            priceAr: adminPriceAr.trim() || '250 ج.م',
-                            priceEn: adminPriceEn.trim() || '250 EGP',
+                            priceAr: adminPriceAr.trim(),
+                            priceEn: adminPriceEn.trim(),
                             showBookingButton: adminShowBookingButton,
                             showViewsCount: adminShowViewsCount,
                             location: {

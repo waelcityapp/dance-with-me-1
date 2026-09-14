@@ -243,6 +243,7 @@ export interface SupportMessage {
 export interface EventBooking {
   id: string;
   eventId: string;
+  bookingMode?: 'priced' | 'name_only';
   eventTitleAr: string;
   eventTitleEn: string;
   eventPrice: number;
