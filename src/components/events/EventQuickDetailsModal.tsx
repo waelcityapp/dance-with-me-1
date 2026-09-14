@@ -233,7 +233,7 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
                     {lang === 'ar' ? 'سعر التذكرة / الدخول' : 'Entry / Ticket Price'}
                   </div>
                   <div className="text-xs sm:text-sm font-black text-emerald-400">
-                    {lang === 'ar' ? (event.priceAr || event.priceEn || 'مجاناً') : (event.priceEn || event.priceAr || 'Free')}
+                    {lang === 'ar' ? (event.priceAr || event.priceEn || 'حجز بالاسم') : (event.priceEn || event.priceAr || 'Book by name')}
                   </div>
                 </div>
               </div>
@@ -329,7 +329,7 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
               className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 font-black text-sm sm:text-base shadow-xl border border-amber-400/40 hover:brightness-110 transition-all cursor-pointer"
             >
               <Ticket className="h-5 w-5" />
-              <span>{lang === 'ar' ? 'احجز تذكرتك الآن' : 'Book Your Ticket Now'}</span>
+              <span>{!event.priceAr?.trim() && !event.priceEn?.trim() ? (lang === 'ar' ? 'احجز باسمك' : 'Book by name') : (lang === 'ar' ? 'احجز تذكرتك الآن' : 'Book Your Ticket Now')}</span>
             </button>
           </div>
         </motion.div>

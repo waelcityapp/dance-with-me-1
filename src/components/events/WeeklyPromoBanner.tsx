@@ -702,7 +702,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             const rawSubtext = lang === 'ar'
               ? (promoEvent.bookingSubtextAr || promoEvent.priceAr || promoEvent.bookingSubtextEn || promoEvent.priceEn)
               : (promoEvent.bookingSubtextEn || promoEvent.priceEn || promoEvent.bookingSubtextAr || promoEvent.priceAr);
-            const cleanSubtext = rawSubtext && String(rawSubtext).trim() !== '0' ? String(rawSubtext).trim() : null;
+            const cleanSubtext = (promoEvent.priceAr?.trim() || promoEvent.priceEn?.trim()) && rawSubtext && String(rawSubtext).trim() !== '0' ? String(rawSubtext).trim() : null;
 
             return (
               <div className="w-full flex flex-col items-center gap-1 pt-0.5">
@@ -712,7 +712,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                   onClick={() => bookTicket(promoEvent.id)}
                   className="w-full flex h-11 items-center justify-center rounded-xl px-4 text-sm font-black transition-all bg-amber-500 text-neutral-950 hover:bg-amber-400 active:scale-[0.99] shadow-sm hover:shadow-md cursor-pointer"
                 >
-                  <span>{lang === 'ar' ? 'احجز الآن' : 'Book Now'}</span>
+                  <span>{!promoEvent.priceAr?.trim() && !promoEvent.priceEn?.trim() ? (lang === 'ar' ? 'احجز باسمك' : 'Book by name') : (lang === 'ar' ? 'احجز الآن' : 'Book Now')}</span>
                 </motion.button>
                 {cleanSubtext && (
                   <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-400 text-center max-w-full leading-tight break-words" title={cleanSubtext}>

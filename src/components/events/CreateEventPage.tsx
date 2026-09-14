@@ -128,8 +128,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [category, setCategory] = useState<DanceCategory>(editingEvent ? editingEvent.category : 'party');
   const [mediaType, setMediaType] = useState<'video' | 'image'>(editingEvent ? editingEvent.mediaType : 'image');
   const [mediaUrl, setMediaUrl] = useState(editingEvent ? editingEvent.mediaUrl : '');
-  const [priceAr, setPriceAr] = useState(editingEvent ? editingEvent.priceAr : '250 ج.م');
-  const [priceEn, setPriceEn] = useState(editingEvent ? editingEvent.priceEn : '250 EGP');
+  const [priceAr, setPriceAr] = useState(editingEvent?.priceAr || '');
+  const [priceEn, setPriceEn] = useState(editingEvent?.priceEn || '');
   const [eventDate, setEventDate] = useState(() => {
     if (editingEvent) {
       try {
@@ -1182,8 +1182,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         : mediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                       uploadDate: new Date().toISOString(),
                       eventDate: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
-                      priceAr: priceAr.trim() || '250 ج.م',
-                      priceEn: priceEn.trim() || '250 EGP',
+                      priceAr: priceAr.trim(),
+                      priceEn: priceEn.trim(),
                       location: {
                         nameAr: locationNameAr.trim() || 'أستوديو الرقص - الزمالك',
                         nameEn: locationNameEn.trim() || 'Dance Studio - Zamalek',
@@ -2623,4 +2623,3 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     </div>
   );
 };
-

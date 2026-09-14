@@ -641,8 +641,8 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                   />
                   <p className="text-[11px] text-neutral-500">
                     {lang === 'ar'
-                      ? 'إذا تركته فارغاً، سيتم عرض السعر الإفتراضي المحدد بأعلى (مثل 250 ج.م).'
-                      : 'If left empty, the default price specified above will be displayed.'}
+                      ? 'إذا تركته فارغاً، يظهر السعر فقط إذا أدخلته في حقل السعر أعلاه.'
+                      : 'If left empty, the price appears only if entered in the price field above.'}
                   </p>
                 </div>
 

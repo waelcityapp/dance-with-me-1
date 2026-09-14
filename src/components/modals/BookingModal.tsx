@@ -106,13 +106,14 @@ export const BookingModal: React.FC = () => {
   };
 
   const basePrice = parsePrice(selectedBookingEvent.priceAr, selectedBookingEvent.priceEn);
+  const nameOnlyBooking = !selectedBookingEvent.priceAr?.trim() && !selectedBookingEvent.priceEn?.trim();
   const totalAmount = basePrice * individuals;
   const customerTotal = Math.max(0, totalAmount - customerDiscount);
 
   const isPhoneValid = phone.trim().length >= 11 && /^\d+$/.test(phone.trim());
   const isNameValid = name.trim().split(' ').filter(Boolean).length >= 2;
   const isMarketerCodeValid = !marketerCodeInput.trim() || (marketerCodeStatus === 'valid' && !quoteWarning);
-  const isFormValid = isNameValid && isPhoneValid && receiptImage !== null && isMarketerCodeValid && !isSubmitting;
+  const isFormValid = (nameOnlyBooking || (basePrice > 0 && receiptImage !== null && isMarketerCodeValid)) && isNameValid && isPhoneValid && !isSubmitting;
 
   const INSTAPAY_LINK = 'https://ipn.eg/S/wael1011/instapay/2dvaYQ';
   const INSTAPAY_HANDLE = 'wael1011@instapay';
@@ -216,7 +217,9 @@ export const BookingModal: React.FC = () => {
   const handleSubmit = async () => {
     if (!isFormValid) return;
 
-    const confirmMessage = isArabic 
+    const confirmMessage = nameOnlyBooking
+      ? (isArabic ? 'هل تريد إرسال طلب الحجز باسمك ورقم هاتفك وعدد الأفراد؟ لا يوجد سعر أو طلب دفع لهذا الحجز حالياً.' : 'Send your booking request with your name, phone and number of people? No price or payment is requested at this stage.')
+      : isArabic
       ? `⚠️ تنبيه هام لسياسة الإلغاء والاسترجاع:\n\n1. يحق لك إلغاء الحجز في أي وقت واسترداد المبلغ مع خصم 5% فقط كرسوم إدارية وتحويلية.\n2. لا يحق لك إلغاء الحجز نهائياً إذا كان الوقت المتبقي على بدء الفعالية هو 48 ساعة أو أقل.\n\nهل أنت موافق وتود تأكيد الحجز وإرسال الطلب الآن؟`
       : `⚠️ Important Cancellation & Refund Policy Alert:\n\n1. You can cancel at any time and get a refund minus a 5% administrative fee.\n2. You are NOT allowed to cancel or request a refund if there are 48 hours or less remaining until the event starts.\n\nDo you agree to these terms and wish to proceed with the booking?`;
 
@@ -232,14 +235,15 @@ export const BookingModal: React.FC = () => {
         eventId: selectedBookingEvent.id,
         eventTitleAr: selectedBookingEvent.titleAr,
         eventTitleEn: selectedBookingEvent.titleEn,
+        bookingMode: nameOnlyBooking ? 'name_only' : 'priced',
         eventPrice: basePrice,
         userName: name.trim(),
         userPhone: phone.trim(),
         numberOfIndividuals: individuals,
         totalAmount: totalAmount,
-        receiptImage: receiptImage!,
+        receiptImage: nameOnlyBooking ? '' : receiptImage!,
         eventDate: selectedBookingEvent.eventDate,
-        marketerCode: marketerCodeInput.trim() || undefined
+        marketerCode: nameOnlyBooking ? undefined : marketerCodeInput.trim() || undefined
       });
 
       if (result) {
@@ -271,7 +275,7 @@ export const BookingModal: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <Ticket className="w-6 h-6 text-amber-500" />
             <h3 className="text-lg font-bold text-neutral-900 dark:text-zinc-100 font-sans">
-              {isArabic ? 'بوابة حجز التذاكر الفورية' : 'Instant Ticket Booking Portal'}
+              {nameOnlyBooking ? (isArabic ? 'طلب حجز بالاسم' : 'Name-only booking request') : (isArabic ? 'بوابة حجز التذاكر الفورية' : 'Instant Ticket Booking Portal')}
             </h3>
           </div>
           <button 
@@ -319,15 +323,22 @@ export const BookingModal: React.FC = () => {
                         day: 'numeric'
                       })}
                     </span>
-                    <span className="flex items-center gap-1">
+                    {!nameOnlyBooking && <span className="flex items-center gap-1">
                       <DollarSign className="w-3.5 h-3.5 text-neutral-400 dark:text-zinc-500" />
-                      {isArabic ? selectedBookingEvent.priceAr : selectedBookingEvent.priceEn}
-                    </span>
+                      {isArabic ? (selectedBookingEvent.priceAr || selectedBookingEvent.priceEn || 'السعر غير محدد') : (selectedBookingEvent.priceEn || selectedBookingEvent.priceAr || 'Price not specified')}
+                    </span>}
                   </div>
                 </div>
               </div>
 
-              {/* Cancellation & Refund Policy Alert */}
+              {!nameOnlyBooking && basePrice <= 0 && (
+                <p role="alert" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+                  {isArabic ? 'لا يمكن إرسال طلب الحجز قبل تحديد سعر التذكرة. يرجى التواصل مع المنظّم.' : 'Booking is unavailable until a ticket price is set. Please contact the organizer.'}
+                </p>
+              )}
+
+              {!nameOnlyBooking && (
+              /* Cancellation & Refund Policy Alert */
               <div className="p-4 bg-red-950/20 border border-red-500/30 rounded-xl space-y-2">
                 <div className="flex gap-2.5">
                   <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -350,6 +361,7 @@ export const BookingModal: React.FC = () => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Form Input: Name */}
               <div className="space-y-2">
@@ -400,6 +412,7 @@ export const BookingModal: React.FC = () => {
                 )}
               </div>
 
+              {!nameOnlyBooking && (<>
               {/* Marketer Code: Manual validation only */}
               <div className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
                 <label className="text-sm font-medium text-neutral-700 dark:text-zinc-300 flex items-center gap-2">
@@ -450,6 +463,8 @@ export const BookingModal: React.FC = () => {
                 )}
               </div>
 
+              </>)}
+
               {/* Individuals Selector & Pricing */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -479,7 +494,7 @@ export const BookingModal: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-xl p-4 flex flex-col justify-center">
+                {!nameOnlyBooking && <div className="bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-xl p-4 flex flex-col justify-center">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-neutral-500 dark:text-zinc-400">
                       {isArabic ? 'قيمة الحجز للفرد:' : 'Price per person:'}
@@ -506,9 +521,10 @@ export const BookingModal: React.FC = () => {
                       {customerTotal} {isArabic ? 'ج.م' : 'EGP'}
                     </span>
                   </div>
-                </div>
+                </div>}
               </div>
 
+              {!nameOnlyBooking && (<>
               {/* Payment Details */}
               <div className="p-4 bg-amber-950/20 border border-amber-900/40 rounded-2xl space-y-3.5">
                 <div className="flex gap-2.5">
@@ -651,6 +667,8 @@ export const BookingModal: React.FC = () => {
                 </div>
               </div>
 
+              </>)}
+
               {/* Submit Action */}
               <button
                 type="button"
@@ -746,14 +764,14 @@ export const BookingModal: React.FC = () => {
                         {bookingResult.numberOfIndividuals} {isArabic ? 'أفراد' : 'people'}
                       </span>
                     </div>
-                    <div className="space-y-1">
+                    {bookingResult.bookingMode !== 'name_only' && <div className="space-y-1">
                       <span className="text-[10px] text-neutral-400 dark:text-zinc-500 uppercase tracking-wider block">
                         {isArabic ? 'المبلغ الإجمالي' : 'Total Price'}
                       </span>
                       <span className="text-xs font-mono font-bold text-amber-500">
                         {bookingResult.totalAmount} {isArabic ? 'ج.م' : 'EGP'}
                       </span>
-                    </div>
+                    </div>}
                   </div>
                 </div>
 
@@ -774,7 +792,9 @@ export const BookingModal: React.FC = () => {
                       {isArabic ? '⏳ تم استلام الطلب وبانتظار موافقة الإدارة' : '⏳ Booking Received - Pending Admin Review'}
                     </span>
                     <p className="text-[11px] text-neutral-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
-                      {isArabic 
+                      {bookingResult.bookingMode === 'name_only'
+                        ? (isArabic ? 'طلب الحجز باسمك قيد مراجعة الإدارة. لا يلزم إرسال مبلغ أو إيصال الآن.' : 'Your name-only booking is pending review. No payment or receipt is needed now.')
+                        : isArabic
                         ? 'سيتم إصدار وتفعيل رمز الـ QR وكود الدخول الخاص بك في ملفك الشخصي فور مراجعة الإيصال والموافقة.' 
                         : 'Your activation QR code and passcode will be issued in your profile as soon as the receipt is verified.'}
                     </p>
@@ -786,7 +806,9 @@ export const BookingModal: React.FC = () => {
               <div className="p-4 bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800/80 rounded-xl max-w-md text-center flex gap-2 items-start">
                 <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-neutral-500 dark:text-zinc-400 text-start leading-relaxed">
-                  {isArabic 
+                  {bookingResult.bookingMode === 'name_only'
+                    ? (isArabic ? 'ستجد طلبك في حسابك الشخصي، وسنبلغك بعد مراجعته.' : 'You can find this request in your profile and will be notified after review.')
+                    : isArabic
                     ? 'سوف تجد إشعاراً في حسابك الشخصي وقريباً كود الدخول الخاص بك والباركود بعد تأكيد المسؤولين لمراجعة إيصال التحويل المرفق.' 
                     : 'You will receive an in-app notification and your access passcode as soon as our administrators verify your attached transfer receipt.'}
                 </p>

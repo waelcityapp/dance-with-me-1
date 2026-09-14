@@ -2041,7 +2041,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           {isArabic ? 'المبلغ الإجمالي' : 'Total Price'}
                         </span>
                         <span className="font-mono font-bold text-amber-500">
-                          {String(b.totalAmount || 0)} {isArabic ? 'ج.م' : 'EGP'}
+                          {b.bookingMode === 'name_only' ? (isArabic ? 'لم يُحدَّد سعر' : 'No price set') : `${String(b.totalAmount || 0)} ${isArabic ? 'ج.م' : 'EGP'}`}
                         </span>
                       </div>
                     </div>
@@ -2245,7 +2245,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           {isCancelable ? (
                             <button
                               onClick={async () => {
-                                const confirmMsg = isArabic
+                                const confirmMsg = b.bookingMode === 'name_only'
+                                  ? (isArabic ? 'هل تريد إلغاء طلب الحجز بالاسم؟' : 'Cancel this name-only booking request?')
+                                  : isArabic
                                   ? `⚠️ هل أنت متأكد من رغبتك في إلغاء الحجز والتراجع عنه؟\n\nشروط سياسة الاسترجاع:\nسوف يتم خصم 5% كرسوم إدارية وتحويل وبنك من إجمالي مبلغ الحجز (${b.totalAmount} ج.م) والباقي يسترجع لك.\n\nهل تود تأكيد طلب الإلغاء؟`
                                   : `⚠️ Are you sure you want to cancel and withdraw your booking?\n\nRefund Policy:\nA 5% fee will be deducted from your total booking amount (${b.totalAmount} EGP) for transfer & administrative fees.\n\nDo you want to confirm cancellation?`;
                                 

@@ -120,6 +120,7 @@ interface AppContextType {
     eventId: string;
     eventTitleAr: string;
     eventTitleEn: string;
+    bookingMode?: 'priced' | 'name_only';
     eventPrice: number;
     userName: string;
     userPhone: string;
@@ -1078,6 +1079,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     eventId: string;
     eventTitleAr: string;
     eventTitleEn: string;
+    bookingMode?: 'priced' | 'name_only';
     eventPrice: number;
     userName: string;
     userPhone: string;
@@ -1098,6 +1100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newBooking: EventBooking = {
       id,
       eventId: bookingData.eventId,
+      bookingMode: bookingData.bookingMode || 'priced',
       eventTitleAr: bookingData.eventTitleAr,
       eventTitleEn: bookingData.eventTitleEn,
       eventPrice: bookingData.eventPrice,
@@ -1317,8 +1320,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       mediaType: 'image',
       mediaUrl: 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
       thumbnailUrl: 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80',
-      priceAr: '250 ج.م',
-      priceEn: '250 EGP',
+      priceAr: '',
+      priceEn: '',
       location: {
         nameAr: 'القاهرة، مصر',
         nameEn: 'Cairo, Egypt',
