@@ -159,14 +159,16 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         body: JSON.stringify({ text, targetLang })
       });
       const data = await res.json();
-      if (data.translatedText) {
-        setter(data.translatedText);
+      if (!res.ok || !data.translatedText) {
+        throw new Error(data.detail || data.error || 'TRANSLATION_FAILED');
       }
+      setter(data.translatedText);
     } catch (error) {
       console.error('Translation error:', error);
+      const reason = error instanceof Error ? error.message : 'TRANSLATION_FAILED';
       alert(lang === 'ar'
-        ? 'تعذر تنفيذ الترجمة الآن. تأكد من إعداد خدمة Gemini ثم حاول مرة أخرى.'
-        : 'Translation is unavailable right now. Please check the Gemini service and try again.');
+        ? 'تعذر تنفيذ الترجمة الآن (' + reason + '). تأكد من إعداد خدمة Gemini ثم حاول مرة أخرى.'
+        : 'Translation is unavailable (' + reason + '). Please check the Gemini service and try again.');
     } finally {
       setIsTranslating(null);
     }
