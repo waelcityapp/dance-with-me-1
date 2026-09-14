@@ -110,6 +110,35 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // Gemini translation endpoint used by the event forms
+  app.post("/api/translate", async (req, res) => {
+    try {
+      const { text, targetLang } = req.body || {};
+      if (typeof text !== "string" || !text.trim()) {
+        return res.status(400).json({ error: "No text provided" });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(503).json({ error: "Gemini API key is not configured" });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey });
+      const language = targetLang === "ar" ? "Arabic" : "English";
+      const prompt = `Translate the following text to ${language}. Return ONLY the translated text without explanations, markdown, or quotation marks.\n\nOriginal text:\n${text.trim()}`;
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+      });
+
+      return res.json({ translatedText: response.text?.trim() || "" });
+    } catch (error) {
+      console.error("Translation error:", error);
+      return res.status(500).json({ error: "Failed to translate text" });
+    }
+  });
+
   // Cloudinary media delete endpoint
   app.post("/api/delete-media", async (req, res) => {
     try {
