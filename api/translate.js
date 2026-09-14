@@ -24,12 +24,17 @@ export default async function handler(req, res) {
 Original text:
 ${text}`;
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
     });
-    return reply(res, 200, { translatedText: response.text?.trim() || '' });
+    const translatedText = response.text?.trim() || '';
+    if (!translatedText) {
+      return reply(res, 502, { error: 'GEMINI_EMPTY_RESPONSE' });
+    }
+    return reply(res, 200, { translatedText });
   } catch (error) {
     console.error('Translation error:', error);
-    return reply(res, 502, { error: 'GEMINI_TRANSLATION_FAILED' });
+    const detail = error instanceof Error ? error.message.slice(0, 240) : 'UNKNOWN_ERROR';
+    return reply(res, 502, { error: 'GEMINI_TRANSLATION_FAILED', detail });
   }
 }
