@@ -94,6 +94,7 @@ export interface DanceEvent {
   descriptionAr: string;
   descriptionEn: string;
   category: 'party' | 'course' | 'trip' | 'exhibition' | 'services' | 'jobs';
+  subcategory?: string;
   styles: DanceStyle[];
   mediaType: 'video' | 'image';
   mediaUrl: string;
@@ -183,7 +184,8 @@ export interface AdSubmission {
   phone: string;
   titleAr: string;
   titleEn: string;
-  category: 'party' | 'course' | 'trip' | 'exhibition';
+  category: 'party' | 'course' | 'trip' | 'exhibition' | 'services' | 'jobs';
+  subcategory?: string;
   styles: DanceStyle[];
   mediaType: 'image' | 'video';
   mediaUrl: string;
