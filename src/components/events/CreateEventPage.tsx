@@ -41,9 +41,7 @@ import {
   Loader2,
   Globe,
   Gift,
-  Zap,
-  Store,
-  Briefcase
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceCategory, DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AdSubmission, DanceEvent } from '../../types';
@@ -91,6 +89,51 @@ interface CreateEventPageProps {
   initialAdType?: 'vip' | 'standard' | 'free' | null;
 }
 
+type AdCategory = Exclude<DanceCategory, 'all'>;
+
+const AD_CATEGORIES: Array<{
+  id: AdCategory;
+  ar: string;
+  en: string;
+  subcategories: Array<{ id: string; ar: string; en: string; supportsDanceStyles?: boolean }>;
+}> = [
+  { id: 'party', ar: 'حفلة وسهرة', en: 'Party & Social', subcategories: [
+    { id: 'latin-party', ar: 'حفلات لاتيني', en: 'Latin Parties', supportsDanceStyles: true },
+    { id: 'oriental-western-party', ar: 'حفلات شرقي وغربي', en: 'Oriental & Western Parties' },
+    { id: 'opera-party', ar: 'حفلات الأوبرا', en: 'Opera Events' },
+    { id: 'theater-show', ar: 'مسرحيات وعروض', en: 'Theatre & Shows' },
+    { id: 'other-party', ar: 'حفلات متنوعة', en: 'Other Parties' }
+  ] },
+  { id: 'course', ar: 'دورة وكورس', en: 'Course & Workshop', subcategories: [
+    { id: 'latin-dance-course', ar: 'دورات رقص لاتيني', en: 'Latin Dance Courses', supportsDanceStyles: true },
+    { id: 'dance-workshop', ar: 'ورش رقص', en: 'Dance Workshops' },
+    { id: 'private-training', ar: 'تدريب خاص', en: 'Private Training' },
+    { id: 'other-course', ar: 'دورات متنوعة', en: 'Other Courses' }
+  ] },
+  { id: 'trip', ar: 'رحلة ومعسكر', en: 'Trip & Camp', subcategories: [
+    { id: 'day-trip', ar: 'رحلة يوم واحد', en: 'Day Trip' },
+    { id: 'dance-camp', ar: 'معسكر رقص', en: 'Dance Camp' },
+    { id: 'travel-trip', ar: 'رحلة سفر', en: 'Travel Trip' }
+  ] },
+  { id: 'exhibition', ar: 'معارض ومؤتمرات', en: 'Exhibitions & Conferences', subcategories: [
+    { id: 'exhibition', ar: 'معرض', en: 'Exhibition' },
+    { id: 'conference', ar: 'مؤتمر', en: 'Conference' },
+    { id: 'cultural-event', ar: 'فعالية ثقافية', en: 'Cultural Event' }
+  ] },
+  { id: 'services', ar: 'خدمات الفعاليات', en: 'Event Services', subcategories: [
+    { id: 'venue-service', ar: 'أماكن واستوديوهات', en: 'Venues & Studios' },
+    { id: 'media-service', ar: 'تصوير وإعلام', en: 'Media & Photography' },
+    { id: 'performer-service', ar: 'فنانين ودي جي', en: 'Performers & DJs' },
+    { id: 'other-service', ar: 'خدمات أخرى', en: 'Other Services' }
+  ] },
+  { id: 'jobs', ar: 'وظائف وفرص عمل', en: 'Jobs & Opportunities', subcategories: [
+    { id: 'dance-job', ar: 'راقصين ومدربين', en: 'Dancers & Instructors' },
+    { id: 'event-staff-job', ar: 'طاقم تنظيم فعاليات', en: 'Event Staff' },
+    { id: 'media-job', ar: 'إعلام وتصوير', en: 'Media & Photography' },
+    { id: 'other-job', ar: 'فرص أخرى', en: 'Other Opportunities' }
+  ] }
+];
+
 export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, onCancel, initialAdType = null }) => {
   const { lang, user, addNewEvent, updateEvent, editingEvent, setEditingEvent, isAdminUnlocked, pricingConfig, loadPricingConfig } = useApp();
 
@@ -126,7 +169,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     }
   };
 
-  const [category, setCategory] = useState<DanceCategory>(editingEvent ? editingEvent.category : 'party');
+  const [category, setCategory] = useState<AdCategory | undefined>(editingEvent?.category);
+  const [subcategory, setSubcategory] = useState<string | undefined>(editingEvent?.subcategory);
   const [mediaType, setMediaType] = useState<'video' | 'image'>(editingEvent ? editingEvent.mediaType : 'image');
   const [mediaUrl, setMediaUrl] = useState(editingEvent ? editingEvent.mediaUrl : '');
   const [priceAr, setPriceAr] = useState(editingEvent?.priceAr || '');
@@ -155,7 +199,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [areaAr, setAreaAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaAr || 'الزمالك') : 'الزمالك');
   const [areaEn, setAreaEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaEn || 'Zamalek') : 'Zamalek');
   const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent && editingEvent.location ? editingEvent.location.googleMapsUrl : 'https://maps.google.com/?q=30.0444,31.2357');
-  const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent ? editingEvent.styles : ['Salsa', 'Bachata']);
+  const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent?.styles || []);
   const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
   const [adNumber, setAdNumber] = useState<string>(editingEvent && editingEvent.adNumber ? editingEvent.adNumber : '');
   const [showViewsCount, setShowViewsCount] = useState<boolean>(editingEvent ? editingEvent.showViewsCount !== false : true);
@@ -169,6 +213,37 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [createTab, setCreateTab] = useState<'form' | 'preview'>('form');
   const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
   const [previewAlert, setPreviewAlert] = useState<string | null>(null);
+  const [classificationError, setClassificationError] = useState<string | null>(null);
+
+  const selectedCategory = AD_CATEGORIES.find(item => item.id === category);
+  const selectedSubcategory = selectedCategory?.subcategories.find(item => item.id === subcategory);
+  const shouldShowDanceStyles = selectedSubcategory?.supportsDanceStyles === true;
+
+  const selectCategory = (nextCategory: AdCategory) => {
+    setCategory(nextCategory);
+    setSubcategory(undefined);
+    setSelectedStyles([]);
+    setClassificationError(null);
+  };
+
+  const selectSubcategory = (nextSubcategory: string) => {
+    const next = selectedCategory?.subcategories.find(item => item.id === nextSubcategory);
+    setSubcategory(nextSubcategory);
+    if (!next?.supportsDanceStyles) setSelectedStyles([]);
+    setClassificationError(null);
+  };
+
+  const validateClassification = () => {
+    if (!category) {
+      setClassificationError(lang === 'ar' ? 'اختر القسم الرئيسي أولًا.' : 'Please select a main category first.');
+      return false;
+    }
+    if (!subcategory) {
+      setClassificationError(lang === 'ar' ? 'اختر التصنيف الفرعي قبل المتابعة.' : 'Please select a subcategory before continuing.');
+      return false;
+    }
+    return true;
+  };
 
   React.useEffect(() => {
     if (initialAdType) {
@@ -448,7 +523,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   const handleProceedToPayment = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!agreedToTerms || hasUrlViolation || mapsUrlError) return;
+    if (!agreedToTerms || hasUrlViolation || mapsUrlError || !validateClassification()) return;
 
     const optionalCode = marketerCodeInput.trim().toUpperCase();
     if (optionalCode && verifiedMarketer?.code !== optionalCode) {
@@ -486,7 +561,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (checkLinksAndWarn()) return;
+    if (checkLinksAndWarn() || !validateClassification()) return;
     
     if (editingEvent) {
       if (agreedToTerms && !isUploadingMedia) {
@@ -532,8 +607,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         titleEn: titleEn || editingEvent.titleEn || 'Royal Salsa & Bachata Night',
         descriptionAr: descAr || editingEvent.descriptionAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
         descriptionEn: descEn || editingEvent.descriptionEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
-        category: (category === 'all' ? 'party' : category) as any,
-        styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
+        category: category as AdCategory,
+        subcategory,
+        styles: selectedStyles,
         mediaType,
         mediaUrl: finalMediaUrl,
         thumbnailUrl: finalThumbnailUrl,
@@ -598,8 +674,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           titleEn: titleEn || 'Royal Salsa & Bachata Night',
           descriptionAr: descAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
           descriptionEn: descEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
-          category: (category === 'all' ? 'party' : category) as any,
-          styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
+          category: category as AdCategory,
+          subcategory,
+          styles: selectedStyles,
           mediaType,
           mediaUrl: finalMediaUrl,
           thumbnailUrl: finalThumbnailUrl,
@@ -641,8 +718,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           titleEn: titleEn || 'New Event Announcement',
           descriptionAr: descAr || '',
           descriptionEn: descEn || '',
-          category: (category === 'all' ? 'party' : category) as any,
-          styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
+          category: category as AdCategory,
+          subcategory,
+          styles: selectedStyles,
           mediaType,
           mediaUrl: finalMediaUrl,
           thumbnailUrl: finalThumbnailUrl,
@@ -683,7 +761,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           titleAr: submittedEventData.titleAr || '',
           titleEn: submittedEventData.titleEn || '',
           category: submittedEventData.category as AdSubmission['category'],
-          styles: submittedEventData.styles || ['Salsa'],
+          subcategory: submittedEventData.subcategory,
+          styles: submittedEventData.styles || [],
           mediaType,
           mediaUrl: finalMediaUrl,
           pricing: {
@@ -747,8 +826,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         mediaType={mediaType}
         expirationNotice={formatExpirationNotice()}
         initialPhone={phone}
-        category={(category === 'all' ? 'party' : category) as any}
-        styles={selectedStyles.length > 0 ? selectedStyles : ['Salsa']}
+        category={category}
+        subcategory={subcategory}
+        styles={selectedStyles}
         mediaUrl={mediaUrl}
         pendingFile={pendingFile}
         cloudinaryConfig={{ cloudName: cloudinaryCloudName, uploadPreset: cloudinaryUploadPreset }}
@@ -759,8 +839,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           titleEn: titleEn || 'Royal Salsa & Bachata Night',
           descriptionAr: descAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
           descriptionEn: descEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
-          category: (category === 'all' ? 'party' : category) as any,
-          styles: selectedStyles.length > 0 ? selectedStyles : ['Salsa'],
+          category: category as AdCategory,
+          subcategory,
+          styles: selectedStyles,
           mediaType,
           mediaUrl: generatedMediaUrl,
           thumbnailUrl: generatedThumbnailUrl,
@@ -1261,7 +1342,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       titleEn: titleEn.trim() || 'Luxury Salsa Night in Zamalek',
                       descriptionAr: descAr.trim() || (lang === 'ar' ? 'اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور...' : 'Event details and description goes here...'),
                       descriptionEn: descEn.trim() || 'Event details and description goes here...',
-                      category: category,
+                      category: category as AdCategory,
                       styles: selectedStyles,
                       mediaType: mediaType,
                       mediaUrl: mediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
@@ -1436,79 +1517,61 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             <span>{lang === 'ar' ? 'اختر تصنيف الإعلان' : 'Select Ad Category'}</span>
           </h3>
           <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
-            {lang === 'ar' ? 'حدد نوع الفعالية لتظهر في القسم المناسب للمستخدمين' : 'Choose event category to appear in the correct section'}
+            {lang === 'ar' ? 'اختر القسم الرئيسي أولًا، ثم التصنيف الفرعي المناسب.' : 'Choose a main category first, then its matching subcategory.'}
           </p>
 
           <div className="space-y-4 mt-4">
-            {/* Pillar 1: Main Events & Activities */}
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-black text-neutral-800 dark:text-neutral-200">
-                <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                <span>{lang === 'ar' ? 'البند 1: الاقسام الرئيسية و الفاعليات' : '1. Main Events & Activities'}</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: 'party', ar: 'حفلة وسهرة', en: 'Party & Social' },
-                  { id: 'course', ar: 'دورة وكورس', en: 'Dance Course' },
-                  { id: 'trip', ar: 'رحلة ومعسكر', en: 'Camp & Trip' },
-                  { id: 'exhibition', ar: 'معارض ومؤتمرات', en: 'Exhibitions' },
-                ].map((cat) => (
+              <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                {lang === 'ar' ? 'القسم الرئيسي *' : 'Main Category *'}
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {AD_CATEGORIES.map((item) => (
                   <button
-                    key={cat.id}
+                    key={item.id}
                     type="button"
-                    onClick={() => setCategory(cat.id as any)}
-                    className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center cursor-pointer ${
-                      category === cat.id
-                        ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border-[#78101F] shadow-lg scale-[1.02] dark:bg-amber-500 dark:text-neutral-950 dark:border-amber-400 font-black'
+                    onClick={() => selectCategory(item.id)}
+                    className={`min-h-12 py-3 px-4 rounded-xl text-sm font-bold transition-all border text-start cursor-pointer ${
+                      category === item.id
+                        ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border-[#78101F] shadow-lg dark:bg-amber-500 dark:text-neutral-950 dark:border-amber-400'
                         : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50'
                     }`}
                   >
-                    {lang === 'ar' ? cat.ar : cat.en}
+                    {lang === 'ar' ? item.ar : item.en}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Pillar 2 & 3: Services & Jobs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-dashed border-amber-200/60 dark:border-neutral-800">
-              {/* Pillar 2 */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-black text-amber-700 dark:text-amber-400">
-                  <Store className="w-3.5 h-3.5" />
-                  <span>{lang === 'ar' ? 'البند 2: خدمات و شركات مكملة' : '2. Services & Suppliers'}</span>
+            {selectedCategory && (
+              <div className="space-y-2 pt-4 border-t border-amber-200/60 dark:border-neutral-800">
+                <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  {lang === 'ar' ? 'التصنيف الفرعي *' : 'Subcategory *'}
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {selectedCategory.subcategories.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => selectSubcategory(item.id)}
+                      className={`min-h-11 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border text-start cursor-pointer ${
+                        subcategory === item.id
+                          ? 'bg-amber-500 text-neutral-950 border-amber-500 shadow-md'
+                          : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50'
+                      }`}
+                    >
+                      {lang === 'ar' ? item.ar : item.en}
+                    </button>
+                  ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setCategory('services')}
-                  className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center cursor-pointer ${
-                    category === 'services'
-                      ? 'bg-amber-500 text-neutral-950 border-amber-500 shadow-md font-black scale-[1.01]'
-                      : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80'
-                  }`}
-                >
-                  {lang === 'ar' ? 'شركات و خدمات مكملة للفعاليات' : 'Complementary Services & Suppliers'}
-                </button>
               </div>
+            )}
 
-              {/* Pillar 3 */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-black text-teal-600 dark:text-teal-400">
-                  <Briefcase className="w-3.5 h-3.5" />
-                  <span>{lang === 'ar' ? 'البند 3: التوظيف فى نفس المجال' : '3. Event Jobs & Gigs'}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setCategory('jobs')}
-                  className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center justify-center text-center cursor-pointer ${
-                    category === 'jobs'
-                      ? 'bg-teal-500 text-white border-teal-500 shadow-md font-black scale-[1.01]'
-                      : 'bg-white text-neutral-800 border-neutral-200 hover:border-teal-400 hover:bg-teal-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80'
-                  }`}
-                >
-                  {lang === 'ar' ? 'وظائف وفرص عمل فى مجال الفعاليات' : 'Jobs & Careers in Events'}
-                </button>
-              </div>
-            </div>
+            {classificationError && (
+              <p role="alert" className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-300">
+                {classificationError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -1941,10 +2004,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </div>
           </div>
 
-          {/* Section 4: Dance Styles */}
-          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
+          {/* Dance styles are only relevant to explicitly compatible subcategories. */}
+          {shouldShowDanceStyles && <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
             <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
-              {lang === 'ar' ? '4. أنماط الرقص المتضمنة' : '4. Included Dance Styles'}
+              {lang === 'ar' ? 'أنماط الرقص (اختياري)' : 'Dance Styles (Optional)'}
             </h4>
             <div className="bg-white dark:bg-neutral-950/60 p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800/80 space-y-2 shadow-sm">
               <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200">
@@ -1968,7 +2031,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 ))}
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* Date, Price, Contact & Location */}
           <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
