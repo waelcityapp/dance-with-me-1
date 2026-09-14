@@ -94,6 +94,7 @@ export interface DanceEvent {
   descriptionAr: string;
   descriptionEn: string;
   category: 'party' | 'course' | 'trip' | 'exhibition' | 'services' | 'jobs';
+  subcategory?: string;
   styles: DanceStyle[];
   mediaType: 'video' | 'image';
   mediaUrl: string;
@@ -232,6 +233,7 @@ export interface SupportMessage {
 export interface EventBooking {
   id: string;
   eventId: string;
+  bookingMode?: 'priced' | 'name_only';
   eventTitleAr: string;
   eventTitleEn: string;
   eventPrice: number;
@@ -240,8 +242,18 @@ export interface EventBooking {
   userPhone: string;
   numberOfIndividuals: number;
   totalAmount: number;
+  originalTotalAmount?: number;
+  marketingDiscountAmount?: number;
   receiptImage: string;
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  marketerCode?: string;
+  marketerId?: string;
+  marketerRuleId?: string;
+  marketerRuleReason?: string;
+  marketerCommissionAmount?: number;
+  commissionStatus?: 'none' | 'pending' | 'available' | 'reversed';
+  commissionLedgerId?: string;
+  marketingRuleSnapshot?: Record<string, unknown> | null;
   userRead?: boolean;
   refNumber: string;
   submittedAt: string;
