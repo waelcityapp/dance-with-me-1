@@ -218,6 +218,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const selectedCategory = AD_CATEGORIES.find(item => item.id === category);
   const selectedSubcategory = selectedCategory?.subcategories.find(item => item.id === subcategory);
   const shouldShowDanceStyles = selectedSubcategory?.supportsDanceStyles === true;
+  const isClassificationComplete = Boolean(selectedCategory && selectedSubcategory);
 
   const selectCategory = (nextCategory: AdCategory) => {
     setCategory(nextCategory);
@@ -230,6 +231,13 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     const next = selectedCategory?.subcategories.find(item => item.id === nextSubcategory);
     setSubcategory(nextSubcategory);
     if (!next?.supportsDanceStyles) setSelectedStyles([]);
+    setClassificationError(null);
+  };
+
+  const returnToMainCategories = () => {
+    setCategory(undefined);
+    setSubcategory(undefined);
+    setSelectedStyles([]);
     setClassificationError(null);
   };
 
@@ -1511,71 +1519,87 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           transition={{ delay: 0.1 }}
           className="rounded-3xl border border-amber-500/30 dark:border-[#78101F]/60 bg-gradient-to-b from-white via-amber-50/20 to-white dark:from-[#42030A]/60 dark:via-neutral-900/95 dark:to-neutral-950 shadow-2xl p-6 sm:p-8 space-y-8 backdrop-blur-xl"
         >
-        <div className="border-b border-amber-200/60 dark:border-white/10 pb-5">
-          <h3 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-            <Tag className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <span>{lang === 'ar' ? 'اختر تصنيف الإعلان' : 'Select Ad Category'}</span>
-          </h3>
-          <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
-            {lang === 'ar' ? 'اختر القسم الرئيسي أولًا، ثم التصنيف الفرعي المناسب.' : 'Choose a main category first, then its matching subcategory.'}
-          </p>
-
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                {lang === 'ar' ? 'القسم الرئيسي *' : 'Main Category *'}
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {AD_CATEGORIES.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => selectCategory(item.id)}
-                    className={`min-h-12 py-3 px-4 rounded-xl text-sm font-bold transition-all border text-start cursor-pointer ${
-                      category === item.id
-                        ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 border-[#78101F] shadow-lg dark:bg-amber-500 dark:text-neutral-950 dark:border-amber-400'
-                        : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50'
-                    }`}
-                  >
-                    {lang === 'ar' ? item.ar : item.en}
-                  </button>
-                ))}
-              </div>
+        {!category ? (
+          <div className="border-b border-amber-200/60 dark:border-white/10 pb-5">
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <Tag className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <span>{lang === 'ar' ? 'اختر القسم الرئيسي للإعلان' : 'Choose the Main Ad Category'}</span>
+            </h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
+              {lang === 'ar' ? 'بعد اختيار القسم ستظهر التصنيفات الخاصة به فقط.' : 'Its matching subcategories will appear after you choose a category.'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+              {AD_CATEGORIES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectCategory(item.id)}
+                  className="min-h-12 py-3 px-4 rounded-xl text-sm font-bold transition-all border text-start cursor-pointer bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50"
+                >
+                  {lang === 'ar' ? item.ar : item.en}
+                </button>
+              ))}
             </div>
-
-            {selectedCategory && (
-              <div className="space-y-2 pt-4 border-t border-amber-200/60 dark:border-neutral-800">
-                <label className="block text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                  {lang === 'ar' ? 'التصنيف الفرعي *' : 'Subcategory *'}
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {selectedCategory.subcategories.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => selectSubcategory(item.id)}
-                      className={`min-h-11 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border text-start cursor-pointer ${
-                        subcategory === item.id
-                          ? 'bg-amber-500 text-neutral-950 border-amber-500 shadow-md'
-                          : 'bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50'
-                      }`}
-                    >
-                      {lang === 'ar' ? item.ar : item.en}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {classificationError && (
-              <p role="alert" className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-300">
-                {classificationError}
-              </p>
-            )}
           </div>
-        </div>
+        ) : !isClassificationComplete ? (
+          <div className="border-b border-amber-200/60 dark:border-white/10 pb-5 space-y-4">
+            <button
+              type="button"
+              onClick={returnToMainCategories}
+              className="inline-flex items-center gap-2 text-xs font-bold text-[#78101F] hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+            >
+              <ArrowLeft className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+              <span>{lang === 'ar' ? 'العودة إلى الأقسام الرئيسية' : 'Back to main categories'}</span>
+            </button>
+            <div>
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+                {lang === 'ar' ? selectedCategory?.ar : selectedCategory?.en}
+              </h3>
+              <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
+                {lang === 'ar' ? 'اختر التصنيف الفرعي المناسب *' : 'Choose the matching subcategory *'}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {selectedCategory?.subcategories.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectSubcategory(item.id)}
+                  className="min-h-11 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border text-start cursor-pointer bg-white text-neutral-800 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-700/80 dark:hover:border-amber-400/50"
+                >
+                  {lang === 'ar' ? item.ar : item.en}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="border-b border-amber-200/60 dark:border-white/10 pb-5 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                {lang === 'ar' ? 'تصنيف الإعلان المختار' : 'Selected Ad Classification'}
+              </p>
+              <h3 className="text-sm sm:text-base font-extrabold text-neutral-900 dark:text-white truncate">
+                {lang === 'ar' ? `${selectedCategory?.ar} ← ${selectedSubcategory?.ar}` : `${selectedCategory?.en} → ${selectedSubcategory?.en}`}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={returnToMainCategories}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-amber-300/70 px-2.5 py-2 text-[11px] font-bold text-[#78101F] hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-400 dark:hover:bg-amber-500/10 transition-colors"
+            >
+              <ArrowLeft className={`h-3.5 w-3.5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+              <span>{lang === 'ar' ? 'تغيير' : 'Change'}</span>
+            </button>
+          </div>
+        )}
 
-        <form onSubmit={handleFormSubmit} className="space-y-6">
+        {classificationError && (
+          <p role="alert" className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-300">
+            {classificationError}
+          </p>
+        )}
+
+        {isClassificationComplete && <form onSubmit={handleFormSubmit} className="space-y-6">
 
           {/* Event Code (when editing) */}
           {editingEvent?.eventRef && (
@@ -2691,7 +2715,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               </p>
             )}
           </div>
-        </form>
+        </form>}
       </motion.div>
       )}
         </>
