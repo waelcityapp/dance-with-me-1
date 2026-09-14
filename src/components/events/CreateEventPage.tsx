@@ -164,6 +164,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       }
     } catch (error) {
       console.error('Translation error:', error);
+      alert(lang === 'ar'
+        ? 'تعذر تنفيذ الترجمة الآن. تأكد من إعداد خدمة Gemini ثم حاول مرة أخرى.'
+        : 'Translation is unavailable right now. Please check the Gemini service and try again.');
     } finally {
       setIsTranslating(null);
     }
