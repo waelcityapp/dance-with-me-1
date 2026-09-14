@@ -1158,6 +1158,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedBooking: EventBooking = {
       ...bkg,
       status: 'approved',
+      commissionStatus: (bkg.marketerCommissionAmount || 0) > 0 ? 'available' : 'none',
         userRead: false,
       barcodeUrl,
       accessCode: accessCode || `DWM-AC-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1186,6 +1187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedBooking: EventBooking = {
       ...bkg,
       status: 'rejected',
+      commissionStatus: (bkg.marketerCommissionAmount || 0) > 0 ? 'reversed' : 'none',
         userRead: false,
       adminNotes,
       reviewedAt: new Date().toISOString()
@@ -1234,6 +1236,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedBooking: EventBooking = {
       ...bkg,
       status: 'cancelled',
+      commissionStatus: (bkg.marketerCommissionAmount || 0) > 0 ? 'reversed' : 'none',
       userRead: false,
       cancelledAt: new Date().toISOString()
     };

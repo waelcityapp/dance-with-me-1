@@ -29,14 +29,20 @@ export async function settleCommission(tx, firestore, booking, nextStatus) {
   const ledgerId = String(booking.commissionLedgerId || '').trim();
   const marketerId = String(booking.marketerId || '').trim();
   const amount = Number(booking.marketerCommissionAmount || 0);
-  if (!ledgerId || !marketerId || !Number.isFinite(amount) || amount <= 0) return;
+  if (!Number.isFinite(amount) || amount < 0) throw new Error('INVALID_COMMISSION_AMOUNT');
+  if (amount === 0) return 'none';
+  if (!ledgerId || !marketerId) throw new Error('COMMISSION_LEDGER_MISSING');
 
   const ledgerRef = firestore.collection('marketer_ledger').doc(ledgerId);
   const ledgerSnap = await tx.get(ledgerRef);
-  if (!ledgerSnap.exists) return;
+  if (!ledgerSnap.exists) throw new Error('COMMISSION_LEDGER_MISSING');
   const currentStatus = ledgerSnap.data()?.status;
-  if (currentStatus === nextStatus || currentStatus === 'reversed') return;
-  if (currentStatus !== 'pending' && currentStatus !== 'available') return;
+  if (currentStatus === nextStatus) return currentStatus;
+  if (currentStatus === 'reversed') {
+    if (nextStatus === 'available') throw new Error('COMMISSION_ALREADY_REVERSED');
+    return 'reversed';
+  }
+  if (currentStatus !== 'pending' && currentStatus !== 'available') throw new Error('INVALID_COMMISSION_STATUS');
 
   const userRef = firestore.collection('users').doc(marketerId);
   if (nextStatus === 'available' && currentStatus === 'pending') {
@@ -52,6 +58,7 @@ export async function settleCommission(tx, firestore, booking, nextStatus) {
         admin.firestore.FieldValue.increment(-amount),
     }, { merge: true });
   }
+  return nextStatus === 'available' ? 'available' : 'reversed';
 }
 
 export default async function handler(req, res) {
@@ -182,8 +189,8 @@ export default async function handler(req, res) {
         const fresh = await tx.get(bookingRef);
         if (!fresh.exists) throw new Error('BOOKING_NOT_FOUND');
         const freshBooking = fresh.data() || {};
-        await settleCommission(tx, firestore, freshBooking, nextStatus === 'approved' ? 'available' : 'reversed');
-        tx.set(bookingRef, update, { merge: true });
+        const commissionStatus = await settleCommission(tx, firestore, freshBooking, nextStatus === 'approved' ? 'available' : 'reversed');
+        tx.set(bookingRef, { ...update, commissionStatus }, { merge: true });
       });
       return reply(res, 200, { ok: true });
     }
@@ -193,8 +200,8 @@ export default async function handler(req, res) {
         const fresh = await tx.get(bookingRef);
         if (!fresh.exists) throw new Error('BOOKING_NOT_FOUND');
         const freshBooking = fresh.data() || {};
-        await settleCommission(tx, firestore, freshBooking, 'reversed');
-        tx.set(bookingRef, { status: 'cancelled', userRead: false, cancelledAt: new Date().toISOString() }, { merge: true });
+        const commissionStatus = await settleCommission(tx, firestore, freshBooking, 'reversed');
+        tx.set(bookingRef, { status: 'cancelled', commissionStatus, userRead: false, cancelledAt: new Date().toISOString() }, { merge: true });
       });
       return reply(res, 200, { ok: true });
     }
