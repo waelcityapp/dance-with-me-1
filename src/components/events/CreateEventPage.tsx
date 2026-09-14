@@ -183,22 +183,22 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     }
     return new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
   });
-  const [phone, setPhone] = useState(editingEvent ? editingEvent.contact.phone : (user?.phone || '+201011223344'));
-  const [whatsapp, setWhatsapp] = useState(editingEvent ? editingEvent.contact.whatsapp : (user?.phone ? user.phone.replace(/[^0-9]/g, '') : '201011223344'));
+  const [phone, setPhone] = useState(editingEvent?.contact.phone || '');
+  const [whatsapp, setWhatsapp] = useState(editingEvent?.contact.whatsapp || '');
   const [organizerName, setOrganizerName] = useState(
     editingEvent && editingEvent.contact?.organizerName 
       ? editingEvent.contact.organizerName 
       : (user?.name || '')
   );
-  const [locationNameAr, setLocationNameAr] = useState(editingEvent ? editingEvent.location.nameAr : 'أستوديو الرقص - الزمالك');
-  const [locationNameEn, setLocationNameEn] = useState(editingEvent ? editingEvent.location.nameEn : 'Dance Studio - Zamalek');
-  const [addressAr, setAddressAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressAr || 'القاهرة، مصر') : 'القاهرة، مصر');
-  const [addressEn, setAddressEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressEn || 'Cairo, Egypt') : 'Cairo, Egypt');
-  const [governorateAr, setGovernorateAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.governorateAr || 'القاهرة') : 'القاهرة');
-  const [governorateEn, setGovernorateEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.governorateEn || 'Cairo') : 'Cairo');
-  const [areaAr, setAreaAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaAr || 'الزمالك') : 'الزمالك');
-  const [areaEn, setAreaEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaEn || 'Zamalek') : 'Zamalek');
-  const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent && editingEvent.location ? editingEvent.location.googleMapsUrl : 'https://maps.google.com/?q=30.0444,31.2357');
+  const [locationNameAr, setLocationNameAr] = useState(editingEvent?.location.nameAr || '');
+  const [locationNameEn, setLocationNameEn] = useState(editingEvent?.location.nameEn || '');
+  const [addressAr, setAddressAr] = useState(editingEvent?.location.addressAr || '');
+  const [addressEn, setAddressEn] = useState(editingEvent?.location.addressEn || '');
+  const [governorateAr, setGovernorateAr] = useState(editingEvent?.location.governorateAr || '');
+  const [governorateEn, setGovernorateEn] = useState(editingEvent?.location.governorateEn || '');
+  const [areaAr, setAreaAr] = useState(editingEvent?.location.areaAr || '');
+  const [areaEn, setAreaEn] = useState(editingEvent?.location.areaEn || '');
+  const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent?.location.googleMapsUrl || '');
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent?.styles || []);
   const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
   const [adNumber, setAdNumber] = useState<string>(editingEvent && editingEvent.adNumber ? editingEvent.adNumber : '');
@@ -547,8 +547,6 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       }
     }
 
-    if (!titleAr) setTitleAr(lang === 'ar' ? 'سهرة سالسا وباتشاتا ملكية جديدة' : 'Royal Salsa & Bachata Night');
-    if (!titleEn) setTitleEn('Royal Salsa & Bachata Night');
     setStep('payment');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -584,37 +582,32 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     }
   };
 
-  const defaultImg = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
-  const defaultVid = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-  
-  let generatedMediaUrl = mediaUrl || (mediaType === 'video' ? defaultVid : defaultImg);
+  let generatedMediaUrl = mediaUrl;
   let generatedThumbnailUrl = mediaType === 'video' ? 
-    (generatedMediaUrl.includes('cloudinary.com') ? generatedMediaUrl.replace(/\.[^.]+$/, '.jpg') : defaultImg) 
+    (generatedMediaUrl.includes('cloudinary.com') ? generatedMediaUrl.replace(/\.[^.]+$/, '.jpg') : '')
     : generatedMediaUrl;
 
   const handleFinalPublish = async () => {
     setIsUploadingMedia(true);
     let finalMediaUrl = mediaUrl;
     
-    if (!finalMediaUrl || finalMediaUrl.startsWith('blob:')) {
-      finalMediaUrl = mediaType === 'video' ? defaultVid : defaultImg;
-    }
+    if (finalMediaUrl.startsWith('blob:')) finalMediaUrl = '';
 
     // Generate a proper thumbnailUrl for videos
     let finalThumbnailUrl = finalMediaUrl;
     if (mediaType === 'video' && finalMediaUrl.includes('cloudinary.com')) {
       finalThumbnailUrl = finalMediaUrl.replace(/\.[^.]+$/, '.jpg');
     } else if (mediaType === 'video') {
-      finalThumbnailUrl = defaultImg;
+      finalThumbnailUrl = '';
     }
 
     if (editingEvent) {
       const updatedEv: DanceEvent = {
         ...editingEvent,
-        titleAr: titleAr || editingEvent.titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
-        titleEn: titleEn || editingEvent.titleEn || 'Royal Salsa & Bachata Night',
-        descriptionAr: descAr || editingEvent.descriptionAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
-        descriptionEn: descEn || editingEvent.descriptionEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
+        titleAr: titleAr || editingEvent.titleAr,
+        titleEn: titleEn || editingEvent.titleEn,
+        descriptionAr: descAr || editingEvent.descriptionAr,
+        descriptionEn: descEn || editingEvent.descriptionEn,
         category: category as AdCategory,
         subcategory,
         styles: selectedStyles,
@@ -678,10 +671,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       // Admins publish directly; guests and regular users create a pending submission for admin review.
       if (user?.isAdmin || isAdminUnlocked) {
         const createdEvent = addNewEvent({
-          titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
-          titleEn: titleEn || 'Royal Salsa & Bachata Night',
-          descriptionAr: descAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
-          descriptionEn: descEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
+          titleAr,
+          titleEn,
+          descriptionAr: descAr,
+          descriptionEn: descEn,
           category: category as AdCategory,
           subcategory,
           styles: selectedStyles,
