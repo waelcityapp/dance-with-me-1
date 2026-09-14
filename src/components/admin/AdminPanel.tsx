@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 126427)
-Total output lines: 8107
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -2412,7 +2409,3912 @@ export const AdminPanel: React.FC = () => {
                   badge: 'PUSH',
                   badgeType: 'amber'
                 },
-              ].map((ite…66427 tokens truncated…                </div>
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.id}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => {
+                      setAdminSection(item.id as any);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-amber-500/70 dark:hover:border-amber-400/60 bg-white dark:bg-neutral-900 p-3 sm:p-3.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group h-auto min-h-[96px] sm:min-h-[108px]"
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        item.color === 'amber' ? 'bg-amber-500/10 text-amber-500' :
+                        item.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-500' :
+                        item.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-500' :
+                        item.color === 'purple' ? 'bg-purple-500/10 text-purple-500' :
+                        item.color === 'cyan' ? 'bg-cyan-500/10 text-cyan-500' :
+                        item.color === 'teal' ? 'bg-teal-500/10 text-teal-500' :
+                        item.color === 'blue' ? 'bg-blue-500/10 text-blue-500' :
+                        item.color === 'pink' ? 'bg-pink-500/10 text-pink-500' :
+                        'bg-red-500/10 text-red-500'
+                      }`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+
+                      {item.badge && (
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md leading-tight ${
+                          item.badgeType === 'amber' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono' :
+                          item.badgeType === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono' :
+                          item.badgeType === 'indigo' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300' :
+                          item.badgeType === 'purple' ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 font-mono' :
+                          item.badgeType === 'cyan' ? 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-mono' :
+                          item.badgeType === 'teal' ? 'bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300' :
+                          item.badgeType === 'blue' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300' :
+                          item.badgeType === 'pink' ? 'bg-pink-100 dark:bg-pink-500/20 text-pink-800 dark:text-pink-300' :
+                          item.badgeType === 'red' ? 'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300' :
+                          'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-2">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-neutral-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                        {item.title}
+                      </h4>
+                      <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                        {item.desc}
+                      </p>
+                    </div>
+
+                    <div className="mt-1 flex items-center justify-end text-[10px] font-black text-amber-600 dark:text-amber-400 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span>{lang === 'ar' ? 'فتح ➔' : 'Open ➔'}</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'bookings' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Section Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Bookings'}
+              </span>
+              <span className="text-xl font-black text-amber-400 mt-1 block font-mono">
+                {bookings ? bookings.length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '🎟️ تذاكر قيد المراجعة' : '🎟️ Pending Review'}
+              </span>
+              <span className="text-xl font-black text-yellow-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'pending').length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '✅ الحجوزات المقبولة' : '✅ Approved Bookings'}
+              </span>
+              <span className="text-xl font-black text-emerald-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'approved').length : 0}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+              <span className="text-xs text-neutral-400 block font-medium">
+                {lang === 'ar' ? '❌ طلبات مرفوضة' : '❌ Rejected Bookings'}
+              </span>
+              <span className="text-xl font-black text-red-400 mt-1 block font-mono">
+                {bookings ? bookings.filter(b => (b.status || 'pending').toLowerCase() === 'rejected').length : 0}
+              </span>
+            </div>
+          </div>
+
+          {/* Purge reminder info card for Admins */}
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex gap-3 items-start">
+            <span className="text-lg text-amber-500 shrink-0 mt-0.5">⚠️</span>
+            <div className="space-y-1">
+              <h5 className="text-xs font-black text-amber-400">
+                {lang === 'ar' ? 'سياسة توفير المساحة التلقائية وتأمين البيانات' : 'Automated Storage Optimization Policy'}
+              </h5>
+              <p className="text-[11px] text-neutral-300 leading-relaxed font-sans">
+                {lang === 'ar' 
+                  ? 'برجاء العلم أنه بعد مرور 24 ساعة من تاريخ الاحتفال/الحدث، يتم مسح صور إيصالات الدفع والتحويلات تلقائياً من خوادم قاعدة البيانات لتوفير مساحة الاستضافة وحماية خصوصية العملاء. تأكد من مطابقة ومراجعة الإيصالات وتفعيل الحجوزات قبل انتهاء الحدث.' 
+                  : 'Please note: 24 hours after an event date has passed, all associated receipt screenshots are automatically deleted to optimize database storage and preserve client privacy. Ensure all bookings are verified and approved before the event begins.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Actions for Admins */}
+          {!viewingBookedAds && !viewingCancellationRequests && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => setViewingBookedAds(true)}
+                className="flex items-center justify-between gap-4 p-5 rounded-3xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all text-left cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-neutral-950 shadow-md shrink-0">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-extrabold text-white text-sm">
+                      {lang === 'ar' ? '📊 مراجعة الإعلانات المحجوزة' : '📊 Review Booked Ads'}
+                    </h4>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' ? 'عرض الفعاليات النشطة وإجمالي الحجوزات والحضور والتفاصيل.' : 'View active events, total bookings, attendance rates and attendee details.'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-amber-500 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">➔</span>
+              </button>
+
+              <button
+                onClick={() => setViewingCancellationRequests(true)}
+                className="flex items-center justify-between gap-4 p-5 rounded-3xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/10 transition-all text-left cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500 text-neutral-950 shadow-md shrink-0">
+                    <XCircle className="h-6 w-6" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-extrabold text-white text-sm">
+                      {lang === 'ar' ? '🚨 طلبات إلغاء الحجز' : '🚨 Cancellation Requests'}
+                    </h4>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' ? 'عرض المستخدمين الراغبين في إلغاء الحجز للتواصل معهم.' : 'View users requesting cancellation and their contact details.'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-red-500 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">➔</span>
+              </button>
+            </div>
+          )}
+
+          {viewingBookedAds ? (
+            // --- BOOKED ADS REVIEW SUBVIEW ---
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (selectedBookedAdId) {
+                        setSelectedBookedAdId(null);
+                      } else {
+                        setViewingBookedAds(false);
+                      }
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 transition-all cursor-pointer shrink-0"
+                  >
+                    <ArrowLeft className={`h-5 w-5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <div className="text-left">
+                    <h3 className="text-lg font-black text-white">
+                      {selectedBookedAdId 
+                        ? (lang === 'ar' ? '👥 تفاصيل الحضور والحجوزات للفعالية' : '👥 Event Booking & Attendance Details')
+                        : (lang === 'ar' ? '📊 مراجعة الإعلانات التي تم عليها الحجز' : '📊 Booked Ads Review')}
+                    </h3>
+                    <p className="text-xs text-neutral-400">
+                      {selectedBookedAdId
+                        ? (lang === 'ar' ? 'عرض قائمة المشتركين المسجلين وحالة حضورهم لكل تذكرة.' : 'List of registered members and their check-in status per ticket.')
+                        : (lang === 'ar' ? 'عرض جميع الفعاليات التي تم عليها حجز تذاكر مع إحصائيات الحضور.' : 'All events with registered tickets and attendance rates.')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedBookedAdId ? (
+                // --- ATTENDEE LIST FOR SELECTED EVENT ---
+                (() => {
+                  const eventBookings = bookings.filter(b => b.eventId === selectedBookedAdId && b.status !== 'rejected');
+                  const currentEvent = events.find(e => e.id === selectedBookedAdId);
+                  const eventTitle = currentEvent 
+                    ? (lang === 'ar' ? currentEvent.titleAr : currentEvent.titleEn)
+                    : (eventBookings[0] ? (lang === 'ar' ? eventBookings[0].eventTitleAr : eventBookings[0].eventTitleEn) : '');
+
+                  const eventRevenue = eventBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+                  const eventIndividuals = eventBookings.reduce((sum, b) => sum + (Number(b.numberOfIndividuals) || 1), 0);
+                  const eventIndividualsAttended = eventBookings.filter(b => b.attended).reduce((sum, b) => sum + (Number(b.numberOfIndividuals) || 1), 0);
+
+                  return (
+                    <div className="space-y-6 animate-fadeIn">
+                      <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4 text-left">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                          <div className="text-left">
+                            <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase font-black">
+                              {lang === 'ar' ? 'الفعالية المحددة' : 'SELECTED EVENT'}
+                            </span>
+                            <h4 className="text-base font-black text-white mt-0.5">{eventTitle}</h4>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 w-full lg:w-auto shrink-0">
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'إجمالي الحجوزات' : 'Total Booked'}</span>
+                              <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                {eventBookings.length} <span className="text-[10px] text-neutral-400 font-normal font-sans">({eventIndividuals} {lang === 'ar' ? 'فرد' : 'pax'})</span>
+                              </span>
+                            </div>
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'حضروا بالفعل' : 'Checked In'}</span>
+                              <span className="text-sm font-black text-emerald-400 font-mono mt-0.5 block">
+                                {eventBookings.filter(b => b.attended).length} <span className="text-[10px] text-emerald-500/70 font-normal font-sans">({eventIndividualsAttended} {lang === 'ar' ? 'فرد' : 'pax'})</span>
+                              </span>
+                            </div>
+                            <div className="bg-neutral-950 p-3 rounded-xl text-center border border-neutral-800/60">
+                              <span className="text-[10px] text-neutral-400 block font-bold leading-tight">{lang === 'ar' ? 'المبلغ المستحق' : 'Total Price'}</span>
+                              <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                {eventRevenue.toLocaleString()} <span className="text-[9px] font-normal text-neutral-400 font-sans">{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {eventBookings.length === 0 ? (
+                          <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20">
+                            <p className="text-neutral-400 text-sm">
+                              {lang === 'ar' ? '🚫 لا توجد حجوزات نشطة لهذه الفعالية حالياً.' : '🚫 No active bookings for this event yet.'}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {eventBookings.map((b) => (
+                              <div
+                                key={b.id}
+                                className="p-5 rounded-3xl border border-neutral-800 bg-neutral-900 flex flex-col justify-between space-y-4 shadow-lg hover:border-neutral-700 transition-all text-left"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="text-left">
+                                    <h5 className="text-sm font-extrabold text-white">{b.userName}</h5>
+                                    <p className="text-xs text-neutral-400 mt-0.5 font-mono">Ref: {b.refNumber}</p>
+                                  </div>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                                    b.status === 'approved' 
+                                      ? 'bg-emerald-500/20 text-emerald-300' 
+                                      : b.status === 'pending'
+                                      ? 'bg-amber-500/20 text-amber-300 animate-pulse'
+                                      : 'bg-red-500/20 text-red-300'
+                                  }`}>
+                                    {b.status === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
+                                    {b.status === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending')}
+                                    {b.status === 'cancelled' && (lang === 'ar' ? '⚠️ ملغي' : 'Cancelled')}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 text-xs">
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '📞 رقم التواصل' : '📞 Phone'}</span>
+                                    <span className="text-white font-bold font-mono">{b.userPhone}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '👥 عدد الأفراد' : '👥 Pax'}</span>
+                                    <span className="text-white font-bold font-mono">{String(b.numberOfIndividuals || 1)} {lang === 'ar' ? 'أفراد' : 'person(s)'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '💰 قيمة الحجز' : '💰 Booking Price'}</span>
+                                    <span className="text-white font-bold font-mono">{String(b.totalAmount || 0)} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-400 block font-medium">{lang === 'ar' ? '🚪 حالة الحضور' : '🚪 Attendance'}</span>
+                                    <span className={`font-bold ${b.attended ? 'text-emerald-400' : 'text-neutral-400'}`}>
+                                      {b.attended 
+                                        ? (lang === 'ar' ? '✅ حضر' : 'Checked In') 
+                                        : (lang === 'ar' ? '❌ لم يحضر بعد' : 'Not Checked In')}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2 pt-2 border-t border-neutral-850">
+                                  <a
+                                    href={`tel:${b.userPhone}`}
+                                    className="flex-1 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-center text-[11px] font-bold text-white flex items-center justify-center gap-1 transition-all"
+                                  >
+                                    <Phone className="h-3.5 w-3.5 text-neutral-400" />
+                                    <span>{lang === 'ar' ? 'اتصال هاتف' : 'Call'}</span>
+                                  </a>
+                                  <a
+                                    href={`https://wa.me/${b.userPhone.startsWith('0') ? '2' + b.userPhone : b.userPhone}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex-1 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-center text-[11px] font-bold text-emerald-400 flex items-center justify-center gap-1 transition-all"
+                                  >
+                                    <span className="text-xs">💬</span>
+                                    <span>واتساب</span>
+                                  </a>
+                                  <button
+                                    onClick={async () => {
+                                      if (actionLoading) return;
+                                      const confirmed = await triggerConfirm(
+                                        lang === 'ar' 
+                                          ? '⚠️ هل أنت متأكد تماماً من حذف هذا الحجز نهائياً من قاعدة البيانات؟ لا يمكن استعادته لاحقاً!' 
+                                          : '⚠️ Are you absolutely sure you want to permanently delete this booking? This action cannot be undone!'
+                                      );
+                                      if (confirmed) {
+                                        setActionLoading(b.id);
+                                        await deleteBooking(b.id);
+                                        setActionLoading(null);
+                                      }
+                                    }}
+                                    disabled={actionLoading !== null}
+                                    className="flex-1 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-center text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <span>{lang === 'ar' ? 'حذف الحجز' : 'Delete'}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                // --- LIST OF EVENTS THAT HAVE BOOKINGS ---
+                (() => {
+                  const groups: Record<string, { 
+                    eventId: string; 
+                    titleAr: string; 
+                    titleEn: string; 
+                    totalBookings: number; 
+                    totalAttendance: number; 
+                    totalRevenue: number;
+                    totalIndividuals: number;
+                    totalIndividualsAttended: number;
+                    bookings: any[] 
+                  }> = {};
+                  bookings.forEach(b => {
+                    if (b.status === 'rejected') return;
+                    if (!groups[b.eventId]) {
+                      groups[b.eventId] = {
+                        eventId: b.eventId,
+                        titleAr: b.eventTitleAr || 'فعالية غير معروفة',
+                        titleEn: b.eventTitleEn || 'Unknown Event',
+                        totalBookings: 0,
+                        totalAttendance: 0,
+                        totalRevenue: 0,
+                        totalIndividuals: 0,
+                        totalIndividualsAttended: 0,
+                        bookings: []
+                      };
+                    }
+                    groups[b.eventId].bookings.push(b);
+                    groups[b.eventId].totalBookings += 1;
+                    groups[b.eventId].totalRevenue += Number(b.totalAmount) || 0;
+                    const pCount = Number(b.numberOfIndividuals) || 1;
+                    groups[b.eventId].totalIndividuals += pCount;
+                    if (b.attended) {
+                      groups[b.eventId].totalAttendance += 1;
+                      groups[b.eventId].totalIndividualsAttended += pCount;
+                    }
+                  });
+
+                  const list = Object.values(groups);
+
+                  const overallBookingsCount = list.reduce((sum, g) => sum + g.totalBookings, 0);
+                  const overallAttendanceCount = list.reduce((sum, g) => sum + g.totalAttendance, 0);
+                  const overallRevenue = list.reduce((sum, g) => sum + g.totalRevenue, 0);
+                  const overallIndividuals = list.reduce((sum, g) => sum + g.totalIndividuals, 0);
+                  const overallIndividualsAttended = list.reduce((sum, g) => sum + g.totalIndividualsAttended, 0);
+
+                  if (list.length === 0) {
+                    return (
+                      <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 animate-fadeIn">
+                        <p className="text-neutral-400 text-sm">
+                          {lang === 'ar' ? '🚫 لا توجد فعاليات مسجلة بها حجوزات حالياً.' : '🚫 No events with registered bookings found.'}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-6 animate-fadeIn text-left text-neutral-100">
+                      {/* Overall stats summary widget */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 rounded-3xl bg-neutral-900 border border-neutral-800">
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-neutral-400 block font-bold">
+                            {lang === 'ar' ? '🎟️ إجمالي التذاكر المحجوزة' : '🎟️ Total Booked Tickets'}
+                          </span>
+                          <span className="text-xl font-black text-white font-mono mt-1 block">
+                            {overallBookingsCount} {lang === 'ar' ? 'حجز' : 'booking(s)'} <span className="text-xs text-neutral-400 font-normal font-sans">({overallIndividuals} {lang === 'ar' ? 'أفراد' : 'pax'})</span>
+                          </span>
+                        </div>
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-emerald-400 block font-bold">
+                            {lang === 'ar' ? '🚪 حضروا بالفعل' : '🚪 Checked In / Attended'}
+                          </span>
+                          <span className="text-xl font-black text-emerald-400 font-mono mt-1 block">
+                            {overallAttendanceCount} {lang === 'ar' ? 'حجز' : 'booking(s)'} <span className="text-xs text-emerald-500/70 font-normal font-sans">({overallIndividualsAttended} {lang === 'ar' ? 'أفراد' : 'pax'})</span>
+                          </span>
+                        </div>
+                        <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800/60">
+                          <span className="text-[10px] text-amber-400 block font-bold">
+                            {lang === 'ar' ? '💰 إجمالي المبالغ المستحقة' : '💰 Total Revenue Due'}
+                          </span>
+                          <span className="text-xl font-black text-amber-400 font-mono mt-1 block">
+                            {overallRevenue.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {list.map((group) => (
+                          <div
+                            key={group.eventId}
+                            onClick={() => setSelectedBookedAdId(group.eventId)}
+                            className="p-5 sm:p-6 rounded-3xl border border-neutral-800 bg-neutral-900 hover:border-amber-500/40 hover:bg-neutral-850/50 transition-all cursor-pointer group flex flex-col justify-between space-y-4 shadow-xl"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase font-black">
+                                  {lang === 'ar' ? 'الفعالية / الإعلان' : 'EVENT / AD'}
+                                </span>
+                                <h4 className="text-base font-black text-white group-hover:text-amber-400 transition-colors mt-0.5 line-clamp-1">
+                                  {lang === 'ar' ? group.titleAr : group.titleEn}
+                                </h4>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePurgeEventCompletely(group.eventId, lang === 'ar' ? group.titleAr : group.titleEn);
+                                }}
+                                className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all shrink-0"
+                                title={lang === 'ar' ? 'حذف الفعالية وكل الحجوزات المتعلقة بها نهائياً' : 'Purge event and all related data completely'}
+                                disabled={actionLoading === group.eventId}
+                              >
+                                {actionLoading === group.eventId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 bg-neutral-950/60 p-3 rounded-2xl border border-neutral-800/40 text-left">
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '🎟️ إجمالي الحجوزات' : '🎟️ Bookings'}
+                                </span>
+                                <span className="text-sm font-black text-white font-mono mt-0.5 block">
+                                  {group.totalBookings} <span className="text-[10px] text-neutral-400 font-normal font-sans">({group.totalIndividuals})</span>
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '🚪 حضروا بالفعل' : '🚪 Attended'}
+                                </span>
+                                <span className="text-sm font-black text-emerald-400 font-mono mt-0.5 block">
+                                  {group.totalAttendance} <span className="text-[10px] text-emerald-500/70 font-normal font-sans">({group.totalIndividualsAttended})</span>
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold leading-tight">
+                                  {lang === 'ar' ? '💰 إجمالي المبالغ' : '💰 Total Price'}
+                                </span>
+                                <span className="text-sm font-black text-amber-400 font-mono mt-0.5 block">
+                                  {group.totalRevenue.toLocaleString()} <span className="text-[9px] font-normal text-neutral-400 font-sans">{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs font-bold text-amber-400 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1 pt-1">
+                              <span>{lang === 'ar' ? 'عرض تفاصيل الحضور والمشتركين ➔' : 'View attendance & subscribers list ➔'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          ) : viewingCancellationRequests ? (
+            // --- CANCELLATION REQUESTS SUBVIEW ---
+            <div className="space-y-6 animate-fadeIn text-left">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setViewingCancellationRequests(false)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 transition-all cursor-pointer shrink-0"
+                  >
+                    <ArrowLeft className={`h-5 w-5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <div>
+                    <h3 className="text-lg font-black text-white">
+                      {lang === 'ar' ? '🚨 طلبات إلغاء الحجز والـ Refund' : '🚨 Booking Cancellation Requests'}
+                    </h3>
+                    <p className="text-xs text-neutral-400">
+                      {lang === 'ar' ? 'قائمة بجميع المستخدمين الذين طلبوا إلغاء حجزهم مع تفاصيل المبالغ والاتصال.' : 'All users who submitted cancellation requests with booking value and contact info.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {(() => {
+                const cancelRequests = bookings.filter(b => (b.status || 'pending').toLowerCase() === 'cancelled');
+
+                if (cancelRequests.length === 0) {
+                  return (
+                    <div className="p-12 text-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 animate-fadeIn">
+                      <p className="text-neutral-400 text-sm">
+                        {lang === 'ar' ? '🎉 لا توجد طلبات إلغاء حجز حالياً.' : '🎉 No cancellation requests found.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+                    {cancelRequests.map((b) => (
+                      <div
+                        key={b.id}
+                        className="p-5 sm:p-6 rounded-3xl border border-red-500/20 bg-neutral-900 hover:border-red-500/40 transition-all shadow-xl space-y-4 relative overflow-hidden flex flex-col justify-between text-left"
+                      >
+                        <div className="absolute top-0 right-0 h-1 bg-red-500 w-full" />
+                        
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <span className="text-[10px] font-mono tracking-wider text-red-400 font-black block">
+                              {lang === 'ar' ? 'طلب إلغاء حجز' : 'CANCELLATION REQUEST'}
+                            </span>
+                            <h4 className="text-sm font-black text-white mt-0.5">{b.userName}</h4>
+                            <p className="text-xs text-neutral-400 font-mono mt-0.5">Ref: {b.refNumber}</p>
+                          </div>
+                          {b.cancelledAt && (
+                            <span className="text-[10px] text-neutral-400 font-bold bg-neutral-950 px-2 py-1 rounded-lg shrink-0">
+                              🕒 {new Date(b.cancelledAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 border-y border-neutral-800 py-3 text-xs">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-neutral-400 shrink-0">{lang === 'ar' ? 'اسم الفعالية:' : 'Event Name:'}</span>
+                            <span className="text-white font-extrabold text-right line-clamp-1 max-w-[200px]">
+                              {lang === 'ar' ? b.eventTitleAr : b.eventTitleEn}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-400">{lang === 'ar' ? 'قيمة الحجز المدفوعة:' : 'Paid Amount:'}</span>
+                            <span className="text-white font-bold font-mono">
+                              {String(b.totalAmount || 0)} {lang === 'ar' ? 'ج.م' : 'EGP'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-400">{lang === 'ar' ? 'رقم موبايل للتواصل:' : 'Contact Phone:'}</span>
+                            <span className="text-amber-400 font-bold font-mono select-all">
+                              {b.userPhone}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                          <a
+                            href={`tel:${b.userPhone}`}
+                            className="flex-1 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-center text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <Phone className="h-4 w-4 text-neutral-400" />
+                            <span>{lang === 'ar' ? 'اتصال بالهاتف' : 'Call'}</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/${b.userPhone.startsWith('0') ? '2' + b.userPhone : b.userPhone}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-center text-xs font-bold text-emerald-400 flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <span className="text-sm">💬</span>
+                            <span>واتساب العميل</span>
+                          </a>
+                          <button
+                            onClick={async () => {
+                              if (actionLoading) return;
+                              const confirmed = await triggerConfirm(
+                                lang === 'ar' 
+                                  ? '⚠️ هل أنت متأكد من حذف هذا الحجز وحذف طلب الإلغاء نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء!' 
+                                  : '⚠️ Are you sure you want to permanently delete this booking and cancellation request from the database? This action cannot be undone!'
+                              );
+                              if (confirmed) {
+                                setActionLoading(b.id);
+                                await deleteBooking(b.id);
+                                setActionLoading(null);
+                              }
+                            }}
+                            disabled={actionLoading !== null}
+                            className="flex-1 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-center text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4 shrink-0" />
+                            <span>{lang === 'ar' ? 'حذف نهائياً' : 'Delete'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            // --- DEFAULT BOOKINGS SECTION CONTENT ---
+            <>
+              {/* Filters and Search Bar */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-4 sm:p-6 space-y-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              {/* Tab Filters */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setBookingsFilter(tab)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      bookingsFilter === tab
+                        ? 'bg-emerald-500 text-neutral-950 shadow-lg shadow-emerald-500/15'
+                        : 'bg-neutral-800 hover:bg-neutral-750 text-neutral-300 border border-neutral-700/60'
+                    }`}
+                  >
+                    {tab === 'all' && (lang === 'ar' ? '📋 الكل' : '📋 All')}
+                    {tab === 'pending' && (lang === 'ar' ? '⏳ معلق' : '⏳ Pending')}
+                    {tab === 'approved' && (lang === 'ar' ? '✅ مقبول' : '✅ Approved')}
+                    {tab === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : '❌ Rejected')}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Field */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder={
+                    lang === 'ar' 
+                      ? 'البحث برقم الحجز، اسم العميل، الموبايل...' 
+                      : 'Search by booking ID, customer name, mobile...'
+                  }
+                  value={bookingsSearch}
+                  onChange={(e) => setBookingsSearch(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500 transition-all font-medium"
+                />
+                {bookingsSearch && (
+                  <button
+                    onClick={() => setBookingsSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bookings List */}
+          <div className="space-y-4">
+            {(() => {
+              const list = bookings || [];
+              const filtered = list.filter((b) => {
+                const currentStatus = (b.status || 'pending').toLowerCase();
+                // Status Filter
+                if (bookingsFilter !== 'all' && currentStatus !== bookingsFilter) return false;
+
+                // Search Filter
+                if (bookingsSearch.trim()) {
+                  const query = bookingsSearch.toLowerCase();
+                  const refNum = b.refNumber.toLowerCase();
+                  const name = b.userName.toLowerCase();
+                  const phone = b.userPhone.toLowerCase();
+                  const titleAr = (b.eventTitleAr || '').toLowerCase();
+                  const titleEn = (b.eventTitleEn || '').toLowerCase();
+
+                  return (
+                    refNum.includes(query) ||
+                    name.includes(query) ||
+                    phone.includes(query) ||
+                    titleAr.includes(query) ||
+                    titleEn.includes(query)
+                  );
+                }
+
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/20 p-12 text-center">
+                    <p className="text-neutral-400 text-sm">
+                      {lang === 'ar' 
+                        ? '🚫 لا توجد طلبات حجز مطابقة للخيارات الحالية.' 
+                        : '🚫 No bookings match your selected filters.'}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {filtered.map((b) => {
+                    return (
+                      <motion.div
+                        key={b.id}
+                        layout
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-3xl border border-neutral-800 bg-neutral-900 p-5 sm:p-6 shadow-xl relative overflow-hidden flex flex-col justify-between"
+                      >
+                        {/* Status bar top */}
+                        <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500" />
+                        <div className="flex items-start justify-between gap-4 border-b border-neutral-800 pb-4 mb-4">
+                          <div>
+                            <span className="text-[10px] font-mono tracking-wider text-neutral-400 uppercase">
+                              {lang === 'ar' ? 'رقم حجز مرجعي' : 'REFERENCE NUMBER'}
+                            </span>
+                            <h4 className="text-base font-black text-emerald-400 tracking-wider mt-0.5 select-all font-mono">
+                              {b.refNumber}
+                            </h4>
+                            {b.submittedAt && (
+                              <div className="text-[10px] text-neutral-400 font-bold mt-1 flex items-center gap-1">
+                                <span>📅</span>
+                                <span>
+                                  {lang === 'ar' ? 'تقديم الحجز:' : 'Submitted:'} {new Date(b.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <span className={`px-3 py-1 rounded-full text-[11px] font-black ${
+                            b.status === 'approved' 
+                              ? 'bg-emerald-500/20 text-emerald-300' 
+                              : b.status === 'rejected'
+                              ? 'bg-red-500/20 text-red-300'
+                              : 'bg-amber-500/20 text-amber-300 animate-pulse'
+                          }`}>
+                            {b.status === 'approved' && (lang === 'ar' ? '✅ مقبول' : 'Approved')}
+                            {b.status === 'rejected' && (lang === 'ar' ? '❌ مرفوض' : 'Rejected')}
+                            {b.status === 'pending' && (lang === 'ar' ? '⏳ قيد المراجعة' : 'Pending Review')}
+                          </span>
+                        </div>
+
+                        {/* Booking Details */}
+                        <div className="space-y-4 flex-1">
+                          {/* Attendee details */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold">
+                                {lang === 'ar' ? '👤 اسم العميل (كامل بالبطاقة)' : '👤 Full Customer Name'}
+                              </span>
+                              <span className="text-sm font-extrabold text-white mt-1 block">
+                                {b.userName}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold">
+                                {lang === 'ar' ? '📞 رقم الموبايل للتواصل' : '📞 Contact Phone'}
+                              </span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs font-mono font-bold text-white select-all">
+                                  {b.userPhone}
+                                </span>
+                                <a
+                                  href={`tel:${b.userPhone}`}
+                                  className="h-6 w-6 rounded-md bg-neutral-800 hover:bg-neutral-750 flex items-center justify-center text-neutral-300 hover:text-white transition-all"
+                                  title="اتصال مباشر"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                </a>
+                                <a
+                                  href={`https://wa.me/${b.userPhone.replace('+', '').replace(/^0/, '20')}`}
+                                  target="_blank"
+                                  referrerPolicy="no-referrer"
+                                  className="h-6 w-6 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 flex items-center justify-center text-emerald-400 transition-all"
+                                  title="مراسلة واتساب"
+                                >
+                                  <MessageCircle className="h-3 w-3" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Event details */}
+                          <div className="rounded-2xl bg-neutral-950 p-3.5 space-y-2 border border-neutral-800/50">
+                            <div className="flex justify-between items-start gap-4">
+                              <div>
+                                <span className="text-[10px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? '🎟️ الفعالية المطلوبة' : '🎟️ Reserved Event'}
+                                </span>
+                                <span className="text-xs font-extrabold text-neutral-200 mt-1 block line-clamp-1">
+                                  {lang === 'ar' ? b.eventTitleAr : b.eventTitleEn}
+                                </span>
+                              </div>
+                              {(() => {
+                                const matchedEvent = events.find(e => e.id === b.eventId);
+                                const evDate = b.eventDate || matchedEvent?.eventDate;
+                                if (!evDate) return null;
+                                return (
+                                  <div className="text-right shrink-0">
+                                    <span className="text-[10px] text-amber-500 block font-black">
+                                      {lang === 'ar' ? '📅 تاريخ الفعالية' : '📅 Event Date'}
+                                    </span>
+                                    <span className="text-xs font-extrabold text-neutral-200 mt-1 block font-mono">
+                                      {new Date(evDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-900 text-center">
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'عدد الأفراد' : 'Guests'}
+                                </span>
+                                <span className="text-xs font-extrabold text-amber-400 mt-0.5 block">
+                                  {b.numberOfIndividuals} {lang === 'ar' ? 'أفراد' : 'people'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'سعر الفرد' : 'Price / Individual'}
+                                </span>
+                                <span className="text-xs font-extrabold text-neutral-300 mt-0.5 block font-mono">
+                                  {b.bookingMode === 'name_only' ? (lang === 'ar' ? 'لم يُحدَّد' : 'Not set') : `${b.eventPrice} ${lang === 'ar' ? 'ج.م' : 'EGP'}`}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-neutral-400 block font-bold">
+                                  {lang === 'ar' ? 'الإجمالي المطلوب' : 'Grand Total'}
+                                </span>
+                                <span className="text-xs font-black text-emerald-400 mt-0.5 block font-mono">
+                                  {b.bookingMode === 'name_only' ? (lang === 'ar' ? 'حجز بالاسم' : 'Name-only booking') : `${String(b.totalAmount || 0)} ${lang === 'ar' ? 'ج.م' : 'EGP'}`}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Receipt Image */}
+                          {b.receiptImage && (
+                            <div>
+                              <span className="text-[10px] text-neutral-400 block font-bold mb-1.5">
+                                {lang === 'ar' ? '📄 إيصال تحويل فودافون كاش / انستاباي' : '📄 Payment Receipt Screenshot'}
+                              </span>
+                              <div 
+                                onClick={() => setSelectedBookingReceipt(b.receiptImage)}
+                                className="relative rounded-2xl overflow-hidden border border-neutral-800 h-28 bg-neutral-950 hover:border-emerald-500/50 transition-all cursor-zoom-in group"
+                              >
+                                <img
+                                  src={b.receiptImage}
+                                  alt="Payment Receipt"
+                                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-center p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                                    <Eye className="h-3 w-3" />
+                                    {lang === 'ar' ? 'تكبير وعرض الإيصال' : 'View full size'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Status timestamps / codes */}
+                          <div className="text-[10px] text-neutral-400 space-y-1 pt-1">
+                            <div className="flex justify-between">
+                              <span>{lang === 'ar' ? 'تاريخ تقديم الحجز:' : 'Submitted At:'}</span>
+                              <span className="font-mono text-neutral-300">
+                                {new Date(b.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                              </span>
+                            </div>
+                            {b.status === 'approved' && b.accessCode && (
+                              <div className="flex justify-between bg-emerald-500/5 px-2 py-1 rounded-md border border-emerald-500/10">
+                                <span className="text-emerald-300 font-bold">{lang === 'ar' ? 'كود الدخول المعتمد:' : 'Access Code Issued:'}</span>
+                                <span className="font-mono font-black text-emerald-400 select-all tracking-wider">{b.accessCode}</span>
+                              </div>
+                            )}
+                            {b.status === 'rejected' && b.adminNotes && (
+                              <div className="bg-red-500/5 px-2 py-1 rounded-md border border-red-500/10 text-red-300">
+                                <span className="font-bold">{lang === 'ar' ? 'سبب الرفض:' : 'Rejection Note:'} </span>
+                                <span>{b.adminNotes}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Delete Button for all statuses */}
+                        <div className="border-t border-neutral-850 pt-3.5 mt-3.5 flex items-center justify-between gap-3">
+                          <span className="text-[10px] text-neutral-500 font-mono">
+                            {lang === 'ar' ? 'إجراءات المشرف' : 'Admin Action'}
+                          </span>
+                          <button
+                            onClick={async () => {
+                              const confirmed = await triggerConfirm(
+                                lang === 'ar' 
+                                  ? '⚠️ هل أنت متأكد تماماً من حذف هذا الحجز نهائياً من قاعدة البيانات؟ لا يمكن استعادة هذا الحجز بعد حذفه!' 
+                                  : '⚠️ Are you absolutely sure you want to permanently delete this booking from the database? This action cannot be undone!'
+                              );
+                              if (confirmed) {
+                                setActionLoading(b.id);
+                                await deleteBooking(b.id);
+                                setActionLoading(null);
+                              }
+                            }}
+                            disabled={actionLoading !== null}
+                            className="bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-neutral-950 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border border-red-500/20 hover:border-red-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>{lang === 'ar' ? 'حذف الحجز نهائياً' : 'Delete Booking'}</span>
+                          </button>
+                        </div>
+
+                        {/* Action buttons */}
+                        {b.status === 'pending' && (
+                          <div className="border-t border-neutral-800 pt-4 mt-4 space-y-3">
+                            {/* Rejection input toggle */}
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder={lang === 'ar' ? 'أدخل سبب الرفض أو كود الحجز المخصص هنا...' : 'Enter rejection reason or custom booking code here...'}
+                                value={rejectionReasonMap[b.id] || ''}
+                                onChange={(e) => {
+                                  setRejectionReasonMap(prev => ({
+                                    ...prev,
+                                    [b.id]: e.target.value
+                                  }));
+                                }}
+                                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500 transition-all"
+                              />
+                            </div>
+
+                            <div className="flex gap-3">
+                              <button
+                                onClick={async () => {
+                                  if (actionLoading) return;
+                                  setActionLoading(b.id);
+                                  // Rejection reason
+                                  const reason = rejectionReasonMap[b.id]?.trim() || (b.bookingMode === 'name_only' ? (lang === 'ar' ? 'تعذر تأكيد طلب الحجز.' : 'The booking request could not be confirmed.') : (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.'));
+                                  await rejectBooking(b.id, reason);
+                                  setActionLoading(null);
+                                }}
+                                disabled={actionLoading !== null}
+                                className="flex-1 bg-neutral-800 hover:bg-red-500/20 hover:text-red-300 text-neutral-300 border border-neutral-700/60 hover:border-red-500/40 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <XCircle className="h-4 w-4 shrink-0" />
+                                <span>{lang === 'ar' ? 'رفض الحجز' : 'Decline Booking'}</span>
+                              </button>
+
+                              <button
+                                onClick={async () => {
+                                  if (actionLoading) return;
+                                  setActionLoading(b.id);
+                                  const typedVal = rejectionReasonMap[b.id]?.trim() || '';
+                                  const code = typedVal || `DWM-${b.refNumber.replace('#', '')}`;
+                                  const qrUrl = 'https://cityeve.online' + '/?verify=' + b.id;
+                                  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+                                  try {
+                                    const approved = await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
+                                    if (!approved) alert(lang === 'ar' ? 'تعذر تأكيد الحجز. راجع الاتصال وصلاحية الإدارة، ثم حاول مجددًا.' : 'Could not confirm this booking. Check your connection and admin access, then try again.');
+                                  } catch (error) {
+                                    console.error('Booking approval failed:', error);
+                                    alert(lang === 'ar' ? 'حدث خطأ أثناء تأكيد الحجز.' : 'An error occurred while confirming the booking.');
+                                  } finally {
+                                    setActionLoading(null);
+                                  }
+                                }}
+                                disabled={actionLoading !== null}
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-neutral-950 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <CheckCircle className="h-4 w-4 shrink-0" />
+                                <span>{lang === 'ar' ? 'تأكيد الحجز وإصدار التذكرة' : 'Confirm & Issue Ticket'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </>
+      )}
+    </div>
+  )}
+
+      {/* Booking Receipt Lightbox Modal Overlay */}
+      <AnimatePresence>
+        {selectedBookingReceipt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedBookingReceipt(null)}
+            className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <button
+              onClick={() => setSelectedBookingReceipt(null)}
+              className="absolute top-4 right-4 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full p-2"
+            >
+              <XCircle className="h-6 w-6" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              src={selectedBookingReceipt}
+              alt="Expanded Payment Receipt Screenshot"
+              className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-neutral-800"
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {adminSection === 'database' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Firebase Connection Card */}
+          <div className="rounded-3xl border border-blue-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-blue-950/40 p-6 shadow-xl">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+                  <Database className="h-7 w-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-extrabold text-white">
+                      {lang === 'ar' ? 'قاعدة بيانات Google Cloud Firestore الخاصة بك' : 'Your Google Cloud Firestore Database'}
+                    </h3>
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold font-mono">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      CONNECTED (Realtime Sync)
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono text-neutral-400 mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1">
+                    <span>Project ID: <strong className="text-blue-300 select-all">{resolvedFirebaseConfig.projectId || 'Unknown'}</strong></span>
+                    <span>Database ID: <strong className="text-blue-300 select-all">{databaseId || '(default)'}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                {(() => {
+                  const isDefaultDb = !databaseId || databaseId === '(default)' || databaseId === 'default';
+                  const firebaseConsoleUrl = isDefaultDb
+                    ? `https://console.firebase.google.com/project/${resolvedFirebaseConfig.projectId || 'Unknown'}/firestore/data`
+                    : `https://console.firebase.google.com/project/${resolvedFirebaseConfig.projectId || 'Unknown'}/firestore/databases/${databaseId}/data`;
+                  const cloudConsoleUrl = `https://console.cloud.google.com/firestore/databases/${isDefaultDb ? '(default)' : databaseId}/data?project=${resolvedFirebaseConfig.projectId || 'Unknown'}`;
+
+                  return (
+                    <>
+                      <a
+                        href={firebaseConsoleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20 cursor-pointer border border-blue-400/30"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        <span>{lang === 'ar' ? 'فتح في كونسول Firebase الرسمي 🚀' : 'Open Firebase Console 🚀'}</span>
+                      </a>
+
+                      <a
+                        href={cloudConsoleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-bold transition-all border border-white/10"
+                      >
+                        <ExternalLink className="h-4 w-4 text-neutral-400" />
+                        <span>{lang === 'ar' ? 'Google Cloud Console ☁️' : 'Cloud Console ☁️'}</span>
+                      </a>
+                    </>
+                  );
+                })()}
+
+                <button
+                  onClick={handleExportBackup}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer border border-emerald-400/30 w-full sm:w-auto"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>{lang === 'ar' ? 'تصدير نسخة JSON 📥' : 'Export JSON Backup 📥'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Collection Sub-Tabs */}
+          <div className="flex flex-wrap items-center gap-2 p-2 rounded-2xl bg-neutral-900 border border-neutral-800">
+            <button
+              onClick={() => setDbSubTab('events')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dbSubTab === 'events' ? 'bg-blue-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <Table className="h-4 w-4" />
+              <span className="font-mono">events/</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-mono">{events.length}</span>
+            </button>
+
+            <button
+              onClick={() => setDbSubTab('submissions')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dbSubTab === 'submissions' ? 'bg-blue-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <Table className="h-4 w-4" />
+              <span className="font-mono">ad_submissions/</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-mono">{submissions.length}</span>
+            </button>
+
+            <button
+              onClick={() => setDbSubTab('notifications')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dbSubTab === 'notifications' ? 'bg-blue-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <Table className="h-4 w-4" />
+              <span className="font-mono">notifications/</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-mono">{notifications.length}</span>
+            </button>
+
+            <button
+              onClick={() => setDbSubTab('schema')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dbSubTab === 'schema' ? 'bg-indigo-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span>{lang === 'ar' ? '🛡️ هيكل القاعدة والأمان (Rules & Blueprint)' : '🛡️ Schema & ABAC Rules'}</span>
+            </button>
+          </div>
+
+          {/* Tab 1: events/ */}
+          {dbSubTab === 'events' && (
+            <div className="space-y-3">
+              {/* Force Clear Cache Banner */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <RefreshCw className="h-5 w-5 text-amber-400 mt-0.5 animate-spin-slow shrink-0" />
+                  <div>
+                    <h5 className="font-bold text-amber-300 text-sm">
+                      {lang === 'ar' ? 'حل نهائي لمشكلة الكاش وتحديث الإعلانات القديمة' : 'Permanent Fix for Stale Ad Cache'}
+                    </h5>
+                    <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                      {lang === 'ar' 
+                        ? 'إذا كان المتصفح يحتفظ بالإعلان القديم أو لم يتم تحديث التعديلات بسبب الحظر في بيئة الـ iframe، اضغط هنا لتنظيف ذاكرة التخزين المحلية بالكامل ومزامنة الفعاليات مباشرة من سيرفر Firestore.' 
+                        : 'If your browser is caching stale ads or updates fail due to iframe cookie blocks, click this button to completely wipe local cache and hard-sync everything directly with the live server.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.clear();
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500 text-neutral-950 font-bold text-xs hover:bg-amber-400 active:scale-95 transition-all shadow-md flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 font-bold" />
+                  <span>{lang === 'ar' ? 'تنظيف الكاش والتحميل النهائي' : 'Force Clear & Reload'}</span>
+                </button>
+              </div>
+
+                            <div className="flex justify-end px-2 mb-2 gap-2">
+                <button
+                  onClick={() => setIsFullscreenEvents(true)}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Maximize2 className="h-3 w-3" />
+                  {lang === 'ar' ? 'تكبير القائمة' : 'Expand List'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-400 px-2">
+                <span>{lang === 'ar' ? `مجموعة الفعاليات والحفلات المخزنة (${events.length} وثيقة في Firestore)` : `Stored Events Collection (${events.length} docs in Firestore)`}</span>
+                <span className="font-mono text-[11px] text-blue-400 select-all">/databases/(default)/documents/events</span>
+              </div>
+              
+              {/* Event Stats */}
+              {(() => {
+                const usedPos = new Set<number>(events.filter(e => !e.isEmpty && typeof e.position === 'number' && e.position !== 999999).map(e => e.position as number));
+                const maxPos = usedPos.size > 0 ? Math.max(...Array.from(usedPos)) : 0;
+                const availablePos: number[] = [];
+                for (let i = 2; i <= maxPos; i++) {
+                  if (!usedPos.has(i)) {
+                    availablePos.push(i);
+                  }
+                }
+                
+                return (
+                  <>
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-2">
+                      <button onClick={() => setAdminEventsFilter('all')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'all' ? 'border-blue-500 bg-blue-500/10' : 'border-neutral-800'} hover:border-blue-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-blue-400">{events.length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'إجمالي الإعلانات' : 'Total Ads'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('empty')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'empty' ? 'border-red-500 bg-red-500/10' : 'border-neutral-800'} hover:border-red-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-red-400">{events.filter(e => e.isEmpty).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'إعلانات مفرغة (محذوفة)' : 'Empty Ads'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('paused')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'paused' ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-800'} hover:border-amber-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-amber-400">{events.filter(e => e.isPaused).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'موقوفة (مخفية)' : 'Paused (Hidden)'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('active')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'active' ? 'border-emerald-500 bg-emerald-500/10' : 'border-neutral-800'} hover:border-emerald-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-emerald-400">{events.filter(e => !e.isEmpty && !e.isPaused).length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'نشطة (متاحة للعرض)' : 'Active (Visible)'}</span>
+                      </button>
+                      <button onClick={() => setAdminEventsFilter('available')} className={`bg-neutral-900/80 border ${adminEventsFilter === 'available' ? 'border-purple-500 bg-purple-500/10' : 'border-neutral-800'} hover:border-purple-500/50 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-all`}>
+                         <span className="text-xl font-black text-purple-400">{availablePos.length}</span>
+                         <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1 text-center">{lang === 'ar' ? 'مساحات متاحة (فارغة)' : 'Available Slots'}</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {adminEventsFilter === 'available' ? (
+                        availablePos.length === 0 ? (
+                          <div className="p-8 text-center text-neutral-500 text-sm font-bold bg-neutral-900/50 rounded-2xl border border-neutral-800">
+                            {lang === 'ar' ? 'لا توجد مساحات فارغة بين الإعلانات حالياً.' : 'No available slots found between ads.'}
+                          </div>
+                        ) : (
+                          availablePos.map(pos => (
+                            <div key={`avail-${pos}`} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900 border ${pos <= 19 ? 'border-amber-500/30' : 'border-purple-500/30'} shadow-md`}>
+                              <div className="flex items-center gap-3.5">
+                                <div className={`h-14 w-14 rounded-xl bg-neutral-800 border ${pos <= 19 ? 'border-amber-500/20' : 'border-purple-500/20'} flex items-center justify-center shrink-0 shadow`}>
+                                   <span className={`text-[10px] font-bold ${pos <= 19 ? 'text-amber-400' : 'text-purple-400'}`}>{lang === 'ar' ? 'متاح' : 'Available'}</span>
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2.5 py-1 rounded-md text-sm font-black ${pos <= 19 ? 'bg-amber-600 border-amber-400' : 'bg-purple-600 border-purple-400'} text-white border font-mono shadow-md`}>
+                                      #{pos}
+                                    </span>
+                                    {pos <= 19 && (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>
+                                    )}
+                                  </div>
+                                  <h4 className="font-bold text-white text-sm mt-1">
+                                    {lang === 'ar' ? (pos <= 19 ? 'مساحة إعلانية VIP متاحة' : 'مساحة إعلانية عادية متاحة') : (pos <= 19 ? 'Available VIP Ad Slot' : 'Available Normal Ad Slot')}
+                                  </h4>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )
+                      ) : (
+                        (adminEventsFilter === 'all' ? events : events.filter(e => {
+                           if (adminEventsFilter === 'empty') return e.isEmpty;
+                           if (adminEventsFilter === 'paused') return e.isPaused;
+                           if (adminEventsFilter === 'active') return !e.isEmpty && !e.isPaused;
+                           return true;
+                        })).map((ev) => (
+                  <div key={ev.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border ${ev.isEmpty ? 'border-red-500/40 opacity-70' : 'border-white/10 hover:border-blue-500/40'} transition-all shadow-md`}>
+                    <div className="flex items-center gap-3.5 overflow-hidden">
+                      {ev.isEmpty ? (
+                        <div className="h-14 w-14 rounded-xl bg-neutral-800 border border-red-500/20 flex items-center justify-center shrink-0 shadow">
+                           <span className="text-[10px] font-bold text-red-400">فارغ</span>
+                        </div>
+                      ) : (
+                        <img src={ev.thumbnailUrl || ev.mediaUrl} alt="" className="h-14 w-14 rounded-xl object-cover border border-white/10 shrink-0 shadow" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-1 rounded-md text-sm font-black bg-indigo-600 text-white border border-indigo-400 font-mono shadow-md" title={lang === 'ar' ? 'الرقم التسلسلي' : 'Serial Number'}>
+                             #{ev.position && ev.position !== 999999 ? ev.position : '-'}
+                          </span>
+                          <span className="font-mono text-[10px] text-neutral-500 font-bold select-all">{ev.id}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-neutral-800 text-neutral-300 uppercase">{ev.category}</span>
+                          {((ev.isFeatured || (typeof ev.position === 'number' && ev.position <= 19))) && !ev.isEmpty && <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">VIP</span>}
+                        </div>
+                        <h4 className="font-bold text-white text-sm mt-1 truncate">{ev.isEmpty ? (lang === 'ar' ? 'مساحة إعلان فارغة (تم المسح)' : 'Empty Ad Slot (Deleted)') : (lang === 'ar' ? ev.titleAr : ev.titleEn)}</h4>
+                        {!ev.isEmpty && (
+                          <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                            <span>💰 <strong className="text-white">{lang === 'ar' ? ev.priceAr : ev.priceEn}</strong></span>
+                            <span>❤️ <strong className="text-white">{String(ev.likesCount || 0)}</strong> {lang === 'ar' ? 'إعجاب' : 'likes'}</span>
+                            <span>📍 {lang === 'ar' ? ev.location?.nameAr : ev.location?.nameEn}</span>
+                            {ev.eventRef && <span>🔢 {lang === 'ar' ? 'المرجع:' : 'Ref:'} <strong className="text-amber-400 font-mono">#{ev.eventRef}</strong></span>}
+                          </div>
+                        )}
+                        {!ev.isEmpty && (
+                          (() => {
+                            const eventBookings = bookings?.filter(b => b.eventId === ev.id) || [];
+                            const totalBookedCount = eventBookings.reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                            const actualAttendedCount = eventBookings
+                              .filter(b => b.status === 'approved' && b.attended === true)
+                              .reduce((sum, b) => sum + (b.numberOfIndividuals || 1), 0);
+                            
+                            return (
+                              <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 bg-neutral-950/40 p-2 rounded-lg border border-neutral-800/40">
+                                <span className="text-indigo-400 font-bold">{lang === 'ar' ? '🎟️ إجمالي الحجوزات:' : '🎟️ Bookings:'} <strong className="text-white font-sans">{totalBookedCount}</strong></span>
+                                <span className="text-emerald-400 font-bold">{lang === 'ar' ? '✅ الحاضرين فعلياً:' : '✅ Attended:'} <strong className="text-white font-sans">{actualAttendedCount}</strong></span>
+                                {eventBookings.length > 0 && (
+                                  <button
+                                    onClick={() => setViewingAttendeesEvent(ev)}
+                                    className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 font-bold text-[10px] transition-colors cursor-pointer border border-blue-500/20"
+                                  >
+                                    {lang === 'ar' ? '🔍 تفاصيل الحاضرين' : '🔍 Guest List'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <button
+                        onClick={() => setQrEventDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn })}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold text-xs transition-all cursor-pointer border border-amber-500/30"
+                      >
+                        <QrCode className="h-3.5 w-3.5" />
+                        <span>{lang === 'ar' ? 'QR الدخول' : 'Check-in QR'}</span>
+                      </button>
+                      <button
+                        onClick={() => setSelectedJsonDoc({ id: ev.id, title: lang === 'ar' ? ev.titleAr : ev.titleEn, data: ev })}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs transition-all cursor-pointer border border-blue-500/30"
+                      >
+                        <Code className="h-3.5 w-3.5" />
+                        <span>{lang === 'ar' ? 'عرض وثيقة JSON' : 'Inspect Doc'}</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من مسح بيانات هذه الفعالية بالكامل وتفريغ الخانة؟ لن تظهر للمستخدمين بعد الآن.' : 'Are you sure you want to delete this event data and empty the slot? It will no longer show to users.');
+                          if (confirmed) {
+                            deleteEvent(ev.id);
+                            alert(lang === 'ar' ? 'تم مسح الإعلان بنجاح وتفريغ الخانة! لن يظهر للمستخدمين.' : 'Ad deleted and slot emptied successfully! It is now hidden from users.');
+                          }
+                        }}
+                        className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                        title={lang === 'ar' ? 'حذف من القاعدة' : 'Delete Document'}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+              </div>
+            </>
+          );
+        })()}
+            </div>
+          )}
+
+          {/* Tab 2: ad_submissions/ */}
+          {dbSubTab === 'submissions' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-400 px-2">
+                <span>{lang === 'ar' ? `طلبات وفواتير إعلانات VIP (${submissions.length} وثيقة في Firestore)` : `Stored Ad Submissions (${submissions.length} docs in Firestore)`}</span>
+                <span className="font-mono text-[11px] text-blue-400 select-all">/databases/(default)/documents/ad_submissions</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {submissions.map((sub) => (
+                  <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border border-white/10 hover:border-blue-500/40 transition-all shadow-md">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs text-amber-400 font-bold select-all">INV: #{sub.invoiceNumber}</span>
+                        <span className="font-mono text-[11px] text-neutral-500 select-all">ID: {sub.id}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          sub.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                          sub.status === 'rejected' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                          sub.status === 'archived' ? 'bg-amber-600/20 text-amber-300 border border-amber-600/30' :
+                          'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}>
+                          {sub.status}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-sky-500/10 text-sky-300 border border-sky-500/30">
+                          {sub.contentLangMode === 'both' ? '🌐 عربي + EN' : sub.contentLangMode === 'ar' ? '🇸🇦 عربي فقط' : sub.contentLangMode === 'en' ? '🇬🇧 English Only' : '🌐 عربي + EN'}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-white text-sm mt-1.5">{sub.titleAr} <span className="text-neutral-400 font-normal">({sub.advertiserName})</span></h4>
+                      <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                        <span>📱 <strong className="text-white font-mono">{sub.phone}</strong></span>
+                        <span>💵 <strong className="text-emerald-400 font-mono">{sub.amount} EGP</strong></span>
+                        <span>📅 {new Date(sub.submittedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <button
+                        onClick={() => setSelectedJsonDoc({ id: sub.id, title: `Invoice #${sub.invoiceNumber}`, data: sub })}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs transition-all cursor-pointer border border-blue-500/30"
+                      >
+                        <Code className="h-3.5 w-3.5" />
+                        <span>{lang === 'ar' ? 'عرض وثيقة JSON' : 'Inspect Doc'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(sub.id)}
+                        className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tab 3: notifications/ */}
+          {dbSubTab === 'notifications' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-400 px-2">
+                <span>{lang === 'ar' ? `إشعارات النظام المخزنة (${notifications.length} وثيقة)` : `Stored Notifications (${notifications.length} docs)`}</span>
+                <span className="font-mono text-[11px] text-blue-400 select-all">/databases/(default)/documents/notifications</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {notifications.map((notif) => (
+                  <div key={notif.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border border-white/10 hover:border-blue-500/40 transition-all">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-blue-400 font-bold select-all">{notif.id}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-neutral-800 text-neutral-300">{notif.type || 'system'}</span>
+                        {notif.read ? <span className="text-neutral-500 text-[10px]">Read ✓</span> : <span className="text-amber-400 text-[10px] font-bold">Unread •</span>}
+                      </div>
+                      <h4 className="font-bold text-white text-sm mt-1">{lang === 'ar' ? notif.titleAr : notif.titleEn}</h4>
+                      <p className="text-xs text-neutral-300 mt-0.5">{lang === 'ar' ? notif.messageAr : notif.messageEn}</p>
+                      <span className="text-[10px] text-neutral-500 font-mono mt-1 block">{new Date(notif.date).toLocaleString()}</span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedJsonDoc({ id: notif.id, title: lang === 'ar' ? notif.titleAr : notif.titleEn, data: notif })}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-blue-300 font-bold text-xs transition-all cursor-pointer border border-blue-500/30 shrink-0"
+                    >
+                      <Code className="h-3.5 w-3.5" />
+                      <span>JSON</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tab 4: schema/ */}
+          {dbSubTab === 'schema' && (
+            <div className="rounded-3xl bg-neutral-900 border border-white/10 p-6 space-y-6 text-left dir-ltr">
+              <div>
+                <h4 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-indigo-400" />
+                  <span>Zero-Trust ABAC Firestore Security & Schema Blueprint</span>
+                </h4>
+                <p className="text-xs text-neutral-400 mt-1">
+                  This application utilizes Google Cloud Firestore with real-time WebSocket synchronization and offline persistence. Below is the configured architectural blueprint and security validation model.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5 font-mono text-xs space-y-2">
+                  <div className="text-indigo-400 font-bold">// 1. Collection: /events/ (DanceEvent Schema)</div>
+                  <div className="text-neutral-300">
+                    Fields: id (string), titleAr/En (string), category (enum: party|course|trip), styles (list&lt;string&gt;), priceAr/En (string), location (map), likesCount (int), isFeatured (bool)
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5 font-mono text-xs space-y-2">
+                  <div className="text-amber-400 font-bold">// 2. Collection: /ad_submissions/ (VIP Ad Invoices Schema)</div>
+                  <div className="text-neutral-300">
+                    Fields: id (string), titleAr/En (string), invoiceNumber (string), advertiserName (string), phone (string), amount (number), status (enum: pending|approved|rejected|archived), receiptUrl (string), submittedAt (timestamp)
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-white/5 font-mono text-xs space-y-2">
+                  <div className="text-emerald-400 font-bold">// 3. Collection: /notifications/ (System & Ad Alerts Schema)</div>
+                  <div className="text-neutral-300">
+                    Fields: id (string), titleAr/En (string), messageAr/En (string), date (timestamp), read (bool), type (enum: system|promo|ad_status)
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {adminSection === 'submissions' && (
+        <div>
+          {/* Filter Tabs */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-neutral-950 border border-neutral-800 w-fit">
+              <button
+                onClick={() => setSubmissionView('new_ads')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold ${submissionView === 'new_ads' ? 'bg-amber-500 text-neutral-950' : 'text-neutral-400'}`}
+              >
+                {lang === 'ar' ? 'طلبات الإعلانات الجديدة' : 'New ads'}
+              </button>
+              <button
+                onClick={() => setSubmissionView('changes')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold ${submissionView === 'changes' ? 'bg-sky-500 text-white' : 'text-neutral-400'}`}
+              >
+                {lang === 'ar' ? `طلبات التعديل والتجديد (${adChangeRequests.filter(item => item.status === 'pending').length})` : `Changes (${adChangeRequests.filter(item => item.status === 'pending').length})`}
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-neutral-900 border border-neutral-800 text-xs font-bold w-full lg:w-auto">
+              <button
+                onClick={() => setFilter('pending')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'pending' ? 'bg-amber-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'قيد المراجعة' : 'Pending'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.filter(s => s.status === 'pending').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFilter('approved')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'approved' ? 'bg-emerald-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'المفعلة (مقبول)' : 'Approved'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.filter(s => s.status === 'approved').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFilter('rejected')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'rejected' ? 'bg-red-500 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'المرفوضة' : 'Rejected'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.filter(s => s.status === 'rejected').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFilter('archived')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'archived' ? 'bg-amber-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'الأرشيف (بحد أقصى شهر)' : 'Archived (Max 1 Mo)'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.filter(s => s.status === 'archived').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  filter === 'all' ? 'bg-neutral-700 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <span>{lang === 'ar' ? 'الكل' : 'All'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {submissions.length}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+              <button
+                onClick={handleAutoScanExpired}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-extrabold text-xs hover:from-amber-400 hover:to-amber-500 shadow-md gold-glow transition-all cursor-pointer w-full sm:w-auto"
+                title="Scan approved ads and move expired ones to archive with instant advertiser alert"
+              >
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span>{lang === 'ar' ? '⚡ فحص ونقل المنتهي للأرشيف وتنبيه المعلن' : '⚡ Auto-Archive Expired & Notify'}</span>
+              </button>
+
+              <button
+                onClick={handleManualRefresh}
+                disabled={manualRefreshing || loading}
+                title={lang === 'ar' ? 'تحديث ومزامنة البيانات من فليستور الآن' : 'Force refresh data from Firestore now'}
+                className="text-xs text-neutral-300 font-mono flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800/60 hover:bg-neutral-800 hover:border-amber-500/30 transition-all cursor-pointer shadow-md disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-amber-400 ${(loading || manualRefreshing) ? 'animate-spin' : ''}`} />
+                <span>
+                  {manualRefreshing 
+                    ? (lang === 'ar' ? 'جاري التحديث...' : 'Syncing...') 
+                    : (lang === 'ar' ? 'تحديث تلقائي لحظي' : 'Live Firebase Sync')}
+                </span>
+              </button>
+            </div>
+          </div>
+
+      {/* Change requests keep the original ad and event identifiers unchanged. */}
+      {submissionView === 'changes' ? (
+        <div className="space-y-4">
+          {adChangeRequests.filter(item => item.status === 'pending').length === 0 ? (
+            <div className="rounded-3xl border border-neutral-800 bg-neutral-900/60 p-12 text-center text-neutral-400">
+              <FileText className="h-12 w-12 mx-auto text-neutral-600 mb-3" />
+              <h3 className="text-lg font-bold text-white mb-1">{lang === 'ar' ? 'لا توجد طلبات تعديل أو تجديد معلقة' : 'No pending change requests'}</h3>
+            </div>
+          ) : adChangeRequests.filter(item => item.status === 'pending').map((request) => {
+            const current = submissions.find(sub => sub.id === request.targetId);
+            const proposed = request.proposedData || {};
+            const currentImage = current?.eventData?.mediaUrl || current?.mediaUrl;
+            const proposedImage = proposed.eventData?.mediaUrl || proposed.mediaUrl || currentImage;
+            return (
+              <div key={request.id} className="rounded-2xl border border-sky-500/30 bg-neutral-900 p-5 space-y-4">
+                <div className="flex flex-wrap justify-between gap-3">
+                  <div>
+                    <div className="text-sky-300 font-bold text-sm">{lang === 'ar' ? 'طلب تغيير إعلان' : 'Ad change request'} · {request.requestType}</div>
+                    <div className="text-xs text-neutral-400 mt-1">{current?.titleAr || request.targetId} — {current?.advertiserName || request.advertiserId}</div>
+                  </div>
+                  <div className="text-[11px] text-neutral-500">{new Date(request.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="rounded-xl bg-neutral-950 border border-white/10 p-3">
+                    <div className="text-neutral-500 mb-2">{lang === 'ar' ? 'الحالي' : 'Current'}</div>
+                    <div className="font-bold text-white">{current?.titleAr || '-'}</div>
+                    <div className="text-amber-300 mt-1">{current?.eventData?.priceAr || '-'}</div>
+                    {currentImage && <img src={currentImage} alt="Current ad" className="mt-3 w-full h-32 object-cover rounded-lg" />}
+                  </div>
+                  <div className="rounded-xl bg-sky-950/30 border border-sky-500/20 p-3">
+                    <div className="text-sky-300 mb-2">{lang === 'ar' ? 'المطلوب بعد الموافقة' : 'Requested after approval'}</div>
+                    <div className="font-bold text-white">{proposed.titleAr || proposed.eventData?.titleAr || current?.titleAr || '-'}</div>
+                    <div className="text-amber-300 mt-1">{proposed.eventData?.priceAr || current?.eventData?.priceAr || '-'}</div>
+                    {proposedImage && <img src={proposedImage} alt="Requested ad" className="mt-3 w-full h-32 object-cover rounded-lg" />}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-end border-t border-white/10 pt-3">
+                  <button onClick={() => handleReviewAdChange(request, 'reject')} disabled={actionLoading === `change-${request.id}`} className="px-4 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 text-xs font-bold disabled:opacity-50">
+                    {lang === 'ar' ? 'رفض الطلب' : 'Reject'}
+                  </button>
+                  <button onClick={() => handleReviewAdChange(request, 'approve')} disabled={actionLoading === `change-${request.id}`} className="px-4 py-2 rounded-xl bg-emerald-500 text-neutral-950 text-xs font-black disabled:opacity-50">
+                    {lang === 'ar' ? 'قبول التغييرات' : 'Approve changes'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : loading ? (
+        <div className="py-20 text-center text-neutral-400">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto text-amber-400 mb-3" />
+          <p className="text-sm font-bold">{lang === 'ar' ? 'جاري جلب الفواتير وطلبات الإعلانات من فايبر بيز...' : 'Loading submissions from Firebase...'}</p>
+        </div>
+      ) : filteredSubmissions.length === 0 ? (
+        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/60 p-12 text-center text-neutral-400">
+          <FileText className="h-12 w-12 mx-auto text-neutral-600 mb-3" />
+          <h3 className="text-lg font-bold text-white mb-1">
+            {lang === 'ar' ? 'لا توجد طلبات في هذه القائمة' : 'No submissions found in this list'}
+          </h3>
+          <p className="text-xs text-neutral-500">
+            {lang === 'ar' ? 'عندما يرسل المدربون والمنظمون إعلانات ومراجعة فواتير، ستظهر هنا فوراً.' : 'When organizers submit ads and invoices, they will appear here instantly.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredSubmissions.map((sub) => {
+            const displayAdType = sub.adType || (sub.pricing?.total === 0 ? 'free' : 'standard');
+            
+            // Smart language detection: Explicit selection or inferred from titles/data
+            const adLangMode: 'both' | 'ar' | 'en' = (() => {
+              if (sub.contentLangMode) return sub.contentLangMode;
+              const titleArVal = (sub.titleAr || sub.eventData?.titleAr || '').trim();
+              const titleEnVal = (sub.titleEn || sub.eventData?.titleEn || '').trim();
+              const descArVal = (sub.eventData?.descriptionAr || '').trim();
+              const descEnVal = (sub.eventData?.descriptionEn || '').trim();
+
+              const hasAr = Boolean(titleArVal && !/^[A-Za-z0-9\s.,!?'"()-]+$/.test(titleArVal)) || Boolean(descArVal && /[\u0600-\u06FF]/.test(descArVal));
+              const hasEn = Boolean(titleEnVal && !/[\u0600-\u06FF]/.test(titleEnVal)) || Boolean(descEnVal && /[A-Za-z]/.test(descEnVal));
+
+              if (titleArVal && titleEnVal && titleArVal.toLowerCase() === titleEnVal.toLowerCase()) {
+                if (/[\u0600-\u06FF]/.test(titleArVal)) return 'ar';
+                return 'en';
+              }
+
+              if (hasAr && hasEn) return 'both';
+              if (hasAr) return 'ar';
+              if (hasEn) return 'en';
+              return 'both';
+            })();
+
+            return (
+            <motion.div
+              key={sub.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`rounded-2xl border p-5 sm:p-6 transition-all ${
+                sub.status === 'pending'
+                  ? 'border-amber-500/40 bg-gradient-to-r from-neutral-900 to-amber-950/20 shadow-lg'
+                  : sub.status === 'approved'
+                  ? 'border-emerald-500/30 bg-neutral-900/80'
+                  : 'border-red-500/30 bg-neutral-900/50 opacity-80'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className={`px-3 py-1 rounded-xl text-xs font-mono font-bold border ${
+                    sub.status === 'pending'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      : sub.status === 'approved'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-red-500/20 text-red-300 border-red-500/40'
+                  }`}>
+                    {sub.invoiceNumber}
+                  </div>
+                  
+                  <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold border flex items-center gap-1.5 shadow-sm ${
+                    displayAdType === 'vip' 
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/40' 
+                      : displayAdType === 'free'
+                      ? 'bg-green-500/10 text-green-400 border-green-500/40'
+                      : 'bg-neutral-800/60 text-neutral-300 border-neutral-600'
+                  }`}>
+                    {displayAdType === 'vip' && <Crown className="h-3.5 w-3.5" />}
+                    {displayAdType === 'free' && <CheckCircle className="h-3.5 w-3.5" />}
+                    {displayAdType !== 'vip' && displayAdType !== 'free' && <FileText className="h-3.5 w-3.5" />}
+                    {displayAdType === 'vip' ? (lang === 'ar' ? 'إعلان VIP مميز' : 'VIP Ad') : displayAdType === 'free' ? (lang === 'ar' ? 'إعلان مجاني' : 'Free Ad') : (lang === 'ar' ? 'إعلان عادي' : 'Standard Ad')}
+                  </span>
+
+                  {/* Selected Language Badge */}
+                  <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold border flex items-center gap-1.5 shadow-sm ${
+                    adLangMode === 'both' 
+                      ? 'bg-sky-500/15 text-sky-300 border-sky-500/40' 
+                      : adLangMode === 'ar'
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                      : 'bg-purple-500/15 text-purple-300 border-purple-500/40'
+                  }`}>
+                    <Globe className="h-3.5 w-3.5" />
+                    {adLangMode === 'both' ? (
+                      <span>{lang === 'ar' ? '🌐 كِلا اللغتين (عربي + English)' : '🌐 Both (AR + EN)'}</span>
+                    ) : adLangMode === 'ar' ? (
+                      <span>{lang === 'ar' ? '🇸🇦 عربي فقط' : '🇸🇦 Arabic Only'}</span>
+                    ) : (
+                      <span>{lang === 'ar' ? '🇬🇧 إنجليزي فقط' : '🇬🇧 English Only'}</span>
+                    )}
+                  </span>
+
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
+                    sub.status === 'pending' ? 'bg-amber-500 text-neutral-950 animate-pulse' :
+                    sub.status === 'approved' ? 'bg-emerald-500 text-neutral-950' : 'bg-red-500 text-white'
+                  }`}>
+                    {sub.status === 'pending' ? (lang === 'ar' ? 'قيد المراجعة' : 'Pending') : 
+                     sub.status === 'approved' ? (lang === 'ar' ? 'مفعل ومقبول' : 'Approved') : 
+                     (lang === 'ar' ? 'مرفوض' : 'Rejected')}
+                  </span>
+                </div>
+                <div className="text-xs text-neutral-400 font-mono flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{new Date(sub.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</span>
+                </div>
+              </div>
+              {/* Grid Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
+                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
+                    <User className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{lang === 'ar' ? 'اسم المعلن:' : 'Advertiser Name:'}</span>
+                  </span>
+                  <span className="text-sm font-bold text-white block">{sub.advertiserName}</span>
+                  <span className="text-xs font-mono text-neutral-400 block">{sub.phone}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1.5">
+                  <span className="text-[11px] text-neutral-400 flex items-center justify-between font-medium">
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      <span>{lang === 'ar' ? 'عنوان وتفاصيل الإعلان:' : 'Ad Title & Details:'}</span>
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                      adLangMode === 'both' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                      adLangMode === 'ar' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                      'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                    }`}>
+                      {adLangMode === 'both' ? (lang === 'ar' ? 'لغتين' : 'Both') : adLangMode === 'ar' ? (lang === 'ar' ? 'عربي فقط' : 'AR Only') : (lang === 'ar' ? 'إنجليزي فقط' : 'EN Only')}
+                    </span>
+                  </span>
+
+                  {adLangMode === 'both' ? (
+                    <div className="space-y-1">
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-800 text-amber-400 border border-amber-500/20 shrink-0">عربي</span>
+                        <span className="truncate">{sub.titleAr || sub.eventData?.titleAr || '—'}</span>
+                      </div>
+                      <div className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-800 text-sky-400 border border-sky-500/20 shrink-0 font-mono">EN</span>
+                        <span className="truncate font-sans">{sub.titleEn || sub.eventData?.titleEn || '—'}</span>
+                      </div>
+                    </div>
+                  ) : adLangMode === 'ar' ? (
+                    <div className="text-sm font-bold text-white block truncate">
+                      {sub.titleAr || sub.eventData?.titleAr || sub.titleEn}
+                    </div>
+                  ) : (
+                    <div className="text-sm font-bold text-white block truncate font-sans">
+                      {sub.titleEn || sub.eventData?.titleEn || sub.titleAr}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 mt-1 pt-1 border-t border-white/5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      displayAdType === 'vip' 
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
+                        : displayAdType === 'free'
+                        ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                        : 'bg-neutral-800 text-neutral-300 border-neutral-600'
+                    }`}>
+                      {displayAdType === 'vip' ? (lang === 'ar' ? 'VIP مميز' : 'VIP Ad') : displayAdType === 'free' ? (lang === 'ar' ? 'مجاني' : 'Free') : (lang === 'ar' ? 'عادي' : 'Standard')}
+                    </span>
+                    <span className="text-xs text-amber-300 font-medium block">
+                      {sub.pricing?.days || 3} {lang === 'ar' ? 'أيام ترويج' : 'Days Promo'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
+                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
+                    <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>{lang === 'ar' ? 'المبلغ المطلوب:' : 'Total Amount:'}</span>
+                  </span>
+                  <span className="text-lg font-black text-emerald-400 block">
+                    {sub.pricing?.total || 250} {lang === 'ar' ? 'جنيه مصري' : 'EGP'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Visual Ad Media Preview */}
+              {(sub.mediaUrl || sub.eventData?.mediaUrl) && (
+                <div className="mb-5 p-4 rounded-xl bg-neutral-950/60 border border-white/5">
+                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-bold mb-2.5">
+                    <ImageIcon className="h-4 w-4 text-amber-400" />
+                    <span>{lang === 'ar' ? '🖼️ الصورة أو الفيديو الإعلاني المرفق:' : '🖼️ Attached Ad Image / Video:'}</span>
+                  </span>
+                  
+                  <div className="relative max-w-xs aspect-[16/10] rounded-2xl overflow-hidden bg-neutral-950 border border-white/10 group/media shadow-md">
+                    {(sub.mediaType === 'video' || sub.eventData?.mediaType === 'video') ? (
+                      <video 
+                        src={sub.mediaUrl || sub.eventData?.mediaUrl} 
+                        className="h-full w-full object-cover" 
+                        controls 
+                        muted 
+                        playsInline
+                      />
+                    ) : (
+                      <img 
+                        src={sub.mediaUrl || sub.eventData?.mediaUrl} 
+                        alt="Attached Ad Media" 
+                        className="h-full w-full object-cover" 
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?auto=format&fit=crop&w=1200&q=80';
+                        }}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/media:opacity-100 flex items-center justify-center transition-all pointer-events-none">
+                      <span className="px-3 py-1.5 rounded-full bg-neutral-900/95 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                        {lang === 'ar' ? 'معاينة الإعلان الفني' : 'Media Preview'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Receipt Preview & Actions */}
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pt-3 border-t border-white/5">
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+                  {sub.receiptImage ? (
+                    <button
+                      onClick={() => setSelectedReceipt(sub.receiptImage || null)}
+                      className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25 transition-all text-xs font-bold cursor-pointer w-full sm:w-auto"
+                    >
+                      <ImageIcon className="h-4 w-4 shrink-0" />
+                      <span>{lang === 'ar' ? 'عرض إيصال التحويل البنكي' : 'View Transfer Receipt'}</span>
+                      <Eye className="h-3.5 w-3.5 ml-1 shrink-0" />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-neutral-500 italic py-2 text-center sm:text-left">
+                      {lang === 'ar' ? 'لم يتم إرفاق صورة إيصال' : 'No receipt image attached'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Admin Approval Buttons */}
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto justify-end">
+                  {sub.status === 'pending' && (
+                    <>
+                      <div className="flex items-center gap-2 mr-2">
+                        <label className="text-xs font-bold text-neutral-400">{lang === 'ar' ? 'رقم الإعلان:' : 'Position:'}</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder={String(adminPosition)}
+                          value={submissionPositions[sub.id] !== undefined ? submissionPositions[sub.id] : (sub.eventData?.position || '')}
+                          onChange={(e) => setSubmissionPositions({ ...submissionPositions, [sub.id]: e.target.value === '' ? '' : Number(e.target.value) })}
+                          className="w-16 rounded-lg bg-neutral-900 border border-neutral-700 py-2 px-2 text-xs text-white text-center focus:border-amber-500 outline-none"
+                        />
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={actionLoading === sub.id}
+                        onClick={() => handleApprove(sub)}
+                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs hover:bg-emerald-400 shadow-md transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                      >
+                        <Check className="h-4 w-4 stroke-[3] shrink-0" />
+                        <span>{actionLoading === sub.id ? '...' : (lang === 'ar' ? 'قبول ونشر الإعلان فوراً' : 'Approve & Publish Ad')}</span>
+                      </motion.button>
+
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={actionLoading === sub.id}
+                        onClick={() => handleReject(sub)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-600/20 text-red-300 border border-red-500/40 font-bold text-xs hover:bg-red-600/30 transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                      >
+                        <XCircle className="h-4 w-4 shrink-0" />
+                        <span>{lang === 'ar' ? 'رفض' : 'Reject'}</span>
+                      </motion.button>
+                    </>
+                  )}
+
+                  {sub.status === 'approved' && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      disabled={actionLoading === sub.id}
+                      onClick={() => handleArchive(sub)}
+                      className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold text-xs hover:bg-amber-500/30 transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                      title={lang === 'ar' ? 'نقل للأرشيف بحد أقصى شهر مع تنبيه المعلن' : 'Move to Archive (Max 1 Mo) & Alert Advertiser'}
+                    >
+                      <Clock className="h-4 w-4 shrink-0" />
+                      <span>{actionLoading === sub.id ? '...' : (lang === 'ar' ? '📦 نقل للأرشيف (انتهاء الصلاحية)' : '📦 Move to Archive')}</span>
+                    </motion.button>
+                  )}
+
+                  <button
+                    onClick={() => handleDelete(sub.id)}
+                    className="flex items-center justify-center p-2.5 rounded-xl bg-neutral-800 text-neutral-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer w-full sm:w-auto"
+                    title={lang === 'ar' ? 'حذف السجل' : 'Delete'}
+                  >
+                    <Trash2 className="h-4 w-4 shrink-0" />
+                    <span className="inline sm:hidden text-xs font-bold ml-1">{lang === 'ar' ? 'حذف السجل' : 'Delete Record'}</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+            );
+          })}
+        </div>
+      )}
+        </div>
+      )}
+
+      {adminSection === 'support' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header Card */}
+          <div className="rounded-3xl border border-emerald-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/40 p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+                  <MessageSquare className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white">
+                    {lang === 'ar' ? 'صندوق رسائل ومقترحات وشكاوى المستخدمين' : 'User Support & Feedback Inbox'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-300 mt-1">
+                    {lang === 'ar'
+                      ? 'مراجعة الرسائل والمقترحات المباشرة، وتوجيه الرد الرسمي ليتم إشعاره في ملف المستخدم الشخصي.'
+                      : 'Review direct feedback and send official replies notified directly to the user profile.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-neutral-900 border border-neutral-800 w-fit">
+            <button
+              onClick={() => setSupportFilter('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                supportFilter === 'all' ? 'bg-emerald-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span>{lang === 'ar' ? 'الكل' : 'All'}</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/20 text-[10px] font-mono">{supportMessages.length}</span>
+            </button>
+            <button
+              onClick={() => setSupportFilter('pending')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                supportFilter === 'pending' ? 'bg-amber-500 text-neutral-950 shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span>{lang === 'ar' ? 'قيد الانتظار' : 'Pending'}</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/20 text-[10px] font-mono">
+                {supportMessages.filter(m => m.status === 'pending').length}
+              </span>
+            </button>
+            <button
+              onClick={() => setSupportFilter('replied')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                supportFilter === 'replied' ? 'bg-blue-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span>{lang === 'ar' ? 'تم الرد' : 'Replied'}</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/20 text-[10px] font-mono">
+                {supportMessages.filter(m => m.status === 'replied').length}
+              </span>
+            </button>
+          </div>
+
+          {/* Messages List */}
+          {supportMessages.length === 0 ? (
+            <div className="rounded-3xl bg-neutral-900/60 border border-neutral-800 p-12 text-center text-neutral-400 font-medium">
+              {lang === 'ar' ? 'لا توجد رسائل دعم ومقترحات واردة حتى الآن.' : 'No support messages received yet.'}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {supportMessages
+                .filter(m => supportFilter === 'all' ? true : m.status === supportFilter)
+                .map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`rounded-3xl border p-6 transition-all ${
+                      msg.status === 'pending'
+                        ? 'bg-neutral-900 border-amber-500/40 shadow-lg'
+                        : 'bg-neutral-900/80 border-neutral-800'
+                    }`}
+                  >
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-neutral-800">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={msg.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                          alt={msg.userName}
+                          className="h-12 w-12 rounded-full object-cover border border-amber-500/30"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-white text-base">{msg.userName}</h4>
+                            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono text-xs font-bold shadow-inner">
+                              {msg.refNumber}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400 mt-1 font-mono">
+                            <span>📧 {msg.userEmail}</span>
+                            <span>📱 {msg.userPhone}</span>
+                            <span>🕒 {new Date(msg.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        {msg.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/40">
+                            <Clock className="h-3.5 w-3.5" />
+                            {lang === 'ar' ? 'بانتظار الرد' : 'Pending Reply'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/40">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            {lang === 'ar' ? 'تم الرد الرسمي' : 'Replied Official'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Message Content */}
+                    <div className="py-4 space-y-2">
+                      <span className="text-xs font-bold text-amber-400 font-mono">
+                        {lang === 'ar' ? '💬 نص الشكوى / المقترح:' : '💬 User Message:'}
+                      </span>
+                      <p className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800 text-sm text-neutral-200 leading-relaxed">
+                        {msg.message}
+                      </p>
+                    </div>
+
+                    {/* Previous Reply if exists */}
+                    {msg.status === 'replied' && msg.replyText && (
+                      <div className="py-2 space-y-2">
+                        <span className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1">
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          {lang === 'ar' ? `📢 رد الإدارة المُرسل للإشعارات (${msg.repliedAt ? new Date(msg.repliedAt).toLocaleDateString() : ''}):` : '📢 Sent Admin Reply:'}
+                        </span>
+                        <p className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 text-sm text-emerald-300 leading-relaxed font-medium">
+                          {msg.replyText}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Reply Action Form */}
+                    <div className="pt-4 border-t border-neutral-800/80 space-y-3">
+                      <label className="block text-xs font-bold text-neutral-300">
+                        {lang === 'ar'
+                          ? (msg.status === 'replied' ? 'تحديث الرد أو إرسال رد إضافي للمستخدم:' : 'توجيه الرد إلى قسم الإشعارات في ملف المستخدم:')
+                          : 'Send official reply to user profile notifications:'}
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <input
+                          type="text"
+                          value={replyInputMap[msg.id] || ''}
+                          onChange={(e) => setReplyInputMap({ ...replyInputMap, [msg.id]: e.target.value })}
+                          placeholder={
+                            lang === 'ar'
+                              ? `اكتب الرد الرسمي على (${msg.userName}) هنا...`
+                              : `Write official reply to (${msg.userName})...`
+                          }
+                          className="flex-1 rounded-xl bg-neutral-950 px-4 py-3 text-sm text-white placeholder-neutral-500 border border-neutral-800 focus:border-emerald-500 focus:outline-none transition-all"
+                        />
+                        <button
+                          onClick={async () => {
+                            const text = replyInputMap[msg.id]?.trim();
+                            if (!text) {
+                              alert(lang === 'ar' ? 'يرجى كتابة نص الرد أولاً' : 'Please enter reply text first');
+                              return;
+                            }
+                            const success = await replyToSupportMessage(msg.id, text);
+                            if (success) {
+                              setReplyInputMap({ ...replyInputMap, [msg.id]: '' });
+                              alert(lang === 'ar' ? '✅ تم توجيه الرد بنجاح إلى صندوق الإشعارات في ملف المستخدم الشخصي!' : '✅ Reply sent and user notified successfully!');
+                            }
+                          }}
+                          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-3 text-xs font-bold text-black shadow-lg hover:from-emerald-400 hover:to-teal-500 transition-all shrink-0 cursor-pointer"
+                        >
+                          <Send className="h-4 w-4" />
+                          <span>{lang === 'ar' ? 'إرسال الرد وإشعار المستخدم' : 'Send Reply & Notify'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {adminSection === 'users' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header Card */}
+          <div className="rounded-3xl border border-purple-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-purple-950/40 p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 shadow-inner">
+                  <Users className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white">
+                    {lang === 'ar' ? 'إدارة ومراقبة مستخدمي التطبيق' : 'App Users Management & Monitoring'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-300 mt-1">
+                    {lang === 'ar'
+                      ? 'مراقبة حسابات الأعضاء والمنظمين، البحث عن بياناتهم، إيقاف الحسابات المؤذيّة أو حذفها بالكامل.'
+                      : 'Monitor member and organizer accounts, search user details, suspend temporary access or delete completely.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-tabs Selector */}
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-neutral-900 border border-neutral-800 w-fit">
+            <button
+              onClick={() => {
+                setUsersSubTab('all');
+                setUserSearchQuery('');
+              }}
+              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                usersSubTab === 'all' ? 'bg-purple-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Table className="h-4 w-4" />
+                {lang === 'ar' ? 'جميع مستخدمي التطبيق' : 'All App Users'}
+              </span>
+            </button>
+            <button
+              onClick={() => setUsersSubTab('search')}
+              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                usersSubTab === 'search' ? 'bg-purple-600 text-white shadow-md font-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Search className="h-4 w-4" />
+                {lang === 'ar' ? 'البحث عن مستخدم' : 'Search for a User'}
+              </span>
+            </button>
+          </div>
+
+          {/* Search View Specific Inputs */}
+          {usersSubTab === 'search' && (
+            <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-6 space-y-4 shadow-lg">
+              <h4 className="text-sm font-black text-white flex items-center gap-2">
+                <Search className="h-4 w-4 text-purple-400" />
+                {lang === 'ar' ? 'البحث بالاسم، البريد الإلكتروني أو الرقم السري' : 'Search by Name, Email, or Password'}
+              </h4>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  placeholder={
+                    lang === 'ar'
+                      ? 'اكتب بريد المستخدم، اسمه، أو الرقم السري هنا للبحث المباشر...'
+                      : 'Type user email, name, or password to search instantly...'
+                  }
+                  className="w-full rounded-2xl bg-neutral-950 px-5 py-4 pl-12 text-sm text-white placeholder-neutral-500 border border-neutral-800 focus:border-purple-500 focus:outline-none transition-all font-medium"
+                />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-500" />
+              </div>
+            </div>
+          )}
+
+          {/* Display Users Table / List */}
+          <div className="rounded-3xl bg-neutral-900/60 border border-neutral-800 shadow-xl overflow-hidden">
+            {usersError ? (
+              <div className="p-8 text-center space-y-4">
+                <div className="mx-auto h-12 w-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <div className="max-w-md mx-auto space-y-2">
+                  <h4 className="text-base font-extrabold text-red-400">
+                    {lang === 'ar' ? '⚠️ فشل تحميل المستخدمين من قاعدة البيانات' : '⚠️ Failed to load users from Firestore'}
+                  </h4>
+                  <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+                    {lang === 'ar'
+                      ? 'تم حظر عملية قراءة كوليكشن المستخدمين بسبب صلاحيات الحماية بـ Firebase Rules. لعرض الحسابات وإدارتها، يجب أولاً تسجيل الدخول ببريد المسؤول waelvts@gmail.com في قسم "حسابي".'
+                      : 'This read query is restricted by Firebase Security Rules. To review, search, and manage registered members, please sign in with your official admin email (waelvts@gmail.com) in the "Account" tab.'}
+                  </p>
+                  <p className="text-[10px] font-mono text-neutral-500 bg-neutral-950 p-2.5 rounded-xl border border-neutral-800 mt-2 select-text">
+                    {usersError}
+                  </p>
+                </div>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="p-12 text-center text-neutral-400 font-medium">
+                {lang === 'ar' 
+                  ? 'لا يوجد مستخدمون متطابقون مع شروط البحث أو قاعدة البيانات فارغة.' 
+                  : 'No users matching search criteria or database is empty.'}
+              </div>
+            ) : (
+              <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+                <table className="w-full border-collapse text-right select-none">
+                  <thead>
+                    <tr className="bg-neutral-900/90 border-b border-neutral-800 text-neutral-400 font-bold text-xs uppercase tracking-wider">
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'المستخدم' : 'User'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'البريد الإلكتروني' : 'Email'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الباقة / العضوية' : 'Account Tier'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الرمز السري' : 'Password'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Creation Date'}</th>
+                      <th className="px-6 py-4 text-right">{lang === 'ar' ? 'الحالة' : 'Status'}</th>
+                      <th className="px-6 py-4 text-center">{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800/60">
+                    {filteredUsers.map((u) => {
+                      const isOwner = u.id === user?.id;
+                      return (
+                        <tr 
+                          key={u.id} 
+                          className={`hover:bg-neutral-900/30 transition-all ${
+                            u.isSuspended ? 'bg-red-950/10' : ''
+                          }`}
+                        >
+                          {/* User Column */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                                alt={u.name}
+                                className="h-10 w-10 rounded-full object-cover border border-purple-500/30"
+                              />
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-extrabold text-white text-sm">{u.name}</span>
+                                  {u.isAdmin && (
+                                    <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-black font-mono">
+                                      ADMIN
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-neutral-400 font-mono block mt-0.5 select-all">
+                                  ID: {u.id}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Email Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-300 select-all">
+                            {u.email}
+                          </td>
+
+                          {/* Account Tier Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-xs font-bold">
+                            <div className="flex flex-col gap-1.5 items-start">
+                              <div className="flex items-center gap-1">
+                                {u.accountTier === 'vip' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                    <Crown className="h-3 w-3 text-amber-400" />
+                                    {lang === 'ar' ? 'حساب VIP' : 'VIP Tier'}
+                                  </span>
+                                ) : u.accountTier === 'featured' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                                    <Sparkles className="h-3 w-3 text-sky-400" />
+                                    {lang === 'ar' ? 'حساب مميز' : 'Featured Tier'}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                    <ShieldCheck className="h-3 w-3 text-emerald-400" />
+                                    {lang === 'ar' ? 'حساب مجاني' : 'Free Tier'}
+                                  </span>
+                                )}
+                              </div>
+
+                              {u.requestedTier && u.requestedTier !== u.accountTier && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] animate-pulse">
+                                  <span>⏳ يطلب ترقية إلى:</span>
+                                  <strong className="underline font-black">{u.requestedTier === 'vip' ? 'VIP 👑' : 'مميز 🌟'}</strong>
+                                </span>
+                              )}
+
+                              {/* Admin Change Tier selector */}
+                              <select
+                                value={u.accountTier || 'free'}
+                                onChange={async (e) => {
+                                  const newTier = e.target.value as AccountTier;
+                                  const confirmMsg = lang === 'ar' 
+                                    ? `هل تريد تغيير باقة حساب (${u.name}) إلى (${newTier === 'vip' ? 'VIP 👑' : newTier === 'featured' ? 'مميز 🌟' : 'مجاني 🟢'})؟`
+                                    : `Do you want to change (${u.name})'s tier to (${newTier})?`;
+                                  
+                                  const confirmed = await triggerConfirm(confirmMsg);
+                                  if (confirmed) {
+                                    const ok = await updateUserTierInFirestore(u.id, newTier);
+                                    if (ok) {
+                                      setAllUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, accountTier: newTier, requestedTier: undefined } : usr));
+                                      alert(lang === 'ar' ? '✅ تم تحديث باقة الحساب وتفعيل الصلاحيات بنجاح!' : '✅ User tier updated successfully!');
+                                    } else {
+                                      alert(lang === 'ar' ? '❌ حدث خطأ أثناء تحديث الباقة' : '❌ Failed to update user tier');
+                                    }
+                                  }
+                                }}
+                                className="bg-neutral-950 text-neutral-200 border border-neutral-700 text-[11px] rounded-lg px-2 py-1 outline-none focus:border-purple-500 cursor-pointer mt-0.5 font-sans"
+                              >
+                                <option value="free">{lang === 'ar' ? 'تحويل إلى: مجاني 🟢' : 'Set to: Free 🟢'}</option>
+                                <option value="featured">{lang === 'ar' ? 'تفعيل: مميز 🌟 (مدفوع)' : 'Activate: Featured 🌟'}</option>
+                                <option value="vip">{lang === 'ar' ? 'تفعيل: VIP 👑 (مدفوع)' : 'Activate: VIP 👑'}</option>
+                              </select>
+                            </div>
+                          </td>
+
+                          {/* Authentication provider column. Passwords are never stored in Firestore. */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-300 select-all">
+                            <span className="text-neutral-500 italic text-xs">
+                              {lang === 'ar' ? 'محمي بواسطة Firebase' : 'Protected by Firebase'}
+                            </span>
+                          </td>
+
+                          {/* Date Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-400">
+                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : '-'}
+                          </td>
+
+                          {/* Status Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-xs font-bold">
+                            {u.isSuspended ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/30">
+                                <Ban className="h-3 w-3" />
+                                {lang === 'ar' ? 'موقوف مؤقتاً' : 'Suspended'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <ShieldCheck className="h-3 w-3" />
+                                {lang === 'ar' ? 'نشط' : 'Active'}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Actions Column */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {/* View Profile button */}
+                              <button
+                                onClick={() => setSelectedUserProfile(u)}
+                                className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20 hover:border-purple-500 transition-all cursor-pointer"
+                                title={lang === 'ar' ? 'عرض الملف الشخصي' : 'View Profile'}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+
+                              {/* Toggle Suspension button */}
+                              <button
+                                onClick={async () => {
+                                  if (isOwner) {
+                                    alert(lang === 'ar' ? '❌ لا يمكنك إيقاف حسابك الأساسي!' : '❌ You cannot suspend your own main account!');
+                                    return;
+                                  }
+                                  const confirmMsg = u.isSuspended
+                                    ? (lang === 'ar' ? `هل أنت متأكد من تفعيل حساب (${u.name})؟` : `Are you sure you want to activate (${u.name})'s account?`)
+                                    : (lang === 'ar' ? `هل أنت متأكد من إيقاف حساب (${u.name}) مؤقتاً؟` : `Are you sure you want to temporarily suspend (${u.name})'s account?`);
+                                  
+                                  const confirmed = await triggerConfirm(confirmMsg);
+                                  if (confirmed) {
+                                    const success = await toggleUserSuspensionInFirestore(u.id, !u.isSuspended);
+                                    if (success) {
+                                      alert(lang === 'ar' ? '✅ تم تحديث حالة المستخدم بنجاح!' : '✅ User status updated successfully!');
+                                    }
+                                  }
+                                }}
+                                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                                  u.isSuspended
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500'
+                                    : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500'
+                                }`}
+                                title={u.isSuspended ? (lang === 'ar' ? 'تفعيل الحساب' : 'Activate User') : (lang === 'ar' ? 'إيقاف الحساب' : 'Suspend User')}
+                              >
+                                <Ban className="h-4 w-4" />
+                              </button>
+
+                              {/* Delete button */}
+                              <button
+                                onClick={async () => {
+                                  if (isOwner) {
+                                    alert(lang === 'ar' ? '❌ لا يمكنك حذف حسابك الأساسي!' : '❌ You cannot delete your own main account!');
+                                    return;
+                                  }
+                                  const confirmed = await triggerConfirm(lang === 'ar' ? `⚠️ تحذير: هل أنت متأكد تماماً من حذف حساب (${u.name}) نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء!` : `⚠️ Warning: Are you absolutely sure you want to permanently delete (${u.name})'s account from the database? This action cannot be undone!`);
+                                  if (confirmed) {
+                                    const success = await deleteUserFromFirestore(u.id);
+                                    if (success) {
+                                      alert(lang === 'ar' ? '✅ تم حذف الحساب بنجاح!' : '✅ User deleted successfully!');
+                                    }
+                                  }
+                                }}
+                                className="p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500 transition-all cursor-pointer"
+                                title={lang === 'ar' ? 'حذف نهائي' : 'Delete permanently'}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'security' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir="rtl">
+          {/* Active Codes & Code update card */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 rounded-3xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white mb-2 flex items-center gap-2">
+                  <Key className="h-5 w-5 text-amber-400" />
+                  <span>{lang === 'ar' ? 'حماية رمز الإدارة' : 'Admin unlock protection'}</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                  {lang === 'ar' 
+                    ? 'رمز الإدارة لا يتم عرضه أو حفظه في Firestore. يتم التحقق منه بأمان داخل Vercel Backend، مع اشتراط تسجيل الدخول بحساب الإدارة أولاً.' 
+                    : 'The unlock code is not displayed or stored in Firestore. It is verified securely by the Vercel Backend after admin sign-in.'}
+                </p>
+                <div className="rounded-xl bg-neutral-950 border border-neutral-800 p-3 text-xs text-amber-300">
+                  {lang === 'ar' ? 'لتغيير الرمز: Vercel ← Settings ← Environment Variables ← ADMIN_UNLOCK_CODE.' : 'To change the code: Vercel → Settings → Environment Variables → ADMIN_UNLOCK_CODE.'}
+                </div>
+              </div>
+              <div className="border-t border-white/5 pt-4 mt-4 text-[10px] text-amber-500/70 leading-relaxed">
+                ℹ️ {lang === 'ar' 
+                  ? 'لا يوجد أي رمز افتراضي داخل التطبيق أو قاعدة البيانات.' 
+                  : 'No default code exists in the app or database.'}
+              </div>
+            </div>
+
+            {/* WhatsApp security alerts configuration card */}
+            <div className="lg:col-span-4 rounded-3xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white mb-2 flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-emerald-400" />
+                  <span>{lang === 'ar' ? 'رقم واتساب الإشعارات الأمنية' : 'WhatsApp Security Alerts Phone'}</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mb-4">
+                  {lang === 'ar' 
+                    ? 'الرقم الذي سيتم توجيه تقارير وبلاغات الاختراق والشرطة إليه مباشرة عبر واتساب.' 
+                    : 'The target WhatsApp phone number that will receive firewall alert reports and system logs.'}
+                </p>
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-neutral-300 block">{lang === 'ar' ? 'رقم الهاتف المعتمد (مع كود الدولة):' : 'Phone Number (with Country Code):'}</label>
+                  <input
+                    type="text"
+                    value={adminAlertPhone}
+                    onChange={(e) => handleAlertPhoneChange(e.target.value)}
+                    placeholder="e.g. 201015112185"
+                    className="w-full text-center rounded-2xl border border-white/10 bg-neutral-950 py-3 px-4 text-sm font-semibold text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
+                  />
+                  <p className="text-[10px] text-neutral-500 leading-relaxed">
+                    {lang === 'ar' 
+                      ? '⚠️ يرجى التأكد من كتابة الرقم بدون فواصل أو علامة + (مثال لمصر: 201015112185).' 
+                      : '⚠️ Enter digits only with country code, no + or spaces (e.g., 201015112185).'}
+                  </p>
+                </div>
+              </div>
+              <div className="border-t border-white/5 pt-4 mt-4 text-[10px] text-emerald-500/70 leading-relaxed font-bold">
+                ✅ {lang === 'ar' ? 'تم الحفظ والمزامنة تلقائياً مع جدار الحماية!' : 'Automatically saved and synced with Firewall!'}
+              </div>
+            </div>
+          </div>
+
+          {/* Security Violations Log Table */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 shadow-xl text-right">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-red-500 animate-pulse" />
+                  <span>{lang === 'ar' ? 'سجلات محاولات الاختراق وجدار الحماية' : 'Firewall & Intrusion Attempts Log'}</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  {lang === 'ar' 
+                    ? 'قائمة بجميع المحاولات الفاشلة التي تجاوزت 3 مرات وتم رصدها وحظرها تلقائياً مع تفاصيل الأجهزة وعناوين الـ IP.'
+                    : 'Real-time record of blocked intrusion attempts, failing more than 3 times, with detailed metadata.'}
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-black font-mono">
+                {securityViolations.length} {lang === 'ar' ? 'محاولة اختراق معزولة' : 'Attempts Blocked'}
+              </span>
+            </div>
+
+            {securityViolations.length === 0 ? (
+              <div className="text-center py-12 border border-dashed border-neutral-800 rounded-2xl bg-neutral-900/10">
+                <ShieldCheck className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
+                <p className="text-sm text-neutral-400 font-bold">{lang === 'ar' ? 'النظام آمن تماماً!' : 'The system is 100% secure!'}</p>
+                <p className="text-xs text-neutral-500 mt-1">{lang === 'ar' ? 'لا توجد أي محاولات دخول خاطئة مسجلة في جدار الحماية حتى الآن.' : 'No failed login violations recorded on the firewall yet.'}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-2xl border border-neutral-800/80 bg-neutral-950/40">
+                <table className="w-full border-collapse text-right select-none" dir="rtl">
+                  <thead>
+                    <tr className="border-b border-neutral-800 text-neutral-400 text-xs font-bold bg-neutral-900/40">
+                      <th className="px-6 py-3 text-right">{lang === 'ar' ? 'التوقيت' : 'Timestamp'}</th>
+                      <th className="px-6 py-3 text-right">{lang === 'ar' ? 'العنوان والموقع' : 'IP & Location'}</th>
+                      <th className="px-6 py-3 text-left">{lang === 'ar' ? 'المتصفح/الجهاز' : 'Browser/Device'}</th>
+                      <th className="px-6 py-3 text-center">{lang === 'ar' ? 'المحاولات' : 'Attempts'}</th>
+                      <th className="px-6 py-3 text-center">{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-900">
+                    {securityViolations.map((v) => {
+                      const policeReport = `🚨 --- تقرير بلاغ أمني عاجل للشرطة أو تكنولوجيا المعلومات 🚨 ---\n` +
+                        `• التوقيت: ${v.timestamp ? new Date(v.timestamp).toLocaleString('ar-EG') : '-'}\n` +
+                        `• عنوان الـ IP المهاجم: ${v.ip || 'غير معروف'}\n` +
+                        `• الموقع التقريبي: ${v.city || 'غير محدد'}، ${v.country || 'غير محدد'}\n` +
+                        `• مزود الخدمة (ISP): ${v.org || 'غير معروف'}\n` +
+                        `• عدد المحاولات الفاشلة قبل القفل: ${v.attempts || 3}\n` +
+                        `• المتصفح/الجهاز المستخدم: ${v.userAgent || 'غير معروف'}\n` +
+                        `• الإيميل المشتبه به: ${v.userEmail || 'زائر غير مسجل'}\n` +
+                        `-----------------------------------------\n` +
+                        `تم قفل جدار الحماية تلقائياً وعزل عنوان الـ IP عن الدخول.`;
+
+                      return (
+                        <tr key={v.id} className="hover:bg-neutral-900/30 transition-all">
+                          {/* Timestamp */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-400">
+                            {v.timestamp ? new Date(v.timestamp).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US') : '-'}
+                          </td>
+
+                          {/* IP & Location */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-sm font-bold text-white font-mono select-all">{v.ip}</span>
+                              <span className="text-[10px] text-neutral-500 font-sans">
+                                {v.city || 'Unknown'}, {v.country || 'Unknown'} {v.org ? `(${v.org})` : ''}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Device Agent */}
+                          <td className="px-6 py-4 max-w-xs truncate text-xs text-neutral-400 font-mono select-all text-left" dir="ltr" title={v.userAgent}>
+                            {v.userAgent || '-'}
+                          </td>
+
+                          {/* Attempts */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="px-2.5 py-1 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-black font-mono">
+                              {v.attempts || 3} / 3
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {/* Copy report */}
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(policeReport);
+                                  alert(lang === 'ar' ? '📋 تم نسخ التقرير الأمني بالكامل إلى الحافظة لعمل بلاغ أمني!' : '📋 Security report copied to clipboard successfully!');
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition-all cursor-pointer border border-neutral-700/60"
+                                title="نسخ تفاصيل بلاغ أمني"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                <span>{lang === 'ar' ? 'نسخ البلاغ' : 'Copy Report'}</span>
+                              </button>
+
+                              {/* Direct WhatsApp report */}
+                              <button
+                                onClick={() => {
+                                  const rawPhone = adminAlertPhone || '201015112185';
+                                  const cleanPhone = rawPhone.replace(/\D/g, '');
+                                  const formattedPhone = (cleanPhone.length === 11 && cleanPhone.startsWith('01')) ? '2' + cleanPhone : cleanPhone;
+                                  const encodedMsg = encodeURIComponent(policeReport);
+                                  window.open(`https://api.whatsapp.com/send?phone=${formattedPhone || '201015112185'}&text=${encodedMsg}`, '_blank');
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500 text-xs font-bold transition-all cursor-pointer"
+                                title="إرسال البلاغ فوراً للواتساب"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5" />
+                                <span>{lang === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'branding' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="rounded-3xl border border-pink-500/30 bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-pink-950/20 p-6 shadow-xl relative overflow-hidden">
+            <h3 className="text-lg sm:text-xl font-extrabold text-white mb-2 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-pink-400 animate-pulse" />
+              <span>{lang === 'ar' ? '🎨 إدارة الهوية والشعارات والأصول بقاعدة البيانات' : '🎨 Live Identity & Assets Manager'}</span>
+            </h3>
+            <p className="text-xs text-neutral-400 leading-relaxed mb-6">
+              {lang === 'ar'
+                ? 'تحكم في المظهر والشعارات واسم التطبيق وأي صور قديمة عبر استبدالها بروابط صور ويب حية. يتم تخزين وتحديث هذه الروابط فورياً في كوليكشن app_assets وتحت مستند باسم current_branding لتسهيل الهجرة والتحكم المستقبلي.'
+                : 'Control application branding, logos, display names, and local images by converting them to online links. All changes are stored under the "app_assets" collection with document ID "current_branding".'}
+            </p>
+
+            <form onSubmit={handleSaveBranding} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* App Name */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'اسم التطبيق الموحد (بالإنكليزية أو العربية دون ترجمة):' : 'Unified App Name (No translation, used for all languages):'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formAppNameEn}
+                    onChange={(e) => {
+                      setFormAppNameEn(e.target.value);
+                      setFormAppNameAr(e.target.value);
+                    }}
+                    required
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm transition-all outline-none"
+                    placeholder="CityEve"
+                  />
+                </div>
+
+                {/* App Icon URL */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط أيقونة التطبيق (App Icon URL):' : 'App Icon Image URL:'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formAppIconUrl}
+                      onChange={(e) => setFormAppIconUrl(e.target.value)}
+                      required
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://.../icon.svg"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingIcon ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع' : 'Upload'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'icon')}
+                        disabled={isUploadingIcon}
+                      />
+                    </label>
+                    <div className="h-12 w-12 rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                      <img
+                        src={formAppIconUrl || "https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png"}
+                        alt="Icon Preview"
+                        className="h-full w-full object-cover rounded-xl"
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dynasmcaj/image/upload/fbyjfjq8equle5pl7kwz.png'; }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الأيقونة المربعة المستخدمة في واجهة التطبيق، الهيدر وبانر التثبيت PWA.' : '💡 Square icon used in app navbar header, install prompts and banners.'}
+                  </p>
+                </div>
+
+                {/* App Logo URL */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط شعار العلامة الكامل (App Logo URL):' : 'App Full Logo Image URL:'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formAppLogoUrl}
+                      onChange={(e) => setFormAppLogoUrl(e.target.value)}
+                      required
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://.../logo.svg"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingLogo ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع' : 'Upload'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'logo')}
+                        disabled={isUploadingLogo}
+                      />
+                    </label>
+                    <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                      <img
+                        src={formAppLogoUrl || "https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png"}
+                        alt="Logo Preview"
+                        className="h-full w-full object-contain"
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dynasmcaj/image/upload/v1785834025/r5uj8nyeht88n4wqdihq.png'; }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الشعار المستطيل الكامل المستخدم في صفحات الدخول والبانرات الاحترافية.' : '💡 Full rectangle brand logo used in premium banners and auth landing pages.'}
+                  </p>
+                </div>
+
+                {/* Hero Header Banner Image URL (Arabic) */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'صورة بانر الهيدر الرئيسي - عربي (Hero Banner Image AR):' : 'Hero Header Banner Image URL (Arabic):'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formHeroBannerUrl}
+                      onChange={(e) => setFormHeroBannerUrl(e.target.value)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://res.cloudinary.com/.../banner_ar.jpg (أو اتركه فارغاً للتصميم التلقائي الذكي)"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingHeroBanner ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع بانر عربي' : 'Upload AR Banner'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'banner')}
+                        disabled={isUploadingHeroBanner}
+                      />
+                    </label>
+                    {formHeroBannerUrl && (
+                      <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                        <img
+                          src={formHeroBannerUrl}
+                          alt="Hero Banner Preview AR"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 صورة البانر العريض باللغة العربية (أكبر الحفلات والفعاليات في جيبك).' : '💡 Wide hero banner image for Arabic language.'}
+                  </p>
+                </div>
+
+                {/* Hero Header Banner Image URL (English) */}
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'صورة بانر الهيدر الرئيسي - إنجليزي (Hero Banner Image EN - اختياري):' : 'Hero Header Banner Image URL (English - Optional):'}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="url"
+                      value={formHeroBannerUrlEn}
+                      onChange={(e) => setFormHeroBannerUrlEn(e.target.value)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-xs font-mono transition-all outline-none"
+                      placeholder="https://res.cloudinary.com/.../banner_en.jpg (اختياري - يتم ترجمته تلقائياً إن ترك فارغاً)"
+                      dir="ltr"
+                    />
+                    <label className="flex items-center justify-center px-4 h-[42px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-all cursor-pointer border border-neutral-700 shrink-0">
+                      {isUploadingHeroBannerEn ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold">{lang === 'ar' ? 'رفع بانر إنجليزي' : 'Upload EN Banner'}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleUploadBrandingImage(e, 'banner_en')}
+                        disabled={isUploadingHeroBannerEn}
+                      />
+                    </label>
+                    {formHeroBannerUrlEn && (
+                      <div className="h-12 w-32 rounded-xl overflow-hidden bg-neutral-950 border border-neutral-800 flex items-center justify-center p-1 shrink-0">
+                        <img
+                          src={formHeroBannerUrlEn}
+                          alt="Hero Banner Preview EN"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 صورة البانر باللغة الإنجليزية. إذا تركتها فارغة سيتم ترجمة النص وتطبيقه تلقائياً عند اختيار الإنجليزية.' : '💡 Optional English banner image. If empty, English text will automatically overlay cleanly.'}
+                  </p>
+                </div>
+
+                {/* Mobile-safe Hero Backgrounds */}
+                <div className="space-y-2 col-span-1 md:col-span-2 rounded-2xl border border-amber-500/20 bg-amber-950/10 p-4">
+                  <label className="text-xs font-bold text-amber-200 block">
+                    {lang === 'ar' ? 'صور أرضية البانر للموبايل (تُظهر الراقصين بدون قص):' : 'Mobile-safe hero backgrounds (keeps dancers visible):'}
+                  </label>
+                  <p className="text-[10px] text-neutral-500 mb-3">
+                    {lang === 'ar' ? 'ارفع نسخة الموبايل المصممة بالطول إلى Cloudinary. إذا تركتها فارغة سيستخدم الموقع صورة الكمبيوتر تلقائياً.' : 'Upload the portrait/mobile floor to Cloudinary. If empty, the desktop image is used as fallback.'}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex gap-2 items-center">
+                      <input type="url" value={formHeroBannerMobileUrl} onChange={(e) => setFormHeroBannerMobileUrl(e.target.value)} className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-neutral-950 text-white border border-neutral-800 text-[10px] font-mono outline-none" placeholder="Cloudinary mobile AR URL" dir="ltr" />
+                      <label className="flex items-center justify-center px-3 h-[38px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white cursor-pointer shrink-0">
+                        {isUploadingHeroBannerMobile ? <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : <span className="text-[10px] font-bold">{lang === 'ar' ? 'رفع موبايل' : 'Upload'}</span>}
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadBrandingImage(e, 'banner_mobile')} disabled={isUploadingHeroBannerMobile} />
+                      </label>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <input type="url" value={formHeroBannerMobileUrlEn} onChange={(e) => setFormHeroBannerMobileUrlEn(e.target.value)} className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-neutral-950 text-white border border-neutral-800 text-[10px] font-mono outline-none" placeholder="Cloudinary mobile EN URL (optional)" dir="ltr" />
+                      <label className="flex items-center justify-center px-3 h-[38px] rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white cursor-pointer shrink-0">
+                        {isUploadingHeroBannerMobileEn ? <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : <span className="text-[10px] font-bold">{lang === 'ar' ? 'رفع EN' : 'Upload EN'}</span>}
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadBrandingImage(e, 'banner_mobile_en')} disabled={isUploadingHeroBannerMobileEn} />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WhatsApp Support Number */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رقم الدعم الفني للواتساب (بدون كود الدولة أو رموزه):' : 'WhatsApp Support Number (Raw, digits only):'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formWhatsappSupport}
+                    onChange={(e) => setFormWhatsappSupport(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm font-mono transition-all outline-none"
+                    placeholder="201012345678"
+                    dir="ltr"
+                  />
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 الرقم الموجه له زر الاستفسار عبر الواتساب للأعضاء.' : '💡 The WhatsApp phone number used for general member inquiries and complaints.'}
+                  </p>
+                </div>
+
+                {/* Instagram URL */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-neutral-300 block">
+                    {lang === 'ar' ? 'رابط حساب إنستجرام الرسمي:' : 'Official Instagram Account URL:'}
+                  </label>
+                  <input
+                    type="url"
+                    value={formInstagramUrl}
+                    onChange={(e) => setFormInstagramUrl(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm font-mono transition-all outline-none"
+                    placeholder="https://instagram.com/..."
+                    dir="ltr"
+                  />
+                  <p className="text-[10px] text-neutral-500">
+                    {lang === 'ar' ? '💡 رابط حساب إنستجرام الرسمي لتثبيت المتابعين والوصول إليه.' : '💡 Instagram account URL for official social integration.'}
+                  </p>
+                </div>
+
+                <div className="border-t border-white/5 pt-6 mt-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="col-span-1 md:col-span-2">
+                    <h4 className="text-sm font-bold text-amber-400 mb-2 flex items-center gap-2">
+                      <Crown className="h-4 w-4" />
+                      {lang === 'ar' ? 'إعدادات نصوص الإعلان الفاخر (فيديو الأسبوع الحصري)' : 'Weekly Promo Ad Settings'}
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الرئيسي (بالعربية):' : 'Main Title (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoTitleAr}
+                      onChange={(e) => setFormPromoTitleAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="فيديو الأسبوع الحصري المميز VIP"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الرئيسي (بالإنجليزية):' : 'Main Title (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoTitleEn}
+                      onChange={(e) => setFormPromoTitleEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="EXCLUSIVE WEEKLY VIP FEATURED VIDEO"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الفرعي (بالعربية):' : 'Subtitle (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoSubtitleAr}
+                      onChange={(e) => setFormPromoSubtitleAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="إعلان خاص"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'العنوان الفرعي (بالإنجليزية):' : 'Subtitle (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoSubtitleEn}
+                      onChange={(e) => setFormPromoSubtitleEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="SPECIAL AD"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'نص الشارة العائمة (بالعربية):' : 'Floating Badge (Arabic):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoBadgeAr}
+                      onChange={(e) => setFormPromoBadgeAr(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none"
+                      placeholder="فيديو الأسبوع الحصري"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-300 block">
+                      {lang === 'ar' ? 'نص الشارة العائمة (بالإنجليزية):' : 'Floating Badge (English):'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formPromoBadgeEn}
+                      onChange={(e) => setFormPromoBadgeEn(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-950 text-white border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all outline-none text-left"
+                      dir="ltr"
+                      placeholder="Weekly Featured Video"
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminSection(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-5 py-3 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white font-bold text-sm transition-all cursor-pointer"
+                >
+                  {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBranding}
+                  className="px-6 py-3 rounded-xl bg-pink-600 text-white hover:bg-pink-500 font-extrabold text-sm transition-all flex items-center gap-2 shadow-lg hover:shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <RefreshCw className={`h-4 w-4 ${savingBranding ? 'animate-spin' : ''}`} />
+                  <span>{lang === 'ar' ? (savingBranding ? 'جاري الحفظ...' : 'حفظ التغييرات بقاعدة البيانات') : (savingBranding ? 'Saving...' : 'Save Changes to Firestore')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'pricing' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="rounded-3xl border border-emerald-500/30 bg-white dark:bg-neutral-900 dark:bg-gradient-to-br dark:from-neutral-900 dark:via-neutral-900 dark:to-emerald-950/20 p-6 shadow-md dark:shadow-xl relative overflow-hidden">
+            <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mb-2 flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-emerald-500 animate-pulse" />
+              <span>{lang === 'ar' ? '💰 التحكم في أسعار الإعلانات' : '💰 Manage Ad Prices'}</span>
+            </h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-6">
+              {lang === 'ar' ? 'تعديل وتحديد قيمة حجز الإعلان المميز والعادي لكل أسبوع أو يوم، مع تحديد نسبة الزيادة الخاصة بإعلانات الفيديو.' : 'Configure prices for VIP and Standard ads per week/day, and set video surcharge percentage.'}
+            </p>
+            
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* VIP Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-amber-500/30 shadow-xs">
+                <h4 className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-2 mb-4">
+                  <Crown className="h-4 w-4" />
+                  {lang === 'ar' ? 'أسعار الإعلان المميز (VIP)' : 'VIP Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.basePrice ?? 100}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.extraDayPrice ?? 20}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.vip?.videoSurchargePercentage ?? 20}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, vip: { ...localPricingConfig?.vip, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Standard Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-neutral-300 dark:border-neutral-700 shadow-xs">
+                <h4 className="text-neutral-900 dark:text-white font-bold flex items-center gap-2 mb-4">
+                  <FileText className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                  {lang === 'ar' ? 'أسعار الإعلان العادي (Standard)' : 'Standard Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.basePrice ?? 50}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.extraDayPrice ?? 10}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.standard?.videoSurchargePercentage ?? 10}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, standard: { ...localPricingConfig?.standard, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Free Pricing Form */}
+              <div className="bg-neutral-50 dark:bg-neutral-950 p-5 rounded-2xl border border-green-500/30 shadow-xs">
+                <h4 className="text-green-600 dark:text-green-400 font-bold flex items-center gap-2 mb-4">
+                  <CheckCircle className="h-4 w-4" />
+                  {lang === 'ar' ? 'الإعلان المجاني (Free)' : 'Free Ad Pricing'}
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'السعر الأساسي (لأول أسبوع/7 أيام)' : 'Base Price (First 7 days)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.basePrice ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, basePrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'سعر كل يوم زيادة' : 'Extra Day Price'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.extraDayPrice ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, extraDayPrice: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-neutral-700 dark:text-neutral-300 font-medium block mb-1">
+                      {lang === 'ar' ? 'نسبة الزيادة لإعلان الفيديو (%)' : 'Video Surcharge Percentage (%)'}
+                    </label>
+                    <input 
+                      type="number"
+                      value={localPricingConfig?.free?.videoSurchargePercentage ?? 0}
+                      onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, free: { ...localPricingConfig?.free, videoSurchargePercentage: Number(e.target.value) }})}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={async () => {
+                  setSavingPricing(true);
+                  await updatePricingConfig(localPricingConfig as any);
+                  setSavingPricing(false);
+                }}
+                disabled={savingPricing}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 dark:text-neutral-950 px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-md cursor-pointer"
+              >
+                {savingPricing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                {lang === 'ar' ? 'حفظ الأسعار في قاعدة البيانات' : 'Save Prices to Database'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'analytics' && (
+        <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          {/* Summary KPIs Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* KPI 1: App Installs PWA */}
+            <div className="rounded-3xl border border-purple-500/30 bg-purple-950/20 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-20 group-hover:scale-110 transition-transform text-purple-400">
+                <Smartphone className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-purple-300 tracking-wider">
+                {lang === 'ar' ? '📲 تثبيتات التطبيق على الهواتف' : '📲 PWA APP INSTALLS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.pwa_installs || 0}
+              </h4>
+              <p className="text-[10px] text-purple-300 mt-2 font-medium">
+                {lang === 'ar' ? '📱 أجهزة قامت بتثبيت التطبيق PWA' : '📱 PWA installed phone instances'}
+              </p>
+            </div>
+
+            {/* KPI 2: Unique Sessions */}
+            <div className="rounded-3xl border border-cyan-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-cyan-400">
+                <Users className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '👥 زوار فريدون (أجهزة)' : '👥 UNIQUE VISITORS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.unique_sessions || 0}
+              </h4>
+              <p className="text-[10px] text-cyan-400 mt-2 font-medium">
+                {lang === 'ar' ? '✨ تحديث مباشر فوري مجاني' : '✨ Live real-time & completely free'}
+              </p>
+            </div>
+
+            {/* KPI 3: Total Page Views */}
+            <div className="rounded-3xl border border-pink-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-pink-400">
+                <Eye className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '📊 إجمالي المشاهدات' : '📊 TOTAL PAGE VIEWS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {analyticsCounters.total_page_views || 0}
+              </h4>
+              <p className="text-[10px] text-pink-400 mt-2 font-medium">
+                {lang === 'ar' ? '🔥 نشاط تصفح ومشاركات حقيقي' : '🔥 Active browser impressions'}
+              </p>
+            </div>
+
+            {/* KPI 4: Engagement Factor */}
+            <div className="rounded-3xl border border-amber-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-amber-400">
+                <TrendingUp className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '⚡ متوسط التفاعل' : '⚡ ENGAGEMENT METRIC'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {((analyticsCounters.total_page_views || 0) / (analyticsCounters.unique_sessions || 1)).toFixed(1)}
+              </h4>
+              <p className="text-[10px] text-amber-400 mt-2 font-medium">
+                {lang === 'ar' ? '🔄 معدل زيارة الصفحات لكل مستخدم' : '🔄 Page views per active session'}
+              </p>
+            </div>
+
+            {/* KPI 5: Outbound Contacts */}
+            <div className="rounded-3xl border border-emerald-500/20 bg-neutral-900/60 p-5 shadow-lg relative overflow-hidden group text-right">
+              <div className="absolute left-3 top-3 opacity-10 group-hover:scale-110 transition-transform text-emerald-400">
+                <MousePointerClick className="h-10 w-10" />
+              </div>
+              <p className="text-[11px] font-bold text-neutral-400 tracking-wider">
+                {lang === 'ar' ? '🎯 نقرات التواصل السريع' : '🎯 CALL-TO-ACTION CLICKS'}
+              </p>
+              <h4 className="text-3xl font-black text-white mt-2 font-mono">
+                {(analyticsCounters.clicks_whatsapp || 0) + (analyticsCounters.clicks_phone || 0) + (analyticsCounters.clicks_maps || 0)}
+              </h4>
+              <p className="text-[10px] text-emerald-400 mt-2 font-medium">
+                {lang === 'ar' ? '✅ واتساب واتصالات وخرائط' : '✅ Active Maps & Chat actions'}
+              </p>
+            </div>
+          </div>
+
+          {/* Core Analytics Details Split Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left/Right Column: Dance Styles Popularity / Audience Interest (7 Cols) */}
+            <div className="lg:col-span-7 rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  {lang === 'ar' ? '🔥 اهتمام الجمهور بحسب نوع الرقصة والأنماط' : '🔥 Audience Interest & Dance Styles Preference'}
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  {lang === 'ar' 
+                    ? 'ترتيب تنازلي فوري لأنواع الرقصات الأكثر طلباً وبحثاً وتصفية من قبل زوار الموقع والجمهور الحقيقي.' 
+                    : 'Real-time ranking of music and dance genres selected by active visitors.'}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {(() => {
+                  const rawStyles = [
+                    { name: 'Salsa', count: analyticsCounters.style_salsa || 0, color: 'bg-amber-500' },
+                    { name: 'Bachata', count: analyticsCounters.style_bachata || 0, color: 'bg-purple-500' },
+                    { name: 'Kizomba', count: analyticsCounters.style_kizomba || 0, color: 'bg-pink-500' },
+                    { name: 'Merengue', count: analyticsCounters.style_merengue || 0, color: 'bg-emerald-500' },
+                    { name: 'Tango', count: analyticsCounters.style_tango || 0, color: 'bg-red-500' },
+                    { name: 'Zouk', count: analyticsCounters.style_zouk || 0, color: 'bg-blue-500' },
+                    { name: 'Cha-Cha', count: analyticsCounters.style_cha_cha || 0, color: 'bg-indigo-500' },
+                    { name: 'Reggaeton', count: analyticsCounters.style_reggaeton || 0, color: 'bg-rose-500' },
+                    { name: 'Ballroom', count: analyticsCounters.style_ballroom || 0, color: 'bg-yellow-500' },
+                    { name: 'Mix & Latin', count: (analyticsCounters.style_mix___latin || analyticsCounters.style_mix_latin || 0), color: 'bg-teal-500' },
+                    { name: 'Arabic & Oriental', count: (analyticsCounters.style_arabic___oriental || analyticsCounters.style_arabic_oriental || 0), color: 'bg-cyan-500' }
+                  ];
+                  const sortedStyles = [...rawStyles].sort((a, b) => b.count - a.count);
+                  const maxStyleCount = Math.max(...sortedStyles.map(s => s.count), 1);
+
+                  return sortedStyles.map((item, index) => {
+                    const safeCount = Number(item.count) || 0;
+                    const pct = maxStyleCount > 0 ? Math.min(Math.round((safeCount / maxStyleCount) * 100), 100) : 0;
+                    return (
+                      <div key={item.name} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-neutral-500 w-5 text-center">
+                              #{index + 1}
+                            </span>
+                            <span className="font-extrabold text-neutral-200">
+                              {getStyleLabel(item.name, lang)}
+                            </span>
+                          </div>
+                          <span className="font-bold text-neutral-400">
+                            {Number(item.count) || 0} {lang === 'ar' ? 'نقرة' : 'clicks'} ({Number.isNaN(pct) ? 0 : pct}%)
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/50">
+                          <div 
+                            className={`h-full ${item.color} rounded-full transition-all duration-1000`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+
+            {/* Right Column: Interaction Clicks & Tab Navigation Breakdown (5 Cols) */}
+            <div className="lg:col-span-5 flex flex-col gap-6 text-right">
+              {/* Box 1: Clicks Breakdown */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <MousePointerClick className="h-4.5 w-4.5 text-emerald-400" />
+                    <span>{lang === 'ar' ? '🎯 الإجراءات المتخذة (CTA)' : '🎯 Customer Call-to-Actions'}</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {lang === 'ar' ? 'تتبع أزرار الاتصال الأكثر استخداماً للوصول إلى المنظمين.' : 'Metrics on actual customer conversions and outreach.'}
+                  </p>
+                </div>
+
+                <div className="space-y-3.5 pt-2">
+                  {/* WhatsApp */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <MessageCircle className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'نقرات التواصل عبر واتساب' : 'WhatsApp Chats Started'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">wa.me outbound link clicks</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-emerald-400">{analyticsCounters.clicks_whatsapp || 0}</span>
+                  </div>
+
+                  {/* Google Maps */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <MapPin className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'خرائط جوجل ومواقع الفعاليات' : 'Google Maps Open'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">location map navigation requests</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-cyan-400">{analyticsCounters.clicks_maps || 0}</span>
+                  </div>
+
+                  {/* Phone Calls */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <Phone className="h-4 w-4" />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">{lang === 'ar' ? 'المكالمات الهاتفية المباشرة' : 'Direct Phone Calls'}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">tel: links launched</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black font-mono text-amber-400">{analyticsCounters.clicks_phone || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Box 2: Sections engagement */}
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <Layers className="h-4.5 w-4.5 text-purple-400" />
+                    <span>{lang === 'ar' ? '🗺️ نشاط تصفح أقسام التطبيق' : '🗺️ Section & Navigation Usage'}</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {lang === 'ar' ? 'توزع الزوار بين الأبواب الرئيسية في التطبيق.' : 'Page view count breakdown across system tabs.'}
+                  </p>
+                </div>
+
+                <div className="space-y-2 font-mono text-xs text-right">
+                  {/* Explore */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '✨ قسم الاستكشاف الرئيسي' : 'Explore Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_explore || 0}</span>
+                  </div>
+                  {/* Trips */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '🌴 قسم الرحلات والمصايف' : 'Trips Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_trips || 0}</span>
+                  </div>
+                  {/* Profile */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '👤 صفحة الحساب والمجتمع' : 'Profile/Account Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_profile || 0}</span>
+                  </div>
+                  {/* Create Ad */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-neutral-800/40">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '➕ صفحة إنشاء الإعلانات' : 'Create Ad Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_create_ad || 0}</span>
+                  </div>
+                  {/* Admin Panel */}
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-neutral-400 font-bold">{lang === 'ar' ? '⚙️ لوحة تحكم الإدارة' : 'Admin Panel Tab'}</span>
+                    <span className="text-white font-extrabold">{analyticsCounters.tab_admin || 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Most Favorited Events & Ads Leaderboard */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-500 fill-red-500" />
+                <span>{lang === 'ar' ? '💖 إعلانات الحفلات الأكثر حفظاً في المفضلة للجمهور' : '💖 Most Favorited (Saved) Events & Ads Leaderboard'}</span>
+              </h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                {lang === 'ar' 
+                  ? 'قائمة مرتبة تنازلياً توضح عدد المستخدمين الفعليين الذين قاموا بحفظ كل إعلان في قائمتهم المفضلة الخاصة.' 
+                  : 'Real-time leaderboard showing how many unique user accounts saved each active event or ad.'}
+              </p>
+            </div>
+
+            {events.length === 0 ? (
+              <div className="py-12 text-center text-xs text-neutral-500 font-mono">
+                {lang === 'ar' ? '📭 لا توجد إعلانات نشطة حالياً في قاعدة البيانات.' : '📭 No active events found in the database.'}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                  <thead>
+                    <tr className="border-b border-neutral-800/60 text-neutral-400 font-bold text-neutral-300">
+                      <th className="py-3 px-4 text-center w-12">#</th>
+                      <th className="py-3 px-4 text-right">{lang === 'ar' ? 'اسم الإعلان / الحفلة' : 'Event / Ad Title'}</th>
+                      <th className="py-3 px-4 text-center">{lang === 'ar' ? 'التصنيف' : 'Category'}</th>
+                      <th className="py-3 px-4 text-center">{lang === 'ar' ? 'تاريخ الفعالية' : 'Event Date'}</th>
+                      <th className="py-3 px-4 text-center w-36">{lang === 'ar' ? 'مرات الحفظ في المفضلة' : 'Favorite Count'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const sortedEvents = [...events].sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
+                      const maxLikes = Math.max(...sortedEvents.map(e => e.likesCount || 0), 1);
+
+                      return sortedEvents.map((ev, index) => {
+                        const likes = ev.likesCount || 0;
+                        const pct = Math.min(Math.round((likes / maxLikes) * 100), 100);
+                        const isTop3 = index < 3;
+                        const medalColors = ['text-yellow-500', 'text-slate-300', 'text-amber-600'];
+
+                        return (
+                          <tr key={ev.id} className="border-b border-neutral-800/40 hover:bg-neutral-950/40 transition-colors">
+                            {/* Rank Column */}
+                            <td className="py-3.5 px-4 text-center font-bold font-mono">
+                              {isTop3 ? (
+                                <span className={`text-sm font-black`}>
+                                  {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                                </span>
+                              ) : (
+                                <span className="text-neutral-500">#{index + 1}</span>
+                              )}
+                            </td>
+
+                            {/* Title & Styles */}
+                            <td className="py-3.5 px-4 font-extrabold text-white text-right">
+                              <div>
+                                <p className="text-sm line-clamp-1">
+                                  {lang === 'ar' ? ev.titleAr || ev.titleEn : ev.titleEn || ev.titleAr}
+                                </p>
+                                <div className="flex flex-wrap gap-1 mt-1 justify-start">
+                                  {ev.styles?.slice(0, 3).map(style => (
+                                    <span key={style} className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-neutral-800 text-neutral-400 font-mono">
+                                      {getStyleLabel(style, lang)}
+                                    </span>
+                                  ))}
+                                  {ev.isWeeklyPromo && (
+                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                                      VIP PROMO
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Category Badge */}
+                            <td className="py-3.5 px-4 text-center">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono ${
+                                ev.category === 'party' 
+                                  ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                                  : ev.category === 'course' 
+                                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                                    : ev.category === 'trip'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              }`}>
+                                {ev.category === 'party' 
+                                  ? (lang === 'ar' ? 'حفلة' : 'Party') 
+                                  : ev.category === 'course' 
+                                    ? (lang === 'ar' ? 'دورة' : 'Course') 
+                                    : ev.category === 'trip'
+                                      ? (lang === 'ar' ? 'رحلة' : 'Trip')
+                                      : (lang === 'ar' ? 'معارض ومؤتمرات' : 'Exhibition')}
+                              </span>
+                            </td>
+
+                            {/* Event Date */}
+                            <td className="py-3.5 px-4 text-center text-[11px] font-mono font-bold text-neutral-400">
+                              {(() => {
+                                try {
+                                  return new Date(ev.eventDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  });
+                                } catch (e) {
+                                  return ev.eventDate;
+                                }
+                              })()}
+                            </td>
+
+                            {/* Favorite Clicks & Visual Indicator */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-3 justify-center">
+                                {/* Favorite count bubble */}
+                                <div className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-2xl text-red-400 shrink-0">
+                                  <Heart className="h-3 w-3 fill-current text-red-500" />
+                                  <span className="font-extrabold font-mono text-sm">{String(likes)}</span>
+                                </div>
+                                {/* Progress visualizer */}
+                                <div className="hidden sm:block h-1.5 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/50">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-pink-500 to-red-500 rounded-full transition-all duration-1000"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Daily Traffic Chart Card (Full Width) */}
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-xl space-y-6 text-right">
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Activity className="h-5 w-5 text-cyan-400" />
+                <span>{lang === 'ar' ? '📈 مخطط حركة المرور والزوار اليومي' : '📈 Daily Visitor & Traffic Timeline'}</span>
+              </h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                {lang === 'ar' 
+                  ? 'رسم بياني يعرض نشاط الزوار الفريدين (بالأزرق 🔷) وإجمالي مشاهدات الصفحات (بالوردي 🌸) للـ 10 أيام الماضية.' 
+                  : 'Time-series bar visualization tracking active unique sessions (cyan) vs total page impressions (pink).'}
+              </p>
+            </div>
+
+            {dailyAnalytics.length === 0 ? (
+              <div className="py-12 text-center text-xs text-neutral-500 font-mono">
+                {lang === 'ar' ? '📭 لا توجد بيانات مسجلة في السجل اليومي بعد.' : '📭 No daily history records found in Firestore yet.'}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Horizontal Bar Chart representation */}
+                <div className="space-y-4">
+                  {(() => {
+                    const maxSessions = Math.max(...dailyAnalytics.map(d => d.unique_sessions || 0), 1);
+                    const maxPageViews = Math.max(...dailyAnalytics.map(d => d.total_page_views || 0), 1);
+
+                    return [...dailyAnalytics].reverse().slice(0, 10).map((day) => {
+                      const sessionPct = Math.min(Math.round(((day.unique_sessions || 0) / maxSessions) * 100), 100);
+                      const viewsPct = Math.min(Math.round(((day.total_page_views || 0) / maxPageViews) * 100), 100);
+
+                      return (
+                        <div key={day.date} className="grid grid-cols-1 md:grid-cols-12 items-center gap-3 border-b border-neutral-800/40 pb-3 text-right">
+                          {/* Date Label */}
+                          <div className="md:col-span-2 text-xs font-bold font-mono text-neutral-300">
+                            📅 {day.date}
+                          </div>
+
+                          {/* Dual Bar Render */}
+                          <div className="md:col-span-8 space-y-1.5">
+                            {/* Sessions (Cyan) */}
+                            <div className="flex items-center gap-2">
+                              <div className="h-2.5 bg-cyan-500 rounded-full transition-all duration-1000" style={{ width: `${sessionPct}%` }} />
+                              <span className="text-[10px] font-mono font-bold text-cyan-400">{day.unique_sessions || 0}</span>
+                            </div>
+
+                            {/* Pageviews (Pink) */}
+                            <div className="flex items-center gap-2">
+                              <div className="h-2.5 bg-pink-500 rounded-full transition-all duration-1000" style={{ width: `${viewsPct}%` }} />
+                              <span className="text-[10px] font-mono font-bold text-pink-400">{day.total_page_views || 0}</span>
+                            </div>
+                          </div>
+
+                          {/* Quick details */}
+                          <div className="md:col-span-2 text-left md:text-right text-[11px] font-mono text-neutral-400 flex md:flex-col justify-between">
+                            <div><strong className="text-cyan-400">{day.unique_sessions || 0}</strong> {lang === 'ar' ? ' زائر فريد' : ' visitors'}</div>
+                            <div><strong className="text-pink-400">{day.total_page_views || 0}</strong> {lang === 'ar' ? ' مشاهدة' : ' views'}</div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Chart Legend */}
+                <div className="flex items-center justify-center gap-6 pt-4 border-t border-neutral-800 text-xs font-mono">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 w-3.5 rounded bg-cyan-500" />
+                    <span className="text-cyan-400 font-extrabold">{lang === 'ar' ? 'الزوار الفريدين (Unique sessions)' : 'Unique visitors'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 w-3.5 rounded bg-pink-500" />
+                    <span className="text-pink-400 font-extrabold">{lang === 'ar' ? 'إجمالي المشاهدات (Page views)' : 'Total page impressions'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Back Button */}
+          <div className="flex justify-end pt-4 border-t border-neutral-800">
+            <button
+              onClick={() => {
+                setAdminSection(null);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-5 py-3 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white font-extrabold text-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>{lang === 'ar' ? 'الرجوع للوحة التحكم' : 'Back to Dashboard'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {adminSection === 'create_ad_admin' && (
+        <div className="space-y-6 animate-fadeIn" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <form onSubmit={handleAdminPublish} className="space-y-6">
+            
+            {/* Master Control Notice */}
+            <div className="rounded-3xl border border-indigo-500/30 bg-neutral-900 p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute right-0 top-0 h-full w-1/3 bg-indigo-500/5 blur-3xl pointer-events-none" />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <Sparkles className="h-6 w-6 animate-pulse" />
+                  </div>
+                  <div className="text-right">
+                    <h3 className="text-base sm:text-lg font-black text-white">
+                      {lang === 'ar' ? 'نظام النشر المباشر للإدارة' : 'Admin Instant Publisher'}
+                    </h3>
+                    <p className="text-xs text-neutral-400 mt-1">
+                      {lang === 'ar' 
+                        ? 'أنت تقوم بإنشاء إعلان بشكل مباشر في قاعدة البيانات. سيتجاوز هذا الإعلان المراجعة والدفع ويظهر للجمهور فوراً.' 
+                        : 'You are composing an event directly inside Firestore. This bypasses the payment/review queue and updates live feeds instantly.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-mono font-black">
+                    BYPASS ACTIVE
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Tab Switcher for Full Live Preview (A separate page/tab of its own because of space/area constraints) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-3xl bg-neutral-950/80 border-2 border-indigo-500/30 shadow-2xl relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="text-right flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+                </span>
+                <div>
+                  <h4 className="text-sm font-black text-white">
+                    {lang === 'ar' ? '👀 معاينة مباشرة تفاعلية بالكامل' : '👀 Live Interactive Preview'}
+                  </h4>
+                  <p className="text-[11px] text-neutral-400">
+                    {lang === 'ar' ? 'اعرض مظهر الإعلان النهائي للجمهور أثناء تعبئة الحقول لتعديله فوراً.' : 'See exactly how the final ad renders to dancers as you type.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex rounded-2xl bg-neutral-900 p-1 border border-neutral-800 w-full sm:w-auto shrink-0 relative z-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminCreateTab('form');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    adminCreateTab === 'form'
+                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>{lang === 'ar' ? '📝 نموذج البيانات' : '📝 Form Builder'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminCreateTab('preview');
+                    setPreviewAlert(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    adminCreateTab === 'preview'
+                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>{lang === 'ar' ? '👁️ المعاينة الحية للجمهور' : '👁️ Live Preview'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Removed Floating Action Button per user request to move it near action buttons */}
+
+            {adminCreateTab === 'form' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
+              
+              {/* LEFT COLUMN: Main Form Details */}
+              <div className="lg:col-span-8 space-y-6">
+                
+                {/* Section 1: Titles & Descriptions */}
+                <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl space-y-4">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-indigo-400" />
+                    <span>{lang === 'ar' ? '📝 تفاصيل ونص الإعلان' : '📝 Event Content & Copy'}</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Title Arabic */}
+                    <div className="space-y-2 text-right">
+                      <div className="flex items-center justify-between flex-row-reverse">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالعربية) *' : 'Event Title (Arabic) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminTitleEn, 'ar', setAdminTitleAr, 'adminTitleAr')}
+                          disabled={!adminTitleEn || isTranslating === 'adminTitleAr'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminTitleAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={adminTitleAr}
+                        onChange={(e) => setAdminTitleAr(e.target.value)}
+                        placeholder="مثال: سهرة سالسا فخمة في الزمالك"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
+                      />
+                    </div>
+
+                    {/* Title English */}
+                    <div className="space-y-2 text-left">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'اسم الإعلان / الحفلة (بالإنجليزية) *' : 'Event Title (English) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminTitleAr, 'en', setAdminTitleEn, 'adminTitleEn')}
+                          disabled={!adminTitleAr || isTranslating === 'adminTitleEn'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminTitleEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={adminTitleEn}
+                        onChange={(e) => setAdminTitleEn(e.target.value)}
+                        placeholder="e.g. Luxury Salsa Night in Zamalek"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-left"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Desc Arabic */}
+                    <div className="space-y-2 text-right">
+                      <div className="flex items-center justify-between flex-row-reverse">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالعربية) *' : 'Event Description (Arabic) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminDescEn, 'ar', setAdminDescAr, 'adminDescAr')}
+                          disabled={!adminDescEn || isTranslating === 'adminDescAr'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminDescAr' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من الإنجليزية' : 'Translate from English'}
+                        </button>
+                      </div>
+                      <textarea
+                        required
+                        rows={4}
+                        value={adminDescAr}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 500) {
+                            setAdminDescAr(e.target.value);
+                          }
+                        }}
+                        maxLength={500}
+                        placeholder="اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور..."
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
+                      />
+                      <div className="flex justify-between items-center mt-1 px-1 text-right" dir="rtl">
+                        <span className={`text-[11px] transition-colors duration-200 ${500 - adminDescAr.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                          {lang === 'ar' 
+                            ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - adminDescAr.length}` 
+                            : `Maximum 500 characters | Remaining: ${500 - adminDescAr.length} characters`}
+                        </span>
+                        {500 - adminDescAr.length === 0 && (
+                          <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                            {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Desc English */}
+                    <div className="space-y-2 text-left">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-neutral-300">
+                          {lang === 'ar' ? 'وصف وتفاصيل الإعلان (بالإنجليزية) *' : 'Event Description (English) *'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslate(adminDescAr, 'en', setAdminDescEn, 'adminDescEn')}
+                          disabled={!adminDescAr || isTranslating === 'adminDescEn'}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-900 border border-neutral-800 text-indigo-400 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isTranslating === 'adminDescEn' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                          {lang === 'ar' ? 'ترجمة من العربية' : 'Translate from Arabic'}
+                        </button>
+                      </div>
+                      <textarea
+                        required
+                        rows={4}
+                        value={adminDescEn}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 500) {
+                            setAdminDescEn(e.target.value);
+                          }
+                        }}
+                        maxLength={500}
+                        placeholder="Write details of the event, instructors, music styles, dress codes..."
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-left"
+                      />
+                      <div className="flex justify-between items-center mt-1 px-1 text-left" dir="ltr">
+                        <span className={`text-[11px] transition-colors duration-200 ${500 - adminDescEn.length <= 50 ? 'text-red-500 font-bold' : 'text-blue-400 font-medium'}`}>
+                          {lang === 'ar' 
+                            ? `الحد الأقصى 500 حرف | الحروف المتبقية: ${500 - adminDescEn.length}` 
+                            : `Maximum 500 characters | Remaining: ${500 - adminDescEn.length} characters`}
+                        </span>
+                        {500 - adminDescEn.length === 0 && (
+                          <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                            {lang === 'ar' ? '⚠️ تم الوصول للحد الأقصى' : '⚠️ Max limit reached'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Section 2: Category & Dance Styles */}
