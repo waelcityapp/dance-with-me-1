@@ -2532,7 +2532,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           )}
 
           {/* Ad Placement Number & Ad Identifier - Admin Only */}
-          {(user?.isAdmin || isAdminUnlocked) && (
+          {editingEvent && (user?.isAdmin || user?.email === 'waelvts@gmail.com') && isAdminUnlocked && (
             <div className="space-y-6 border-t border-amber-200/60 dark:border-white/5 pt-6 animate-fadeIn">
               <div className="flex items-center gap-2">
                 <Lock className="h-4 w-4 text-[#78101F] dark:text-amber-500" />
