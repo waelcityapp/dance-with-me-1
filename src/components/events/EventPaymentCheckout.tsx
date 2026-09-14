@@ -43,7 +43,8 @@ export interface EventPaymentCheckoutProps {
   mediaType: 'image' | 'video';
   expirationNotice: string;
   initialPhone?: string;
-  category?: 'party' | 'course' | 'trip';
+  category?: 'party' | 'course' | 'trip' | 'exhibition' | 'services' | 'jobs';
+  subcategory?: string;
   styles?: any[];
   mediaUrl?: string;
   pendingFile?: File | null;
@@ -64,8 +65,9 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   mediaType,
   expirationNotice,
   initialPhone = '',
-  category = 'party',
-  styles = ['Salsa'],
+  category,
+  subcategory,
+  styles = [],
   mediaUrl = '',
   pendingFile = null,
   cloudinaryConfig,
@@ -242,6 +244,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية',
       titleEn: titleEn || 'Royal Salsa & Bachata Night',
       category: category as any,
+      subcategory,
       styles: styles as any,
       mediaType,
       mediaUrl: finalMediaUrl,
