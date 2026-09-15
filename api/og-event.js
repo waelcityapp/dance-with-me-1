@@ -20,7 +20,7 @@ const languageQuery = lang => lang === 'en' ? '?lang=en' : '';
 const categoryUrl = (slug,lang) => `${SITE_URL}/categories/${slug}.html${languageQuery(lang)}`;
 const directoryNav = lang => `<nav aria-label="${lang==='en'?'Event categories':'أقسام الفعاليات'}">${CATEGORIES.map(c => `<a href="${categoryUrl(c[0],lang)}">${esc(c[lang==='en'?3:2])}</a>`).join('')}</nav>`;
 
-export function renderDocument({lang='ar',title,description='',url=SITE_URL+'/',image=LOGO,body='',structured=[],index=true,alternates=true,app=true}) {
+export function renderDocument({lang='ar',title,description='',url=SITE_URL+'/',image=LOGO,body='',structured=[],index=true,alternates=true,app=true,fallbackVisible=true}) {
   const arUrl = url.replace(/\?lang=en$/, '');
   const enUrl = arUrl + '?lang=en';
   const metadata = `<title>${esc(title)}</title>
@@ -42,7 +42,7 @@ ${structured.map(s => `<script type="application/ld+json">${jsonLd(s)}</script>`
     .replace(/<link\b[^>]*rel=["'](?:canonical|alternate)["'][^>]*>/gi, '')
     .replace(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '')
     .replace('</head>', `${metadata}</head>`)
-    .replace('<div id="root"></div>', () => `<div id="root">${body}</div>`);
+    .replace('<div id="root"></div>', () => `<div id="root">${fallbackVisible ? body : '<div style="display:none" data-seo-fallback="true">'+body+'</div>'}</div>`);
   if (!app) html = html.replace(/<script\b[^>]*type="module"[^>]*>[\s\S]*?<\/script>/gi, '');
   return html;
 }
@@ -59,6 +59,7 @@ export default async function handler(req,res) {
   const lang = req.query.lang === 'en' ? 'en' : 'ar';
   const eventId = req.query.event || req.query.eventId;
   const en = lang === 'en';
+  const isCrawler = /googlebot|bingbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|slackbot/i.test(String(req.headers?.['user-agent'] || ''));
   try {
     if (eventId) {
       const valid = typeof eventId==='string' && eventId.length<=150 && !/[\/\u0000-\u001f]/.test(eventId);
@@ -70,7 +71,7 @@ export default async function handler(req,res) {
       }
       const d = eventDetails(event,lang);
       const body = `<main class="seo-page"><a href="/${languageQuery(lang)}">CityEve</a><article><h1>${esc(d.name)}</h1><img class="seo-detail-image" src="${esc(d.image)}" alt="${esc(d.name)}" />${d.date?`<p><time datetime="${esc(d.date)}">${esc(d.date.slice(0,10))}</time></p>`:''}<p>${esc([d.place,d.address,d.city].filter(Boolean).join(' — '))}</p><p class="seo-description">${esc(d.description)}</p>${d.organizer?`<p>${en?'Organizer':'المنظم'}: ${esc(d.organizer)}</p>`:''}</article>${directoryNav(lang)}</main>`;
-      return send(res,200,renderDocument({lang,title:d.name+' | CityEve',description:d.description.slice(0,220),url:d.url,image:d.image,structured:[d.structured],body,index:!en||hasEnglish(event),alternates:hasEnglish(event)}));
+      return send(res,200,renderDocument({lang,title:d.name+' | CityEve',description:d.description.slice(0,220),url:d.url,image:d.image,structured:[d.structured],body,index:!en||hasEnglish(event),alternates:hasEnglish(event),fallbackVisible:isCrawler}));
     }
     const category = CATEGORIES.find(c=>c[0]===req.query.page);
     if (req.query.page !== 'home' && !category) return send(res,404,renderDocument({lang,title:'CityEve',index:false,alternates:false,app:false,body:'<main class="seo-page"><h1>404</h1><a href="/">CityEve</a></main>'}));
@@ -83,7 +84,7 @@ export default async function handler(req,res) {
     const structured = [{'@context':'https://schema.org','@type':category?'CollectionPage':'WebSite',name:title,description,url,inLanguage:lang},
       {'@context':'https://schema.org','@type':'ItemList',itemListElement:events.map((e,i)=>({'@type':'ListItem',position:i+1,url:eventDetails(e,lang).url,name:eventDetails(e,lang).name}))}];
     if (!category) structured.push({'@context':'https://schema.org','@type':'Organization',name:'CityEve',url:SITE_URL,logo:LOGO});
-    return send(res,200,renderDocument({lang,title,description,url,body,structured,app:!category}));
+    return send(res,200,renderDocument({lang,title,description,url,body,structured,app:!category,fallbackVisible:category ? true : isCrawler}));
   } catch (error) {
     console.error('SEO page unavailable:',error.message);
     res.setHeader('Retry-After','60');

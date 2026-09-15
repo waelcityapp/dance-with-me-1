@@ -232,7 +232,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         ],
       },
       { weight: 60, values: dateValues },
-      { weight: 50, values: [ev.descriptionAr, ev.descriptionEn] },
+      { weight: 50, values: [ev.descriptionAr, ev.descriptionEn, ...(ev.searchKeywords || [])] },
       { weight: 30, values: [ev.priceAr, ev.priceEn, ev.adNumber, ev.eventRef] },
     ].map(field => ({
       weight: field.weight,
