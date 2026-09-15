@@ -225,7 +225,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const selectedSubcategory = selectedCategory?.subcategories.find(item => item.id === subcategory);
   const shouldShowDanceStyles = selectedSubcategory?.supportsDanceStyles === true;
   const normalizedSearchKeywords = searchKeywordsText
-    .split(/[,\n]/)
+    .split(/[,،\n]/)
     .map(value => value.trim())
     .filter(Boolean)
     .filter((value, index, values) => values.findIndex(item => item.toLocaleLowerCase() === value.toLocaleLowerCase()) === index)
@@ -1800,11 +1800,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 {lang === 'ar' ? 'كلمات تساعد المستخدمين في العثور على الإعلان' : 'Search phrases that help users find this ad'}
               </h4>
               <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                {lang === 'ar' ? 'أضف كلمات أو عبارات مرتبطة بالإعلان لتحسين ظهوره في البحث داخل المنصة.' : 'Add words or phrases related to this ad to improve internal search results.'}
+                {lang === 'ar' ? 'افصل بين كل كلمة أو عبارة بالفاصلة «،» أو "," فقط؛ المسافات داخل العبارة مسموحة.' : 'Separate each word or phrase with «،» or "," only; spaces are allowed inside a phrase.'}
               </p>
             </div>
             <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-              {lang === 'ar' ? 'الكلمات والعبارات (حتى 15، افصل بينها بفاصلة)' : 'Words and phrases (up to 15, separated by commas)'}
+              {lang === 'ar' ? 'الكلمات والعبارات (حتى 15، افصل بينها بالفاصلة العربية «،» أو الإنجليزية ",")' : 'Words and phrases (up to 15, separated by the Arabic comma «،» or English comma ",")'}
               <input
                 type="text"
                 value={searchKeywordsText}
