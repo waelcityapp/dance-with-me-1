@@ -189,6 +189,8 @@ export interface AdSubmission {
   category: 'party' | 'course' | 'trip' | 'exhibition' | 'services' | 'jobs';
   subcategory?: string;
   styles: DanceStyle[];
+  /** Optional phrases used by CityEve's internal search. */
+  searchKeywords?: string[];
   mediaType: 'image' | 'video';
   mediaUrl: string;
   pricing: {
