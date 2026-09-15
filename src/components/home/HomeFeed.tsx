@@ -1,3 +1,4 @@
+import { requestedEventId } from '../../utils/seoUrl';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceCategory, DanceEvent, DanceStyle, ALL_DANCE_STYLES, getStyleLabel } from '../../types';
@@ -73,8 +74,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   // Scroll instantly to specific event from URL if present
   useEffect(() => {
     if (activeEvents.length > 0) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const eventId = urlParams.get('event');
+      const eventId = requestedEventId();
       if (eventId) {
         const found = activeEvents.find(ev => ev.id === eventId);
         if (found) {
@@ -707,6 +707,17 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           </div>
         )}
       </AnimatePresence>
+
+      <nav aria-label={lang === 'ar' ? 'دليل الفعاليات' : 'Event directory'} className="flex flex-wrap justify-center gap-x-5 gap-y-3 py-6 text-sm text-neutral-600 dark:text-neutral-400">
+        {[
+          ['parties', 'الحفلات والسهرات', 'Parties and nightlife'],
+          ['courses', 'الكورسات', 'Courses'],
+          ['trips', 'الرحلات', 'Trips'],
+          ['exhibitions', 'المعارض والمؤتمرات', 'Exhibitions and conferences'],
+          ['services', 'الخدمات', 'Services'],
+          ['jobs', 'الوظائف', 'Jobs'],
+        ].map(([slug, ar, en]) => <a key={slug} className="underline underline-offset-4 hover:text-emerald-600 dark:hover:text-emerald-400" href={`/categories/${slug}.html${lang === 'en' ? '?lang=en' : ''}`}>{lang === 'ar' ? ar : en}</a>)}
+      </nav>
 
       {/* Main Categories Explorer Directory Modal */}
       <CategoriesExplorerModal
