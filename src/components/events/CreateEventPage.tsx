@@ -105,7 +105,7 @@ const AD_CATEGORIES: Array<{
     { id: 'other-party', ar: 'حفلات متنوعة', en: 'Other Parties' }
   ] },
   { id: 'course', ar: 'دورة وكورس', en: 'Course & Workshop', subcategories: [
-    { id: 'latin-dance-course', ar: 'دورات رقص لاتيني', en: 'Latin Dance Courses', supportsDanceStyles: true },
+    { id: 'latin-dance-course', ar: 'دورات رقص لاتيني', en: 'Latin Dance Courses' },
     { id: 'dance-workshop', ar: 'ورش رقص', en: 'Dance Workshops' },
     { id: 'private-training', ar: 'تدريب خاص', en: 'Private Training' },
     { id: 'other-course', ar: 'دورات متنوعة', en: 'Other Courses' }
