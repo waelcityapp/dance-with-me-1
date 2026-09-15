@@ -2,6 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
+import { requestedEventId } from './utils/seoUrl';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AppProvider, useApp } from './context/AppContext';
@@ -86,7 +87,7 @@ const AppContent: React.FC = () => {
     if (urlParams.get('verify')) {
       setActiveTab('verification');
     }
-    if (urlParams.get('event')) {
+    if (requestedEventId()) {
       setActiveTab('explore');
     }
     if (

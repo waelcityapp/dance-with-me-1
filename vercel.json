@@ -1,41 +1,46 @@
 {
-  "rewrites": [
-    {
-      "source": "/__/auth/(.*)",
-      "destination": "https://dance-with-me-35e98.firebaseapp.com/__/auth/$1"
-    },
-    {
-      "source": "/sitemap.xml",
-      "destination": "/api/sitemap"
-    },
-    {
-      "source": "/e/:eventId",
-      "destination": "/api/og-event?event=:eventId"
-    },
-    {
-      "source": "/event/:eventId",
-      "destination": "/api/og-event?event=:eventId"
-    },
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "query",
-          "key": "event",
-          "value": "(?<event>.*)"
-        }
-      ],
-      "destination": "/api/og-event?event=:event"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
   "crons": [
     {
       "path": "/api/cleanup-archived-ads",
       "schedule": "30 2 * * *"
+    }
+  ],
+  "functions": {
+    "api/og-event.js": {
+      "includeFiles": "dist/index.html"
+    }
+  },
+  "routes": [
+    {
+      "src": "^/__/auth/(.*)$",
+      "dest": "https://dance-with-me-35e98.firebaseapp.com/__/auth/$1"
+    },
+    {
+      "src": "^/sitemap.xml$",
+      "dest": "/api/sitemap"
+    },
+    {
+      "src": "^/e/([^/]+)/?$",
+      "dest": "/api/og-event?event=$1"
+    },
+    {
+      "src": "^/event/([^/]+)/?$",
+      "dest": "/api/og-event?event=$1"
+    },
+    {
+      "src": "^/categories/([^/]+)\\.html$",
+      "dest": "/api/og-event?page=$1"
+    },
+    {
+      "src": "^/$",
+      "dest": "/api/og-event?page=home"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^/(.*)$",
+      "dest": "/index.html"
     }
   ]
 }
