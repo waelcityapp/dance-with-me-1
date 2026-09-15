@@ -166,6 +166,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [areaEn, setAreaEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaEn || 'Zamalek') : 'Zamalek');
   const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent && editingEvent.location ? editingEvent.location.googleMapsUrl : 'https://maps.google.com/?q=30.0444,31.2357');
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent?.styles || []);
+  const [searchKeywordsText, setSearchKeywordsText] = useState<string>((editingEvent?.searchKeywords || []).join(', '));
   const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
   const [adNumber, setAdNumber] = useState<string>(editingEvent && editingEvent.adNumber ? editingEvent.adNumber : '');
   const [showViewsCount, setShowViewsCount] = useState<boolean>(editingEvent ? editingEvent.showViewsCount !== false : true);
@@ -183,6 +184,12 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const selectedCategory = AD_CATEGORIES.find(item => item.id === category);
   const selectedSubcategory = selectedCategory?.subcategories.find(item => item.id === subcategory);
   const shouldShowDanceStyles = selectedSubcategory?.supportsDanceStyles === true;
+  const normalizedSearchKeywords = searchKeywordsText
+    .split(/[,،\n]/)
+    .map(value => value.trim())
+    .filter(Boolean)
+    .filter((value, index, values) => values.findIndex(item => item.toLocaleLowerCase() === value.toLocaleLowerCase()) === index)
+    .slice(0, 15);
   const isClassificationComplete = Boolean(selectedCategory && selectedSubcategory);
   const selectCategory = (nextCategory: AdCategory) => { setCategory(nextCategory); setSubcategory(undefined); setSelectedStyles([]); setClassificationError(null); };
   const selectSubcategory = (nextSubcategory: string) => { const next = selectedCategory?.subcategories.find(item => item.id === nextSubcategory); setSubcategory(nextSubcategory); if (!next?.supportsDanceStyles) setSelectedStyles([]); setClassificationError(null); };
@@ -540,6 +547,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         category: category as AdCategory,
         subcategory,
         styles: selectedStyles,
+
+        searchKeywords: normalizedSearchKeywords,
         mediaType,
         mediaUrl: finalMediaUrl,
         thumbnailUrl: finalThumbnailUrl,
@@ -608,6 +617,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           category: category as AdCategory,
           subcategory,
           styles: selectedStyles,
+
+          searchKeywords: normalizedSearchKeywords,
           mediaType,
           mediaUrl: finalMediaUrl,
           thumbnailUrl: finalThumbnailUrl,
@@ -701,6 +712,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           category: category as AdCategory,
           subcategory,
           styles: selectedStyles,
+
+          searchKeywords: normalizedSearchKeywords,
           mediaType,
           mediaUrl: generatedMediaUrl,
           thumbnailUrl: generatedThumbnailUrl,
@@ -1203,6 +1216,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       descriptionEn: descEn.trim() || 'Event details and description goes here...',
                       category: category as AdCategory,
                       styles: selectedStyles,
+
+                      searchKeywords: normalizedSearchKeywords,
                       mediaType: mediaType,
                       mediaUrl: mediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                       thumbnailUrl: mediaType === 'video' ? 
@@ -1576,6 +1591,30 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </div>
           </div>
 
+          {/* Internal search keywords */}
+          <div className="space-y-3 border-t border-neutral-200 dark:border-neutral-800 pt-5">
+            <div>
+              <h4 className="text-base font-bold text-neutral-900 dark:text-white">
+                {lang === 'ar' ? 'كلمات تساعد المستخدمين في العثور على الإعلان' : 'Search phrases that help users find this ad'}
+              </h4>
+              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                {lang === 'ar' ? 'افصل بين كل كلمة أو عبارة بالفاصلة «،» أو "," فقط؛ المسافات داخل العبارة مسموحة.' : 'Separate each word or phrase with «،» or "," only; spaces are allowed inside a phrase.'}
+              </p>
+            </div>
+            <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+              {lang === 'ar' ? 'الكلمات والعبارات (حتى 15، افصل بينها بالفاصلة العربية «،» أو الإنجليزية ",")' : 'Words and phrases (up to 15, separated by the Arabic comma «،» or English comma ",")'}
+              <input
+                type="text"
+                value={searchKeywordsText}
+                onChange={e => setSearchKeywordsText(e.target.value)}
+                placeholder={lang === 'ar' ? 'مثال: حفلات مصر، حفلات لاتيني، سهرات القاهرة' : 'Example: Egypt parties, Latin parties, Cairo nightlife'}
+                className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-pink-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+              />
+            </label>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              {normalizedSearchKeywords.length}/15 {lang === 'ar' ? 'عبارة — تُستخدم للبحث داخل CityEve فقط.' : 'phrases — used for search inside CityEve only.'}
+            </p>
+          </div>
           {/* Section 3: Media Only */}
           <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
             <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
