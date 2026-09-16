@@ -33,14 +33,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
   const locationText = locationName ? `📍 ${locationName}` : '';
   // Concise, professional share text. WhatsApp supplies the image preview,
   // title, description, favicon, and domain separately.
-  const whatsappMessage = [
-    shareTitle,
-    '',
-    descSnippet + (descSnippet.length >= 150 ? '...' : ''),
-    '',
-    isArabic ? 'تفاصيل الفعالية والحجز عبر منصة CityEve:' : 'Event details and booking on CityEve:',
-    shareUrl
-  ].join('\n');
+  // WhatsApp already renders the page title and description in its link preview.
+  // Keep the sent message short to avoid showing the event details twice.
+  const shareCallToAction = isArabic
+    ? 'تفاصيل الفعالية والحجز عبر CityEve 🎟️'
+    : 'Event details and booking via CityEve 🎟️';
+  const whatsappMessage = [shareCallToAction, shareUrl].join('\n');
 
   const handleCopy = () => {
     try {
@@ -55,7 +53,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ event, onClose }) => {
       try {
         await navigator.share({
           title: shareTitle,
-          text: `${shareTitle}\n${descSnippet}...`,
+          text: shareCallToAction,
           url: shareUrl
         });
         onClose();
