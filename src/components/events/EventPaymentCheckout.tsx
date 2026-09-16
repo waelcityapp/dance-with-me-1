@@ -53,6 +53,7 @@ export interface EventPaymentCheckoutProps {
   adType?: 'vip' | 'standard' | 'free';
   contentLangMode?: 'both' | 'ar' | 'en' | null;
   onBack: () => void;
+  onReviewTerms?: () => void;
   onSuccessComplete: () => void;
 }
 
@@ -75,6 +76,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   adType = 'standard',
   contentLangMode = 'both',
   onBack,
+  onReviewTerms,
   onSuccessComplete
 }) => {
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
@@ -83,6 +85,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
+  const [showSubmissionConfirmation, setShowSubmissionConfirmation] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
 
@@ -257,6 +260,10 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
       receiptImage: receiptImage || undefined,
       status: 'pending',
       submittedAt: new Date().toISOString(),
+      termsAcceptance: {
+        version: '2026-09-16',
+        acceptedAt: new Date().toISOString()
+      },
       adType: adType as ('vip' | 'standard' | 'free'),
       contentLangMode: (contentLangMode as any) || 'both',
       eventData: {
@@ -266,7 +273,11 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
         thumbnailUrl: finalThumbnailUrl,
         createdByAdmin: user?.isAdmin || false,
         creatorId: user?.id,
-        creatorName: user?.name
+        creatorName: user?.name,
+        termsAcceptance: {
+          version: '2026-09-16',
+          acceptedAt: new Date().toISOString()
+        }
       }
     };
 
@@ -312,6 +323,49 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
 
   return (
     <div className="w-full max-w-3xl mx-auto pt-2 pb-36 sm:pb-44" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      {/* Final submission confirmation */}
+      <AnimatePresence>
+        {showSubmissionConfirmation && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              className="w-full max-w-md rounded-3xl border border-amber-500/40 bg-white dark:bg-neutral-950 p-6 shadow-2xl"
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-11 w-11 shrink-0 rounded-2xl bg-amber-500/15 flex items-center justify-center text-[#78101F] dark:text-amber-400">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-neutral-900 dark:text-white">
+                    {lang === 'ar' ? 'تأكيد إرسال الإعلان' : 'Confirm Ad Submission'}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+                    {lang === 'ar'
+                      ? 'سيُرسل إعلانك إلى الإدارة للمراجعة ولن يظهر للجمهور قبل الاعتماد. باستمرارك، أنت توافق على الشروط والأحكام وسياسة المحتوى.'
+                      : 'Your ad will be sent to the administration for review and will not appear publicly before approval. By continuing, you agree to the terms, conditions, and content policy.'}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 flex flex-col-reverse sm:flex-row gap-3">
+                <button type="button" onClick={() => setShowSubmissionConfirmation(false)} className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-800 py-3 text-sm font-bold text-neutral-700 dark:text-neutral-200">
+                  {lang === 'ar' ? 'رجوع' : 'Back'}
+                </button>
+                <button type="button" onClick={() => { setShowSubmissionConfirmation(false); handleSubmitReview(); }} className="flex-1 rounded-xl bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] py-3 text-sm font-extrabold text-amber-300 border border-amber-400/40">
+                  {lang === 'ar' ? 'إرسال للمراجعة' : 'Send for Review'}
+                </button>
+              </div>
+              {onReviewTerms && (
+                <button type="button" onClick={() => { setShowSubmissionConfirmation(false); onReviewTerms(); }} className="mt-4 w-full text-xs font-bold text-[#78101F] underline underline-offset-2 dark:text-amber-400">
+                  {lang === 'ar' ? 'مراجعة الشروط والأحكام' : 'Review terms & conditions'}
+                </button>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Success Modal */}
       <AnimatePresence>
         {showSuccessModal && (
@@ -689,7 +743,7 @@ export const EventPaymentCheckout: React.FC<EventPaymentCheckoutProps> = ({
             whileTap={isFormValid ? { scale: 0.98 } : {}}
             type="button"
             disabled={!isFormValid || isSubmitting}
-            onClick={handleSubmitReview}
+            onClick={() => setShowSubmissionConfirmation(true)}
             className={`w-full rounded-2xl py-4.5 px-6 text-base sm:text-lg font-extrabold transition-all flex items-center justify-center gap-3 border ${
               isFormValid
                 ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 shadow-2xl border-amber-400/40 cursor-pointer'
