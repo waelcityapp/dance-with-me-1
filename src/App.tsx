@@ -162,6 +162,12 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (path === '/login' || path === '/register') {
+        setAuthPage(path.slice(1) as 'login' | 'register');
+        return;
+      }
+      setAuthPage(null);
       if (marketerWalletOpen) {
         setMarketerWalletOpen(false);
         return;
@@ -182,12 +188,27 @@ const AppContent: React.FC = () => {
 
   const [selectedMapEvent, setSelectedMapEvent] = useState<DanceEvent | null>(null);
   const [selectedShareEvent, setSelectedShareEvent] = useState<DanceEvent | null>(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authPage, setAuthPage] = useState<'login' | 'register' | null>(() => {
+    const path = window.location.pathname.replace(/\/+$/, '') || '/';
+    return path === '/login' ? 'login' : path === '/register' ? 'register' : null;
+  });
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isPersonalNotifOpen, setIsPersonalNotifOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isWhyBookOpen, setIsWhyBookOpen] = useState(false);
   const [createAdInitialType, setCreateAdInitialType] = useState<'vip' | 'standard' | 'free' | null>(null);
+
+  const openAuthPage = (page: 'login' | 'register' = 'login') => {
+    window.history.pushState({ ...(window.history.state || {}), cityeveAuthPage: page }, '', `/${page}`);
+    setAuthPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const closeAuthPage = () => {
+    window.history.pushState({ ...(window.history.state || {}), cityeveAuthPage: null }, '', '/');
+    setAuthPage(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleOpenCreateAd = (type?: 'vip' | 'standard' | 'free' | null) => {
     if (!user) {
@@ -238,7 +259,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-600 dark:selection:text-amber-300 transition-colors duration-200">
       <Header
         onOpenNotifications={() => setIsNotifOpen(true)}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={() => openAuthPage('login')}
         onOpenInstallModal={() => setIsInstallOpen(true)}
         onOpenAboutUs={() => {
           setActiveTab('about_us');
@@ -311,7 +332,7 @@ const AppContent: React.FC = () => {
             {activeTab === 'profile' && (
               <ProfileView
                 onOpenCreateModal={handleOpenCreateAd}
-                onOpenAuth={() => setIsAuthOpen(true)}
+                onOpenAuth={() => openAuthPage('login')}
                 onOpenMap={(ev) => setSelectedMapEvent(ev)}
                 onOpenShare={(ev) => setSelectedShareEvent(ev)}
               />
@@ -371,11 +392,11 @@ const AppContent: React.FC = () => {
 
       <MapModal event={selectedMapEvent} onClose={() => setSelectedMapEvent(null)} />
       <ShareModal event={selectedShareEvent} onClose={() => setSelectedShareEvent(null)} />
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      {authPage && <AuthModal initialTab={authPage} onNavigate={openAuthPage} onClose={closeAuthPage} />}
       <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
       <PersonalNotificationsModal isOpen={isPersonalNotifOpen} onClose={() => setIsPersonalNotifOpen(false)} />
       <PwaInstallModal isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />
-      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={() => setIsAuthOpen(true)} />
+      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={() => openAuthPage('login')} />
       <SupportModal isOpen={isSupportModalOpen} onClose={closeSupportModal} />
       <WhyBookModal isOpen={isWhyBookOpen} onClose={() => setIsWhyBookOpen(false)} />
       <AdminLockModal />

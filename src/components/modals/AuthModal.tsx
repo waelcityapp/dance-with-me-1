@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AccountTier } from '../../types';
 import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
 
@@ -15,8 +15,9 @@ const GoogleLogo = ({ className = "h-4 w-4 shrink-0" }: { className?: string }) 
 );
 
 interface AuthModalProps {
-  isOpen: boolean;
   onClose: () => void;
+  initialTab: 'login' | 'register';
+  onNavigate: (page: 'login' | 'register') => void;
 }
 
 const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
@@ -77,7 +78,7 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
 
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNavigate }) => {
   const { lang, user, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -87,7 +88,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [selectedTier, setSelectedTier] = useState<AccountTier>('free');
   const [registerStep, setRegisterStep] = useState<'choose_tier' | 'free_form' | 'pricing_plans'>('free_form');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>(initialTab);
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [googleFinalizing, setGoogleFinalizing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -100,7 +101,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setAuthErrorCode(null);
   }, [activeTab]);
 
-  if (!isOpen) return null;
+  React.useEffect(() => {
+    setActiveTab(initialTab);
+    setRegisterStep('free_form');
+  }, [initialTab]);
+
+  const switchAuthTab = (tab: 'login' | 'register') => {
+    setActiveTab(tab);
+    setRegisterStep('free_form');
+    onNavigate(tab);
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -324,13 +334,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[70] flex items-end justify-center p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-slate-950/45 backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/80">
+      <section className="min-h-[calc(100dvh-8rem)] w-full bg-slate-50 px-2 py-4 dark:bg-neutral-950 sm:px-4 sm:py-8">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 sm:max-h-[90vh]"
+          className="relative mx-auto flex w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 shrink-0 dark:border-white/10 dark:bg-neutral-950 sm:p-5">
@@ -507,7 +515,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('register')}
+                  onClick={() => switchAuthTab('register')}
                   className="w-full sm:flex-1 rounded-xl bg-neutral-800 py-3 px-4 text-xs font-bold text-neutral-300 hover:bg-neutral-700 hover:text-white transition-all cursor-pointer text-center"
                 >
                   {lang === 'ar' ? 'إلغاء والرجوع' : 'Cancel & Back'}
@@ -652,8 +660,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <button
                   type="button"
                   onClick={() => {
-                    setActiveTab('register');
-                    setRegisterStep('free_form');
+                    switchAuthTab('register');
                   }}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'register' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                 >
@@ -661,7 +668,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('login')}
+                  onClick={() => switchAuthTab('login')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'login' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                 >
                   {lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
@@ -708,7 +715,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     <button
                       type="button"
                       onClick={() => {
-                        setActiveTab('login');
+                        switchAuthTab('login');
                         setErrorMsg(null);
                         setAuthErrorCode(null);
                       }}
@@ -1226,7 +1233,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </form>
           )}
         </motion.div>
-      </div>
-    </AnimatePresence>
+      </section>
   );
 };
