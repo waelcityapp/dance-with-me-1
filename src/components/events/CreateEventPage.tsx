@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Sparkles, 
@@ -134,19 +134,36 @@ const AD_CATEGORIES: Array<{
   ] }
 ];
 
+const CREATE_AD_DRAFT_KEY = 'cityeve:create-ad-draft:v1';
+
+type CreateAdDraft = Record<string, any>;
+
+const readCreateAdDraft = (): CreateAdDraft | null => {
+  try {
+    const raw = localStorage.getItem(CREATE_AD_DRAFT_KEY);
+    const draft = raw ? JSON.parse(raw) : null;
+    return draft && typeof draft === 'object' ? draft : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, onCancel, initialAdType = null }) => {
   const { lang, user, addNewEvent, updateEvent, editingEvent, setEditingEvent, isAdminUnlocked, pricingConfig, loadPricingConfig } = useApp();
+  const [savedDraft] = useState<CreateAdDraft | null>(() => editingEvent ? null : readCreateAdDraft());
+  const hasRestoredDraft = Boolean(savedDraft);
 
-  const [adType, setAdType] = useState<'vip' | 'standard' | 'free' | null>(initialAdType || (editingEvent ? ((editingEvent.adType as any) || 'vip') : null));
+
+  const [adType, setAdType] = useState<'vip' | 'standard' | 'free' | null>(savedDraft?.adType || initialAdType || (editingEvent ? ((editingEvent.adType as any) || 'vip') : null));
   const [isEditingAdType, setIsEditingAdType] = useState(false);
-  const [contentLangMode, setContentLangMode] = useState<'both' | 'ar' | 'en' | null>(editingEvent ? 'both' : null);
+  const [contentLangMode, setContentLangMode] = useState<'both' | 'ar' | 'en' | null>(savedDraft?.contentLangMode || (editingEvent ? 'both' : null));
   const [isEditingLangMode, setIsEditingLangMode] = useState(false);
   const [isLoadingPricing, setIsLoadingPricing] = useState(false);
-  const [step, setStep] = useState<'form' | 'payment'>('form');
-  const [titleAr, setTitleAr] = useState(editingEvent ? editingEvent.titleAr : '');
-  const [titleEn, setTitleEn] = useState(editingEvent ? editingEvent.titleEn : '');
-  const [descAr, setDescAr] = useState(editingEvent ? editingEvent.descriptionAr : '');
-  const [descEn, setDescEn] = useState(editingEvent ? editingEvent.descriptionEn : '');
+  const [step, setStep] = useState<'form' | 'payment'>(savedDraft?.step === 'payment' ? 'payment' : 'form');
+  const [titleAr, setTitleAr] = useState(savedDraft?.titleAr ?? (editingEvent ? editingEvent.titleAr : ''));
+  const [titleEn, setTitleEn] = useState(savedDraft?.titleEn ?? (editingEvent ? editingEvent.titleEn : ''));
+  const [descAr, setDescAr] = useState(savedDraft?.descAr ?? (editingEvent ? editingEvent.descriptionAr : ''));
+  const [descEn, setDescEn] = useState(savedDraft?.descEn ?? (editingEvent ? editingEvent.descriptionEn : ''));
   const [isTranslating, setIsTranslating] = useState<string | null>(null);
 
   const handleTranslate = async (text: string, targetLang: 'ar' | 'en', setter: (val: string) => void, fieldName: string) => {
@@ -174,13 +191,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     }
   };
 
-  const [category, setCategory] = useState<AdCategory | undefined>(editingEvent?.category);
-  const [subcategory, setSubcategory] = useState<string | undefined>(editingEvent?.subcategory);
-  const [mediaType, setMediaType] = useState<'video' | 'image'>(editingEvent ? editingEvent.mediaType : 'image');
-  const [mediaUrl, setMediaUrl] = useState(editingEvent ? editingEvent.mediaUrl : '');
-  const [priceAr, setPriceAr] = useState(editingEvent?.priceAr || '');
-  const [priceEn, setPriceEn] = useState(editingEvent?.priceEn || '');
+  const [category, setCategory] = useState<AdCategory | undefined>(savedDraft?.category || editingEvent?.category);
+  const [subcategory, setSubcategory] = useState<string | undefined>(savedDraft?.subcategory || editingEvent?.subcategory);
+  const [mediaType, setMediaType] = useState<'video' | 'image'>(savedDraft?.mediaType || (editingEvent ? editingEvent.mediaType : 'image'));
+  const [mediaUrl, setMediaUrl] = useState(savedDraft?.mediaUrl ?? (editingEvent ? editingEvent.mediaUrl : ''));
+  const [priceAr, setPriceAr] = useState(savedDraft?.priceAr ?? (editingEvent?.priceAr || ''));
+  const [priceEn, setPriceEn] = useState(savedDraft?.priceEn ?? (editingEvent?.priceEn || ''));
   const [eventDate, setEventDate] = useState(() => {
+    if (savedDraft?.eventDate) return savedDraft.eventDate;
     if (editingEvent) {
       try {
         return new Date(editingEvent.eventDate).toISOString().split('T')[0];
@@ -188,27 +206,27 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     }
     return new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
   });
-  const [phone, setPhone] = useState(editingEvent?.contact.phone || '');
-  const [whatsapp, setWhatsapp] = useState(editingEvent?.contact.whatsapp || '');
+  const [phone, setPhone] = useState(savedDraft?.phone ?? (editingEvent?.contact.phone || ''));
+  const [whatsapp, setWhatsapp] = useState(savedDraft?.whatsapp ?? (editingEvent?.contact.whatsapp || ''));
   const [organizerName, setOrganizerName] = useState(
-    editingEvent && editingEvent.contact?.organizerName 
+    savedDraft?.organizerName ?? (editingEvent && editingEvent.contact?.organizerName 
       ? editingEvent.contact.organizerName 
-      : (user?.name || '')
+      : (user?.name || ''))
   );
-  const [locationNameAr, setLocationNameAr] = useState(editingEvent?.location.nameAr || '');
-  const [locationNameEn, setLocationNameEn] = useState(editingEvent?.location.nameEn || '');
-  const [addressAr, setAddressAr] = useState(editingEvent?.location.addressAr || '');
-  const [addressEn, setAddressEn] = useState(editingEvent?.location.addressEn || '');
-  const [governorateAr, setGovernorateAr] = useState(editingEvent?.location.governorateAr || '');
-  const [governorateEn, setGovernorateEn] = useState(editingEvent?.location.governorateEn || '');
-  const [areaAr, setAreaAr] = useState(editingEvent?.location.areaAr || '');
-  const [areaEn, setAreaEn] = useState(editingEvent?.location.areaEn || '');
-  const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent?.location.googleMapsUrl || '');
-  const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent?.styles || []);
-  const [searchKeywordsText, setSearchKeywordsText] = useState<string>((editingEvent?.searchKeywords || []).join(', '));
-  const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
-  const [adNumber, setAdNumber] = useState<string>(editingEvent && editingEvent.adNumber ? editingEvent.adNumber : '');
-  const [showViewsCount, setShowViewsCount] = useState<boolean>(editingEvent ? editingEvent.showViewsCount !== false : true);
+  const [locationNameAr, setLocationNameAr] = useState(savedDraft?.locationNameAr ?? (editingEvent?.location.nameAr || ''));
+  const [locationNameEn, setLocationNameEn] = useState(savedDraft?.locationNameEn ?? (editingEvent?.location.nameEn || ''));
+  const [addressAr, setAddressAr] = useState(savedDraft?.addressAr ?? (editingEvent?.location.addressAr || ''));
+  const [addressEn, setAddressEn] = useState(savedDraft?.addressEn ?? (editingEvent?.location.addressEn || ''));
+  const [governorateAr, setGovernorateAr] = useState(savedDraft?.governorateAr ?? (editingEvent?.location.governorateAr || ''));
+  const [governorateEn, setGovernorateEn] = useState(savedDraft?.governorateEn ?? (editingEvent?.location.governorateEn || ''));
+  const [areaAr, setAreaAr] = useState(savedDraft?.areaAr ?? (editingEvent?.location.areaAr || ''));
+  const [areaEn, setAreaEn] = useState(savedDraft?.areaEn ?? (editingEvent?.location.areaEn || ''));
+  const [googleMapsUrl, setGoogleMapsUrl] = useState(savedDraft?.googleMapsUrl ?? (editingEvent?.location.googleMapsUrl || ''));
+  const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(savedDraft?.selectedStyles || editingEvent?.styles || []);
+  const [searchKeywordsText, setSearchKeywordsText] = useState<string>(savedDraft?.searchKeywordsText ?? (editingEvent?.searchKeywords || []).join(', '));
+  const [position, setPosition] = useState<number>(savedDraft?.position ?? (editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0));
+  const [adNumber, setAdNumber] = useState<string>(savedDraft?.adNumber ?? (editingEvent && editingEvent.adNumber ? editingEvent.adNumber : ''));
+  const [showViewsCount, setShowViewsCount] = useState<boolean>(savedDraft?.showViewsCount ?? (editingEvent ? editingEvent.showViewsCount !== false : true));
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -216,8 +234,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   
-  const [createTab, setCreateTab] = useState<'form' | 'preview'>('form');
-  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
+  const [createTab, setCreateTab] = useState<'form' | 'preview'>(savedDraft?.createTab === 'preview' ? 'preview' : 'form');
+  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>(savedDraft?.previewLang === 'en' ? 'en' : 'ar');
   const [previewAlert, setPreviewAlert] = useState<string | null>(null);
   const [classificationError, setClassificationError] = useState<string | null>(null);
 
@@ -360,6 +378,13 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     });
   };
 
+  const clearSavedDraft = () => {
+    try {
+      localStorage.removeItem(CREATE_AD_DRAFT_KEY);
+    } catch (e) {}
+    window.location.reload();
+  };
+
   const handleCancelClick = () => {
     setEditingEvent(null);
     if (onCancel) {
@@ -498,13 +523,40 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   };
 
   // Subscription Plan & Terms State
-  const [subscriptionDays, setSubscriptionDays] = useState<number>(7);
-  const [agreedToTerms, setAgreedToTerms] = useState<boolean>(!!editingEvent);
+  const [subscriptionDays, setSubscriptionDays] = useState<number>(savedDraft?.subscriptionDays ?? 7);
+  const [agreedToTerms, setAgreedToTerms] = useState<boolean>(savedDraft?.agreedToTerms ?? !!editingEvent);
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
-  const [paymentMethod, setPaymentMethod] = useState<'instapay' | 'wallet' | 'card'>('instapay');
-  const [marketerCodeInput, setMarketerCodeInput] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'instapay' | 'wallet' | 'card'>(savedDraft?.paymentMethod || 'instapay');
+  const [marketerCodeInput, setMarketerCodeInput] = useState(savedDraft?.marketerCodeInput ?? '');
   const [verifiedMarketer, setVerifiedMarketer] = useState<{ code: string; marketerId: string } | null>(null);
   const [marketerCodeStatus, setMarketerCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+
+  useEffect(() => {
+    if (editingEvent) return;
+    const draft = {
+      adType, contentLangMode, step, titleAr, titleEn, descAr, descEn, category, subcategory,
+      mediaType, mediaUrl, priceAr, priceEn, eventDate, phone, whatsapp, organizerName,
+      locationNameAr, locationNameEn, addressAr, addressEn, governorateAr, governorateEn,
+      areaAr, areaEn, googleMapsUrl, selectedStyles, searchKeywordsText, position, adNumber,
+      showViewsCount, createTab, previewLang, subscriptionDays, agreedToTerms, paymentMethod,
+      marketerCodeInput
+    };
+    const hasContent = Boolean(
+      draft.titleAr || draft.titleEn || draft.descAr || draft.descEn || draft.category ||
+      draft.mediaUrl || draft.priceAr || draft.priceEn || draft.phone || draft.whatsapp ||
+      draft.locationNameAr || draft.locationNameEn || draft.addressAr || draft.addressEn ||
+      draft.governorateAr || draft.governorateEn || draft.areaAr || draft.areaEn ||
+      draft.googleMapsUrl || draft.searchKeywordsText || draft.adType
+    );
+    try {
+      if (hasContent) localStorage.setItem(CREATE_AD_DRAFT_KEY, JSON.stringify(draft));
+      else localStorage.removeItem(CREATE_AD_DRAFT_KEY);
+    } catch (e) {}
+  }, [editingEvent, adType, contentLangMode, step, titleAr, titleEn, descAr, descEn, category,
+    subcategory, mediaType, mediaUrl, priceAr, priceEn, eventDate, phone, whatsapp, organizerName,
+    locationNameAr, locationNameEn, addressAr, addressEn, governorateAr, governorateEn, areaAr,
+    areaEn, googleMapsUrl, selectedStyles, searchKeywordsText, position, adNumber, showViewsCount,
+    createTab, previewLang, subscriptionDays, agreedToTerms, paymentMethod, marketerCodeInput]);
 
   // Calculate Subscription Pricing
   const getPriceBreakdown = () => {
@@ -806,6 +858,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     }
 
     setIsUploadingMedia(false);
+    try {
+      localStorage.removeItem(CREATE_AD_DRAFT_KEY);
+    } catch (e) {}
     onComplete();
   };
 
@@ -944,6 +999,18 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </button>
         </div>
       </motion.div>
+
+      {hasRestoredDraft && !editingEvent && (
+        <div className="mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-emerald-400/40 bg-emerald-50 p-4 text-sm text-emerald-950 dark:bg-emerald-500/10 dark:text-emerald-100">
+          <div>
+            <p className="font-bold">{lang === 'ar' ? 'تمت استعادة مسودة إعلانك.' : 'Your ad draft was restored.'}</p>
+            <p className="mt-1 text-xs opacity-80">{lang === 'ar' ? 'يمكنك إكمال البيانات من حيث توقفت.' : 'You can continue from where you stopped.'}</p>
+          </div>
+          <button type="button" onClick={clearSavedDraft} className="rounded-xl border border-emerald-600/30 px-3 py-2 text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-500/20">
+            {lang === 'ar' ? 'إلغاء المسودة والبدء من جديد' : 'Discard draft and start over'}
+          </button>
+        </div>
+      )}
 
       {/* Ad Type & Language Mode Selection Bar */}
       {(!adType || isEditingAdType) ? (
