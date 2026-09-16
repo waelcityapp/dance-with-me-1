@@ -4185,9 +4185,10 @@ export const AdminPanel: React.FC = () => {
                   </span>
                 </div>
                 <div className="mx-auto max-w-2xl p-3 sm:p-5">
+                  <div className="pointer-events-none select-none" aria-label={lang === 'ar' ? 'معاينة للعرض فقط' : 'Read-only preview'}>
                   <EventCard
                     event={{
-                      id: sub.eventData?.id || `preview-${sub.id}`,
+                      id: `review-preview-${sub.id}`,
                       titleAr: sub.eventData?.titleAr || sub.titleAr || 'إعلان جديد',
                       titleEn: sub.eventData?.titleEn || sub.titleEn || 'New event',
                       descriptionAr: sub.eventData?.descriptionAr || sub.descriptionAr || '',
@@ -4222,6 +4223,7 @@ export const AdminPanel: React.FC = () => {
                       alert(lang === 'ar' ? 'رابط المشاركة يُنشأ بعد اعتماد الإعلان ونشره.' : 'The sharing link is created after approval and publishing.');
                     }}
                   />
+                  </div>
                 </div>
               </section>
 
