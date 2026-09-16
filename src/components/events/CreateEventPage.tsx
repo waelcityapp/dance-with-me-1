@@ -2183,6 +2183,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={locationNameAr}
                     onChange={e => setLocationNameAr(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: استوديو الرقص - الزمالك' : 'e.g. Dance Studio - Zamalek'}
                     className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
@@ -2197,6 +2198,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={locationNameEn}
                     onChange={e => setLocationNameEn(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: Dance Studio - Zamalek' : 'e.g. Dance Studio - Zamalek'}
                     className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
