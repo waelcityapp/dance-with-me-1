@@ -191,6 +191,20 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const normalizedSearchQuery = normalizeSearchText(searchQuery);
   const searchTerms = normalizedSearchQuery.split(/\s+/).filter(Boolean);
 
+  // Small controlled aliases cover common Arabic spellings without broadening results too much.
+  const searchTermVariants = (term: string) => {
+    const aliases: Record<string, string[]> = {
+      'لاتين': ['لاتين', 'لاتيني', 'لاتينيه'],
+      'لاتيني': ['لاتين', 'لاتيني', 'لاتينيه'],
+      'لاتينيه': ['لاتين', 'لاتيني', 'لاتينيه'],
+      'سالس': ['سالس', 'سالسا'],
+      'سالسا': ['سالس', 'سالسا'],
+      'باتشاتا': ['باتشاتا', 'باتشات'],
+      'كيزومبا': ['كيزومبا', 'كيزومب'],
+    };
+    return aliases[term] || [term];
+  };
+
   const getEventSearchScore = (ev: DanceEvent) => {
     if (!normalizedSearchQuery) return 0;
 
@@ -240,14 +254,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     }));
 
     const searchableText = fields.flatMap(field => field.texts).join(' ');
-    if (!searchTerms.every(term => searchableText.includes(term))) return 0;
+    if (!searchTerms.every(term => searchTermVariants(term).some(variant => searchableText.includes(variant)))) return 0;
 
     let score = 0;
     for (const term of searchTerms) {
+      const variants = searchTermVariants(term);
       for (const field of fields) {
-        const exactMatch = field.texts.some(text => text === term);
-        const startsWithMatch = field.texts.some(text => text.startsWith(term));
-        const containsMatch = field.texts.some(text => text.includes(term));
+        const exactMatch = field.texts.some(text => variants.some(variant => text === variant));
+        const startsWithMatch = field.texts.some(text => variants.some(variant => text.startsWith(variant)));
+        const containsMatch = field.texts.some(text => variants.some(variant => text.includes(variant)));
         if (exactMatch) {
           score += field.weight * 3;
           break;
