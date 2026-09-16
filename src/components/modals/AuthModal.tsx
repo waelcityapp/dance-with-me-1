@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2 } from 'lucide-react';
+import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AccountTier } from '../../types';
 import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
@@ -82,10 +82,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(['Salsa', 'Bachata']);
+  const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>([]);
   const [selectedAvatar, setSelectedAvatar] = useState(DEFAULT_NEUTRAL_AVATAR);
   const [selectedTier, setSelectedTier] = useState<AccountTier>('free');
-  const [registerStep, setRegisterStep] = useState<'choose_tier' | 'free_form' | 'pricing_plans'>('choose_tier');
+  const [registerStep, setRegisterStep] = useState<'choose_tier' | 'free_form' | 'pricing_plans'>('free_form');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('login');
   const [loadingAuth, setLoadingAuth] = useState(false);
@@ -271,9 +271,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           await loginUser(userName, cleanEmail, userAvatar, firebaseUser.uid, password);
         }
       }
-      if (activeTab === 'register') {
-        updateUserFavorites(selectedStyles);
-      }
       setAppActiveTab('explore');
       onClose();
     } catch (err: any) {
@@ -343,14 +340,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const handleCompleteGoogleOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedStyles.length === 0) {
-      alert(lang === 'ar' ? 'برجاء اختيار نمط رقص واحد على الأقل للمتابعة' : 'Please select at least one dance style to continue');
-      return;
-    }
     const finalName = name.trim() || (lang === 'ar' ? 'عضو VIP (Google)' : 'Google VIP Member');
     const finalEmail = email.trim() || 'member@dwm.app';
     await loginUser(finalName, finalEmail, selectedAvatar, googleUid, undefined, selectedTier);
-    updateUserFavorites(selectedStyles);
     setAppActiveTab('explore');
     onClose();
   };
@@ -365,21 +357,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-[70] flex items-end justify-center p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-slate-950/45 backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/80">
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 shadow-2xl gold-glow"
+          className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 sm:max-h-[90vh]"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 bg-neutral-950 p-5 shrink-0">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 shrink-0 dark:border-white/10 dark:bg-neutral-950 sm:p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
                 {user ? <ShieldCheck className="h-5 w-5" /> : activeTab === 'google_consent' ? <GoogleLogo className="h-5 w-5" /> : activeTab === 'google_onboarding' ? <Sparkles className="h-5 w-5 text-amber-400" /> : <User className="h-5 w-5" />}
               </div>
               <div>
-                <h3 className="font-bold text-white text-base">
+                <h3 className="font-bold text-slate-900 text-base dark:text-white">
                   {user
                     ? (lang === 'ar' ? 'حساب المستخدم الفاخر (VIP)' : 'VIP Member Profile')
                     : activeTab === 'google_consent'
@@ -390,15 +382,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                             ? (activeTab === 'register' ? 'إنشاء حساب جديد' : 'تسجيل الدخول') 
                             : (activeTab === 'register' ? 'Create New Account' : 'Sign In'))}
                 </h3>
-                <p className="text-xs text-neutral-400 font-mono">
-                  {user ? user.email : (lang === 'ar' ? 'انضم إلى مجتمع النادي وأدر حجوزاتك وحفلاتك' : 'Join the club community to manage bookings and events')}
+                <p className="text-xs text-slate-500 font-mono dark:text-neutral-400">
+                  {user ? user.email : (lang === 'ar' ? 'حساب واحد للحجوزات والإعلانات المحفوظة' : 'One account for bookings and saved listings')}
                 </p>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-950 transition-colors dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
             >
               <X className="h-5 w-5" />
             </button>
@@ -686,23 +678,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </form>
           ) : (
             /* Register / Login Form */
-            <form onSubmit={handleAuth} className="p-6 space-y-4 overflow-y-auto flex-1">
+            <form onSubmit={handleAuth} className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-4 overflow-y-auto flex-1 sm:p-6">
               {/* Tab Selector first at the top */}
-              <div className="flex rounded-xl bg-neutral-950 p-1 border border-white/10 mb-4">
+              <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200 mb-4 dark:bg-neutral-950 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => {
                     setActiveTab('register');
-                    setRegisterStep('choose_tier');
+                    setRegisterStep('free_form');
                   }}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'register' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-neutral-400 hover:text-white'}`}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'register' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                 >
                   {lang === 'ar' ? 'إنشاء حساب جديد' : 'Create Account'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('login')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'login' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-neutral-400 hover:text-white'}`}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'login' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                 >
                   {lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
                 </button>
@@ -711,7 +703,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               {/* Dedicated Tab-Specific Google Button - Hide during tier selection or pricing plans */}
               {(activeTab === 'login' || (activeTab === 'register' && registerStep === 'free_form')) && (
                 <>
-                  <div className="mb-4 bg-neutral-950/40 p-3.5 rounded-2xl border border-white/5 space-y-2">
+                  <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 space-y-2 dark:border-white/5 dark:bg-neutral-950/40">
                     <button
                       type="button"
                       onClick={handleGoogleLogin}
@@ -725,7 +717,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                           : (lang === 'ar' ? 'تسجيل الدخول الفوري بـ Google' : 'Instant Sign In with Google')}
                       </span>
                     </button>
-                    <p className="text-[11px] text-center text-amber-400 font-bold leading-relaxed px-1">
+                    <p className="text-[11px] text-center text-amber-700 dark:text-amber-400 font-bold leading-relaxed px-1">
                       {lang === 'ar'
                         ? '💡 الدخول بجوجل ذكي وتلقائي: سيتعرف النظام على حسابك فوراً. إذا كان لديك حساب سابق فسيتم تسجيل دخولك، وإذا كنت جديداً فسيقوم بإنشاء وتفعيل حسابك الفاخر بضغطة واحدة وبأمان!'
                         : '💡 Google Sign-In is smart & automatic: If you have an existing account, you will be logged in instantly. If you are new, it will securely register your VIP account in a single click!'}
@@ -778,7 +770,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               {activeTab === 'register' && (
                 <>
                   {/* STEP 1: CHOOSE TIER FIRST */}
-                  {registerStep === 'choose_tier' && (
+                  {false && registerStep === 'choose_tier' && (
                     <div className="space-y-3.5 py-1">
                       <div className="text-center space-y-1 mb-2">
                         <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[11px] font-bold text-amber-400">
@@ -893,7 +885,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   )}
 
                   {/* STEP 2A: PLANS & PRICING PAGE */}
-                  {registerStep === 'pricing_plans' && (
+                  {false && registerStep === 'pricing_plans' && (
                     <div className="space-y-4 py-1">
                       <div className="text-center space-y-1">
                         <span className="inline-block px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-xs font-extrabold text-amber-300">
@@ -909,14 +901,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                         <button
                           type="button"
                           onClick={() => setBillingCycle('monthly')}
-                          className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${billingCycle === 'monthly' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-neutral-400 hover:text-white'}`}
+                          className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${billingCycle === 'monthly' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                         >
                           {lang === 'ar' ? 'اشتراك شهري' : 'Monthly Billing'}
                         </button>
                         <button
                           type="button"
                           onClick={() => setBillingCycle('yearly')}
-                          className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 ${billingCycle === 'yearly' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-neutral-400 hover:text-white'}`}
+                          className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 ${billingCycle === 'yearly' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                         >
                           <span>{lang === 'ar' ? 'اشتراك سنوي' : 'Yearly Billing'}</span>
                           <span className="text-[9px] bg-emerald-400 text-neutral-950 px-1 py-0.2 rounded font-black">
@@ -1083,22 +1075,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   {/* STEP 2B: FREE ACCOUNT FORM INPUTS */}
                   {registerStep === 'free_form' && (
                     <div className="space-y-4">
-                      {/* Active Tier Header */}
-                      <div className="flex items-center justify-between p-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xl">
-                        <div className="flex items-center gap-2">
-                          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
-                          <span className="text-xs font-bold text-emerald-300">
-                            {lang === 'ar' ? '🟢 التسجيل بالحساب المجاني' : '🟢 Free Account Registration'}
-                          </span>
+                      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-neutral-950/60">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div>
+                            <h4 className="text-xs font-extrabold text-slate-900 dark:text-white">{lang === 'ar' ? 'اختر الخطة المناسبة' : 'Choose your plan'}</h4>
+                            <p className="mt-0.5 text-[10px] text-slate-500 dark:text-neutral-400">{lang === 'ar' ? 'الحساب المجاني محدد تلقائيًا؛ يمكنك تغييره الآن.' : 'The free account is selected by default; you can change it now.'}</p>
+                          </div>
+                          <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setRegisterStep('choose_tier')}
-                          className="text-[11px] font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
-                        >
-                          {lang === 'ar' ? '🔄 تغيير نوع الحساب / عرض الخطط' : '🔄 Change Tier / View Plans'}
-                        </button>
-                      </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button type="button" onClick={() => setSelectedTier('free')} className={`min-h-16 rounded-xl border p-2 text-center transition-all ${selectedTier === 'free' ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-1 ring-emerald-500 dark:bg-emerald-500/15 dark:text-emerald-300' : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-400 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300'}`}><ShieldCheck className="mx-auto h-4 w-4" /><span className="mt-1 block text-[11px] font-extrabold">{lang === 'ar' ? 'مجاني' : 'Free'}</span><span className="block text-[9px] opacity-75">{lang === 'ar' ? '0 ج.م' : '0 EGP'}</span></button>
+                          <button type="button" onClick={() => setSelectedTier('featured')} className={`min-h-16 rounded-xl border p-2 text-center transition-all ${selectedTier === 'featured' ? 'border-sky-500 bg-sky-50 text-sky-800 ring-1 ring-sky-500 dark:bg-sky-500/15 dark:text-sky-300' : 'border-slate-200 bg-white text-slate-600 hover:border-sky-400 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300'}`}><Sparkles className="mx-auto h-4 w-4" /><span className="mt-1 block text-[11px] font-extrabold">{lang === 'ar' ? 'مميز' : 'Featured'}</span><span className="block text-[9px] opacity-75">{lang === 'ar' ? '200 ج.م/شهر' : '200 EGP/mo'}</span></button>
+                          <button type="button" onClick={() => setSelectedTier('vip')} className={`min-h-16 rounded-xl border p-2 text-center transition-all ${selectedTier === 'vip' ? 'border-amber-500 bg-amber-50 text-amber-800 ring-1 ring-amber-500 dark:bg-amber-500/15 dark:text-amber-300' : 'border-slate-200 bg-white text-slate-600 hover:border-amber-400 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300'}`}><Crown className="mx-auto h-4 w-4" /><span className="mt-1 block text-[11px] font-extrabold">VIP</span><span className="block text-[9px] opacity-75">{lang === 'ar' ? '500 ج.م/شهر' : '500 EGP/mo'}</span></button>
+                        </div>
+                        {selectedTier !== 'free' && (
+                          <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-start dark:border-amber-500/30 dark:bg-amber-500/10">
+                            <div className="flex items-start gap-2"><Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" /><div className="min-w-0"><p className="text-xs font-extrabold text-amber-900 dark:text-amber-300">{lang === 'ar' ? 'الاشتراكات المدفوعة تُفعّل قريبًا' : 'Paid subscriptions are coming soon'}</p><p className="mt-0.5 text-[11px] leading-5 text-amber-800 dark:text-amber-200">{lang === 'ar' ? 'يمكنك إنشاء حساب مجاني الآن، وسنبلغك فور تفعيل هذه الخطة.' : 'Create a free account now and we will notify you when this plan is available.'}</p><button type="button" onClick={() => setSelectedTier('free')} className="mt-2 text-[11px] font-extrabold text-amber-800 underline underline-offset-2 hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-200">{lang === 'ar' ? 'العودة إلى الخطة المجانية' : 'Return to Free plan'}</button></div></div>
+                          </div>
+                        )}
+                      </section>
+
+                      <p className="text-xs leading-5 text-slate-500 dark:text-neutral-400">{lang === 'ar' ? 'أدخل بياناتك الأساسية فقط. يمكنك تعديل صورتك واهتماماتك لاحقًا من ملفك الشخصي.' : 'Enter only your basic details. You can update your photo and preferences later from your profile.'}</p>
 
                       {/* Full Name */}
                       <div>
@@ -1106,14 +1103,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                           {lang === 'ar' ? 'الاسم بالكامل' : 'Full Name'}
                         </label>
                         <div className="relative">
-                          <User className="absolute top-3 left-3 h-4 w-4 text-neutral-500" />
+                          <User className="absolute top-3 left-3 h-4 w-4 text-slate-400 dark:text-neutral-500" />
                           <input
                             type="text"
                             required={activeTab === 'register'}
                             value={name}
                             onChange={e => setName(e.target.value)}
                             placeholder={lang === 'ar' ? 'مثال: سارة علي' : 'e.g. Sarah Ali'}
-                            className="w-full rounded-xl border border-white/10 bg-neutral-950 py-2.5 pl-10 pr-4 text-sm text-white placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
+                            className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white dark:placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
                           />
                         </div>
                       </div>
@@ -1124,14 +1121,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                           {lang === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}
                         </label>
                         <div className="relative">
-                          <Mail className="absolute top-3 left-3 h-4 w-4 text-neutral-500" />
+                          <Mail className="absolute top-3 left-3 h-4 w-4 text-slate-400 dark:text-neutral-500" />
                           <input
                             type="email"
                             required
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             placeholder="user@example.com"
-                            className="w-full rounded-xl border border-white/10 bg-neutral-950 py-2.5 pl-10 pr-4 text-sm font-mono text-white placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
+                            className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-mono text-slate-900 placeholder-slate-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white dark:placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
                           />
                         </div>
                       </div>
@@ -1142,110 +1139,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                           {lang === 'ar' ? 'كلمة المرور' : 'Password'}
                         </label>
                         <div className="relative">
-                          <Lock className="absolute top-3 left-3 h-4 w-4 text-neutral-500" />
+                          <Lock className="absolute top-3 left-3 h-4 w-4 text-slate-400 dark:text-neutral-500" />
                           <input
                             type="password"
                             required
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="w-full rounded-xl border border-white/10 bg-neutral-950 py-2.5 pl-10 pr-4 text-sm font-mono text-white placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
+                            className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-mono text-slate-900 placeholder-slate-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white dark:placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
                           />
-                        </div>
-                      </div>
-
-                      {/* Avatar Selection */}
-                      <div>
-                        <label className="block text-xs font-mono text-neutral-300 mb-2">
-                          {lang === 'ar' ? 'اختر صورة الملف الشخصي أو قم بالرفع من جهازك:' : 'Select Profile Avatar or Upload Photo:'}
-                        </label>
-                        <div className="flex items-center justify-start gap-3 py-1">
-                          {GENDER_NEUTRAL_AVATARS.map((av, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setSelectedAvatar(av)}
-                              className={`relative rounded-xl overflow-hidden border-2 transition-all p-0.5 cursor-pointer ${
-                                selectedAvatar === av
-                                  ? 'border-amber-400 shadow-lg gold-glow scale-105 bg-amber-500/20'
-                                  : 'border-white/10 opacity-60 hover:opacity-100 bg-neutral-950'
-                              }`}
-                              title={`Avatar ${idx + 1}`}
-                            >
-                              <img src={av} alt={`Avatar ${idx + 1}`} className="h-10 w-10 rounded-lg object-cover" />
-                              {selectedAvatar === av && (
-                                <div className="absolute top-1 right-1 bg-amber-400 rounded-full p-0.5 text-neutral-950">
-                                  <Check className="h-2.5 w-2.5 stroke-[3]" />
-                                </div>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Upload Photo From Device */}
-                        <div className="mt-3 flex items-center justify-between bg-neutral-950 p-3 rounded-xl border border-white/10">
-                          <div className="flex items-center gap-2">
-                            <Upload className="h-4 w-4 text-amber-400" />
-                            <span className="text-xs text-neutral-300 font-mono">
-                              {lang === 'ar' ? 'أو قم برفع صورة من جهازك 📁:' : 'Or upload photo from device 📁:'}
-                            </span>
-                          </div>
-                          <label className="cursor-pointer rounded-lg bg-gradient-to-r from-amber-500/20 to-amber-600/20 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 transition-all flex items-center gap-1.5">
-                            <span>{lang === 'ar' ? 'اختر ملف الصورة' : 'Choose Photo'}</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleFileUpload}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
-
-                        {!GENDER_NEUTRAL_AVATARS.includes(selectedAvatar) && (
-                          <div className="mt-2 flex items-center gap-2 bg-amber-500/10 p-2 rounded-lg border border-amber-500/30">
-                            <img src={selectedAvatar} alt="Uploaded preview" className="h-9 w-9 rounded-full object-cover border-2 border-amber-400 shadow" />
-                            <span className="text-xs font-mono font-bold text-amber-300">
-                              {lang === 'ar' ? '✓ تم اختيار الصورة وجاهزة للحفظ عند التسجيل' : '✓ Photo ready to save upon registration'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Dance Styles */}
-                      <div>
-                        <label className="block text-xs font-mono text-neutral-300 mb-2">
-                          {lang === 'ar' ? 'أنماط الرقص المفضلة لديك:' : 'Your Favorite Dance Styles:'}
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {ALL_DANCE_STYLES.map(style => {
-                            const isSelected = selectedStyles.includes(style);
-                            return (
-                              <button
-                                key={style}
-                                type="button"
-                                onClick={() => toggleStyle(style)}
-                                className={`rounded-lg px-3 py-1.5 text-xs font-mono font-semibold border transition-all cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
-                                    : 'bg-neutral-950 text-neutral-400 border-white/10 hover:border-white/30'
-                                }`}
-                              >
-                                {isSelected && '✓ '}#{getStyleLabel(style, lang)}
-                              </button>
-                            );
-                          })}
                         </div>
                       </div>
 
                       {/* Submit Button */}
                       <button
                         type="submit"
-                        disabled={loadingAuth}
-                        className="w-full mt-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 py-3.5 px-6 text-base font-extrabold text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-xl gold-glow transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        disabled={loadingAuth || selectedTier !== 'free'}
+                        className="w-full mt-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 py-3.5 px-6 text-base font-extrabold text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
                       >
                         <Sparkles className="h-5 w-5 fill-current" />
                         <span>
-                          {lang === 'ar' ? 'حفظ البيانات والتسجيل الآن 💾✨' : 'Save Data & Register Now 💾✨'}
+                          {selectedTier !== 'free' ? (lang === 'ar' ? 'اختر الخطة المجانية للمتابعة' : 'Choose the Free plan to continue') : (lang === 'ar' ? 'إنشاء الحساب' : 'Create account')}
                         </span>
                       </button>
                     </div>
@@ -1261,21 +1175,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       {lang === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}
                     </label>
                     <div className="relative">
-                      <Mail className="absolute top-3 left-3 h-4 w-4 text-neutral-500" />
+                      <Mail className="absolute top-3 left-3 h-4 w-4 text-slate-400 dark:text-neutral-500" />
                       <input
                         type="email"
                         required
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="user@example.com"
-                        className="w-full rounded-xl border border-white/10 bg-neutral-950 py-2.5 pl-10 pr-4 text-sm font-mono text-white placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
+                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-mono text-slate-900 placeholder-slate-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white dark:placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
                       />
                     </div>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-mono text-neutral-300">
+                      <label className="block text-xs font-mono text-slate-700 dark:text-neutral-300">
                         {lang === 'ar' ? 'كلمة المرور' : 'Password'}
                       </label>
                       <button
@@ -1287,14 +1201,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       </button>
                     </div>
                     <div className="relative">
-                      <Lock className="absolute top-3 left-3 h-4 w-4 text-neutral-500" />
+                      <Lock className="absolute top-3 left-3 h-4 w-4 text-slate-400 dark:text-neutral-500" />
                       <input
                         type="password"
                         required
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full rounded-xl border border-white/10 bg-neutral-950 py-2.5 pl-10 pr-4 text-sm font-mono text-white placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
+                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-mono text-slate-900 placeholder-slate-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white dark:placeholder-neutral-600 outline-none focus:border-amber-500 transition-all"
                       />
                     </div>
                   </div>
