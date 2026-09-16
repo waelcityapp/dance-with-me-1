@@ -37,6 +37,9 @@ import {
 } from '../lib/firebase';
 import { PricingConfig } from '../types';
 import { MODERN_FEATURED_EVENTS } from '../data/defaultEvents';
+
+const ACTIVE_TAB_STORAGE_KEY = 'cityeve:last-active-tab';
+const RESTORABLE_TABS: TabType[] = ['explore', 'parties', 'courses', 'trips', 'profile', 'create_ad', 'admin', 'edit_ad_admin', 'verification'];
 import { 
   subscribeUserToPush, 
   unsubscribeUserFromPush, 
@@ -197,13 +200,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAnalyticsEvent(`view_mode_${mode}`);
   };
 
-  const [activeTab, setActiveTab] = useState<TabType>('explore');
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    try {
+      const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType | null;
+      if (savedTab && RESTORABLE_TABS.includes(savedTab)) return savedTab;
+    } catch (e) {}
+    return 'explore';
+  });
   const [adminSelectedUserId, setAdminSelectedUserId] = useState<string | null>(null);
 
   const handleSetActiveTab = (tab: TabType) => {
     setActiveTab(tab);
     logAnalyticsEvent(`tab_${tab}`);
   };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTab);
+    } catch (e) {}
+  }, [activeTab]);
 
   // Automatically switch tab and close modal once unlocked to prevent race conditions
   useEffect(() => {
