@@ -4173,6 +4173,58 @@ export const AdminPanel: React.FC = () => {
                   <span>{new Date(sub.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</span>
                 </div>
               </div>
+              {/* Public-facing preview: this uses the exact same card component seen by visitors. */}
+              <section className="mb-6 overflow-hidden rounded-3xl border border-sky-400/30 bg-sky-500/5 shadow-[0_18px_45px_rgba(0,0,0,0.18)]">
+                <div className="flex flex-col gap-2 border-b border-sky-400/20 bg-sky-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 text-sm font-black text-sky-100">
+                    <Eye className="h-4 w-4 text-sky-300" />
+                    <span>{lang === 'ar' ? 'هكذا سيظهر الإعلان للجمهور' : 'Visitor-facing preview'}</span>
+                  </div>
+                  <span className="w-fit rounded-full border border-sky-300/30 bg-sky-300/10 px-2.5 py-1 text-[11px] font-bold text-sky-200">
+                    {lang === 'ar' ? 'قبل النشر' : 'Before publishing'}
+                  </span>
+                </div>
+                <div className="mx-auto max-w-2xl p-3 sm:p-5">
+                  <EventCard
+                    event={{
+                      id: sub.eventData?.id || `preview-${sub.id}`,
+                      titleAr: sub.eventData?.titleAr || sub.titleAr || 'إعلان جديد',
+                      titleEn: sub.eventData?.titleEn || sub.titleEn || 'New event',
+                      descriptionAr: sub.eventData?.descriptionAr || sub.descriptionAr || '',
+                      descriptionEn: sub.eventData?.descriptionEn || sub.descriptionEn || '',
+                      category: sub.eventData?.category || sub.category || 'party',
+                      styles: sub.eventData?.styles || sub.styles || [],
+                      searchKeywords: sub.eventData?.searchKeywords || sub.searchKeywords || [],
+                      mediaType: sub.mediaType || sub.eventData?.mediaType || 'image',
+                      mediaUrl: sub.mediaUrl || sub.eventData?.mediaUrl || '',
+                      thumbnailUrl: sub.thumbnailUrl || sub.eventData?.thumbnailUrl || sub.mediaUrl || sub.eventData?.mediaUrl || '',
+                      uploadDate: sub.submittedAt || new Date().toISOString(),
+                      eventDate: sub.eventData?.eventDate || new Date().toISOString(),
+                      priceAr: sub.eventData?.priceAr || '',
+                      priceEn: sub.eventData?.priceEn || '',
+                      location: sub.eventData?.location || { nameAr: '', nameEn: '', addressAr: '', addressEn: '', googleMapsUrl: '', lat: 0, lng: 0 },
+                      contact: sub.eventData?.contact || { organizerName: sub.advertiserName || '', phone: sub.phone || '', whatsapp: sub.phone || '' },
+                      likesCount: sub.eventData?.likesCount || 0,
+                      viewsCount: sub.eventData?.viewsCount || 0,
+                      showBookingButton: sub.eventData?.showBookingButton !== false,
+                      showViewsCount: sub.eventData?.showViewsCount !== false,
+                      isFeatured: displayAdType === 'vip',
+                      adType: displayAdType === 'free' ? 'standard' : displayAdType,
+                      position: sub.eventData?.position || positionValue
+                    } as DanceEvent}
+                    index={0}
+                    overrideAdType={displayAdType === 'vip' ? 'vip' : 'standard'}
+                    hideAdminControls
+                    onOpenMap={(event) => {
+                      if (event.location?.googleMapsUrl) window.open(event.location.googleMapsUrl, '_blank', 'noopener,noreferrer');
+                    }}
+                    onOpenShare={() => {
+                      alert(lang === 'ar' ? 'رابط المشاركة يُنشأ بعد اعتماد الإعلان ونشره.' : 'The sharing link is created after approval and publishing.');
+                    }}
+                  />
+                </div>
+              </section>
+
               {/* Grid Info */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                 <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
@@ -4286,8 +4338,8 @@ export const AdminPanel: React.FC = () => {
               )}
 
               {/* Receipt Preview & Actions */}
-              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pt-3 border-t border-white/5">
-                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+              <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto">
                   {sub.receiptImage ? (
                     <button
                       onClick={() => setSelectedReceipt(sub.receiptImage || null)}
@@ -4305,10 +4357,10 @@ export const AdminPanel: React.FC = () => {
                 </div>
 
                 {/* Admin Approval Buttons */}
-                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto justify-end">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">
                   {sub.status === 'pending' && (
                     <>
-                      <div className="flex items-center gap-2 mr-2">
+                      <div className="flex min-h-[46px] items-center gap-2 rounded-xl border border-white/10 bg-neutral-950/60 px-3">
                         <label className="text-xs font-bold text-neutral-400">{lang === 'ar' ? 'رقم الإعلان:' : 'Position:'}</label>
                         <input
                           type="number"
@@ -4324,7 +4376,7 @@ export const AdminPanel: React.FC = () => {
                         whileTap={{ scale: 0.98 }}
                         disabled={actionLoading === sub.id}
                         onClick={() => handleApprove(sub)}
-                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs hover:bg-emerald-400 shadow-md transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                        className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-black text-neutral-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 cursor-pointer disabled:opacity-50 disabled:cursor-wait w-full sm:w-auto"
                       >
                         <Check className="h-4 w-4 stroke-[3] shrink-0" />
                         <span>{actionLoading === sub.id ? '...' : (lang === 'ar' ? 'قبول ونشر الإعلان فوراً' : 'Approve & Publish Ad')}</span>
@@ -4335,7 +4387,7 @@ export const AdminPanel: React.FC = () => {
                         whileTap={{ scale: 0.98 }}
                         disabled={actionLoading === sub.id}
                         onClick={() => handleReject(sub)}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-600/20 text-red-300 border border-red-500/40 font-bold text-xs hover:bg-red-600/30 transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                        className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-600/15 px-5 py-3 text-sm font-bold text-red-200 transition-all hover:bg-red-600/25 cursor-pointer disabled:opacity-50 disabled:cursor-wait w-full sm:w-auto"
                       >
                         <XCircle className="h-4 w-4 shrink-0" />
                         <span>{lang === 'ar' ? 'رفض' : 'Reject'}</span>
