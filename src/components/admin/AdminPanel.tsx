@@ -1650,6 +1650,7 @@ export const AdminPanel: React.FC = () => {
         descriptionEn: sub.eventData?.descriptionEn || sub.descriptionEn || 'Ad & Event details',
         category: sub.eventData?.category || sub.category || 'party',
         styles: sub.eventData?.styles || sub.styles || ['Salsa'],
+        searchKeywords: sub.eventData?.searchKeywords || sub.searchKeywords || [],
         mediaType: sub.mediaType || sub.eventData?.mediaType || 'image',
         mediaUrl: mediaUrlToUse,
         thumbnailUrl: thumbUrlToUse,
