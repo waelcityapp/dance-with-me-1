@@ -450,7 +450,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   // Subscription Plan & Terms State
   const [subscriptionDays, setSubscriptionDays] = useState<number>(savedDraft?.subscriptionDays ?? 7);
-  const [agreedToTerms, setAgreedToTerms] = useState<boolean>(savedDraft?.agreedToTerms ?? !!editingEvent);
+  const [agreedToTerms] = useState<boolean>(true);
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<'instapay' | 'wallet' | 'card'>(savedDraft?.paymentMethod || 'instapay');
 
@@ -498,7 +498,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   const handleProceedToPayment = (e?: React.FormEvent | React.MouseEvent) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!agreedToTerms || hasUrlViolation || mapsUrlError || !validateClassification()) return;
+    if (hasUrlViolation || mapsUrlError || !validateClassification()) return;
     if (!titleAr) setTitleAr(lang === 'ar' ? 'سهرة سالسا وباتشاتا ملكية جديدة' : 'Royal Salsa & Bachata Night');
     if (!titleEn) setTitleEn('Royal Salsa & Bachata Night');
     setStep('payment');
@@ -524,12 +524,12 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     if (checkLinksAndWarn() || !validateClassification()) return;
     
     if (editingEvent) {
-      if (agreedToTerms && !isUploadingMedia) {
+      if (!isUploadingMedia) {
         handleFinalPublish();
       }
       return;
     }
-    if (agreedToTerms) {
+    {
       setCreateTab('preview');
       setPreviewAlert(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -771,6 +771,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           setStep('form');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
+        onReviewTerms={() => setShowTermsModal(true)}
         onSuccessComplete={handleFinalPublish}
       />
     );
@@ -2368,65 +2369,24 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </div>
           )}
 
-          {/* SECTION 7: Terms & Conditions Agreement & Checkbox */}
-          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
-            <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase flex items-center justify-between">
-              <span>{lang === 'ar' ? '7. اتفاقية الاستخدام والشروط والأحكام الخاصة بمنصة "Dance with me"' : '7. Terms & Conditions of "Dance with me" Platform'}</span>
-            </h4>
-
-            {/* Simplified Terms Summary / Trigger */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-950/90 border border-neutral-200 dark:border-neutral-800/80 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                  <ShieldCheck className="h-5 w-5 text-[#78101F] dark:text-amber-500" />
-                </div>
-                <div>
-                  <p className="font-bold text-neutral-900 dark:text-white mb-0.5">
-                    {lang === 'ar' ? 'مراجعة شروط النشر' : 'Review Publishing Terms'}
-                  </p>
-                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-mono">
-                    {lang === 'ar' ? 'يرجى قراءة الشروط لضمان قبول إعلانك' : 'Please read the terms to ensure ad approval'}
-                  </p>
-                </div>
+          {/* Publishing notice: compact summary only */}
+          <div className="border-t border-amber-200/60 dark:border-white/10 pt-5">
+            <div className="rounded-2xl border border-amber-200 dark:border-neutral-800 bg-amber-50/50 dark:bg-neutral-950/60 p-4 flex gap-3 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300">
+              <ShieldCheck className="h-5 w-5 shrink-0 text-[#78101F] dark:text-amber-400" />
+              <div className="leading-relaxed">
+                <p className="font-bold text-neutral-900 dark:text-white">
+                  {lang === 'ar' ? 'يُرسل الإعلان للإدارة للمراجعة قبل ظهوره للجمهور.' : 'Your ad is sent to the administration for review before it appears publicly.'}
+                </p>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                  {lang === 'ar' ? 'لا تنشر روابط خارجية أو بيانات حساسة أو محتوى مخالف.' : 'Do not publish external links, sensitive data, or prohibited content.'}
+                  {' '}
+                  <button type="button" onClick={() => setShowTermsModal(true)} className="font-bold text-[#78101F] underline underline-offset-2 dark:text-amber-400">
+                    {lang === 'ar' ? 'مراجعة الشروط والأحكام' : 'Review terms & conditions'}
+                  </button>
+                </p>
               </div>
-              
-              <button
-                type="button"
-                onClick={() => setShowTermsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-50 dark:bg-neutral-900 border border-amber-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-100 dark:hover:bg-neutral-800 text-[#78101F] dark:text-amber-400 text-xs font-bold transition-all group cursor-pointer"
-              >
-                <span>{lang === 'ar' ? 'عرض شروط النشر كاملة' : 'View Full Publishing Terms'}</span>
-                {lang === 'ar' ? <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> : <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />}
-              </button>
             </div>
-
-            {/* Checkbox */}
-            <label 
-              onClick={() => setAgreedToTerms(!agreedToTerms)}
-              className="flex items-start gap-3.5 p-4 rounded-2xl bg-white dark:bg-neutral-950/90 border border-neutral-200 dark:border-neutral-800/80 hover:border-amber-500/60 dark:hover:border-amber-500/40 cursor-pointer transition-all select-none shadow-sm"
-            >
-              <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition-all ${
-                agreedToTerms 
-                  ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] border-[#78101F] text-amber-300 shadow-md dark:bg-amber-500 dark:border-amber-400 dark:text-neutral-950 dark:gold-glow' 
-                  : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 text-transparent'
-              }`}>
-                <Check className="h-4 w-4 stroke-[3]" />
-              </div>
-              <div className="text-xs sm:text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
-                <span className="font-bold text-neutral-900 dark:text-white block mb-1">
-                  {lang === 'ar'
-                    ? 'أقر بأنني اطلعت على جميع الشروط والأحكام الخاصة بالنشر على منصة Dance with me، وأتعهد بالالتزام بها وبكافة التشريعات والقوانين والأعراف المتبعة في جمهورية مصر العربية، وأوافق عليها جميعاً دون أي تحفظ.'
-                    : 'I acknowledge that I have read all the terms and conditions for publishing on the Dance with me platform, commit to abide by them and all laws and customs observed in the Arab Republic of Egypt, and agree to all of them without reservation.'}
-                </span>
-                <span className="text-neutral-500 dark:text-neutral-400 text-xs block mt-1">
-                  {lang === 'ar'
-                    ? `تنويه: الإعلان ينتهي مساء يوم الحدث (${formatExpirationNotice()})، وإجمالي المطلوب دفعه هو (${pricing.total} ج.م).`
-                    : `Notice: This ad expires on the evening of the event date (${formatExpirationNotice()}), with a total payable amount of (${pricing.total} EGP).`}
-                </span>
-              </div>
-            </label>
           </div>
-
           
           {hasUrlViolation && (
             <div className="mb-6 p-5 rounded-2xl bg-red-500/10 border-2 border-red-500/40 animate-pulse shadow-xl shadow-red-500/10">
@@ -2453,24 +2413,22 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {editingEvent ? (
                 <motion.button
-                  whileHover={agreedToTerms && !isUploadingMedia && !hasUrlViolation ? { scale: 1.01 } : {}}
-                  whileTap={agreedToTerms && !isUploadingMedia && !hasUrlViolation ? { scale: 0.98 } : {}}
+                  whileHover={!isUploadingMedia && !hasUrlViolation ? { scale: 1.01 } : {}}
+                  whileTap={!isUploadingMedia && !hasUrlViolation ? { scale: 0.98 } : {}}
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (!agreedToTerms || isUploadingMedia || hasUrlViolation || mapsUrlError) return;
+                    if (isUploadingMedia || hasUrlViolation || mapsUrlError) return;
                     handleFinalPublish();
                   }}
-                  disabled={!agreedToTerms || isUploadingMedia || hasUrlViolation || mapsUrlError}
+                  disabled={isUploadingMedia || hasUrlViolation || mapsUrlError}
                   className={`w-full sm:w-auto min-w-[280px] rounded-2xl py-3 px-8 text-sm font-extrabold transition-all flex items-center justify-center gap-3 border ${
                     hasUrlViolation
                       ? 'hidden pointer-events-none'
-                      : agreedToTerms
-                      ? 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 shadow-2xl border-amber-400/40 cursor-pointer'
-                      : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
+                      : 'bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 shadow-2xl border-amber-400/40 cursor-pointer'
                   }`}
                 >
-                  <Sparkles className={`h-5 w-5 shrink-0 ${agreedToTerms && !isUploadingMedia ? 'fill-current animate-pulse-slow text-amber-300' : 'text-neutral-600'}`} />
+                  <Sparkles className={`h-5 w-5 shrink-0 ${!isUploadingMedia ? 'fill-current animate-pulse-slow text-amber-300' : 'text-neutral-600'}`} />
                   <span>
                     {isUploadingMedia
                       ? (lang === 'ar' ? 'جاري الحفظ والرفع...' : 'Saving & Uploading...')
@@ -2479,17 +2437,17 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </motion.button>
               ) : (
                 <motion.button
-                  whileHover={agreedToTerms && !hasUrlViolation ? { scale: 1.01 } : {}}
-                  whileTap={agreedToTerms && !hasUrlViolation ? { scale: 0.98 } : {}}
+                  whileHover={!hasUrlViolation ? { scale: 1.01 } : {}}
+                  whileTap={!hasUrlViolation ? { scale: 0.98 } : {}}
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (!agreedToTerms || hasUrlViolation || mapsUrlError) return;
+                    if (hasUrlViolation || mapsUrlError) return;
                     setCreateTab('preview');
                     setPreviewAlert(null);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  disabled={!agreedToTerms || hasUrlViolation || mapsUrlError}
+                  disabled={hasUrlViolation || mapsUrlError}
                   className={`w-full sm:w-auto min-w-[280px] rounded-2xl py-3 px-8 text-sm font-extrabold transition-all flex items-center justify-center gap-3 border ${
                     hasUrlViolation
                       ? 'hidden pointer-events-none'
@@ -2498,7 +2456,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       : 'bg-neutral-800/80 text-neutral-500 border-neutral-700/60 cursor-not-allowed opacity-60'
                   }`}
                 >
-                  <Eye className={`h-5 w-5 shrink-0 ${agreedToTerms ? 'text-amber-300' : 'text-neutral-600'}`} />
+                  <Eye className={`h-5 w-5 shrink-0 ${'text-amber-300'}`} />
                   <span>
                     {lang === 'ar' ? 'معاينة الإعلان وتدقيق البيانات' : 'Preview Ad & Verify Details'}
                   </span>
@@ -2506,13 +2464,6 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               )}
             </div>
             
-            {!agreedToTerms && (
-              <p className="mt-3 text-center text-xs text-amber-700 dark:text-amber-400/80 font-medium">
-                {lang === 'ar' 
-                  ? '⚠️ يرجى الموافقة على الشروط والأحكام أعلاه لتفعيل زر معاينة الإعلان'
-                  : '⚠️ Please agree to the publishing terms and conditions above to unlock the next step'}
-              </p>
-            )}
           </div>
         </form>}
       </motion.div>
