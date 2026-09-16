@@ -449,7 +449,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
         </div>
 
         {/* Compact Mobile Date & Location Filters */}
-        <div className="relative z-10 grid grid-cols-4 items-stretch gap-1.5 pb-0.5 pt-0.5 w-full pointer-events-auto" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="relative z-10 grid grid-cols-3 items-stretch gap-1.5 pb-0.5 pt-0.5 w-full pointer-events-auto" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           <button
             type="button"
             onClick={() => setSelectedTimeFilter('month')}
@@ -476,7 +476,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
           <button
             type="button"
             onClick={() => setShowLocationFilter(true)}
-            className="shrink-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
+            className="col-span-3 min-w-0 rounded-xl bg-white dark:bg-neutral-900 px-3 py-2 text-[11px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 border border-amber-500/50 hover:border-amber-500 transition-colors cursor-pointer whitespace-nowrap"
           >
             <Filter className="inline-block h-3 w-3 ml-1 text-amber-500 align-[-2px]" />
             {selectedGovernorate === 'all' ? (lang === 'ar' ? 'المحافظة / المنطقة' : 'Governorate / Area') : selectedGovernorate + (selectedArea !== 'all' ? ' / ' + selectedArea : '')}
