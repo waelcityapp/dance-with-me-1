@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -23,19 +23,63 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   onExploreClick,
   onPostAdClick,
 }) => {
-  const { lang, appAssets, selectedCategory } = useApp();
+  const { lang, appAssets, selectedCategory, activeEvents } = useApp();
   const isAr = lang === 'ar';
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<DanceCategory | null>(null);
   const [chosenCategoryId, setChosenCategoryId] = useState<DanceCategory | null>(null);
   const [chosenSubcategoryId, setChosenSubcategoryId] = useState('all');
   const [heroSearchQuery, setHeroSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const uploadedBackground = isAr
     ? appAssets?.app_hero_banner_url
     : appAssets?.app_hero_banner_url_en;
   const uploadedMobileBackground = isAr
     ? appAssets?.app_hero_banner_mobile_url
     : appAssets?.app_hero_banner_mobile_url_en;
+
+  const normalizeSearchValue = (value: unknown) => String(value ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
+    .replace(/ـ/g, '')
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+
+  // Suggestions come only from published listings, never from an invented keyword list.
+  const searchSuggestions = useMemo(() => {
+    const query = normalizeSearchValue(heroSearchQuery);
+    if (query.length < 2) return [];
+
+    const choices = new Map<string, string>();
+    activeEvents.forEach(event => {
+      const values = [
+        isAr ? event.titleAr : event.titleEn,
+        event.titleAr,
+        event.titleEn,
+        event.contact?.organizerName,
+        isAr ? event.location?.nameAr : event.location?.nameEn,
+        event.location?.nameAr,
+        event.location?.nameEn,
+        ...(event.styles || []),
+        ...(event.searchKeywords || []),
+      ];
+
+      values.forEach(value => {
+        const label = String(value ?? '').trim();
+        if (label && normalizeSearchValue(label).includes(query)) {
+          choices.set(normalizeSearchValue(label), label);
+        }
+      });
+    });
+
+    return Array.from(choices.values()).slice(0, 5);
+  }, [activeEvents, heroSearchQuery, isAr]);
 
   const backgroundImage = uploadedBackground || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1800&q=80';
   const mobileBackgroundImage = uploadedMobileBackground || uploadedBackground || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80';
@@ -146,7 +190,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
             </p>
           </div>
 
-          <div className="mt-[clamp(8px,2.2vw,16px)] w-full max-w-[min(640px,calc(100vw-32px))] md:mt-4 md:max-w-2xl">
+          <div className="relative mt-[clamp(8px,2.2vw,16px)] w-full max-w-[min(640px,calc(100vw-32px))] md:mt-4 md:max-w-2xl">
             <div className="group flex w-full items-center gap-1.5 rounded-[26px] border-2 border-[#9a672d]/90 bg-[#351b19]/90 px-2 py-1.5 text-right text-[#fff0c8] shadow-[inset_0_1px_0_rgba(255,225,160,0.16),0_10px_26px_rgba(30,0,6,0.24)] backdrop-blur-md transition focus-within:border-[#e0b45e] focus-within:bg-[#3d201d]/95 md:gap-2 md:px-3 md:py-2">
               <input
                 type="search"
@@ -158,6 +202,8 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 }}
                 placeholder={isAr ? 'ابحث عن حفلة أو دورة أو رحلة...' : 'Search for a party, course, or trip...'}
                 aria-label={isAr ? 'البحث عن فعالية' : 'Search events'}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
                 className="min-w-0 flex-1 bg-transparent text-[10px] font-semibold leading-4 text-[#fff0c8] outline-none placeholder:text-[#e7c98b]/75 md:text-sm"
                 dir={isAr ? 'rtl' : 'ltr'}
               />
@@ -165,6 +211,28 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 {isAr ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
               </span>
             </div>
+            {isSearchFocused && searchSuggestions.length > 0 && (
+              <div className="absolute inset-x-0 top-full z-40 mt-1.5 overflow-hidden rounded-2xl border border-[#d4af67]/60 bg-[#2b1114]/95 p-1.5 shadow-2xl backdrop-blur-xl">
+                <p className="px-2 py-1 text-[10px] font-bold text-[#edc56d]/85">
+                  {isAr ? 'اقتراحات من الإعلانات المنشورة' : 'Suggestions from published listings'}
+                </p>
+                {searchSuggestions.map(suggestion => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setHeroSearchQuery(suggestion);
+                      setIsSearchFocused(false);
+                      window.dispatchEvent(new CustomEvent('cityeve-hero-search', { detail: { query: suggestion } }));
+                    }}
+                    className="block w-full truncate rounded-xl px-3 py-2 text-right text-xs font-semibold text-[#fff0c8] transition hover:bg-[#6d1d2a]/80"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="relative mt-[clamp(8px,2vw,12px)] w-full max-w-4xl px-1 md:mt-3">
