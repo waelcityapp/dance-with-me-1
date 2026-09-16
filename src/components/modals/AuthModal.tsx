@@ -1045,6 +1045,45 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     <div className="space-y-4">
                       <p className="text-xs leading-5 text-slate-500 dark:text-neutral-400">{lang === 'ar' ? 'أدخل بياناتك الأساسية فقط. يمكنك تعديل صورتك واهتماماتك لاحقًا من ملفك الشخصي.' : 'Enter only your basic details. You can update your photo and preferences later from your profile.'}</p>
 
+                      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-neutral-950/60">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div>
+                            <h4 className="text-xs font-extrabold text-slate-900 dark:text-white">{lang === 'ar' ? 'اختر الخطة المناسبة' : 'Choose your plan'}</h4>
+                            <p className="mt-0.5 text-[10px] text-slate-500 dark:text-neutral-400">{lang === 'ar' ? 'الحساب المجاني محدد تلقائيًا؛ يمكنك تغييره الآن.' : 'The free account is selected by default; you can change it now.'}</p>
+                          </div>
+                          <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTier('free')}
+                            className={`min-h-16 rounded-xl border p-2 text-center transition-all ${selectedTier === 'free' ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-1 ring-emerald-500 dark:bg-emerald-500/15 dark:text-emerald-300' : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-400 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300'}`}
+                          >
+                            <ShieldCheck className="mx-auto h-4 w-4" />
+                            <span className="mt-1 block text-[11px] font-extrabold">{lang === 'ar' ? 'مجاني' : 'Free'}</span>
+                            <span className="block text-[9px] opacity-75">{lang === 'ar' ? '0 ج.م' : '0 EGP'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTier('featured')}
+                            className={`min-h-16 rounded-xl border p-2 text-center transition-all ${selectedTier === 'featured' ? 'border-sky-500 bg-sky-50 text-sky-800 ring-1 ring-sky-500 dark:bg-sky-500/15 dark:text-sky-300' : 'border-slate-200 bg-white text-slate-600 hover:border-sky-400 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300'}`}
+                          >
+                            <Sparkles className="mx-auto h-4 w-4" />
+                            <span className="mt-1 block text-[11px] font-extrabold">{lang === 'ar' ? 'مميز' : 'Featured'}</span>
+                            <span className="block text-[9px] opacity-75">{lang === 'ar' ? '200 ج.م/شهر' : '200 EGP/mo'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTier('vip')}
+                            className={`min-h-16 rounded-xl border p-2 text-center transition-all ${selectedTier === 'vip' ? 'border-amber-500 bg-amber-50 text-amber-800 ring-1 ring-amber-500 dark:bg-amber-500/15 dark:text-amber-300' : 'border-slate-200 bg-white text-slate-600 hover:border-amber-400 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300'}`}
+                          >
+                            <Crown className="mx-auto h-4 w-4" />
+                            <span className="mt-1 block text-[11px] font-extrabold">VIP</span>
+                            <span className="block text-[9px] opacity-75">{lang === 'ar' ? '500 ج.م/شهر' : '500 EGP/mo'}</span>
+                          </button>
+                        </div>
+                      </section>
+
                       {/* Full Name */}
                       <div>
                         <label className="block text-xs font-mono text-slate-700 dark:text-neutral-300 mb-1">
