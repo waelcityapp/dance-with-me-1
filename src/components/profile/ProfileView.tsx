@@ -562,19 +562,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-neutral-900 dark:bg-neutral-900 p-4 sm:p-5 shadow-xl"
+        className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-neutral-900 dark:bg-neutral-900 p-6 sm:p-8 shadow-2xl"
       >
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
         
         <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <div className="shrink-0 flex flex-col items-center gap-3">
-            <div className="relative shrink-0">
+            <div 
+              className="relative group cursor-pointer" 
+              onClick={() => { if (!isAdminView) setShowAvatarPicker(!showAvatarPicker) }}
+            >
               <img
                 src={user.avatar || DEFAULT_NEUTRAL_AVATAR}
                 alt={user.name}
-                className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover border-2 border-amber-500/30 shadow-lg"
+                className="h-28 w-28 rounded-full object-cover border-4 border-neutral-800 shadow-xl transition-transform group-hover:scale-105 group-hover:border-amber-400"
               />
+              {!isAdminView && (
+                <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">{lang === 'ar' ? 'تعديل' : 'Edit'}</span>
+                </div>
+              )}
             </div>
+            {!isAdminView && (
+              <button 
+                onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+                className="text-xs font-semibold text-amber-500 hover:text-amber-400 underline-offset-4 hover:underline transition-all"
+              >
+                {lang === 'ar' ? 'تغيير الصورة' : 'Change Photo'}
+              </button>
+            )}
           </div>
 
           <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-start w-full">
@@ -756,11 +772,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
 
       {/* Sticky Modern Tab Bar */}
-      <section className="mb-6 rounded-3xl border border-white/10 bg-neutral-900/70 p-3 shadow-lg">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-md pt-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-white/5 mb-6">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 snap-x">
           <button
             onClick={() => setActiveSection('booked')}
-            className={`flex min-h-[64px] w-full flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-xs font-bold transition-all sm:flex-row ${activeSection === 'booked' || activeSection === 'overview' ? 'bg-emerald-500 text-neutral-950 shadow-md' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'booked' || activeSection === 'overview' ? 'bg-emerald-500 text-neutral-950 shadow-md' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
             <Ticket className="h-4 w-4" />
             <span>{lang === 'ar' ? 'تذاكري وحجوزاتي' : 'Bookings'}</span>
@@ -769,7 +785,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           
           <button
             onClick={() => setActiveSection('liked')}
-            className={`flex min-h-[64px] w-full flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-xs font-bold transition-all sm:flex-row ${activeSection === 'liked' ? 'bg-red-500 text-white shadow-md shadow-red-500/20' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'liked' ? 'bg-red-500 text-white shadow-md shadow-red-500/20' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
             <Heart className="h-4 w-4" />
             <span>{lang === 'ar' ? 'المفضلة' : 'Favorites'}</span>
@@ -778,7 +794,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           
           <button
             onClick={() => setActiveSection('ads')}
-            className={`flex min-h-[64px] w-full flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-xs font-bold transition-all sm:flex-row ${activeSection === 'ads' ? 'bg-amber-500 text-neutral-950 shadow-md gold-glow' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'ads' ? 'bg-amber-500 text-neutral-950 shadow-md gold-glow' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
             <FileText className="h-4 w-4" />
             <span>{lang === 'ar' ? 'إعلاناتي VIP' : 'My Ads'}</span>
@@ -787,7 +803,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <button
             onClick={() => setActiveSection('support')}
-            className={`flex min-h-[64px] w-full flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-xs font-bold transition-all sm:flex-row ${activeSection === 'support' ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'support' ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
             <MessageSquare className="h-4 w-4" />
             <span>{lang === 'ar' ? 'الدعم الفني' : 'Support'}</span>
@@ -796,14 +812,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <button
             onClick={() => setActiveSection('archive')}
-            className={`flex min-h-[64px] w-full flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-xs font-bold transition-all sm:flex-row ${activeSection === 'archive' ? 'bg-neutral-700 text-white shadow-md' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
+            className={`shrink-0 snap-start flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${activeSection === 'archive' ? 'bg-neutral-700 text-white shadow-md' : 'bg-neutral-900 border border-white/5 text-neutral-400 hover:text-white'}`}
           >
             <Clock className="h-4 w-4" />
             <span>{lang === 'ar' ? 'الأرشيف' : 'Archive'}</span>
             <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'archive' ? 'bg-black/20' : 'bg-neutral-800'}`}>{expiredEvents.length}</span>
           </button>
         </div>
-      </section>
+      </div>
 
       <div className="space-y-6">
 
@@ -2356,6 +2372,42 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     className="w-full rounded-2xl border border-white/10 bg-neutral-950 py-3 px-4 text-sm font-semibold text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all text-left"
                     placeholder="e.g. 201015112185"
                   />
+                </div>
+
+                {/* Favorite Dance Styles */}
+                <div>
+                  <label className="text-xs font-bold text-neutral-300 block mb-2">
+                    {lang === 'ar' ? 'أنماط رقصك المفضلة:' : 'Favorite Dance Styles:'}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[160px] overflow-y-auto p-2 bg-neutral-950/50 rounded-2xl border border-white/5">
+                    {ALL_DANCE_STYLES.map((style) => {
+                      const isSelected = editStyles.includes(style);
+                      return (
+                        <button
+                          key={style}
+                          onClick={() => {
+                            if (isSelected) {
+                              setEditStyles(editStyles.filter((s) => s !== style));
+                            } else {
+                              setEditStyles([...editStyles, style]);
+                            }
+                          }}
+                          className={`flex items-center justify-between p-2 rounded-xl border text-xs font-semibold transition-all ${
+                            isSelected
+                              ? 'border-amber-400 bg-amber-500/10 text-amber-300'
+                              : 'border-white/5 bg-neutral-900 text-neutral-400 hover:border-white/25 hover:text-white'
+                          }`}
+                        >
+                          {isSelected ? (
+                            <Check className="h-3 w-3 text-amber-400" />
+                          ) : (
+                            <div className="h-3 w-3" />
+                          )}
+                          <span className="truncate">{style}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Account Tier Selection */}
