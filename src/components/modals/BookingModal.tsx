@@ -262,17 +262,17 @@ export const BookingModal: React.FC = () => {
   const isArabic = lang === 'ar';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/70 dark:bg-black/80 backdrop-blur-sm overflow-y-auto">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="relative w-full max-w-2xl bg-neutral-100 dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-8"
+        className="relative w-full max-w-2xl bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-4 sm:my-8"
         dir={isArabic ? 'rtl' : 'ltr'}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-neutral-200 dark:border-zinc-800 bg-neutral-50 dark:bg-zinc-950/40">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-neutral-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <Ticket className="w-6 h-6 text-amber-500" />
             <h3 className="text-lg font-bold text-neutral-900 dark:text-zinc-100 font-sans">
               {nameOnlyBooking ? (isArabic ? 'طلب حجز بالاسم' : 'Name-only booking request') : (isArabic ? 'بوابة حجز التذاكر الفورية' : 'Instant Ticket Booking Portal')}
@@ -287,7 +287,7 @@ export const BookingModal: React.FC = () => {
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 max-h-[80vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 max-h-[80vh] overflow-y-auto">
           {!bookingResult ? (
             <div className="space-y-6">
               {/* Event Info Card */}
@@ -526,7 +526,7 @@ export const BookingModal: React.FC = () => {
 
               {!nameOnlyBooking && (<>
               {/* Payment Details */}
-              <div className="p-4 bg-amber-950/20 border border-amber-900/40 rounded-2xl space-y-3.5">
+              <div className="p-4 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl space-y-3.5">
                 <div className="flex gap-2.5">
                   <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                   <div>
@@ -538,7 +538,7 @@ export const BookingModal: React.FC = () => {
                         ? 'وسيلة الدفع المتاحة حالياً هي انستاباي (InstaPay). يمكنك الضغط على الزر أدناه للتحويل المباشر إلى تطبيق أو موقع انستاباي، أو نسخ رابط الدفع، ثم أرفق لقطة شاشة لإيصال التحويل بالأسفل لتفعيل الحجز فوراً:' 
                         : 'The payment method currently available is InstaPay. Click the button below to pay directly on InstaPay or copy the payment link, then attach the receipt screenshot below:'}
                     </p>
-                    <div className="mt-2.5 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-400 leading-relaxed flex gap-2 items-start">
+                    <div className="mt-2.5 p-2.5 bg-amber-100/70 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed flex gap-2 items-start">
                       <span className="text-sm">⚠️</span>
                       <span>
                         {isArabic
@@ -563,7 +563,7 @@ export const BookingModal: React.FC = () => {
                         ⚡
                       </div>
                       <div>
-                        <span className="block text-xs sm:text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
+                        <span className="block break-words text-xs sm:text-sm font-bold text-neutral-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-300 transition-colors">
                           {isArabic ? 'اضغط الرابط لإرسال نقود إلى' : 'Click link to send money to'} <span className="font-mono text-amber-400">{INSTAPAY_HANDLE}</span>
                         </span>
                         <span className="block text-[10px] text-neutral-500 dark:text-zinc-400 font-medium tracking-wide">
