@@ -2118,7 +2118,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               <div>
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
                   <DollarSign className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
-                  <span>{lang === 'ar' ? 'سعر التذكرة / الاشتراك' : 'Ticket / Course Price'}</span>
+                  <span>{lang === 'ar' ? 'سعر التذكرة / الاشتراك (اختياري)' : 'Ticket / Course Price (Optional)'}</span>
                 </label>
                 {contentLangMode === 'both' ? (
                   <div className="grid grid-cols-2 gap-2">
@@ -2126,14 +2126,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       type="text"
                       value={priceAr}
                       onChange={e => setPriceAr(e.target.value)}
-                      placeholder="250 ج.م"
+                      placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
                       className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
                     />
                     <input
                       type="text"
                       value={priceEn}
                       onChange={e => setPriceEn(e.target.value)}
-                      placeholder="250 EGP"
+                      placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
                       className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
                     />
                   </div>
@@ -2142,7 +2142,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={priceAr}
                     onChange={e => setPriceAr(e.target.value)}
-                    placeholder="250 ج.م"
+                    placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
                     className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
                   />
                 ) : (
@@ -2150,7 +2150,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={priceEn}
                     onChange={e => setPriceEn(e.target.value)}
-                    placeholder="250 EGP"
+                    placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
                     className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
                   />
                 )}
