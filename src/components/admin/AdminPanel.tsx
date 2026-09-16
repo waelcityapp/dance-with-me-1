@@ -4230,15 +4230,17 @@ export const AdminPanel: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
-                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
-                    <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
-                    <span>{lang === 'ar' ? 'المبلغ المطلوب:' : 'Total Amount:'}</span>
-                  </span>
-                  <span className="text-lg font-black text-emerald-400 block">
-                    {sub.pricing?.total || 250} {lang === 'ar' ? 'جنيه مصري' : 'EGP'}
-                  </span>
-                </div>
+                {typeof sub.pricing?.total === 'number' && (
+                  <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
+                    <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
+                      <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>{lang === 'ar' ? 'المبلغ المطلوب:' : 'Total Amount:'}</span>
+                    </span>
+                    <span className="text-lg font-black text-emerald-400 block">
+                      {sub.pricing.total} {lang === 'ar' ? 'جنيه مصري' : 'EGP'}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Visual Ad Media Preview */}
