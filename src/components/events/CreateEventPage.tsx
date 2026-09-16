@@ -2203,7 +2203,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </div>
               </div>
 
-              {/* Views Count Privacy Setting */}
+              {/* Views Count Privacy Setting - only for unlocked admin editing an existing ad */}
+              {editingEvent && (user?.isAdmin || user?.email === 'waelvts@gmail.com') && isAdminUnlocked && (
               <div className="pt-2">
                 <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-900/50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
@@ -2248,7 +2249,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* SECTION 6: Subscription Plan & Dynamic Calculation */}
           <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
