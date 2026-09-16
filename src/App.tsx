@@ -197,6 +197,7 @@ const AppContent: React.FC = () => {
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isWhyBookOpen, setIsWhyBookOpen] = useState(false);
   const [createAdInitialType, setCreateAdInitialType] = useState<'vip' | 'standard' | 'free' | null>(null);
+  const isAuthRoute = authPage !== null;
 
   const openAuthPage = (page: 'login' | 'register' = 'login') => {
     window.history.pushState({ ...(window.history.state || {}), cityeveAuthPage: page }, '', `/${page}`);
@@ -267,7 +268,7 @@ const AppContent: React.FC = () => {
         }}
       />
 
-      {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
+      {!isAuthRoute && (!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
         <div className="relative w-full">
           <div className="w-full bg-[#FBF3E2] dark:bg-neutral-950 pb-2 sm:pb-3 transition-colors duration-200">
             <MainHeroHeaderBanner
@@ -317,8 +318,10 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-0.5 sm:pt-1' : 'pt-2.5'}`}>
-        {activeTab === 'verification' ? (
+      <main className={`flex-1 w-full ${isAuthRoute ? '' : 'max-w-5xl mx-auto px-2 sm:px-4 pb-20'} ${!isAuthRoute && (!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-0.5 sm:pt-1' : !isAuthRoute ? 'pt-2.5' : ''}`}>
+        {isAuthRoute ? (
+          <AuthModal initialTab={authPage} onNavigate={openAuthPage} onClose={closeAuthPage} />
+        ) : activeTab === 'verification' ? (
           <VerificationView />
         ) : activeTab === 'about_us' ? (
           <AboutUsPage />
@@ -388,11 +391,10 @@ const AppContent: React.FC = () => {
         )}
       </main>
 
-      <BottomNav onOpenPersonalNotifications={() => setIsPersonalNotifOpen(true)} />
+      {!isAuthRoute && <BottomNav onOpenPersonalNotifications={() => setIsPersonalNotifOpen(true)} />}
 
       <MapModal event={selectedMapEvent} onClose={() => setSelectedMapEvent(null)} />
       <ShareModal event={selectedShareEvent} onClose={() => setSelectedShareEvent(null)} />
-      {authPage && <AuthModal initialTab={authPage} onNavigate={openAuthPage} onClose={closeAuthPage} />}
       <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
       <PersonalNotificationsModal isOpen={isPersonalNotifOpen} onClose={() => setIsPersonalNotifOpen(false)} />
       <PwaInstallModal isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />

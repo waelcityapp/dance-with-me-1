@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AccountTier } from '../../types';
 import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
@@ -334,12 +334,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
   };
 
   return (
-      <section className="min-h-[calc(100dvh-8rem)] w-full bg-slate-50 px-2 py-4 dark:bg-neutral-950 sm:px-4 sm:py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="relative mx-auto flex w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900"
-        >
+      <section className="min-h-[calc(100dvh-4rem)] w-full bg-slate-50 px-3 py-6 dark:bg-neutral-950 sm:px-6 sm:py-10">
+        <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-12">
+          <div className="hidden pt-10 lg:block" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+            <span className="inline-flex rounded-full bg-amber-500/10 px-3 py-1 text-xs font-black text-amber-700 dark:text-amber-300">
+              CityEve
+            </span>
+            <h1 className="mt-5 text-4xl font-black leading-tight text-slate-950 dark:text-white">
+              {lang === 'ar' ? 'كل فعالياتك وحجوزاتك في مكان واحد.' : 'Your events and bookings, all in one place.'}
+            </h1>
+            <p className="mt-4 max-w-md text-base leading-7 text-slate-600 dark:text-neutral-400">
+              {lang === 'ar' ? 'سجّل الدخول لحفظ حجوزاتك، متابعة فعالياتك، وإدارة حسابك بسهولة.' : 'Sign in to save bookings, follow your events, and manage your account with ease.'}
+            </p>
+          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative mx-auto flex w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/20"
+          >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 shrink-0 dark:border-white/10 dark:bg-neutral-950 sm:p-5">
             <div className="flex items-center gap-3">
@@ -366,9 +378,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
 
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-950 transition-colors dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
             >
-              <X className="h-5 w-5" />
+              {lang === 'ar' ? <ArrowRight className="h-4 w-4" /> : <ArrowLeft className="h-4 w-4" />}
+              <span>{lang === 'ar' ? 'الرئيسية' : 'Home'}</span>
             </button>
           </div>
 
@@ -1232,7 +1245,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
               )}
             </form>
           )}
-        </motion.div>
+          </motion.div>
+        </div>
       </section>
   );
 };
