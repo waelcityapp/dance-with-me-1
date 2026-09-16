@@ -34,11 +34,13 @@ import { WhyBookModal } from './components/modals/WhyBookModal';
 import { AboutUsPage } from './components/about/AboutUsPage';
 import { Megaphone, Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { DanceEvent, AccountTier } from './types';
+import { DanceEvent, AccountTier, TabType } from './types';
 
 import { AdminEditEventPage } from './components/admin/AdminEditEventPage';
 import { VerificationView } from './components/verification/VerificationView';
 import { AttendeeCheckinHandler } from './components/verification/AttendeeCheckinHandler';
+
+const isRestorableTab = (tab: unknown): tab is TabType => ['explore', 'parties', 'courses', 'trips', 'profile', 'create_ad', 'admin', 'edit_ad_admin', 'verification'].includes(String(tab));
 
 const AppContent: React.FC = () => {
   const { 
@@ -148,12 +150,26 @@ const AppContent: React.FC = () => {
   }, [activeTab, adminWorkspace, user?.isAdmin, lang]);
 
   useEffect(() => {
-    const handlePopState = () => {
+    const state = window.history.state as { cityeveTab?: TabType } | null;
+    if (state?.cityeveTab === activeTab) return;
+    const nextState = { ...(state || {}), cityeveTab: activeTab };
+    if (state?.cityeveTab) {
+      window.history.pushState(nextState, '', window.location.href);
+    } else {
+      window.history.replaceState(nextState, '', window.location.href);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
       if (marketerWalletOpen) {
         setMarketerWalletOpen(false);
         return;
       }
-      if (activeTab !== 'explore') {
+      const previousTab = event.state?.cityeveTab;
+      if (isRestorableTab(previousTab)) {
+        setActiveTab(previousTab);
+      } else if (activeTab !== 'explore') {
         setActiveTab('explore');
       }
     };
