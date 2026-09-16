@@ -1082,6 +1082,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                             <span className="block text-[9px] opacity-75">{lang === 'ar' ? '500 ج.م/شهر' : '500 EGP/mo'}</span>
                           </button>
                         </div>
+                        {selectedTier !== 'free' && (
+                          <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-start dark:border-amber-500/30 dark:bg-amber-500/10">
+                            <div className="flex items-start gap-2">
+                              <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-extrabold text-amber-900 dark:text-amber-300">{lang === 'ar' ? 'الاشتراكات المدفوعة تُفعّل قريبًا' : 'Paid subscriptions are coming soon'}</p>
+                                <p className="mt-0.5 text-[11px] leading-5 text-amber-800 dark:text-amber-200">{lang === 'ar' ? 'يمكنك إنشاء حساب مجاني الآن، وسنبلغك فور تفعيل هذه الخطة.' : 'Create a free account now and we will notify you when this plan is available.'}</p>
+                                <button type="button" onClick={() => setSelectedTier('free')} className="mt-2 text-[11px] font-extrabold text-amber-800 underline underline-offset-2 hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-200">
+                                  {lang === 'ar' ? 'العودة إلى الخطة المجانية' : 'Return to Free plan'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </section>
 
                       {/* Full Name */}
@@ -1141,12 +1155,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       {/* Submit Button */}
                       <button
                         type="submit"
-                        disabled={loadingAuth}
-                        className="w-full mt-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 py-3.5 px-6 text-base font-extrabold text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        disabled={loadingAuth || selectedTier !== 'free'}
+                        className="w-full mt-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 py-3.5 px-6 text-base font-extrabold text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
                       >
                         <Sparkles className="h-5 w-5 fill-current" />
                         <span>
-                          {lang === 'ar' ? 'إنشاء الحساب' : 'Create account'}
+                          {selectedTier !== 'free'
+                            ? (lang === 'ar' ? 'اختر الخطة المجانية للمتابعة' : 'Choose the Free plan to continue')
+                            : (lang === 'ar' ? 'إنشاء الحساب' : 'Create account')}
                         </span>
                       </button>
                     </div>
