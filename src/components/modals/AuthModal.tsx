@@ -717,11 +717,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                           : (lang === 'ar' ? 'تسجيل الدخول الفوري بـ Google' : 'Instant Sign In with Google')}
                       </span>
                     </button>
-                    <p className="text-[11px] text-center text-amber-700 dark:text-amber-400 font-bold leading-relaxed px-1">
-                      {lang === 'ar'
-                        ? '💡 الدخول بجوجل ذكي وتلقائي: سيتعرف النظام على حسابك فوراً. إذا كان لديك حساب سابق فسيتم تسجيل دخولك، وإذا كنت جديداً فسيقوم بإنشاء وتفعيل حسابك الفاخر بضغطة واحدة وبأمان!'
-                        : '💡 Google Sign-In is smart & automatic: If you have an existing account, you will be logged in instantly. If you are new, it will securely register your VIP account in a single click!'}
-                    </p>
                   </div>
 
                   {/* OR Divider */}
