@@ -1137,7 +1137,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-mono text-neutral-300">
+                      <label className="block text-xs font-mono text-slate-700 dark:text-neutral-300">
                         {lang === 'ar' ? 'كلمة المرور' : 'Password'}
                       </label>
                       <button
