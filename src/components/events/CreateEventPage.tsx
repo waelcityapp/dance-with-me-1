@@ -156,15 +156,15 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       ? editingEvent.contact.organizerName 
       : (user?.name || '')
   );
-  const [locationNameAr, setLocationNameAr] = useState(editingEvent ? editingEvent.location.nameAr : 'أستوديو الرقص - الزمالك');
-  const [locationNameEn, setLocationNameEn] = useState(editingEvent ? editingEvent.location.nameEn : 'Dance Studio - Zamalek');
-  const [addressAr, setAddressAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressAr || 'القاهرة، مصر') : 'القاهرة، مصر');
-  const [addressEn, setAddressEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.addressEn || 'Cairo, Egypt') : 'Cairo, Egypt');
-  const [governorateAr, setGovernorateAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.governorateAr || 'القاهرة') : 'القاهرة');
-  const [governorateEn, setGovernorateEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.governorateEn || 'Cairo') : 'Cairo');
-  const [areaAr, setAreaAr] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaAr || 'الزمالك') : 'الزمالك');
-  const [areaEn, setAreaEn] = useState(editingEvent && editingEvent.location ? (editingEvent.location.areaEn || 'Zamalek') : 'Zamalek');
-  const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent && editingEvent.location ? editingEvent.location.googleMapsUrl : 'https://maps.google.com/?q=30.0444,31.2357');
+  const [locationNameAr, setLocationNameAr] = useState(editingEvent?.location.nameAr || '');
+  const [locationNameEn, setLocationNameEn] = useState(editingEvent?.location.nameEn || '');
+  const [addressAr, setAddressAr] = useState(editingEvent?.location.addressAr || '');
+  const [addressEn, setAddressEn] = useState(editingEvent?.location.addressEn || '');
+  const [governorateAr, setGovernorateAr] = useState(editingEvent?.location.governorateAr || '');
+  const [governorateEn, setGovernorateEn] = useState(editingEvent?.location.governorateEn || '');
+  const [areaAr, setAreaAr] = useState(editingEvent?.location.areaAr || '');
+  const [areaEn, setAreaEn] = useState(editingEvent?.location.areaEn || '');
+  const [googleMapsUrl, setGoogleMapsUrl] = useState(editingEvent?.location.googleMapsUrl || '');
   const [selectedStyles, setSelectedStyles] = useState<DanceStyle[]>(editingEvent?.styles || []);
   const [searchKeywordsText, setSearchKeywordsText] = useState<string>((editingEvent?.searchKeywords || []).join(', '));
   const [position, setPosition] = useState<number>(editingEvent && editingEvent.position !== undefined ? editingEvent.position : 0);
@@ -1980,6 +1980,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={locationNameAr}
                     onChange={e => setLocationNameAr(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: استوديو الرقص - الزمالك' : 'e.g. Dance Studio - Zamalek'}
                     className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
@@ -1994,6 +1995,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={locationNameEn}
                     onChange={e => setLocationNameEn(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: Dance Studio - Zamalek' : 'e.g. Dance Studio - Zamalek'}
                     className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm outline-none"
                   />
                 </div>
