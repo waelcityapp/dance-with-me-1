@@ -951,6 +951,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           setStep('form');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
+        onReviewTerms={() => setShowTermsModal(true)}
         onSuccessComplete={handleFinalPublish}
       />
     );
