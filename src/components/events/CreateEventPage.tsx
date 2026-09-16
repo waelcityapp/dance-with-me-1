@@ -204,7 +204,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         return new Date(editingEvent.eventDate).toISOString().split('T')[0];
       } catch (e) {}
     }
-    return new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+    return '';
   });
   const [phone, setPhone] = useState(savedDraft?.phone ?? (editingEvent?.contact.phone || ''));
   const [whatsapp, setWhatsapp] = useState(savedDraft?.whatsapp ?? (editingEvent?.contact.whatsapp || ''));
@@ -2173,7 +2173,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               <div>
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
-                  <span>{lang === 'ar' ? 'تاريخ الفعالية' : 'Event Date'}</span>
+                  <span>{lang === 'ar' ? 'تاريخ الفعالية — اختره من التقويم' : 'Event Date — choose it from the calendar'}</span>
                 </label>
                 <input
                   type="date"
@@ -2421,6 +2421,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="tel"
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: 01012345678' : 'e.g. +20 101 234 5678'}
                     dir="ltr"
                     className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none text-left"
                   />
@@ -2434,6 +2435,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="tel"
                     value={whatsapp}
                     onChange={e => setWhatsapp(e.target.value)}
+                    placeholder={lang === 'ar' ? 'مثال: 01012345678' : 'e.g. +20 101 234 5678'}
                     dir="ltr"
                     className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none text-left"
                   />
