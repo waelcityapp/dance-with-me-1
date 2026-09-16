@@ -562,7 +562,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-slate-50 dark:bg-slate-50 dark:bg-neutral-900 p-6 sm:p-8 shadow-2xl"
+        className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-slate-50 dark:bg-neutral-900 p-6 sm:p-8 shadow-2xl"
       >
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
         
@@ -579,7 +579,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               />
               {!isAdminView && (
                 <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-slate-900 dark:text-white text-xs font-bold">{lang === 'ar' ? 'تعديل' : 'Edit'}</span>
+                  <span className="text-white text-xs font-bold">{lang === 'ar' ? 'تعديل' : 'Edit'}</span>
                 </div>
               )}
             </div>
