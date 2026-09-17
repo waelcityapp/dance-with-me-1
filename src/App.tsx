@@ -182,12 +182,17 @@ const AppContent: React.FC = () => {
 
   const [selectedMapEvent, setSelectedMapEvent] = useState<DanceEvent | null>(null);
   const [selectedShareEvent, setSelectedShareEvent] = useState<DanceEvent | null>(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isPersonalNotifOpen, setIsPersonalNotifOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isWhyBookOpen, setIsWhyBookOpen] = useState(false);
   const [createAdInitialType, setCreateAdInitialType] = useState<'vip' | 'standard' | 'free' | null>(null);
+  const authPageMode = window.location.pathname === '/register' ? 'register' : window.location.pathname === '/login' ? 'login' : null;
+  const openLoginPage = () => window.location.assign('/login');
+
+  useEffect(() => {
+    if (authPageMode && user) window.location.replace('/');
+  }, [authPageMode, user]);
 
   const handleOpenCreateAd = (type?: 'vip' | 'standard' | 'free' | null) => {
     if (!user) {
@@ -234,11 +239,34 @@ const AppContent: React.FC = () => {
     marketersGridTarget
   ) : null;
 
+  if (authPageMode) {
+    if (user) return null;
+
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans text-neutral-900 transition-colors duration-200 dark:bg-neutral-950 dark:text-neutral-100">
+        <Header
+          onOpenNotifications={() => window.location.assign('/')}
+          onOpenAuth={openLoginPage}
+          onOpenInstallModal={() => window.location.assign('/?install=1')}
+          onOpenAboutUs={() => window.location.assign('/')}
+        />
+        <main className="mx-auto w-full max-w-5xl">
+          <AuthModal
+            isOpen
+            presentation="page"
+            initialTab={authPageMode}
+            onClose={() => window.location.assign('/')}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-600 dark:selection:text-amber-300 transition-colors duration-200">
       <Header
         onOpenNotifications={() => setIsNotifOpen(true)}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={openLoginPage}
         onOpenInstallModal={() => setIsInstallOpen(true)}
         onOpenAboutUs={() => {
           setActiveTab('about_us');
@@ -311,7 +339,7 @@ const AppContent: React.FC = () => {
             {activeTab === 'profile' && (
               <ProfileView
                 onOpenCreateModal={handleOpenCreateAd}
-                onOpenAuth={() => setIsAuthOpen(true)}
+                onOpenAuth={openLoginPage}
                 onOpenMap={(ev) => setSelectedMapEvent(ev)}
                 onOpenShare={(ev) => setSelectedShareEvent(ev)}
               />
@@ -371,11 +399,10 @@ const AppContent: React.FC = () => {
 
       <MapModal event={selectedMapEvent} onClose={() => setSelectedMapEvent(null)} />
       <ShareModal event={selectedShareEvent} onClose={() => setSelectedShareEvent(null)} />
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
       <PersonalNotificationsModal isOpen={isPersonalNotifOpen} onClose={() => setIsPersonalNotifOpen(false)} />
       <PwaInstallModal isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />
-      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={() => setIsAuthOpen(true)} />
+      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={openLoginPage} />
       <SupportModal isOpen={isSupportModalOpen} onClose={closeSupportModal} />
       <WhyBookModal isOpen={isWhyBookOpen} onClose={() => setIsWhyBookOpen(false)} />
       <AdminLockModal />
