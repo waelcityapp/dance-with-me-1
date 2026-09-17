@@ -17,6 +17,8 @@ const GoogleLogo = ({ className = "h-4 w-4 shrink-0" }: { className?: string }) 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onGoogleAuthStart: () => void;
+  onGoogleAuthEnd: () => void;
 }
 
 const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
@@ -77,8 +79,8 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
 
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { lang, user, activeTab: appActiveTab, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onGoogleAuthStart, onGoogleAuthEnd }) => {
+  const { lang, user, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -256,15 +258,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const confirmGoogleAuth = async () => {
     if (loadingAuth) return;
-    const tabBeforeGoogle = appActiveTab;
+    let completed = false;
     setLoadingAuth(true);
+    onGoogleAuthStart();
     setErrorMsg(null);
     setAuthErrorCode(null);
     try {
-      // Move the app to Home before Firebase publishes the signed-in user.
-      // This prevents the guest profile/register view from flashing after the
-      // Google window closes.
-      setAppActiveTab('explore');
       const googleUser = await loginWithFirebaseGoogle();
       if (googleUser && googleUser.email) {
         await loginUser(
@@ -275,11 +274,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           undefined,
           'free'
         );
-        setAppActiveTab('explore');
-        onClose();
+        completed = true;
       }
     } catch (err: any) {
-      setAppActiveTab(tabBeforeGoogle);
       const errorCode = err.code || 'unknown';
       if (errorCode !== 'auth/popup-closed-by-user' && errorCode !== 'auth/cancelled-popup-request') {
         console.error('Google login error:', err);
@@ -306,6 +303,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       
       setActiveTab('login');
     } finally {
+      if (!completed) onGoogleAuthEnd();
       setLoadingAuth(false);
     }
   };
