@@ -14,6 +14,7 @@ import { CreateEventPage } from './components/events/CreateEventPage';
 import { MapModal } from './components/modals/MapModal';
 import { ShareModal } from './components/modals/ShareModal';
 import { AuthModal } from './components/modals/AuthModal';
+import { AuthPage } from './components/auth/AuthPage';
 import { NotificationsModal } from './components/modals/NotificationsModal';
 import { PersonalNotificationsModal } from './components/modals/PersonalNotificationsModal';
 import { PwaInstallModal } from './components/modals/PwaInstallModal';
@@ -250,14 +251,7 @@ const AppContent: React.FC = () => {
           onOpenInstallModal={() => window.location.assign('/?install=1')}
           onOpenAboutUs={() => window.location.assign('/')}
         />
-        <main className="mx-auto w-full max-w-5xl">
-          <AuthModal
-            isOpen
-            presentation="page"
-            initialTab={authPageMode}
-            onClose={() => window.location.assign('/')}
-          />
-        </main>
+        <AuthPage mode={authPageMode} onClose={() => window.location.assign('/')} />
       </div>
     );
   }
