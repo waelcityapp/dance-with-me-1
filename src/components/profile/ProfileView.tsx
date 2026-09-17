@@ -562,12 +562,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900 sm:p-8"
+        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900 sm:p-5"
       >
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
         
-        <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          <div className="shrink-0 flex flex-col items-center gap-3">
+        <div className="relative flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+          <div className="flex shrink-0 flex-col items-center gap-2">
             <div 
               className="relative group cursor-pointer" 
               onClick={() => { if (!isAdminView) setShowAvatarPicker(!showAvatarPicker) }}
@@ -575,7 +575,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <img
                 src={user.avatar || DEFAULT_NEUTRAL_AVATAR}
                 alt={user.name}
-                className="h-28 w-28 rounded-full object-cover border-4 border-white shadow-lg ring-1 ring-slate-200 transition-transform group-hover:scale-105 group-hover:ring-amber-400 dark:border-neutral-900 dark:ring-white/10"
+                className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md ring-1 ring-slate-200 transition-transform group-hover:scale-105 group-hover:ring-amber-400 dark:border-neutral-900 dark:ring-white/10 sm:h-24 sm:w-24"
               />
               {!isAdminView && (
                 <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -593,8 +593,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
 
-          <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-start w-full">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 mb-2">
+          <div className="flex w-full flex-1 flex-col items-center text-center sm:items-start sm:text-start">
+            <div className="mb-1 flex flex-col items-center gap-2 sm:flex-row sm:items-start sm:gap-3">
               <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">{user.name}</h2>
               {user.isAdmin ? (
                 <span className="rounded-lg bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/20 flex items-center gap-1">
@@ -629,13 +629,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               )}
             </div>
 
-            <div className="mb-5 flex flex-col items-center gap-2 text-sm text-slate-500 dark:text-neutral-400 sm:flex-row sm:items-start sm:gap-4">
+            <div className="mb-3 flex flex-col items-center gap-1 text-xs text-slate-500 dark:text-neutral-400 sm:flex-row sm:items-start sm:gap-3">
               <span>{user.email}</span>
               <span className="hidden sm:inline text-slate-500 dark:text-neutral-600">•</span>
               <span dir="ltr">{user.phone}</span>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-6">
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <span className="text-xs text-slate-400 dark:text-neutral-500 font-bold ml-1">{lang === 'ar' ? 'الأنماط:' : 'Styles:'}</span>
               {(user.favoriteStyles || []).map(style => (
                 <span key={style} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300">
@@ -666,7 +666,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   {!isAdminView && (
                     <button
                       onClick={onOpenCreateModal}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-neutral-950 shadow-sm transition-all hover:bg-amber-400 sm:flex-none"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-neutral-950 shadow-sm transition-all hover:bg-amber-400 sm:flex-none"
                     >
                       <PlusCircle className="h-4 w-4" />
                       <span>{lang === 'ar' ? 'إضافة إعلان' : 'Post Ad'}</span>
@@ -676,7 +676,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   {!isAdminView && (
                     <button
                       onClick={handleOpenEditProfile}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 sm:flex-none"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 sm:flex-none"
                     >
                       <Edit3 className="h-4 w-4" />
                       <span>{lang === 'ar' ? 'تعديل البيانات' : 'Edit Profile'}</span>
@@ -1696,7 +1696,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Booked Tickets Section */}
       {activeSection === 'booked' && (
       <div>
-        <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="mb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
               <Ticket className="h-4 w-4" />
@@ -1729,28 +1729,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {myBookings.map((b) => {
               const isArabic = lang === 'ar';
               return (
                 <div 
                   key={b.id} 
-                  className="bg-slate-50 dark:bg-neutral-900 border border-zinc-800 rounded-3xl overflow-hidden relative shadow-lg flex flex-col"
+                  className="relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-neutral-900"
                   dir={isArabic ? 'rtl' : 'ltr'}
                 >
                   {/* Vertical Red Accent - signature visual style! */}
-                  <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-red-600"></div>
+                  <div className="absolute bottom-0 left-0 top-0 w-1 bg-amber-500"></div>
                   
                   {/* Title Toggle Area */}
                   <div
-                    className="p-5 flex justify-between items-center cursor-pointer select-none border-b border-zinc-800/60"
+                    className="flex cursor-pointer select-none items-center justify-between border-b border-slate-200 p-4 dark:border-white/10"
                     onClick={() => setExpandedBookingId(expandedBookingId === b.id ? null : b.id)}
                   >
                     <div className="space-y-1">
-                      <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                         {isArabic ? 'الفعالية / الحفلة' : 'EVENT'}
                       </span>
-                      <h4 className="text-base font-bold text-zinc-100 line-clamp-1">
+                      <h4 className="line-clamp-1 text-base font-extrabold text-slate-900 dark:text-white">
                         {isArabic ? (b.eventTitleAr || b.eventTitleEn) : (b.eventTitleEn || b.eventTitleAr)}
                       </h4>
                       <div className="flex items-center gap-2 mt-2">
@@ -1775,7 +1775,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             {isArabic ? 'مرفوض' : 'Rejected'}
                           </span>
                         )}
-                        <span className="text-xs font-mono font-bold text-amber-500">
+                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
                           #{b.refNumber}
                         </span>
                       </div>
@@ -1798,17 +1798,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         exit={{ opacity: 0, height: 0 }}
                         className="overflow-hidden flex flex-col justify-between"
                       >
-                        <div className="p-5 space-y-4">
+                        <div className="space-y-4 p-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                        <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                           {isArabic ? 'الرقم المرجعي للحجز' : 'REF NUMBER'}
                         </span>
                         <span className="text-xs font-mono font-bold text-amber-500">
                           {b.refNumber}
                         </span>
                         {b.submittedAt && (
-                          <span className="text-[10px] text-zinc-400 font-sans block mt-1">
+                          <span className="mt-1 block text-[10px] text-slate-500 dark:text-neutral-400">
                             📅 {new Date(b.submittedAt).toLocaleString(isArabic ? 'ar-EG' : 'en-US')}
                           </span>
                         )}
@@ -1837,7 +1837,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         )}
                         <button
                           onClick={() => setBookingToDelete(b.id)}
-                          className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-red-500/15 hover:text-red-400 text-zinc-400 border border-zinc-750 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                          className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-slate-500 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-500 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-red-500/15 dark:hover:text-red-400"
                           title={isArabic ? 'حذف هذا الحجز' : 'Delete this booking'}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1846,10 +1846,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                         {isArabic ? 'الفعالية / الحفلة' : 'EVENT'}
                       </span>
-                      <h4 className="text-sm font-bold text-zinc-100 line-clamp-1">
+                      <h4 className="line-clamp-1 text-sm font-extrabold text-slate-900 dark:text-white">
                         {isArabic ? (b.eventTitleAr || b.eventTitleEn) : (b.eventTitleEn || b.eventTitleAr)}
                       </h4>
                       {(() => {
@@ -1859,7 +1859,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         return (
                           <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-500 mt-1">
                             <span>📅 {isArabic ? 'تاريخ الحفلة:' : 'Event Date:'}</span>
-                            <span className="font-mono text-zinc-200">
+                            <span className="font-medium text-slate-700 dark:text-neutral-200">
                               {new Date(evDate).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </span>
                           </div>
@@ -1867,20 +1867,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       })()}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t border-zinc-800/60">
+                    <div className="grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 text-xs dark:border-white/10">
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">
+                        <span className="block text-[10px] text-slate-500 dark:text-neutral-400">
                           {isArabic ? 'اسم الحاجز' : 'Name'}
                         </span>
-                        <span className="font-semibold text-zinc-300 font-sans truncate block">
+                        <span className="block truncate font-semibold text-slate-700 dark:text-neutral-200">
                           {b.userName}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">
+                        <span className="block text-[10px] text-slate-500 dark:text-neutral-400">
                           {isArabic ? 'رقم الهاتف' : 'Phone'}
                         </span>
-                        <span className="font-mono text-zinc-300 block truncate">
+                        <span className="block truncate font-medium text-slate-700 dark:text-neutral-200">
                           {b.userPhone}
                         </span>
                       </div>
@@ -1888,15 +1888,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">
+                        <span className="block text-[10px] text-slate-500 dark:text-neutral-400">
                           {isArabic ? 'عدد الأفراد' : 'Guests'}
                         </span>
-                        <span className="font-semibold text-zinc-300 font-sans">
+                        <span className="font-semibold text-slate-700 dark:text-neutral-200">
                           {String(b.numberOfIndividuals || 1)} {isArabic ? 'أفراد' : 'people'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">
+                        <span className="block text-[10px] text-slate-500 dark:text-neutral-400">
                           {isArabic ? 'المبلغ الإجمالي' : 'Total Price'}
                         </span>
                         <span className="font-mono font-bold text-amber-500">
@@ -1906,7 +1906,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
 
                     {/* Purge Notice Warning */}
-                    <div className="text-[10px] text-zinc-400 bg-zinc-900/30 p-2.5 rounded-xl border border-zinc-800/80 flex gap-1.5 leading-relaxed">
+                    <div className="flex gap-1.5 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-[10px] leading-relaxed text-slate-600 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-neutral-300">
                       <span className="text-amber-500 mt-0.5 shrink-0">⚠️</span>
                       <div>
                         {isArabic ? (
@@ -1923,14 +1923,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </div>
 
                   {/* Dotted separator with ticket cuts on sides */}
-                  <div className="relative flex items-center justify-center px-4 my-1">
-                    <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-white dark:bg-neutral-950 border-r border-zinc-800"></div>
-                    <div className="w-full border-t border-dashed border-zinc-800"></div>
-                    <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-white dark:bg-neutral-950 border-l border-zinc-800"></div>
+                  <div className="relative my-1 flex items-center justify-center px-4">
+                    <div className="w-full border-t border-dashed border-slate-200 dark:border-white/10"></div>
                   </div>
 
                   {/* Ticket Bottom interactive or review area */}
-                  <div className="p-5 bg-zinc-950/40 rounded-b-3xl">
+                  <div className="rounded-b-2xl bg-slate-50 p-4 dark:bg-neutral-950/30">
                     {b.status === 'pending' ? (
                       <div className="space-y-2.5">
                         <div className="text-xs text-amber-400 bg-amber-500/5 p-2.5 rounded-xl border border-amber-500/10 flex gap-2">
