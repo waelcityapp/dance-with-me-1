@@ -17,8 +17,6 @@ const GoogleLogo = ({ className = "h-4 w-4 shrink-0" }: { className?: string }) 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onGoogleAuthStart: () => void;
-  onGoogleAuthEnd: () => void;
 }
 
 const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
@@ -45,6 +43,8 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
         return 'تم إغلاق نافذة تسجيل الدخول قبل إتمام العملية. يمكنك المحاولة مجدداً أو المتابعة بالبريد الإلكتروني.';
       case 'auth/popup-blocked':
         return 'تم حظر النافذة المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة لهذا الموقع للمتابعة.';
+      case 'auth/google-identity-unavailable':
+        return 'تعذر عرض اختيار حساب Google. تأكد من اتصال الإنترنت ثم حاول مرة أخرى.';
       default:
         return `فشل التحقق من البيانات: ${code}. يرجى التأكد من البيانات والمحاولة مرة أخرى.`;
     }
@@ -71,6 +71,8 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
         return 'The sign-in popup was closed before completing authentication. You can try again or use Email & Password.';
       case 'auth/popup-blocked':
         return 'Popup blocked by browser. Please allow popups for this site to continue.';
+      case 'auth/google-identity-unavailable':
+        return 'Google account selection could not be displayed. Check your connection and try again.';
       default:
         return `Authentication failed: ${code}. Please verify your credentials and try again.`;
     }
@@ -79,8 +81,8 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
 
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onGoogleAuthStart, onGoogleAuthEnd }) => {
-  const { lang, user, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+  const { lang, user, activeTab: appActiveTab, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -258,12 +260,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onGoogleA
 
   const confirmGoogleAuth = async () => {
     if (loadingAuth) return;
-    let completed = false;
+    const tabBeforeGoogle = appActiveTab;
     setLoadingAuth(true);
-    onGoogleAuthStart();
     setErrorMsg(null);
     setAuthErrorCode(null);
     try {
+      setAppActiveTab('explore');
       const googleUser = await loginWithFirebaseGoogle();
       if (googleUser && googleUser.email) {
         await loginUser(
@@ -274,9 +276,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onGoogleA
           undefined,
           'free'
         );
-        completed = true;
+        setAppActiveTab('explore');
+        onClose();
       }
     } catch (err: any) {
+      setAppActiveTab(tabBeforeGoogle);
       const errorCode = err.code || 'unknown';
       if (errorCode !== 'auth/popup-closed-by-user' && errorCode !== 'auth/cancelled-popup-request') {
         console.error('Google login error:', err);
@@ -303,7 +307,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onGoogleA
       
       setActiveTab('login');
     } finally {
-      if (!completed) onGoogleAuthEnd();
       setLoadingAuth(false);
     }
   };
