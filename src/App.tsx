@@ -183,18 +183,10 @@ const AppContent: React.FC = () => {
   const [selectedMapEvent, setSelectedMapEvent] = useState<DanceEvent | null>(null);
   const [selectedShareEvent, setSelectedShareEvent] = useState<DanceEvent | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isGoogleAuthInProgress, setIsGoogleAuthInProgress] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isPersonalNotifOpen, setIsPersonalNotifOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isWhyBookOpen, setIsWhyBookOpen] = useState(false);
-
-  useEffect(() => {
-    if (!isGoogleAuthInProgress || !user) return;
-    setActiveTab('explore');
-    setIsAuthOpen(false);
-    setIsGoogleAuthInProgress(false);
-  }, [isGoogleAuthInProgress, setActiveTab, user]);
   const [createAdInitialType, setCreateAdInitialType] = useState<'vip' | 'standard' | 'free' | null>(null);
 
   const handleOpenCreateAd = (type?: 'vip' | 'standard' | 'free' | null) => {
@@ -379,15 +371,7 @@ const AppContent: React.FC = () => {
 
       <MapModal event={selectedMapEvent} onClose={() => setSelectedMapEvent(null)} />
       <ShareModal event={selectedShareEvent} onClose={() => setSelectedShareEvent(null)} />
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => {
-          setIsAuthOpen(false);
-          setIsGoogleAuthInProgress(false);
-        }}
-        onGoogleAuthStart={() => setIsGoogleAuthInProgress(true)}
-        onGoogleAuthEnd={() => setIsGoogleAuthInProgress(false)}
-      />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
       <PersonalNotificationsModal isOpen={isPersonalNotifOpen} onClose={() => setIsPersonalNotifOpen(false)} />
       <PwaInstallModal isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />
