@@ -78,7 +78,7 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { lang, user, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
+  const { lang, user: accountUser, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -90,6 +90,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('login');
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [googleFinalizing, setGoogleFinalizing] = useState(false);
+  // Auth may publish the account before profile setup finishes. Keep the
+  // sign-in view stable until the success handler closes it and opens Home.
+  const user = googleFinalizing ? null : accountUser;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [authErrorCode, setAuthErrorCode] = useState<string | null>(null);
   const [googleUid, setGoogleUid] = useState<string>('');
@@ -256,6 +259,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   const confirmGoogleAuth = async () => {
+    if (loadingAuth) return;
     setLoadingAuth(true);
     setGoogleFinalizing(true);
     setErrorMsg(null);
@@ -327,6 +331,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     <AnimatePresence>
       <div className="fixed inset-0 z-[70] flex items-end justify-center p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-slate-950/45 backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/80">
         <motion.div
+          inert={googleFinalizing}
+          aria-busy={googleFinalizing}
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -364,20 +370,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* Keep the modal stable while the Google session is converted into an app profile. */}
-          {googleFinalizing ? (
-            <div className="flex min-h-64 flex-1 flex-col items-center justify-center gap-4 p-8 text-center" role="status" aria-live="polite">
-              <Loader2 className="h-10 w-10 animate-spin text-amber-400" />
-              <div>
-                <h4 className="text-base font-black text-white">
-                  {lang === 'ar' ? 'جارٍ تجهيز حسابك...' : 'Preparing your account...'}
-                </h4>
-                <p className="mt-1 text-xs text-neutral-400">
-                  {lang === 'ar' ? 'سيتم تحويلك إلى الصفحة الرئيسية تلقائيًا.' : 'You will be taken to the home page automatically.'}
-                </p>
-              </div>
-            </div>
-          ) : user ? (
+          {user ? (
             <div className="p-6 space-y-6 text-center overflow-y-auto flex-1">
               <div className="flex flex-col items-center gap-3">
                 <img src={user.avatar} alt={user.name} className="h-20 w-20 rounded-2xl object-cover border-2 border-amber-500 shadow-xl gold-glow" />
@@ -678,7 +671,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       disabled={loadingAuth}
                       className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white text-neutral-800 py-2.5 px-4 text-xs font-extrabold shadow-sm hover:bg-neutral-50 hover:shadow transition-all border border-neutral-200 cursor-pointer active:scale-[0.99]"
                     >
-                      <GoogleLogo className="h-4 w-4 shrink-0" />
+                      {googleFinalizing
+                        ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                        : <GoogleLogo className="h-4 w-4 shrink-0" />}
                       <span>
                         {activeTab === 'register'
                           ? (lang === 'ar' ? 'إنشاء حساب سريع بـ Google' : 'Quick Sign Up with Google')
