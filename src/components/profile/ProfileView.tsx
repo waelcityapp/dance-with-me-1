@@ -597,21 +597,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="mb-1 flex flex-col items-center gap-2 sm:flex-row sm:items-start sm:gap-3">
               <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">{user.name}</h2>
               {user.isAdmin ? (
-                <span className="rounded-lg bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/20 flex items-center gap-1">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300">
                   {lang === 'ar' ? 'مدير المنصة (Admin)' : 'PLATFORM ADMIN'}
                 </span>
               ) : user.accountTier === 'vip' ? (
-                <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-amber-500/20 shadow-sm flex items-center gap-1">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300">
                   <span>👑</span>
                   <span>{lang === 'ar' ? 'عضوية VIP' : 'VIP MEMBER'}</span>
                 </span>
               ) : user.accountTier === 'featured' ? (
-                <span className="rounded-lg bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-300 border border-sky-500/20 shadow-sm flex items-center gap-1">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300">
                   <span>🌟</span>
                   <span>{lang === 'ar' ? 'حساب مميز' : 'FEATURED MEMBER'}</span>
                 </span>
               ) : (
-                <span className="rounded-lg bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-400 border border-emerald-500/20 shadow-sm flex items-center gap-1">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300">
                   <span>🟢</span>
                   <span>{lang === 'ar' ? 'حساب مجاني' : 'FREE MEMBER'}</span>
                 </span>
@@ -635,23 +635,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span dir="ltr">{user.phone}</span>
             </div>
 
-            <div className="mb-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <span className="text-xs text-slate-400 dark:text-neutral-500 font-bold ml-1">{lang === 'ar' ? 'الأنماط:' : 'Styles:'}</span>
-              {(user.favoriteStyles || []).map(style => (
-                <span key={style} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300">
-                  {style}
-                </span>
-              ))}
-              {!isAdminView && (
-                <button 
-                  onClick={handleOpenEditProfile}
-                  className="rounded-md bg-slate-100/80 dark:bg-neutral-800/50 px-3 py-1 text-xs font-semibold text-amber-500 hover:bg-neutral-800 hover:text-amber-400 border border-dashed border-amber-500/30 transition-colors"
-                  title={lang === 'ar' ? 'إضافة/تعديل' : 'Add/Edit'}
-                >
-                  +
-                </button>
-              )}
-            </div>
+            {(user.favoriteStyles || []).length > 0 && (
+              <p className="mb-4 text-xs text-slate-500 dark:text-neutral-400">
+                {lang === 'ar' ? `الأنماط المفضلة: ${(user.favoriteStyles || []).join(' • ')}` : `Favorite styles: ${(user.favoriteStyles || []).join(' • ')}`}
+              </p>
+            )}
 
             {/* Quick Actions or Avatar Picker */}
             <AnimatePresence mode="wait">
@@ -776,7 +764,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 snap-x">
           <button
             onClick={() => setActiveSection('booked')}
-            className={`shrink-0 snap-start flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${activeSection === 'booked' || activeSection === 'overview' ? 'bg-emerald-500 text-neutral-950 shadow-sm' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'}`}
+                  className={`shrink-0 snap-start flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${activeSection === 'booked' || activeSection === 'overview' ? 'bg-amber-500 text-neutral-950 shadow-sm' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'}`}
           >
             <Ticket className="h-4 w-4" />
             <span>{lang === 'ar' ? 'تذاكري وحجوزاتي' : 'Bookings'}</span>
@@ -785,7 +773,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           
           <button
             onClick={() => setActiveSection('liked')}
-            className={`shrink-0 snap-start flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${activeSection === 'liked' ? 'bg-red-500 text-white shadow-sm shadow-red-500/20' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'}`}
+            className={`shrink-0 snap-start flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${activeSection === 'liked' ? 'bg-amber-500 text-neutral-950 shadow-sm' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'}`}
           >
             <Heart className="h-4 w-4" />
             <span>{lang === 'ar' ? 'المفضلة' : 'Favorites'}</span>
@@ -803,7 +791,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <button
             onClick={() => setActiveSection('support')}
-            className={`shrink-0 snap-start flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${activeSection === 'support' ? 'bg-blue-500 text-white shadow-sm shadow-blue-500/20' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'}`}
+            className={`shrink-0 snap-start flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${activeSection === 'support' ? 'bg-amber-500 text-neutral-950 shadow-sm' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'}`}
           >
             <MessageSquare className="h-4 w-4" />
             <span>{lang === 'ar' ? 'الدعم الفني' : 'Support'}</span>
@@ -812,7 +800,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <button
             onClick={() => setActiveSection('archive')}
-            className={`shrink-0 snap-start flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${activeSection === 'archive' ? 'bg-slate-800 text-white shadow-sm dark:bg-neutral-700' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'}`}
+            className={`shrink-0 snap-start flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${activeSection === 'archive' ? 'bg-amber-500 text-neutral-950 shadow-sm' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'}`}
           >
             <Clock className="h-4 w-4" />
             <span>{lang === 'ar' ? 'الأرشيف' : 'Archive'}</span>
