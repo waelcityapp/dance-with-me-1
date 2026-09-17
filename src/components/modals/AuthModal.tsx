@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { ArrowLeft, ArrowRight, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AccountTier } from '../../types';
-import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
+import { getFirebaseGoogleRedirectResult, loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
 
 const GoogleLogo = ({ className = "h-4 w-4 shrink-0" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -95,6 +95,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
   const [authErrorCode, setAuthErrorCode] = useState<string | null>(null);
   const [googleUid, setGoogleUid] = useState<string>('');
   const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
+
+  const finishGoogleLogin = async (googleUser: { id: string; name: string; email: string; avatar: string }) => {
+    await loginUser(
+      googleUser.name || (lang === 'ar' ? 'عضو جديد' : 'New Member'),
+      googleUser.email,
+      googleUser.avatar || selectedAvatar,
+      googleUser.id,
+      undefined,
+      'free'
+    );
+    setAppActiveTab('explore');
+    onClose();
+  };
+
+  React.useEffect(() => {
+    let active = true;
+
+    const completePwaGoogleRedirect = async () => {
+      try {
+        const googleUser = await getFirebaseGoogleRedirectResult();
+        if (!googleUser || !active) return;
+        setLoadingAuth(true);
+        setGoogleFinalizing(true);
+        await finishGoogleLogin(googleUser);
+      } catch (err: any) {
+        if (!active) return;
+        setAuthErrorCode(err.code || 'unknown');
+        setErrorMsg(getAuthErrorMessage(err.code || 'unknown', lang));
+        setGoogleFinalizing(false);
+        setLoadingAuth(false);
+      }
+    };
+
+    void completePwaGoogleRedirect();
+    return () => { active = false; };
+  }, []);
 
   React.useEffect(() => {
     setErrorMsg(null);
@@ -273,16 +309,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
     try {
       const googleUser = await loginWithFirebaseGoogle();
       if (googleUser && googleUser.email) {
-        await loginUser(
-          googleUser.name || (lang === 'ar' ? 'عضو جديد' : 'New Member'),
-          googleUser.email,
-          googleUser.avatar || selectedAvatar,
-          googleUser.id,
-          undefined,
-          'free'
-        );
-        setAppActiveTab('explore');
-        onClose();
+        await finishGoogleLogin(googleUser);
+      } else {
+        // In an installed PWA, the browser is leaving for Google now. The
+        // result is completed by getFirebaseGoogleRedirectResult on return.
+        return;
       }
     } catch (err: any) {
       const errorCode = err.code || 'unknown';

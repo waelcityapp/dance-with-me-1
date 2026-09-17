@@ -18,6 +18,8 @@ import {
 import { 
   getAuth, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -72,23 +74,43 @@ export function sanitizeForFirestore<T>(data: T): T {
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
+export type GoogleProfile = { id: string; name: string; email: string; avatar: string };
+
+const toGoogleProfile = (user: { uid: string; displayName: string | null; email: string | null; photoURL: string | null }): GoogleProfile => ({
+  id: user.uid,
+  name: user.displayName || 'عضو VIP (Google)',
+  email: user.email || 'member@dwm.app',
+  avatar: user.photoURL || ''
+});
+
+const isInstalledPwa = () => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+};
+
 /**
- * Helper to Sign in with Google Auth via popup
+ * Uses a redirect inside an installed PWA because mobile standalone windows do
+ * not reliably preserve popup state when Google returns to the application.
  */
-export async function loginWithFirebaseGoogle(): Promise<{ id: string; name: string; email: string; avatar: string } | null> {
+export async function loginWithFirebaseGoogle(): Promise<GoogleProfile | null> {
   try {
+    if (isInstalledPwa()) {
+      await signInWithRedirect(auth, googleProvider);
+      return null;
+    }
+
     const res = await signInWithPopup(auth, googleProvider);
-    const user = res.user;
-    return {
-      id: user.uid,
-      name: user.displayName || 'عضو VIP (Google)',
-      email: user.email || 'member@dwm.app',
-      avatar: user.photoURL || ''
-    };
+    return toGoogleProfile(res.user);
   } catch (err: any) {
     // We throw the error so the UI can provide specific guidance based on error code
     throw err;
   }
+}
+
+/** Read the Google result after an installed PWA returns from the provider. */
+export async function getFirebaseGoogleRedirectResult(): Promise<GoogleProfile | null> {
+  const result = await getRedirectResult(auth);
+  return result ? toGoogleProfile(result.user) : null;
 }
 
 /**
