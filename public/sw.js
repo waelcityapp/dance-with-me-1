@@ -1,5 +1,13 @@
-const CACHE_VERSION = 'v=20260804';
+const CACHE_VERSION = 'v=20260917-auth-cache-fix';
 const CACHE_NAME = `dwm-luxury-cache-${CACHE_VERSION}`;
+
+// Authentication helpers contain one-time OAuth state and must always come
+// directly from Firebase through the existing reverse proxy. Caching one of
+// these responses can make an installed PWA reuse an expired sign-in state.
+const shouldBypassCache = (requestUrl) => {
+  const url = new URL(requestUrl);
+  return url.pathname.startsWith('/__/auth/') || url.pathname === '/__/firebase/init.json';
+};
 
 // Core assets to cache one by one defensively
 const CORE_ASSETS = [
@@ -58,6 +66,9 @@ self.addEventListener('fetch', (event) => {
   // Skip cross-origin or extension requests
   if (!event.request.url.startsWith(self.location.origin)) return;
 
+  // Never intercept or cache Firebase/Google authentication helpers.
+  if (shouldBypassCache(event.request.url)) return;
+
   event.respondWith(
     fetch(event.request).then((networkResponse) => {
       if (networkResponse && networkResponse.status === 200) {
@@ -67,9 +78,9 @@ self.addEventListener('fetch', (event) => {
         });
       }
       return networkResponse;
-    }).catch((err) => {
+    }).catch(() => {
       console.warn('[SW Defensive] Network fetch failed, relying on cache:', event.request.url);
-      return caches.match(event.request);
+      return caches.match(event.request).then((cachedResponse) => cachedResponse || Response.error());
     })
   );
 });
@@ -159,4 +170,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-
