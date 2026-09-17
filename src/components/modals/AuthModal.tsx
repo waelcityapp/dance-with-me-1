@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
+import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AccountTier } from '../../types';
 import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
@@ -78,7 +78,7 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { lang, user: accountUser, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
+  const { lang, user, activeTab: appActiveTab, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -89,10 +89,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('login');
   const [loadingAuth, setLoadingAuth] = useState(false);
-  const [googleFinalizing, setGoogleFinalizing] = useState(false);
-  // Auth may publish the account before profile setup finishes. Keep the
-  // sign-in view stable until the success handler closes it and opens Home.
-  const user = googleFinalizing ? null : accountUser;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [authErrorCode, setAuthErrorCode] = useState<string | null>(null);
   const [googleUid, setGoogleUid] = useState<string>('');
@@ -260,11 +256,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const confirmGoogleAuth = async () => {
     if (loadingAuth) return;
+    const tabBeforeGoogle = appActiveTab;
     setLoadingAuth(true);
-    setGoogleFinalizing(true);
     setErrorMsg(null);
     setAuthErrorCode(null);
     try {
+      // Move the app to Home before Firebase publishes the signed-in user.
+      // This prevents the guest profile/register view from flashing after the
+      // Google window closes.
+      setAppActiveTab('explore');
       const googleUser = await loginWithFirebaseGoogle();
       if (googleUser && googleUser.email) {
         await loginUser(
@@ -279,6 +279,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         onClose();
       }
     } catch (err: any) {
+      setAppActiveTab(tabBeforeGoogle);
       const errorCode = err.code || 'unknown';
       if (errorCode !== 'auth/popup-closed-by-user' && errorCode !== 'auth/cancelled-popup-request') {
         console.error('Google login error:', err);
@@ -305,7 +306,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       
       setActiveTab('login');
     } finally {
-      setGoogleFinalizing(false);
       setLoadingAuth(false);
     }
   };
@@ -331,8 +331,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     <AnimatePresence>
       <div className="fixed inset-0 z-[70] flex items-end justify-center p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-slate-950/45 backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/80">
         <motion.div
-          inert={googleFinalizing}
-          aria-busy={googleFinalizing}
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -671,9 +669,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       disabled={loadingAuth}
                       className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white text-neutral-800 py-2.5 px-4 text-xs font-extrabold shadow-sm hover:bg-neutral-50 hover:shadow transition-all border border-neutral-200 cursor-pointer active:scale-[0.99]"
                     >
-                      {googleFinalizing
-                        ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
-                        : <GoogleLogo className="h-4 w-4 shrink-0" />}
+                      <GoogleLogo className="h-4 w-4 shrink-0" />
                       <span>
                         {activeTab === 'register'
                           ? (lang === 'ar' ? 'إنشاء حساب سريع بـ Google' : 'Quick Sign Up with Google')
