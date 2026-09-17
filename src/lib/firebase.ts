@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { 
   getAuth, 
-  signInWithPopup, 
+  signInWithCredential,
   GoogleAuthProvider, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -70,25 +70,59 @@ export function sanitizeForFirestore<T>(data: T): T {
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+const GOOGLE_WEB_CLIENT_ID = '163649448355-iq9f7jqj01and4qao386qn87arcqas0m.apps.googleusercontent.com';
+
+const loadGoogleIdentityServices = () => new Promise<void>((resolve, reject) => {
+  if ((window as any).google?.accounts?.id) {
+    resolve();
+    return;
+  }
+  const existing = document.querySelector('script[data-cityeve-google-identity]');
+  if (existing) {
+    existing.addEventListener('load', () => resolve(), { once: true });
+    existing.addEventListener('error', () => reject(new Error('Google Identity Services failed to load.')), { once: true });
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+  script.dataset.cityeveGoogleIdentity = 'true';
+  script.onload = () => resolve();
+  script.onerror = () => reject(new Error('Google Identity Services failed to load.'));
+  document.head.appendChild(script);
+});
 
 /**
- * Helper to Sign in with Google Auth via popup
+ * Signs in with Google Identity Services and exchanges its ID token directly
+ * with Firebase, without a browser popup or redirect round trip.
  */
 export async function loginWithFirebaseGoogle(): Promise<{ id: string; name: string; email: string; avatar: string } | null> {
-  try {
-    const res = await signInWithPopup(auth, googleProvider);
-    const user = res.user;
-    return {
-      id: user.uid,
-      name: user.displayName || 'عضو VIP (Google)',
-      email: user.email || 'member@dwm.app',
-      avatar: user.photoURL || ''
-    };
-  } catch (err: any) {
-    // We throw the error so the UI can provide specific guidance based on error code
-    throw err;
-  }
+  await loadGoogleIdentityServices();
+  const idToken = await new Promise<string>((resolve, reject) => {
+    (window as any).google.accounts.id.initialize({
+      client_id: GOOGLE_WEB_CLIENT_ID,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+      callback: (response: { credential?: string }) => {
+        if (response.credential) resolve(response.credential);
+        else reject(Object.assign(new Error('Google did not return an ID token.'), { code: 'auth/google-identity-unavailable' }));
+      }
+    });
+    (window as any).google.accounts.id.prompt((notification: any) => {
+      if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
+        reject(Object.assign(new Error('Google Identity prompt was not displayed.'), { code: 'auth/google-identity-unavailable' }));
+      }
+    });
+  });
+  const result = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+  const user = result.user;
+  return {
+    id: user.uid,
+    name: user.displayName || 'عضو VIP (Google)',
+    email: user.email || 'member@dwm.app',
+    avatar: user.photoURL || ''
+  };
 }
 
 /**
