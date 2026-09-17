@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v=20260917-auth-cache-fix';
+const CACHE_VERSION = 'v=20260917-auth-pages';
 const CACHE_NAME = `dwm-luxury-cache-${CACHE_VERSION}`;
 
 // Authentication helpers contain one-time OAuth state and must always come
