@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ArrowLeft, ArrowRight, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
-import { motion } from 'motion/react';
+import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { DanceStyle, ALL_DANCE_STYLES, getStyleLabel, AccountTier } from '../../types';
-import { getFirebaseGoogleRedirectResult, loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
+import { loginWithFirebaseGoogle, registerWithFirebaseEmail, loginWithFirebaseEmail, getUserByEmailFromFirestore, resetFirebasePassword } from '../../lib/firebase';
 
 const GoogleLogo = ({ className = "h-4 w-4 shrink-0" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -15,9 +15,8 @@ const GoogleLogo = ({ className = "h-4 w-4 shrink-0" }: { className?: string }) 
 );
 
 interface AuthModalProps {
+  isOpen: boolean;
   onClose: () => void;
-  initialTab: 'login' | 'register';
-  onNavigate: (page: 'login' | 'register') => void;
 }
 
 const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
@@ -78,7 +77,7 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
 
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 
-export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNavigate }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { lang, user, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -88,7 +87,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
   const [selectedTier, setSelectedTier] = useState<AccountTier>('free');
   const [registerStep, setRegisterStep] = useState<'choose_tier' | 'free_form' | 'pricing_plans'>('free_form');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('login');
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [googleFinalizing, setGoogleFinalizing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -96,57 +95,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
   const [googleUid, setGoogleUid] = useState<string>('');
   const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
 
-  const finishGoogleLogin = async (googleUser: { id: string; name: string; email: string; avatar: string }) => {
-    await loginUser(
-      googleUser.name || (lang === 'ar' ? 'عضو جديد' : 'New Member'),
-      googleUser.email,
-      googleUser.avatar || selectedAvatar,
-      googleUser.id,
-      undefined,
-      'free'
-    );
-    setAppActiveTab('explore');
-    onClose();
-  };
-
-  React.useEffect(() => {
-    let active = true;
-
-    const completePwaGoogleRedirect = async () => {
-      try {
-        const googleUser = await getFirebaseGoogleRedirectResult();
-        if (!googleUser || !active) return;
-        setLoadingAuth(true);
-        setGoogleFinalizing(true);
-        await finishGoogleLogin(googleUser);
-      } catch (err: any) {
-        if (!active) return;
-        setAuthErrorCode(err.code || 'unknown');
-        setErrorMsg(getAuthErrorMessage(err.code || 'unknown', lang));
-        setGoogleFinalizing(false);
-        setLoadingAuth(false);
-      }
-    };
-
-    void completePwaGoogleRedirect();
-    return () => { active = false; };
-  }, []);
-
   React.useEffect(() => {
     setErrorMsg(null);
     setAuthErrorCode(null);
   }, [activeTab]);
 
-  React.useEffect(() => {
-    setActiveTab(initialTab);
-    setRegisterStep('free_form');
-  }, [initialTab]);
-
-  const switchAuthTab = (tab: 'login' | 'register') => {
-    setActiveTab(tab);
-    setRegisterStep('free_form');
-    onNavigate(tab);
-  };
+  if (!isOpen) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -309,11 +263,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
     try {
       const googleUser = await loginWithFirebaseGoogle();
       if (googleUser && googleUser.email) {
-        await finishGoogleLogin(googleUser);
-      } else {
-        // In an installed PWA, the browser is leaving for Google now. The
-        // result is completed by getFirebaseGoogleRedirectResult on return.
-        return;
+        await loginUser(
+          googleUser.name || (lang === 'ar' ? 'عضو جديد' : 'New Member'),
+          googleUser.email,
+          googleUser.avatar || selectedAvatar,
+          googleUser.id,
+          undefined,
+          'free'
+        );
+        setAppActiveTab('explore');
+        onClose();
       }
     } catch (err: any) {
       const errorCode = err.code || 'unknown';
@@ -365,24 +324,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
   };
 
   return (
-      <section className="min-h-[calc(100dvh-4rem)] w-full bg-slate-50 px-3 py-6 dark:bg-neutral-950 sm:px-6 sm:py-10">
-        <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-12">
-          <div className="hidden pt-10 lg:block" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-            <span className="inline-flex rounded-full bg-amber-500/10 px-3 py-1 text-xs font-black text-amber-700 dark:text-amber-300">
-              CityEve
-            </span>
-            <h1 className="mt-5 text-4xl font-black leading-tight text-slate-950 dark:text-white">
-              {lang === 'ar' ? 'كل فعالياتك وحجوزاتك في مكان واحد.' : 'Your events and bookings, all in one place.'}
-            </h1>
-            <p className="mt-4 max-w-md text-base leading-7 text-slate-600 dark:text-neutral-400">
-              {lang === 'ar' ? 'سجّل الدخول لحفظ حجوزاتك، متابعة فعالياتك، وإدارة حسابك بسهولة.' : 'Sign in to save bookings, follow your events, and manage your account with ease.'}
-            </p>
-          </div>
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative mx-auto flex w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/20"
-          >
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[70] flex items-end justify-center p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-slate-950/45 backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/80">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 sm:max-h-[90vh]"
+        >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 shrink-0 dark:border-white/10 dark:bg-neutral-950 sm:p-5">
             <div className="flex items-center gap-3">
@@ -409,10 +358,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
 
             <button
               onClick={onClose}
-              className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-950 transition-colors dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
             >
-              {lang === 'ar' ? <ArrowRight className="h-4 w-4" /> : <ArrowLeft className="h-4 w-4" />}
-              <span>{lang === 'ar' ? 'الرئيسية' : 'Home'}</span>
+              <X className="h-5 w-5" />
             </button>
           </div>
 
@@ -559,7 +507,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
                 </button>
                 <button
                   type="button"
-                  onClick={() => switchAuthTab('register')}
+                  onClick={() => setActiveTab('register')}
                   className="w-full sm:flex-1 rounded-xl bg-neutral-800 py-3 px-4 text-xs font-bold text-neutral-300 hover:bg-neutral-700 hover:text-white transition-all cursor-pointer text-center"
                 >
                   {lang === 'ar' ? 'إلغاء والرجوع' : 'Cancel & Back'}
@@ -704,7 +652,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
                 <button
                   type="button"
                   onClick={() => {
-                    switchAuthTab('register');
+                    setActiveTab('register');
+                    setRegisterStep('free_form');
                   }}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'register' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                 >
@@ -712,7 +661,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
                 </button>
                 <button
                   type="button"
-                  onClick={() => switchAuthTab('login')}
+                  onClick={() => setActiveTab('login')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'login' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                 >
                   {lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
@@ -759,7 +708,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
                     <button
                       type="button"
                       onClick={() => {
-                        switchAuthTab('login');
+                        setActiveTab('login');
                         setErrorMsg(null);
                         setAuthErrorCode(null);
                       }}
@@ -1276,8 +1225,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialTab, onNav
               )}
             </form>
           )}
-          </motion.div>
-        </div>
-      </section>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 };

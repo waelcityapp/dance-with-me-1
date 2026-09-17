@@ -162,12 +162,6 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      const path = window.location.pathname.replace(/\/+$/, '') || '/';
-      if (path === '/login' || path === '/register') {
-        setAuthPage(path.slice(1) as 'login' | 'register');
-        return;
-      }
-      setAuthPage(null);
       if (marketerWalletOpen) {
         setMarketerWalletOpen(false);
         return;
@@ -188,28 +182,12 @@ const AppContent: React.FC = () => {
 
   const [selectedMapEvent, setSelectedMapEvent] = useState<DanceEvent | null>(null);
   const [selectedShareEvent, setSelectedShareEvent] = useState<DanceEvent | null>(null);
-  const [authPage, setAuthPage] = useState<'login' | 'register' | null>(() => {
-    const path = window.location.pathname.replace(/\/+$/, '') || '/';
-    return path === '/login' ? 'login' : path === '/register' ? 'register' : null;
-  });
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isPersonalNotifOpen, setIsPersonalNotifOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isWhyBookOpen, setIsWhyBookOpen] = useState(false);
   const [createAdInitialType, setCreateAdInitialType] = useState<'vip' | 'standard' | 'free' | null>(null);
-  const isAuthRoute = authPage !== null;
-
-  const openAuthPage = (page: 'login' | 'register' = 'login') => {
-    window.history.pushState({ ...(window.history.state || {}), cityeveAuthPage: page }, '', `/${page}`);
-    setAuthPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const closeAuthPage = () => {
-    window.history.pushState({ ...(window.history.state || {}), cityeveAuthPage: null }, '', '/');
-    setAuthPage(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   const handleOpenCreateAd = (type?: 'vip' | 'standard' | 'free' | null) => {
     if (!user) {
@@ -260,7 +238,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-600 dark:selection:text-amber-300 transition-colors duration-200">
       <Header
         onOpenNotifications={() => setIsNotifOpen(true)}
-        onOpenAuth={() => openAuthPage('login')}
+        onOpenAuth={() => setIsAuthOpen(true)}
         onOpenInstallModal={() => setIsInstallOpen(true)}
         onOpenAboutUs={() => {
           setActiveTab('about_us');
@@ -268,7 +246,7 @@ const AppContent: React.FC = () => {
         }}
       />
 
-      {!isAuthRoute && (!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
+      {(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') && (
         <div className="relative w-full">
           <div className="w-full bg-[#FBF3E2] dark:bg-neutral-950 pb-2 sm:pb-3 transition-colors duration-200">
             <MainHeroHeaderBanner
@@ -318,10 +296,8 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      <main className={`flex-1 w-full ${isAuthRoute ? '' : 'max-w-5xl mx-auto px-2 sm:px-4 pb-20'} ${!isAuthRoute && (!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-0.5 sm:pt-1' : !isAuthRoute ? 'pt-2.5' : ''}`}>
-        {isAuthRoute ? (
-          <AuthModal initialTab={authPage} onNavigate={openAuthPage} onClose={closeAuthPage} />
-        ) : activeTab === 'verification' ? (
+      <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-0.5 sm:pt-1' : 'pt-2.5'}`}>
+        {activeTab === 'verification' ? (
           <VerificationView />
         ) : activeTab === 'about_us' ? (
           <AboutUsPage />
@@ -335,7 +311,7 @@ const AppContent: React.FC = () => {
             {activeTab === 'profile' && (
               <ProfileView
                 onOpenCreateModal={handleOpenCreateAd}
-                onOpenAuth={() => openAuthPage('login')}
+                onOpenAuth={() => setIsAuthOpen(true)}
                 onOpenMap={(ev) => setSelectedMapEvent(ev)}
                 onOpenShare={(ev) => setSelectedShareEvent(ev)}
               />
@@ -391,14 +367,15 @@ const AppContent: React.FC = () => {
         )}
       </main>
 
-      {!isAuthRoute && <BottomNav onOpenPersonalNotifications={() => setIsPersonalNotifOpen(true)} />}
+      <BottomNav onOpenPersonalNotifications={() => setIsPersonalNotifOpen(true)} />
 
       <MapModal event={selectedMapEvent} onClose={() => setSelectedMapEvent(null)} />
       <ShareModal event={selectedShareEvent} onClose={() => setSelectedShareEvent(null)} />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
       <PersonalNotificationsModal isOpen={isPersonalNotifOpen} onClose={() => setIsPersonalNotifOpen(false)} />
       <PwaInstallModal isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />
-      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={() => openAuthPage('login')} />
+      <GuestAlertModal isOpen={guestAlertState.isOpen} reason={guestAlertState.reason} onClose={closeGuestAlert} onOpenAuth={() => setIsAuthOpen(true)} />
       <SupportModal isOpen={isSupportModalOpen} onClose={closeSupportModal} />
       <WhyBookModal isOpen={isWhyBookOpen} onClose={() => setIsWhyBookOpen(false)} />
       <AdminLockModal />
