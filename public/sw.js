@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v=20260804';
+const CACHE_VERSION = 'v=20260917-auth-pages';
 const CACHE_NAME = `dwm-luxury-cache-${CACHE_VERSION}`;
 
 // Core assets to cache one by one defensively
@@ -159,4 +159,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-
