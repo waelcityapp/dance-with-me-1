@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 20036)
-Total output lines: 1244
-
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { X, User, Mail, Sparkles, Check, ShieldCheck, LogOut, Lock, Upload, Crown, Loader2, Info } from 'lucide-react';
@@ -339,16 +336,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, presentat
   return (
     <AnimatePresence>
       <div className={presentation === 'page'
-        ? 'flex min-h-[calc(100dvh-4rem)] w-full items-start justify-center bg-slate-50 px-3 py-6 dark:bg-neutral-950 sm:px-6 sm:py-10'
+        ? 'min-h-[calc(100dvh-4rem)] w-full bg-slate-50 px-4 py-8 dark:bg-neutral-950 sm:px-6 sm:py-12'
         : 'fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/80'}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 sm:max-h-[90vh]"
+          initial={presentation === 'page' ? false : { opacity: 0, scale: 0.9, y: 20 }}
+          animate={presentation === 'page' ? undefined : { opacity: 1, scale: 1, y: 0 }}
+          exit={presentation === 'page' ? undefined : { opacity: 0, scale: 0.9, y: 20 }}
+          className={presentation === 'page'
+            ? 'relative mx-auto flex w-full max-w-2xl flex-col overflow-visible bg-transparent'
+            : 'relative flex w-full max-w-lg max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 sm:max-h-[90vh]'}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 shrink-0 dark:border-white/10 dark:bg-neutral-950 sm:p-5">
+          <div className={presentation === 'page'
+            ? 'flex items-center justify-between border-b border-slate-200 pb-6 dark:border-white/10'
+            : 'flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 shrink-0 dark:border-white/10 dark:bg-neutral-950 sm:p-5'}>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
                 {user ? <ShieldCheck className="h-5 w-5" /> : activeTab === 'google_consent' ? <GoogleLogo className="h-5 w-5" /> : activeTab === 'google_onboarding' ? <Sparkles className="h-5 w-5 text-amber-400" /> : <User className="h-5 w-5" />}
@@ -373,9 +374,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, presentat
 
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-950 transition-colors dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
+              className={presentation === 'page'
+                ? 'rounded-xl px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white'
+                : 'flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-950 transition-colors dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white'}
             >
-              <X className="h-5 w-5" />
+              {presentation === 'page'
+                ? <span>{lang === 'ar' ? 'العودة للرئيسية' : 'Back to home'}</span>
+                : <X className="h-5 w-5" />}
             </button>
           </div>
 
@@ -697,7 +702,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, presentat
                       <span>
                         {activeTab === 'register'
                           ? (lang === 'ar' ? 'إنشاء حساب سريع بـ Google' : 'Quick Sign Up with Google')
-                          : (lang === 'ar' ? 'تسجيل الد…36 tokens truncated… </div>
+                          : (lang === 'ar' ? 'تسجيل الدخول الفوري بـ Google' : 'Instant Sign In with Google')}
+                      </span>
+                    </button>
+                  </div>
 
                   {/* OR Divider */}
                   <div className="flex items-center gap-3 my-2">
