@@ -17,6 +17,8 @@ const GoogleLogo = ({ className = "h-4 w-4 shrink-0" }: { className?: string }) 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  presentation?: 'modal' | 'page';
+  initialTab?: 'login' | 'register';
 }
 
 const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
@@ -77,7 +79,7 @@ const getAuthErrorMessage = (code: string, lang: 'ar' | 'en'): string => {
 
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, presentation = 'modal', initialTab = 'login' }) => {
   const { lang, user, loginUser, logoutUser, updateUserFavorites, setActiveTab: setAppActiveTab } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -87,7 +89,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [selectedTier, setSelectedTier] = useState<AccountTier>('free');
   const [registerStep, setRegisterStep] = useState<'choose_tier' | 'free_form' | 'pricing_plans'>('free_form');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'google_consent' | 'google_onboarding'>(initialTab);
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [googleFinalizing, setGoogleFinalizing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -99,6 +101,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setErrorMsg(null);
     setAuthErrorCode(null);
   }, [activeTab]);
+
+  const changeAuthTab = (tab: 'login' | 'register' | 'google_consent' | 'google_onboarding') => {
+    if (presentation === 'page' && (tab === 'login' || tab === 'register') && window.location.pathname !== `/${tab}`) {
+      window.location.assign(`/${tab}`);
+      return;
+    }
+    setActiveTab(tab);
+  };
 
   if (!isOpen) return null;
 
@@ -331,7 +341,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setErrorMsg(getAuthErrorMessage(errorCode, lang));
       }
       
-      setActiveTab('login');
+      changeAuthTab('login');
     } finally {
       setGoogleFinalizing(false);
       setLoadingAuth(false);
@@ -357,15 +367,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[70] flex items-end justify-center p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-slate-950/45 backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/80">
+      <div className={presentation === 'page'
+        ? 'min-h-[calc(100dvh-4rem)] w-full bg-slate-50 px-4 py-8 dark:bg-neutral-950 sm:px-6 sm:py-12'
+        : 'fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/80'}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 sm:max-h-[90vh]"
+          initial={presentation === 'page' ? false : { opacity: 0, scale: 0.9, y: 20 }}
+          animate={presentation === 'page' ? undefined : { opacity: 1, scale: 1, y: 0 }}
+          exit={presentation === 'page' ? undefined : { opacity: 0, scale: 0.9, y: 20 }}
+          className={presentation === 'page'
+            ? 'relative mx-auto flex w-full max-w-2xl flex-col overflow-visible bg-transparent'
+            : 'relative flex w-full max-w-lg max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 sm:max-h-[90vh]'}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 shrink-0 dark:border-white/10 dark:bg-neutral-950 sm:p-5">
+          <div className={presentation === 'page'
+            ? 'flex items-center justify-between border-b border-slate-200 pb-6 dark:border-white/10'
+            : 'flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 shrink-0 dark:border-white/10 dark:bg-neutral-950 sm:p-5'}>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
                 {user ? <ShieldCheck className="h-5 w-5" /> : activeTab === 'google_consent' ? <GoogleLogo className="h-5 w-5" /> : activeTab === 'google_onboarding' ? <Sparkles className="h-5 w-5 text-amber-400" /> : <User className="h-5 w-5" />}
@@ -390,9 +406,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-950 transition-colors dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white"
+              className={presentation === 'page'
+                ? 'rounded-xl px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white'
+                : 'flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-950 transition-colors dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-white'}
             >
-              <X className="h-5 w-5" />
+              {presentation === 'page'
+                ? <span>{lang === 'ar' ? 'العودة للرئيسية' : 'Back to home'}</span>
+                : <X className="h-5 w-5" />}
             </button>
           </div>
 
@@ -539,7 +559,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('register')}
+                  onClick={() => changeAuthTab('register')}
                   className="w-full sm:flex-1 rounded-xl bg-neutral-800 py-3 px-4 text-xs font-bold text-neutral-300 hover:bg-neutral-700 hover:text-white transition-all cursor-pointer text-center"
                 >
                   {lang === 'ar' ? 'إلغاء والرجوع' : 'Cancel & Back'}
@@ -684,7 +704,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <button
                   type="button"
                   onClick={() => {
-                    setActiveTab('register');
+                    changeAuthTab('register');
                     setRegisterStep('free_form');
                   }}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'register' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
@@ -693,7 +713,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('login')}
+                  onClick={() => changeAuthTab('login')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeTab === 'login' ? 'bg-amber-500 text-neutral-950 shadow-md font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white'}`}
                 >
                   {lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
@@ -740,7 +760,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     <button
                       type="button"
                       onClick={() => {
-                        setActiveTab('login');
+                        changeAuthTab('login');
                         setErrorMsg(null);
                         setAuthErrorCode(null);
                       }}
