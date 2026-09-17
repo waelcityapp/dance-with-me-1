@@ -191,10 +191,6 @@ function ensureWalletTab(hasMarketerHistory: boolean, lang: 'ar' | 'en') {
 
 function renderProfileBadge() {
   try {
-    // Account references and marketer messages remain available to the relevant
-    // management screens, but do not belong in the member profile header.
-    document.querySelectorAll('[data-cityeve-account-reference], [data-cityeve-marketer-status], [data-cityeve-marketer-hint]').forEach((node) => node.remove());
-
     const cachedUser = readCachedUser();
     if (!cachedUser) return;
     const name = String(cachedUser?.name || '').trim();
@@ -206,10 +202,6 @@ function renderProfileBadge() {
     const hasMarketerHistory = cachedUser?.isMarketer === true || Boolean(cachedUser?.marketerCode);
     const isActiveMarketer = hasMarketerHistory && marketerStatus === 'active';
     ensureWalletTab(hasMarketerHistory, lang);
-
-    // Do not inject account numbers, marketer status, or explanatory text into
-    // the profile header. Those details are shown only where they have an action.
-    return;
 
     const headings = Array.from(document.querySelectorAll('main h2')) as HTMLHeadingElement[];
     const nameHeading = headings.find((heading) => heading.textContent?.trim() === name);
