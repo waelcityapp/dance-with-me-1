@@ -4127,6 +4127,12 @@ export const AdminPanel: React.FC = () => {
                   }`}>
                     {sub.invoiceNumber}
                   </div>
+
+                  {sub.renewalRequest && (
+                    <span className="rounded-full border border-sky-400/40 bg-sky-500/15 px-2.5 py-1 text-[10px] font-black text-sky-200 shadow-sm">
+                      {lang === 'ar' ? 'طلب تجديد' : 'Renewal Request'}
+                    </span>
+                  )}
                   
                   <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold border flex items-center gap-1.5 shadow-sm ${
                     displayAdType === 'vip' 
