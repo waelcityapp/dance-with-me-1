@@ -213,6 +213,8 @@ export interface AdSubmission {
   expiresAt?: string;
   archivedAt?: string;
   renewalCount?: number;
+  /** Marks a pending submission that is requesting a renewal rather than a new ad. */
+  renewalRequest?: boolean;
   eventData?: Partial<DanceEvent>;
   staffSettings?: SecurityStaffSettings;
 }
