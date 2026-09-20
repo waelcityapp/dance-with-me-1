@@ -329,8 +329,8 @@ export const AdminPanel: React.FC = () => {
   const [adminCategory, setAdminCategory] = useState<DanceCategory>('party');
   const [adminMediaType, setAdminMediaType] = useState<'video' | 'image'>('image');
   const [adminMediaUrl, setAdminMediaUrl] = useState('');
-  const [adminPriceAr, setAdminPriceAr] = useState('');
-  const [adminPriceEn, setAdminPriceEn] = useState('');
+  const [adminPriceAr, setAdminPriceAr] = useState('250 ج.م');
+  const [adminPriceEn, setAdminPriceEn] = useState('250 EGP');
   const [adminEventDate, setAdminEventDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
   const [adminPhone, setAdminPhone] = useState('+201011223344');
   const [adminWhatsapp, setAdminWhatsapp] = useState('201011223344');
@@ -774,8 +774,8 @@ export const AdminPanel: React.FC = () => {
         uploadDate: new Date().toISOString(),
         eventRef: newEventRef,
         eventDate: safeDateStr,
-        priceAr: (adminPriceAr || '').trim(),
-        priceEn: (adminPriceEn || '').trim(),
+        priceAr: (adminPriceAr || '').trim() || '250 ج.م',
+        priceEn: (adminPriceEn || '').trim() || '250 EGP',
         location: {
           nameAr: (adminLocationNameAr || '').trim() || 'أستوديو الرقص - الزمالك',
           nameEn: (adminLocationNameEn || '').trim() || 'Dance Studio - Zamalek',
@@ -1515,7 +1515,16 @@ export const AdminPanel: React.FC = () => {
     const loadLocal = (): AdSubmission[] => {
       try {
         const local = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
-        return local as AdSubmission[];
+        // Legacy browser caches can contain partial records from older releases.
+        // Ignore only those invalid cache entries so one corrupt item cannot
+        // prevent the whole admin review page from rendering.
+        if (!Array.isArray(local)) return [];
+        return local.filter((item): item is AdSubmission => (
+          item !== null
+          && typeof item === 'object'
+          && typeof item.id === 'string'
+          && item.id.trim().length > 0
+        ));
       } catch (e) {
         return [];
       }
@@ -1525,7 +1534,9 @@ export const AdminPanel: React.FC = () => {
       const localList = loadLocal();
       const map = new Map<string, AdSubmission>();
       localList.forEach(item => map.set(item.id, item));
-      firebaseList.forEach(item => map.set(item.id, item));
+      (Array.isArray(firebaseList) ? firebaseList : [])
+        .filter((item): item is AdSubmission => item !== null && typeof item === 'object' && typeof item.id === 'string' && item.id.trim().length > 0)
+        .forEach(item => map.set(item.id, item));
       
       const merged = Array.from(map.values());
       merged.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
@@ -1559,7 +1570,13 @@ export const AdminPanel: React.FC = () => {
         const loadLocal = (): AdSubmission[] => {
         try {
           const local = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
-          return local as AdSubmission[];
+          if (!Array.isArray(local)) return [];
+          return local.filter((item): item is AdSubmission => (
+            item !== null
+            && typeof item === 'object'
+            && typeof item.id === 'string'
+            && item.id.trim().length > 0
+          ));
         } catch (e) {
           return [];
         }
@@ -1568,7 +1585,9 @@ export const AdminPanel: React.FC = () => {
       const localList = loadLocal();
       const map = new Map<string, AdSubmission>();
       localList.forEach(item => map.set(item.id, item));
-      list.forEach(item => map.set(item.id, item));
+      (Array.isArray(list) ? list : [])
+        .filter((item): item is AdSubmission => item !== null && typeof item === 'object' && typeof item.id === 'string' && item.id.trim().length > 0)
+        .forEach(item => map.set(item.id, item));
       
       const merged = Array.from(map.values());
       merged.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
@@ -1650,14 +1669,13 @@ export const AdminPanel: React.FC = () => {
         descriptionEn: sub.eventData?.descriptionEn || sub.descriptionEn || 'Ad & Event details',
         category: sub.eventData?.category || sub.category || 'party',
         styles: sub.eventData?.styles || sub.styles || ['Salsa'],
-        searchKeywords: sub.eventData?.searchKeywords || sub.searchKeywords || [],
         mediaType: sub.mediaType || sub.eventData?.mediaType || 'image',
         mediaUrl: mediaUrlToUse,
         thumbnailUrl: thumbUrlToUse,
         uploadDate: new Date().toISOString(),
         eventDate: safeEventDate,
-        priceAr: sub.eventData?.priceAr?.trim() || '',
-        priceEn: sub.eventData?.priceEn?.trim() || '',
+        priceAr: sub.eventData?.priceAr || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'دخول مجاني' : `${sub.pricing.total} ج.م`) : '250 ج.م'),
+        priceEn: sub.eventData?.priceEn || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'Free Entry' : `${sub.pricing.total} EGP`) : '250 EGP'),
         location: sub.eventData?.location || {
           nameAr: 'القاهرة، مصر',
           nameEn: 'Cairo, Egypt',
@@ -3627,7 +3645,7 @@ export const AdminPanel: React.FC = () => {
                                   {lang === 'ar' ? 'سعر الفرد' : 'Price / Individual'}
                                 </span>
                                 <span className="text-xs font-extrabold text-neutral-300 mt-0.5 block font-mono">
-                                  {b.bookingMode === 'name_only' ? (lang === 'ar' ? 'لم يُحدَّد' : 'Not set') : `${b.eventPrice} ${lang === 'ar' ? 'ج.م' : 'EGP'}`}
+                                  {b.eventPrice} ج.م
                                 </span>
                               </div>
                               <div>
@@ -3635,7 +3653,7 @@ export const AdminPanel: React.FC = () => {
                                   {lang === 'ar' ? 'الإجمالي المطلوب' : 'Grand Total'}
                                 </span>
                                 <span className="text-xs font-black text-emerald-400 mt-0.5 block font-mono">
-                                  {b.bookingMode === 'name_only' ? (lang === 'ar' ? 'حجز بالاسم' : 'Name-only booking') : `${String(b.totalAmount || 0)} ${lang === 'ar' ? 'ج.م' : 'EGP'}`}
+                                  {String(b.totalAmount || 0)} ج.م
                                 </span>
                               </div>
                             </div>
@@ -3741,7 +3759,7 @@ export const AdminPanel: React.FC = () => {
                                   if (actionLoading) return;
                                   setActionLoading(b.id);
                                   // Rejection reason
-                                  const reason = rejectionReasonMap[b.id]?.trim() || (b.bookingMode === 'name_only' ? (lang === 'ar' ? 'تعذر تأكيد طلب الحجز.' : 'The booking request could not be confirmed.') : (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.'));
+                                  const reason = rejectionReasonMap[b.id]?.trim() || (lang === 'ar' ? 'لم يتم استلام المبلغ بالكامل أو الإيصال غير صالح.' : 'Amount not received or receipt is invalid.');
                                   await rejectBooking(b.id, reason);
                                   setActionLoading(null);
                                 }}
@@ -3760,15 +3778,8 @@ export const AdminPanel: React.FC = () => {
                                   const code = typedVal || `DWM-${b.refNumber.replace('#', '')}`;
                                   const qrUrl = 'https://cityeve.online' + '/?verify=' + b.id;
                                   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
-                                  try {
-                                    const approved = await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
-                                    if (!approved) alert(lang === 'ar' ? 'تعذر تأكيد الحجز. راجع الاتصال وصلاحية الإدارة، ثم حاول مجددًا.' : 'Could not confirm this booking. Check your connection and admin access, then try again.');
-                                  } catch (error) {
-                                    console.error('Booking approval failed:', error);
-                                    alert(lang === 'ar' ? 'حدث خطأ أثناء تأكيد الحجز.' : 'An error occurred while confirming the booking.');
-                                  } finally {
-                                    setActionLoading(null);
-                                  }
+                                  await approveBooking(b.id, qr, code, 0, typedVal ? (lang === 'ar' ? `كود الحجز: ${typedVal}` : `Custom code: ${typedVal}`) : '');
+                                  setActionLoading(null);
                                 }}
                                 disabled={actionLoading !== null}
                                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-neutral-950 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
@@ -4480,56 +4491,6 @@ export const AdminPanel: React.FC = () => {
                   <span>{new Date(sub.submittedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}</span>
                 </div>
               </div>
-              {/* Public-facing preview: this uses the exact same card component seen by visitors. */}
-              <section className="mb-6 overflow-hidden rounded-3xl border border-sky-400/30 bg-sky-500/5 shadow-[0_18px_45px_rgba(0,0,0,0.18)]">
-                <div className="flex flex-col gap-2 border-b border-sky-400/20 bg-sky-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2 text-sm font-black text-sky-100">
-                    <Eye className="h-4 w-4 text-sky-300" />
-                    <span>{lang === 'ar' ? 'هكذا سيظهر الإعلان للجمهور' : 'Visitor-facing preview'}</span>
-                  </div>
-                  <span className="w-fit rounded-full border border-sky-300/30 bg-sky-300/10 px-2.5 py-1 text-[11px] font-bold text-sky-200">
-                    {lang === 'ar' ? 'قبل النشر' : 'Before publishing'}
-                  </span>
-                </div>
-                <div className="mx-auto max-w-2xl p-3 sm:p-5">
-                  <div className="pointer-events-none select-none" aria-label={lang === 'ar' ? 'معاينة للعرض فقط' : 'Read-only preview'}>
-                  <EventCard
-                    event={{
-                      id: `review-preview-${sub.id}`,
-                      titleAr: sub.eventData?.titleAr || sub.titleAr || 'إعلان جديد',
-                      titleEn: sub.eventData?.titleEn || sub.titleEn || 'New event',
-                      descriptionAr: sub.eventData?.descriptionAr || sub.descriptionAr || '',
-                      descriptionEn: sub.eventData?.descriptionEn || sub.descriptionEn || '',
-                      category: sub.eventData?.category || sub.category || 'party',
-                      styles: sub.eventData?.styles || sub.styles || [],
-                      searchKeywords: sub.eventData?.searchKeywords || sub.searchKeywords || [],
-                      mediaType: sub.mediaType || sub.eventData?.mediaType || 'image',
-                      mediaUrl: sub.mediaUrl || sub.eventData?.mediaUrl || '',
-                      thumbnailUrl: sub.thumbnailUrl || sub.eventData?.thumbnailUrl || sub.mediaUrl || sub.eventData?.mediaUrl || '',
-                      uploadDate: sub.submittedAt || new Date().toISOString(),
-                      eventDate: sub.eventData?.eventDate || new Date().toISOString(),
-                      priceAr: sub.eventData?.priceAr || '',
-                      priceEn: sub.eventData?.priceEn || '',
-                      location: sub.eventData?.location || { nameAr: '', nameEn: '', addressAr: '', addressEn: '', googleMapsUrl: '', lat: 0, lng: 0 },
-                      contact: sub.eventData?.contact || { organizerName: sub.advertiserName || '', phone: sub.phone || '', whatsapp: sub.phone || '' },
-                      likesCount: sub.eventData?.likesCount || 0,
-                      viewsCount: sub.eventData?.viewsCount || 0,
-                      showBookingButton: sub.eventData?.showBookingButton !== false,
-                      showViewsCount: sub.eventData?.showViewsCount !== false,
-                      isFeatured: displayAdType === 'vip',
-                      adType: displayAdType === 'free' ? 'standard' : displayAdType,
-                      position: sub.eventData?.position || positionValue
-                    } as DanceEvent}
-                    index={0}
-                    overrideAdType={displayAdType === 'vip' ? 'vip' : 'standard'}
-                    hideAdminControls
-                    onOpenMap={() => {}}
-                    onOpenShare={() => {}}
-                  />
-                  </div>
-                </div>
-              </section>
-
               {/* Grid Info */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                 <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
@@ -4593,17 +4554,15 @@ export const AdminPanel: React.FC = () => {
                   </div>
                 </div>
 
-                {typeof sub.pricing?.total === 'number' && (
-                  <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
-                    <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
-                      <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
-                      <span>{lang === 'ar' ? 'المبلغ المطلوب:' : 'Total Amount:'}</span>
-                    </span>
-                    <span className="text-lg font-black text-emerald-400 block">
-                      {sub.pricing.total} {lang === 'ar' ? 'جنيه مصري' : 'EGP'}
-                    </span>
-                  </div>
-                )}
+                <div className="p-3 rounded-xl bg-neutral-950/60 border border-white/5 space-y-1">
+                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium">
+                    <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>{lang === 'ar' ? 'المبلغ المطلوب:' : 'Total Amount:'}</span>
+                  </span>
+                  <span className="text-lg font-black text-emerald-400 block">
+                    {sub.pricing?.total || 250} {lang === 'ar' ? 'جنيه مصري' : 'EGP'}
+                  </span>
+                </div>
               </div>
 
               {/* Visual Ad Media Preview */}
@@ -4643,8 +4602,8 @@ export const AdminPanel: React.FC = () => {
               )}
 
               {/* Receipt Preview & Actions */}
-              <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto">
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pt-3 border-t border-white/5">
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
                   {sub.receiptImage ? (
                     <button
                       onClick={() => setSelectedReceipt(sub.receiptImage || null)}
@@ -4662,10 +4621,10 @@ export const AdminPanel: React.FC = () => {
                 </div>
 
                 {/* Admin Approval Buttons */}
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto justify-end">
                   {sub.status === 'pending' && (
                     <>
-                      <div className="flex min-h-[46px] items-center gap-2 rounded-xl border border-white/10 bg-neutral-950/60 px-3">
+                      <div className="flex items-center gap-2 mr-2">
                         <label className="text-xs font-bold text-neutral-400">{lang === 'ar' ? 'رقم الإعلان:' : 'Position:'}</label>
                         <input
                           type="number"
@@ -4681,7 +4640,7 @@ export const AdminPanel: React.FC = () => {
                         whileTap={{ scale: 0.98 }}
                         disabled={actionLoading === sub.id}
                         onClick={() => handleApprove(sub)}
-                        className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-black text-neutral-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 cursor-pointer disabled:opacity-50 disabled:cursor-wait w-full sm:w-auto"
+                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs hover:bg-emerald-400 shadow-md transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
                       >
                         <Check className="h-4 w-4 stroke-[3] shrink-0" />
                         <span>{actionLoading === sub.id ? '...' : (lang === 'ar' ? 'قبول ونشر الإعلان فوراً' : 'Approve & Publish Ad')}</span>
@@ -4692,7 +4651,7 @@ export const AdminPanel: React.FC = () => {
                         whileTap={{ scale: 0.98 }}
                         disabled={actionLoading === sub.id}
                         onClick={() => handleReject(sub)}
-                        className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-600/15 px-5 py-3 text-sm font-bold text-red-200 transition-all hover:bg-red-600/25 cursor-pointer disabled:opacity-50 disabled:cursor-wait w-full sm:w-auto"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-600/20 text-red-300 border border-red-500/40 font-bold text-xs hover:bg-red-600/30 transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto"
                       >
                         <XCircle className="h-4 w-4 shrink-0" />
                         <span>{lang === 'ar' ? 'رفض' : 'Reject'}</span>
@@ -5269,8 +5228,8 @@ export const AdminPanel: React.FC = () => {
               </div>
               <div className="border-t border-white/5 pt-4 mt-4 text-[10px] text-amber-500/70 leading-relaxed">
                 ℹ️ {lang === 'ar' 
-                  ? 'رمز الإدارة محفوظ بأمان في إعدادات Vercel ولا يظهر داخل الموقع.' 
-                  : 'The admin code is stored securely in Vercel settings and is never displayed in the site.'}
+                  ? 'يتم توليد الرمز الافتراضي (123456) تلقائياً عند أول إعداد للتطبيق.' 
+                  : 'A default code (123456) is generated upon first setup.'}
               </div>
             </div>
 
@@ -6994,8 +6953,8 @@ export const AdminPanel: React.FC = () => {
                           />
                           <p className="text-[11px] text-neutral-500">
                             {lang === 'ar'
-                              ? 'إذا تركته فارغاً، يظهر السعر فقط إذا أدخلته في حقل السعر أعلاه.'
-                              : 'If left empty, the price appears only if entered in the price field above.'}
+                              ? 'إذا تركته فارغاً، سيتم عرض السعر الإفتراضي المحدد بأعلى (مثل 250 ج.م).'
+                              : 'If left empty, the default price specified above will be displayed.'}
                           </p>
                         </div>
 
@@ -7511,8 +7470,8 @@ export const AdminPanel: React.FC = () => {
                               : adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                             uploadDate: new Date().toISOString(),
                             eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
-                            priceAr: adminPriceAr.trim(),
-                            priceEn: adminPriceEn.trim(),
+                            priceAr: adminPriceAr.trim() || '250 ج.م',
+                            priceEn: adminPriceEn.trim() || '250 EGP',
                             showBookingButton: adminShowBookingButton,
                             showViewsCount: adminShowViewsCount,
                             location: {
