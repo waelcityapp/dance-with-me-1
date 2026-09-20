@@ -439,6 +439,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const updated: AdSubmission = {
         ...sub,
         status: 'pending',
+        renewalRequest: true,
         renewalCount: (sub.renewalCount || 0) + 1,
         submittedAt: new Date().toISOString()
       };
