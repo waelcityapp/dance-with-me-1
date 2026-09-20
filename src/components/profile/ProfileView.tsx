@@ -251,6 +251,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [mediaUploadProgress, setMediaUploadProgress] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [archiveDeleteId, setArchiveDeleteId] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [activeSection, setActiveSection] = useState<'overview' | 'ads' | 'support' | 'booked' | 'liked' | 'archive'>('booked');
 
@@ -268,6 +269,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [attendanceEventId, setAttendanceEventId] = useState<string | null>(null);
   const [attendanceSub, setAttendanceSub] = useState<AdSubmission | null>(null);
   const [manageStaffSub, setManageStaffSub] = useState<AdSubmission | null>(null);
+
+  const handleArchiveDelete = async (eventId: string) => {
+    if (archiveDeleteId) return;
+
+    setArchiveDeleteId(eventId);
+    try {
+      const confirmed = await triggerConfirm(lang === 'ar'
+        ? 'هل أنت متأكد من حذف هذا الإعلان من الأرشيف نهائيًا؟ لا يمكن التراجع عن الحذف.'
+        : 'Are you sure you want to permanently delete this archived ad? This cannot be undone.');
+      if (confirmed) {
+        await deleteEvent(eventId);
+      }
+    } finally {
+      setArchiveDeleteId(null);
+    }
+  };
 
   const myBookings = useMemo(() => {
     if (!user) return [];
@@ -987,10 +1004,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {expiredEvents.map((ev, idx) => (
                   <div key={ev.id} className="relative">
-                    <EventCard event={ev} index={idx} onOpenMap={onOpenMap} onOpenShare={onOpenShare} hideAdminControls={!!adminViewUser} />
+                    <EventCard event={ev} index={idx} onOpenMap={onOpenMap} onOpenShare={onOpenShare} hideAdminControls />
                     <button
-                      onClick={() => deleteEvent(ev.id)}
-                      className="absolute top-2 left-2 z-40 flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg hover:bg-red-700 transition-colors"
+                      onClick={() => handleArchiveDelete(ev.id)}
+                      disabled={archiveDeleteId !== null}
+                      className="absolute top-2 left-2 z-40 flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg hover:bg-red-700 transition-colors disabled:cursor-wait disabled:opacity-60"
                     >
                       <Trash2 className="h-3 w-3" />
                       <span>{lang === 'ar' ? 'حذف من الأرشيف' : 'Delete from Archive'}</span>
@@ -2041,7 +2059,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           {isArabic ? 'المبلغ الإجمالي' : 'Total Price'}
                         </span>
                         <span className="font-mono font-bold text-amber-500">
-                          {b.bookingMode === 'name_only' ? (isArabic ? 'لم يُحدَّد سعر' : 'No price set') : `${String(b.totalAmount || 0)} ${isArabic ? 'ج.م' : 'EGP'}`}
+                          {String(b.totalAmount || 0)} {isArabic ? 'ج.م' : 'EGP'}
                         </span>
                       </div>
                     </div>
@@ -2245,9 +2263,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           {isCancelable ? (
                             <button
                               onClick={async () => {
-                                const confirmMsg = b.bookingMode === 'name_only'
-                                  ? (isArabic ? 'هل تريد إلغاء طلب الحجز بالاسم؟' : 'Cancel this name-only booking request?')
-                                  : isArabic
+                                const confirmMsg = isArabic
                                   ? `⚠️ هل أنت متأكد من رغبتك في إلغاء الحجز والتراجع عنه؟\n\nشروط سياسة الاسترجاع:\nسوف يتم خصم 5% كرسوم إدارية وتحويل وبنك من إجمالي مبلغ الحجز (${b.totalAmount} ج.م) والباقي يسترجع لك.\n\nهل تود تأكيد طلب الإلغاء؟`
                                   : `⚠️ Are you sure you want to cancel and withdraw your booking?\n\nRefund Policy:\nA 5% fee will be deducted from your total booking amount (${b.totalAmount} EGP) for transfer & administrative fees.\n\nDo you want to confirm cancellation?`;
                                 
