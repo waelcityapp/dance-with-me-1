@@ -391,18 +391,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const handleRenewAd = async (sub: AdSubmission) => {
     setActionLoading(sub.id);
     try {
-      const result = await submitAdChangeRequest(sub.id, 'renew', {
+      const updated: AdSubmission = {
+        ...sub,
+        status: 'pending',
+        renewalRequest: true,
         renewalCount: (sub.renewalCount || 0) + 1,
-      });
+        submittedAt: new Date().toISOString(),
+      };
+      updateLocalAndState(updated);
+      await saveAdSubmissionToFirestore(updated);
       alert(lang === 'ar'
-        ? `✅ تم إرسال طلب التجديد للإدارة. المتبقي لك اليوم: ${result.remainingToday} طلبات تغيير لهذا الإعلان.`
-        : `Renewal request sent. ${result.remainingToday} change requests remain for this ad today.`);
+        ? '✅ تم إرسال طلب التجديد للإدارة للمراجعة.'
+        : 'Renewal request sent to the administration for review.');
     } catch (err) {
       console.error('Error renewing ad:', err);
-      const code = err instanceof Error ? err.message : '';
-      if (code === 'DAILY_CHANGE_LIMIT_REACHED') {
-        alert(lang === 'ar' ? 'وصلت إلى الحد اليومي: 4 طلبات تغيير لهذا الإعلان. حاول غدًا.' : 'Daily limit reached: 4 change requests for this ad. Please try again tomorrow.');
-      }
+      alert(lang === 'ar' ? 'تعذر إرسال طلب التجديد. حاول مرة أخرى.' : 'Unable to send the renewal request. Please try again.');
     } finally {
       setActionLoading(null);
     }
