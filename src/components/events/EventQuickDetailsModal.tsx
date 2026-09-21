@@ -53,7 +53,6 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
       recordEventView(event.id);
     }
     playbackCountedRef.current = false;
-    if (event && videoRef.current) startVideoPlayback();
   }, [event, viewerKey]);
 
   if (!event) return null;
