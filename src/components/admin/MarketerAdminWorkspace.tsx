@@ -40,14 +40,34 @@ export const MarketerAdminWorkspace: React.FC<{ onBack: () => void }> = ({ onBac
   const [period, setPeriod] = useState('30');
   const [planSaving, setPlanSaving] = useState(false);
   const [planMessage, setPlanMessage] = useState('');
+  const [generalPlans, setGeneralPlans] = useState<any[]>([]);
+  const [planDiscount, setPlanDiscount] = useState('');
+  const [planReward, setPlanReward] = useState('');
+  const [planDiscountType, setPlanDiscountType] = useState<RuleValueType>('percentage');
+  const [planRewardType, setPlanRewardType] = useState<RuleValueType>('percentage');
+  const [planStart, setPlanStart] = useState('');
+  const [planEnd, setPlanEnd] = useState('');
+  useEffect(() => {
+    if (section !== 'plans') return;
+    void marketerRulesApi.listGeneralPlans().then((result) => setGeneralPlans(result.rules)).catch((error) => setPlanMessage(error instanceof Error ? error.message : 'تعذر تحميل الخطة العامة.'));
+  }, [section]);
+  useEffect(() => {
+    const plan = generalPlans.find((item) => item.targetType === (planTab === 'bookings' ? 'booking' : 'advertisement'));
+    setPlanDiscount(plan ? String(plan.customerDiscount?.value ?? '') : '');
+    setPlanReward(plan ? String(plan.marketerReward?.value ?? '') : '');
+    setPlanDiscountType(plan?.customerDiscount?.type || 'percentage');
+    setPlanRewardType(plan?.marketerReward?.type || 'percentage');
+    setPlanStart(plan?.startsAt || ''); setPlanEnd(plan?.endsAt || '');
+  }, [planTab, generalPlans]);
+
   const saveGeneralPlan = async () => {
     const read = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
-    const discount = Number(read('general-plan-discount')?.value || 0);
-    const reward = Number(read('general-plan-reward')?.value || 0);
-    const discountType = (read('general-plan-discount-type')?.value || 'percentage') as RuleValueType;
-    const rewardType = (read('general-plan-reward-type')?.value || 'percentage') as RuleValueType;
-    const startsAt = read('general-plan-start')?.value || '';
-    const endsAt = read('general-plan-end')?.value || '';
+    const discount = Number(planDiscount || 0);
+    const reward = Number(planReward || 0);
+    const discountType = planDiscountType;
+    const rewardType = planRewardType;
+    const startsAt = planStart;
+    const endsAt = planEnd;
     if (!Number.isFinite(discount) || !Number.isFinite(reward) || discount < 0 || reward < 0 || (discountType === 'percentage' && discount > 100) || (rewardType === 'percentage' && reward > 100)) { setPlanMessage('أدخل قيماً صحيحة؛ النسبة من 0 إلى 100.'); return; }
     if (startsAt && endsAt && endsAt < startsAt) { setPlanMessage('تاريخ النهاية يجب أن يكون بعد البداية.'); return; }
     setPlanSaving(true); setPlanMessage('');
@@ -108,11 +128,11 @@ export const MarketerAdminWorkspace: React.FC<{ onBack: () => void }> = ({ onBac
           <div className={`${shell} p-5 sm:p-6`}>
             <div className="flex items-start gap-3"><CircleDollarSign className="mt-0.5 h-5 w-5 text-amber-500" /><div><h2 className="font-black">{planTab === 'bookings' ? (ar ? 'الخطة العامة لكل الحجوزات' : 'Default booking plan') : (ar ? 'الخطة العامة لإضافة إعلان' : 'Default advertising plan')}</h2><p className={`mt-1 text-xs ${muted}`}>{ar ? 'تسري على جميع المسوّقين عند عدم وجود اتفاق أخص' : 'Applies to all marketers unless a more specific agreement exists'}</p></div></div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2 text-xs font-bold">{ar ? 'خصم العميل' : 'Customer discount'}<div className="flex gap-2"><input className={field} id="general-plan-discount" type="number" min="0" step="0.01" placeholder="10" aria-label={ar ? 'خصم العميل' : 'Customer discount'} /><select id="general-plan-discount-type" className={field} aria-label={ar ? 'نوع خصم العميل' : 'Discount type'}><option value="percentage">{ar ? 'نسبة %' : 'Percent %'}</option><option value="fixed">{ar ? 'مبلغ ثابت' : 'Fixed amount'}</option></select></div></label>
-              <label className="space-y-2 text-xs font-bold">{ar ? 'عمولة المسوّق' : 'Marketer reward'}<div className="flex gap-2"><input className={field} id="general-plan-reward" type="number" min="0" step="0.01" placeholder="10" aria-label={ar ? 'عمولة المسوّق' : 'Marketer reward'} /><select id="general-plan-reward-type" className={field} aria-label={ar ? 'نوع العمولة' : 'Reward type'}><option value="percentage">{ar ? 'نسبة %' : 'Percent %'}</option><option value="fixed">{ar ? 'مبلغ ثابت' : 'Fixed amount'}</option></select></div></label>
+              <label className="space-y-2 text-xs font-bold">{ar ? 'خصم العميل' : 'Customer discount'}<div className="flex gap-2"><input className={field} id="general-plan-discount" type="number" min="0" step="0.01" value={planDiscount} onChange={(event) => setPlanDiscount(event.target.value)} placeholder="10" aria-label={ar ? 'خصم العميل' : 'Customer discount'} /><select id="general-plan-discount-type" value={planDiscountType} onChange={(event) => setPlanDiscountType(event.target.value as RuleValueType)} className={field} aria-label={ar ? 'نوع خصم العميل' : 'Discount type'}><option value="percentage">{ar ? 'نسبة %' : 'Percent %'}</option><option value="fixed">{ar ? 'مبلغ ثابت' : 'Fixed amount'}</option></select></div></label>
+              <label className="space-y-2 text-xs font-bold">{ar ? 'عمولة المسوّق' : 'Marketer reward'}<div className="flex gap-2"><input className={field} id="general-plan-reward" type="number" min="0" step="0.01" value={planReward} onChange={(event) => setPlanReward(event.target.value)} placeholder="10" aria-label={ar ? 'عمولة المسوّق' : 'Marketer reward'} /><select id="general-plan-reward-type" value={planRewardType} onChange={(event) => setPlanRewardType(event.target.value as RuleValueType)} className={field} aria-label={ar ? 'نوع العمولة' : 'Reward type'}><option value="percentage">{ar ? 'نسبة %' : 'Percent %'}</option><option value="fixed">{ar ? 'مبلغ ثابت' : 'Fixed amount'}</option></select></div></label>
               {planTab === 'ads' && <label className="space-y-2 text-xs font-bold">{ar ? 'نوع الإعلان' : 'Ad type'}<select className={field}><option>{ar ? 'إعلان عادي' : 'Standard ad'}</option><option>{ar ? 'إعلان مميز' : 'Featured ad'}</option></select></label>}
-              <label className="space-y-2 text-xs font-bold">{ar ? 'تاريخ البداية (اختياري)' : 'Start date (optional)'}<input id="general-plan-start" className={field} type="date" /></label>
-              <label className="space-y-2 text-xs font-bold">{ar ? 'تاريخ النهاية (اختياري)' : 'End date (optional)'}<input id="general-plan-end" className={field} type="date" /></label>
+              <label className="space-y-2 text-xs font-bold">{ar ? 'تاريخ البداية (اختياري)' : 'Start date (optional)'}<input id="general-plan-start" className={field} type="date" value={planStart} onChange={(event) => setPlanStart(event.target.value)} /></label>
+              <label className="space-y-2 text-xs font-bold">{ar ? 'تاريخ النهاية (اختياري)' : 'End date (optional)'}<input id="general-plan-end" className={field} type="date" value={planEnd} onChange={(event) => setPlanEnd(event.target.value)} /></label>
             </div>
             {planMessage ? <div className="mt-6 rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-xs font-bold text-amber-800 dark:text-amber-300">{planMessage}</div> : <div className="mt-6 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">{ar ? 'تُستخدم الخطة عند عدم وجود اتفاق خاص للمسوّق.' : 'Used when no marketer-specific agreement exists.'}</div>}
             <button type="button" disabled={planSaving} onClick={() => void saveGeneralPlan()} className="mt-4 rounded-xl bg-amber-500 px-5 py-3 text-sm font-black text-neutral-950 disabled:opacity-50">{planSaving ? (ar ? 'جارٍ الحفظ...' : 'Saving...') : (ar ? 'اعتماد وحفظ الخطة' : 'Approve and save plan')}</button>
