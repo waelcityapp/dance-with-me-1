@@ -9,6 +9,7 @@ import { FullscreenVideoModal } from './FullscreenVideoModal';
 import { EventImageLightboxModal } from './EventImageLightboxModal';
 import { BroadcastPushModal } from '../modals/BroadcastPushModal';
 import { logAnalyticsEvent } from '../../lib/firebase';
+import { getVideoLimitMessage, getVideoViewerKey, reserveVideoPlay } from '../../lib/videoPlaybackLimit';
 
 interface EventCardProps {
   event: DanceEvent;
@@ -47,6 +48,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   }, [event?.id]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playbackCountedRef = useRef(false);
+  const autoStartedRef = useRef(false);
+  const viewerKey = getVideoViewerKey(user?.id);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
@@ -62,8 +66,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       (entries) => {
         entries.forEach((entry) => {
           if (videoRef.current) {
-            if (entry.isIntersecting) {
-              videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+            if (entry.isIntersecting && !autoStartedRef.current) {
+              autoStartedRef.current = true;
+              startVideoPlayback();
             } else {
               videoRef.current.pause();
               setIsPlaying(false);
@@ -83,9 +88,26 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         observer.unobserve(videoRef.current);
       }
     };
-  }, []);
+  }, [event.id, viewerKey]);
+
+  const startVideoPlayback = () => {
+    if (!videoRef.current) return;
+    if (!playbackCountedRef.current) {
+      const reservation = reserveVideoPlay(event.id, viewerKey);
+      if (!reservation.allowed) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+        alert(getVideoLimitMessage(lang === 'ar'));
+        return;
+      }
+      playbackCountedRef.current = true;
+    }
+    videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+  };
 
   useEffect(() => {
+    autoStartedRef.current = false;
+    playbackCountedRef.current = false;
     setAspectRatioClass('aspect-[16/10]');
     setImageAspectRatioClass('aspect-[16/10]');
   }, [event.mediaUrl]);
@@ -117,11 +139,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
     }
     if (videoRef.current) {
       if (videoRef.current.paused || videoRef.current.ended) {
-        videoRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch((err) => {
-          console.error("Playback failed:", err);
-        });
+        startVideoPlayback();
       } else {
         videoRef.current.pause();
         setIsPlaying(false);
@@ -367,9 +385,12 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             poster={event.thumbnailUrl || undefined}
             playsInline
             muted={isMuted}
-            loop
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
+            onEnded={() => {
+              playbackCountedRef.current = false;
+              setIsPlaying(false);
+            }}
             onLoadedMetadata={(e) => {
               const video = e.currentTarget;
               if (video.videoHeight > video.videoWidth) {
@@ -405,6 +426,18 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         )}
       </div>
+        {getSafePlayableVideoUrl(event.mediaUrl) && (
+          <button
+            type="button"
+            onClick={(e) => togglePlay(e)}
+            className={`absolute inset-0 z-10 flex items-center justify-center bg-black/5 transition-opacity cursor-pointer group/play ${isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}
+            aria-label={isPlaying ? (lang === 'ar' ? 'إيقاف الفيديو' : 'Pause video') : (lang === 'ar' ? 'تشغيل الفيديو' : 'Play video')}
+          >
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-950/80 text-white backdrop-blur-md border border-white/10 group-hover/play:scale-110 transition-transform">
+              {isPlaying ? <Pause className="h-7 w-7 fill-current" /> : <Play className="h-7 w-7 fill-current ms-1" />}
+            </span>
+          </button>
+        )}
         <div className="flex flex-1 flex-col p-2.5 sm:p-3.5 relative z-10 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 transition-colors">
           {/* Content Box (Title, Price, description) */}
           <div className="mb-2.5">
@@ -734,6 +767,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
         posterUrl={event.thumbnailUrl || undefined}
         titleAr={event.titleAr}
         titleEn={event.titleEn}
+        videoId={event.id}
+        viewerKey={viewerKey}
+        initialPlaybackCounted={playbackCountedRef.current}
       />
       {/* Delete Confirmation Modal for Admins */}
       {showDeleteConfirm && (
