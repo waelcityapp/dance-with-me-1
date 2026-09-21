@@ -20,9 +20,14 @@ export async function findActiveMarketerByCode(firestore, code) {
 }
 
 export async function resolveBookingRule(firestore, { marketerId, eventId, eventReference, at = new Date() }) {
-  const snapshot = await firestore.collection('marketer_rules').where('marketerId', '==', marketerId).limit(100).get();
+  const [snapshot, generalSnapshot] = await Promise.all([
+    firestore.collection('marketer_rules').where('marketerId', '==', marketerId).limit(100).get(),
+    firestore.collection('marketer_rules').where('marketerId', '==', '__all_marketers__').limit(20).get(),
+  ]);
   const rules = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))
     .filter((rule) => rule.testMode !== true && inWindow(rule, at));
+  const generalRules = generalSnapshot.docs.map((item) => ({ id: item.id, ...item.data() }))
+    .filter((rule) => rule.configurationSource === 'admin_general_plan' && inWindow(rule, at));
 
   const specific = rules
      .filter((rule) => (rule.targetType === 'booking' || rule.targetType === 'event') && (rule.targetId === eventId || (eventReference && String(rule.targetReference || '').trim() === String(eventReference).trim())))
@@ -31,6 +36,9 @@ export async function resolveBookingRule(firestore, { marketerId, eventId, event
 
   const fallback = rules.find((rule) => rule.scope === 'default' && rule.targetType === 'booking' && rule.targetId === 'default');
   if (fallback) return { rule: fallback, reason: 'marketer_default_booking' };
+
+  const generalFallback = generalRules.find((rule) => rule.targetType === 'booking' && rule.targetId === 'default');
+  if (generalFallback) return { rule: generalFallback, reason: 'general_default_booking' };
 
   return { rule: null, reason: 'no_applicable_rule' };
 }
