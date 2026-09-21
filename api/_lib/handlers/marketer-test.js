@@ -1,5 +1,5 @@
-import { calculateConversion, money } from './_lib/marketingMath.js';
-import { admin, getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
+import { calculateConversion, money } from '../marketingMath.js';
+import { admin, getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
 function now() { return new Date().toISOString(); }
 function id(value, field) {

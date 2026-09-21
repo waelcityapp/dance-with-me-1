@@ -1,4 +1,4 @@
-import { getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
+import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
 const MAX_REQUESTS_PER_DAY = 4;
 

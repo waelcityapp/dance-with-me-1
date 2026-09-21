@@ -1,6 +1,6 @@
-import { getAdminDb, verifyRequestUser, admin } from './_lib/firebaseAdmin.js';
-import { calculateConversion } from './_lib/marketingMath.js';
-import { findActiveMarketerByCode, resolveBookingRule } from './_lib/marketingRules.js';
+import { getAdminDb, verifyRequestUser, admin } from '../firebaseAdmin.js';
+import { calculateConversion } from '../marketingMath.js';
+import { findActiveMarketerByCode, resolveBookingRule } from '../marketingRules.js';
 
 const OWNER_EMAIL = String(process.env.ADMIN_EMAIL || 'waelvts@gmail.com').trim().toLowerCase();
 

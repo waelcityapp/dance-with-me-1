@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
+import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
 function reply(res, status, body) { return res.status(status).json(body); }
 function sameSecret(input, secret) {

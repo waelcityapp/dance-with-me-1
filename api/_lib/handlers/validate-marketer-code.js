@@ -1,4 +1,4 @@
-import { getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
+import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
 function reply(res, status, body) {
   res.setHeader('Cache-Control', 'no-store');

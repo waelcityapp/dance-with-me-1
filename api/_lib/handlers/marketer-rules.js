@@ -1,4 +1,4 @@
-import { getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
+import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
 function cleanId(value, field) {
   const result = String(value || '').trim();

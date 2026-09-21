@@ -1,5 +1,5 @@
-import { getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
-import { marketingQuote, findActiveMarketerByCode, resolveBookingRule } from './_lib/marketingRules.js';
+import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
+import { marketingQuote, findActiveMarketerByCode, resolveBookingRule } from '../marketingRules.js';
 
 function reply(res, status, body) { return res.status(status).json(body); }
 function text(value, max = 160) { return String(value || '').trim().slice(0, max); }

@@ -10,7 +10,7 @@
     }
   ],
   "functions": {
-    "api/og-event.js": {
+    "api/[...path].js": {
       "includeFiles": "dist/index.html"
     }
   },
