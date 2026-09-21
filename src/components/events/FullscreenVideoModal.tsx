@@ -30,8 +30,8 @@ export const FullscreenVideoModal: React.FC<FullscreenVideoModalProps> = ({
 }) => {
   const { lang } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playerRef = useRef<any>(null);
   const playbackCountedRef = useRef(initialPlaybackCounted);
+  const [isPortrait, setIsPortrait] = useState(false);
 
   const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = event.currentTarget;
@@ -44,74 +44,16 @@ export const FullscreenVideoModal: React.FC<FullscreenVideoModalProps> = ({
     }
     playbackCountedRef.current = true;
   };
-  const [isPortrait, setIsPortrait] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
     playbackCountedRef.current = initialPlaybackCounted;
-
-    let playerInstance: any;
-    const timer = setTimeout(() => {
-      if (videoRef.current) {
-        const PlyrClass = (window as any).Plyr;
-        if (PlyrClass) {
-          try {
-            playerInstance = new PlyrClass(videoRef.current, {
-              controls: [
-                'play-large',
-                'play',
-                'progress',
-                'current-time',
-                'duration',
-                'mute',
-                'volume',
-                'settings',
-                'fullscreen'
-              ],
-              speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
-              autoplay: true,
-              muted: false,
-              keyboard: { focused: true, global: true },
-              tooltips: { controls: true, seek: true },
-              i18n: lang === 'ar' ? {
-                play: 'تشغيل',
-                pause: 'إيقاف مؤقت',
-                mute: 'كتم الصوت',
-                unmute: 'تشغيل الصوت',
-                settings: 'الإعدادات',
-                speed: 'السرعة',
-                normal: 'عادي',
-                quality: 'الجودة',
-                loop: 'تكرار',
-              } : undefined
-            });
-
-            playerRef.current = playerInstance;
-
-            playerInstance.on('ready', () => {
-              playerInstance.play().catch((err: any) => {
-                console.log('Autoplay play failed/blocked:', err);
-              });
-            });
-          } catch (e) {
-            console.error('Error initializing Plyr:', e);
-          }
-        }
-      }
-    }, 150);
-
     return () => {
-      clearTimeout(timer);
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-        } catch (e) {
-          console.warn('Error destroying Plyr:', e);
-        }
-        playerRef.current = null;
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
       }
     };
-  }, [isOpen, videoUrl, lang]);
+  }, [isOpen, videoUrl, initialPlaybackCounted]);
 
   if (!isOpen) return null;
 
@@ -168,15 +110,15 @@ export const FullscreenVideoModal: React.FC<FullscreenVideoModalProps> = ({
               isPortrait ? 'max-w-[380px] aspect-[9/16]' : 'max-w-4xl aspect-video'
             }`}
           >
-            {/* The video element that Plyr wraps */}
+            {/* Use one native player to avoid duplicate audio/rendering layers. */}
             <video
               ref={videoRef}
               src={getSafePlayableVideoUrl(videoUrl)}
               poster={posterUrl}
-              autoPlay
-              preload="auto"
+              preload="metadata"
               playsInline
               controls
+              loop={false}
               className="w-full h-full object-contain cursor-pointer"
               onLoadedMetadata={(e) => {
                 const video = e.currentTarget;
