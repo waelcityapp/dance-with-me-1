@@ -375,7 +375,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           <iframe
             src={getGoogleDrivePreviewUrl(event.mediaUrl) || event.mediaUrl}
             className="h-full w-full border-0 bg-neutral-950"
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="encrypted-media; picture-in-picture"
             referrerPolicy="no-referrer"
           />
         ) : getSafePlayableVideoUrl(event.mediaUrl) ? (
@@ -385,6 +385,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             poster={event.thumbnailUrl || undefined}
             playsInline
             muted={isMuted}
+            loop={false}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             onEnded={() => {
