@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { fetchMarketingQuote, validateMarketerCode } from '../../lib/marketerCodeApi';
+import { uploadToCloudinary } from '../../utils/cloudinary';
 
 export const BookingModal: React.FC = () => {
   const { 
@@ -214,6 +215,16 @@ export const BookingModal: React.FC = () => {
     }
   };
 
+  const uploadReceiptForBooking = async (dataUrl: string): Promise<string> => {
+    if (!dataUrl.startsWith('data:')) return dataUrl;
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    const file = new File([blob], 'booking-receipt.jpg', { type: blob.type || 'image/jpeg' });
+    const uploadedUrl = await uploadToCloudinary(file);
+    if (!uploadedUrl) throw new Error('RECEIPT_UPLOAD_FAILED');
+    return uploadedUrl;
+  };
+
   const handleSubmit = async () => {
     if (!isFormValid) return;
 
@@ -231,6 +242,7 @@ export const BookingModal: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      const receiptForBooking = nameOnlyBooking ? '' : await uploadReceiptForBooking(receiptImage!);
       const result = await submitBooking({
         eventId: selectedBookingEvent.id,
         eventTitleAr: selectedBookingEvent.titleAr,
@@ -241,7 +253,7 @@ export const BookingModal: React.FC = () => {
         userPhone: phone.trim(),
         numberOfIndividuals: individuals,
         totalAmount: totalAmount,
-        receiptImage: nameOnlyBooking ? '' : receiptImage!,
+        receiptImage: receiptForBooking,
         eventDate: selectedBookingEvent.eventDate,
         marketerCode: nameOnlyBooking ? undefined : marketerCodeInput.trim() || undefined
       });
