@@ -34,9 +34,7 @@ export async function resolveBookingRule(firestore, { marketerId, eventId, event
     .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))[0];
   if (specific) return { rule: specific, reason: 'marketer_event_booking' };
 
-  const fallback = rules.find((rule) => rule.scope === 'default' && rule.targetType === 'booking' && rule.targetId === 'default');
-  if (fallback) return { rule: fallback, reason: 'marketer_default_booking' };
-
+  // The global plan is the default. Personal rules are only event-specific exceptions.
   const generalFallback = generalRules.find((rule) => rule.targetType === 'booking' && rule.targetId === 'default');
   if (generalFallback) return { rule: generalFallback, reason: 'general_default_booking' };
 
