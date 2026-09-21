@@ -26,6 +26,7 @@ const eventImage = (event?: DanceEvent) => event?.thumbnailUrl || event?.mediaUr
 export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
   const { lang, activeEvents, events } = useApp();
   const [rules, setRules] = useState<MarketerRule[]>([]);
+  const [generalPlans, setGeneralPlans] = useState<MarketerRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -50,8 +51,9 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
   const refresh = async () => {
     setLoading(true);
     try {
-      const result = await marketerRulesApi.list(marketer.id);
+      const [result, general] = await Promise.all([marketerRulesApi.list(marketer.id), marketerRulesApi.listGeneralPlans()]);
       setRules(result.rules);
+      setGeneralPlans(general.rules as MarketerRule[]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'تعذر تحميل الاتفاقات.');
     } finally {
@@ -165,18 +167,18 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
-          <h2 className="font-black flex items-center gap-2"><Tag className="h-5 w-5 text-amber-500" /> الاتفاق الافتراضي</h2>
-          <p className="mt-1 text-xs text-neutral-500">يُستخدم عند عدم وجود اتفاق خاص. إعداد مستقل للإعلانات أو الحجوزات.</p>
-          <label className="mt-5 block text-sm font-black">نوع العملية
-            <select value={defaultTarget} onChange={(event) => setDefaultTarget(event.target.value as typeof defaultTarget)} className="mt-2 h-11 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-3">
-              <option value="advertisement">إضافة إعلان</option><option value="booking">حجز فاعلية</option>
-            </select>
-          </label>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <RuleInput label="خصم العميل" value={defaultDiscount} onChange={setDefaultDiscount} />
-            <RuleInput label="عمولة المسوق" value={defaultReward} onChange={setDefaultReward} />
+          <h2 className="font-black flex items-center gap-2"><Tag className="h-5 w-5 text-amber-500" /> الخطة العامة المطبقة</h2>
+          <p className="mt-1 text-xs text-neutral-500">للعلم فقط من إعدادات الخطط العامة؛ لا يمكن تعديلها من إعدادات هذا المسوّق.</p>
+          <div className="mt-5 space-y-3">
+            {generalPlans.filter((rule) => rule.targetType === 'booking' || rule.targetType === 'advertisement').map((rule) => (
+              <div key={rule.id} className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 p-3">
+                <div className="font-black">{rule.targetType === 'booking' ? 'الخطة العامة للحجوزات' : 'الخطة العامة لإضافة الإعلانات'}</div>
+                <div className="mt-1 text-xs text-neutral-500">خصم {valueText(rule.customerDiscount)} · عمولة {valueText(rule.marketerReward)}</div>
+                <span className="mt-2 inline-block rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black text-emerald-600">مطبقة تلقائيًا</span>
+              </div>
+            ))}
+            {generalPlans.length === 0 && <p className="text-sm text-neutral-500">لم يتم اعتماد خطة عامة بعد.</p>}
           </div>
-          <button type="button" disabled={saving} onClick={() => void saveRule('default')} className="mt-5 h-11 w-full rounded-xl bg-amber-500 text-neutral-950 font-black flex items-center justify-center gap-2 disabled:opacity-50"><Save className="h-4 w-4" />حفظ الافتراضي</button>
         </div>
 
         <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
@@ -204,7 +206,7 @@ export const MarketerSettingsPage: React.FC<Props> = ({ marketer, onBack }) => {
 
       <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
         <h2 className="font-black">الاتفاقات المحفوظة</h2>
-        {loading ? <p className="mt-4 text-sm text-neutral-500">جاري التحميل...</p> : rules.length === 0 ? <p className="mt-4 text-sm text-neutral-500">لا توجد اتفاقات محفوظة لهذا المسوق.</p> : <div className="mt-4 grid gap-3">{rules.map((rule) => (
+        {loading ? <p className="mt-4 text-sm text-neutral-500">جاري التحميل...</p> : rules.length === 0 ? <p className="mt-4 text-sm text-neutral-500">لا توجد اتفاقات محفوظة لهذا المسوق.</p> : <div className="mt-4 grid gap-3">{rules.filter((rule) => rule.scope === 'event').map((rule) => (
           <article key={rule.id} className="rounded-2xl border border-neutral-200 dark:border-neutral-700 p-3 flex flex-col sm:flex-row gap-3 sm:items-center">
             {rule.eventSnapshot ? <img src={rule.eventSnapshot.thumbnailUrl || rule.eventSnapshot.mediaUrl} alt="" className="h-16 w-20 rounded-xl object-cover" /> : <div className="h-16 w-20 rounded-xl bg-amber-500/10 flex items-center justify-center"><Tag className="text-amber-500" /></div>}
             <div className="min-w-0 flex-1"><div className="font-black truncate">{rule.eventSnapshot?.titleAr || (rule.scope === 'event' ? (rule.targetType === 'advertisement' ? 'اتفاق خاص: إضافة إعلان' : 'اتفاق خاص: حجز فعالية') : (rule.targetType === 'advertisement' ? 'افتراضي: إضافة إعلان' : 'افتراضي: حجز فعالية'))}</div><div className="mt-1 text-xs text-neutral-500">{rule.targetReference ? `مرجع #${rule.targetReference} · ` : ''}خصم {valueText(rule.customerDiscount)} · عمولة {valueText(rule.marketerReward)}</div><span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${rule.active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-neutral-500/10 text-neutral-500'}`}>{rule.active ? 'نشط' : 'متوقف'}</span></div>
