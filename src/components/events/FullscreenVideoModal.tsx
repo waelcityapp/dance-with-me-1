@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getSafePlayableVideoUrl } from '../../lib/mediaUtils';
+import { getVideoLimitMessage, reserveVideoPlay } from '../../lib/videoPlaybackLimit';
 
 interface FullscreenVideoModalProps {
   isOpen: boolean;
@@ -11,6 +12,9 @@ interface FullscreenVideoModalProps {
   posterUrl?: string;
   titleAr?: string;
   titleEn?: string;
+  videoId?: string;
+  viewerKey?: string;
+  initialPlaybackCounted?: boolean;
 }
 
 export const FullscreenVideoModal: React.FC<FullscreenVideoModalProps> = ({
@@ -19,15 +23,32 @@ export const FullscreenVideoModal: React.FC<FullscreenVideoModalProps> = ({
   videoUrl,
   posterUrl,
   titleAr,
-  titleEn
+  titleEn,
+  videoId,
+  viewerKey,
+  initialPlaybackCounted = false
 }) => {
   const { lang } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
+  const playbackCountedRef = useRef(initialPlaybackCounted);
+
+  const handleVideoPlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget;
+    if (!videoId || !viewerKey || playbackCountedRef.current) return;
+    const reservation = reserveVideoPlay(videoId, viewerKey);
+    if (!reservation.allowed) {
+      video.pause();
+      alert(getVideoLimitMessage(lang === 'ar'));
+      return;
+    }
+    playbackCountedRef.current = true;
+  };
   const [isPortrait, setIsPortrait] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
+    playbackCountedRef.current = initialPlaybackCounted;
 
     let playerInstance: any;
     const timer = setTimeout(() => {
@@ -164,6 +185,10 @@ export const FullscreenVideoModal: React.FC<FullscreenVideoModalProps> = ({
                 } else {
                   setIsPortrait(false);
                 }
+              }}
+              onPlay={handleVideoPlay}
+              onEnded={() => {
+                playbackCountedRef.current = false;
               }}
             />
           </div>
