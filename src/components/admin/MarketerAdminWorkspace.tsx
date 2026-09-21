@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, BarChart3, CalendarDays, ChevronLeft, ChevronRig
 import { useApp } from '../../context/AppContext';
 import { UserProfile } from '../../types';
 import { MarketersManagement } from './MarketersManagement';
+import { marketerRulesApi, RuleValueType } from '../../lib/marketerRulesApi';
 
 type Section = 'home' | 'assign' | 'plans' | 'review';
 type TransactionStatus = 'all' | 'pending' | 'available' | 'reversed' | 'processing' | 'paid' | 'rejected';
@@ -37,6 +38,25 @@ export const MarketerAdminWorkspace: React.FC<{ onBack: () => void }> = ({ onBac
   const [reviewTab, setReviewTab] = useState<'operations' | 'withdrawals'>('operations');
   const [planTab, setPlanTab] = useState<'bookings' | 'ads'>('bookings');
   const [period, setPeriod] = useState('30');
+  const [planSaving, setPlanSaving] = useState(false);
+  const [planMessage, setPlanMessage] = useState('');
+  const saveGeneralPlan = async () => {
+    const read = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    const discount = Number(read('general-plan-discount')?.value || 0);
+    const reward = Number(read('general-plan-reward')?.value || 0);
+    const discountType = (read('general-plan-discount-type')?.value || 'percentage') as RuleValueType;
+    const rewardType = (read('general-plan-reward-type')?.value || 'percentage') as RuleValueType;
+    const startsAt = read('general-plan-start')?.value || '';
+    const endsAt = read('general-plan-end')?.value || '';
+    if (!Number.isFinite(discount) || !Number.isFinite(reward) || discount < 0 || reward < 0 || (discountType === 'percentage' && discount > 100) || (rewardType === 'percentage' && reward > 100)) { setPlanMessage('أدخل قيماً صحيحة؛ النسبة من 0 إلى 100.'); return; }
+    if (startsAt && endsAt && endsAt < startsAt) { setPlanMessage('تاريخ النهاية يجب أن يكون بعد البداية.'); return; }
+    setPlanSaving(true); setPlanMessage('');
+    try {
+      await marketerRulesApi.saveGeneralPlan({ targetType: planTab === 'bookings' ? 'booking' : 'advertisement', customerDiscount: { type: discountType, value: discount }, marketerReward: { type: rewardType, value: reward }, startsAt, endsAt });
+      setPlanMessage('تم اعتماد وحفظ الخطة العامة.');
+    } catch (error) { setPlanMessage(error instanceof Error ? error.message : 'تعذر حفظ الخطة.'); }
+    finally { setPlanSaving(false); }
+  };
 
   const go = (next: Section) => { setSection(next); setSelectedMarketer(null); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const back = () => { if (section === 'review' && selectedMarketer) { setSelectedMarketer(null); return; } if (section === 'home') onBack(); else go('home'); };
@@ -88,14 +108,14 @@ export const MarketerAdminWorkspace: React.FC<{ onBack: () => void }> = ({ onBac
           <div className={`${shell} p-5 sm:p-6`}>
             <div className="flex items-start gap-3"><CircleDollarSign className="mt-0.5 h-5 w-5 text-amber-500" /><div><h2 className="font-black">{planTab === 'bookings' ? (ar ? 'الخطة العامة لكل الحجوزات' : 'Default booking plan') : (ar ? 'الخطة العامة لإضافة إعلان' : 'Default advertising plan')}</h2><p className={`mt-1 text-xs ${muted}`}>{ar ? 'تسري على جميع المسوّقين عند عدم وجود اتفاق أخص' : 'Applies to all marketers unless a more specific agreement exists'}</p></div></div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2 text-xs font-bold">{ar ? 'خصم العميل' : 'Customer discount'}<div className="flex gap-2"><input className={field} type="number" min="0" placeholder="10" aria-label={ar ? 'خصم العميل' : 'Customer discount'} /><select className={field} aria-label={ar ? 'نوع خصم العميل' : 'Discount type'}><option>{ar ? 'نسبة %' : 'Percent %'}</option><option>{ar ? 'مبلغ ثابت' : 'Fixed amount'}</option></select></div></label>
-              <label className="space-y-2 text-xs font-bold">{ar ? 'عمولة المسوّق' : 'Marketer reward'}<div className="flex gap-2"><input className={field} type="number" min="0" placeholder="10" aria-label={ar ? 'عمولة المسوّق' : 'Marketer reward'} /><select className={field} aria-label={ar ? 'نوع العمولة' : 'Reward type'}><option>{ar ? 'نسبة %' : 'Percent %'}</option><option>{ar ? 'مبلغ ثابت' : 'Fixed amount'}</option></select></div></label>
+              <label className="space-y-2 text-xs font-bold">{ar ? 'خصم العميل' : 'Customer discount'}<div className="flex gap-2"><input className={field} id="general-plan-discount" type="number" min="0" step="0.01" placeholder="10" aria-label={ar ? 'خصم العميل' : 'Customer discount'} /><select id="general-plan-discount-type" className={field} aria-label={ar ? 'نوع خصم العميل' : 'Discount type'}><option value="percentage">{ar ? 'نسبة %' : 'Percent %'}</option><option value="fixed">{ar ? 'مبلغ ثابت' : 'Fixed amount'}</option></select></div></label>
+              <label className="space-y-2 text-xs font-bold">{ar ? 'عمولة المسوّق' : 'Marketer reward'}<div className="flex gap-2"><input className={field} id="general-plan-reward" type="number" min="0" step="0.01" placeholder="10" aria-label={ar ? 'عمولة المسوّق' : 'Marketer reward'} /><select id="general-plan-reward-type" className={field} aria-label={ar ? 'نوع العمولة' : 'Reward type'}><option value="percentage">{ar ? 'نسبة %' : 'Percent %'}</option><option value="fixed">{ar ? 'مبلغ ثابت' : 'Fixed amount'}</option></select></div></label>
               {planTab === 'ads' && <label className="space-y-2 text-xs font-bold">{ar ? 'نوع الإعلان' : 'Ad type'}<select className={field}><option>{ar ? 'إعلان عادي' : 'Standard ad'}</option><option>{ar ? 'إعلان مميز' : 'Featured ad'}</option></select></label>}
-              <label className="space-y-2 text-xs font-bold">{ar ? 'تاريخ البداية (اختياري)' : 'Start date (optional)'}<input className={field} type="date" /></label>
-              <label className="space-y-2 text-xs font-bold">{ar ? 'تاريخ النهاية (اختياري)' : 'End date (optional)'}<input className={field} type="date" /></label>
+              <label className="space-y-2 text-xs font-bold">{ar ? 'تاريخ البداية (اختياري)' : 'Start date (optional)'}<input id="general-plan-start" className={field} type="date" /></label>
+              <label className="space-y-2 text-xs font-bold">{ar ? 'تاريخ النهاية (اختياري)' : 'End date (optional)'}<input id="general-plan-end" className={field} type="date" /></label>
             </div>
-            <div className="mt-6 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">{ar ? 'هذه الحقول لم تُربط بالحفظ بعد. القواعد الحالية للمسوّقين لم تتغير.' : 'These fields do not save yet. Existing marketer agreements are unchanged.'}</div>
-            <button type="button" disabled className="mt-4 rounded-xl bg-amber-500 px-5 py-3 text-sm font-black text-neutral-950 opacity-50">{ar ? 'حفظ الخطة · بعد الاعتماد' : 'Save plan · after approval'}</button>
+            {planMessage ? <div className="mt-6 rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-xs font-bold text-amber-800 dark:text-amber-300">{planMessage}</div> : <div className="mt-6 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">{ar ? 'تُستخدم الخطة عند عدم وجود اتفاق خاص للمسوّق.' : 'Used when no marketer-specific agreement exists.'}</div>}
+            <button type="button" disabled={planSaving} onClick={() => void saveGeneralPlan()} className="mt-4 rounded-xl bg-amber-500 px-5 py-3 text-sm font-black text-neutral-950 disabled:opacity-50">{planSaving ? (ar ? 'جارٍ الحفظ...' : 'Saving...') : (ar ? 'اعتماد وحفظ الخطة' : 'Approve and save plan')}</button>
           </div>
           <div className="space-y-4">
             <div className={`${shell} p-5`}><h2 className="font-black">{ar ? 'استثناءات الخطة العامة' : 'General exceptions'}</h2><p className={`mt-2 text-sm leading-6 ${muted}`}>{planTab === 'bookings' ? (ar ? 'قاعدة لفعالية بعينها أو لفترة محددة، تطبق على جميع المسوّقين.' : 'A rule for one event or a limited period, for all marketers.') : (ar ? 'قاعدة لإعلان عادي أو مميز، ويمكن تحديد فترة لها.' : 'Rules by standard or featured ad, optionally time-limited.')}</p><button type="button" disabled className="mt-4 rounded-xl border border-amber-500/30 px-4 py-2.5 text-xs font-bold text-amber-700 opacity-60 dark:text-amber-300">{ar ? '+ إضافة استثناء · بعد الاعتماد' : '+ Add exception · after approval'}</button></div>
