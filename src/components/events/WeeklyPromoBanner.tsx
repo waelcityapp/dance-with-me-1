@@ -326,7 +326,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           <iframe
             src={getGoogleDrivePreviewUrl(promoEvent.mediaUrl) || promoEvent.mediaUrl}
             className="h-full w-full border-0 bg-neutral-950"
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="encrypted-media; picture-in-picture"
             referrerPolicy="no-referrer"
           />
         ) : getSafePlayableVideoUrl(promoEvent.mediaUrl) ? (
@@ -336,6 +336,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             poster={promoEvent.thumbnailUrl || undefined}
             playsInline
             muted={isMuted}
+            loop={false}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             onEnded={() => {
