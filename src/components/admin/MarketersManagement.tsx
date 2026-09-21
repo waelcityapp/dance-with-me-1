@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BadgeCheck, Ban, Copy, Search, Settings, UserCheck, Users, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, Ban, Copy, Search, Settings, UserCheck, Users, Wallet, X } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useApp } from '../../context/AppContext';
 import { db, subscribeToAllUsers } from '../../lib/firebase';
@@ -9,6 +9,7 @@ import { MarketerSettingsPage } from './MarketerSettingsPage';
 
 interface MarketersManagementProps {
   onBack: () => void;
+  onReviewMarketer?: (marketer: UserProfile) => void;
 }
 
 const normalize = (value?: string) => (value || '').trim().toLowerCase();
@@ -59,7 +60,7 @@ const findOwnerIndex = (items: UserProfile[], adminUser: UserProfile | null) => 
   return adminIndexes.length === 1 ? adminIndexes[0] : -1;
 };
 
-export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack }) => {
+export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack, onReviewMarketer }) => {
   const { lang, user: adminUser } = useApp();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [query, setQuery] = useState('');
@@ -328,10 +329,23 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
 
   const copyText = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
-      setMessage(lang === 'ar' ? 'تم النسخ.' : 'Copied.');
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const helper = document.createElement('textarea');
+        helper.value = value;
+        helper.setAttribute('readonly', '');
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.select();
+        const copied = document.execCommand('copy');
+        helper.remove();
+        if (!copied) throw new Error('COPY_FAILED');
+      }
+      setMessage(lang === 'ar' ? 'تم نسخ الكود.' : 'Code copied.');
     } catch {
-      setMessage(lang === 'ar' ? 'تعذر النسخ تلقائياً.' : 'Could not copy automatically.');
+      setMessage(lang === 'ar' ? 'تعذر النسخ تلقائياً. حدّد الكود وانسخه يدوياً.' : 'Could not copy automatically. Select the code and copy it manually.');
     }
   };
 
@@ -454,6 +468,12 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    {hasMarketerHistory && onReviewMarketer && (
+                      <button type="button" onClick={() => onReviewMarketer(item)} className="h-10 rounded-xl border border-neutral-200 dark:border-neutral-700 px-3 text-xs font-black flex items-center gap-2 bg-neutral-50 dark:bg-neutral-800">
+                        <Wallet className="h-4 w-4" />
+                        {lang === 'ar' ? 'مراجعة الحساب' : 'Review account'}
+                      </button>
+                    )}
                     {hasMarketerHistory && (
                       <button type="button" onClick={() => setSettingsMarketer(item)} className="h-10 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 text-xs font-black flex items-center gap-2 text-amber-700 dark:text-amber-300" aria-label={lang === 'ar' ? `إعدادات المسوق ${item.name}` : `Settings for ${item.name}`}>
                         <Settings className="h-4 w-4" />
