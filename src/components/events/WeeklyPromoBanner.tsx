@@ -41,7 +41,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   }, [promoEvent?.id]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackCountedRef = useRef(false);
-  const autoStartedRef = useRef(false);
+
   const viewerKey = getVideoViewerKey(user?.id);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -54,32 +54,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (videoRef.current) {
-            if (entry.isIntersecting && !autoStartedRef.current) {
-              autoStartedRef.current = true;
-              startVideoPlayback();
-            } else {
-              videoRef.current.pause();
-              setIsPlaying(false);
-            }
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    if (videoRef.current) {
-      observer.observe(videoRef.current);
-    }
-
-    return () => {
-      if (videoRef.current) {
-        observer.unobserve(videoRef.current);
-      }
-    };
+    playbackCountedRef.current = false;
   }, [promoEvent.id, viewerKey]);
 
   const startVideoPlayback = () => {
@@ -98,7 +73,6 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   };
 
   useEffect(() => {
-    autoStartedRef.current = false;
     playbackCountedRef.current = false;
     setAspectRatioClass('aspect-video');
     setImageAspectRatioClass('aspect-video');
@@ -326,7 +300,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           <iframe
             src={getGoogleDrivePreviewUrl(promoEvent.mediaUrl) || promoEvent.mediaUrl}
             className="h-full w-full border-0 bg-neutral-950"
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="encrypted-media; picture-in-picture"
             referrerPolicy="no-referrer"
           />
         ) : getSafePlayableVideoUrl(promoEvent.mediaUrl) ? (
@@ -336,6 +310,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             poster={promoEvent.thumbnailUrl || undefined}
             playsInline
             muted={isMuted}
+            loop={false}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             onEnded={() => {
