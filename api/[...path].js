@@ -30,8 +30,34 @@ const handlers = new Map([
   ['/validate-marketer-code', validateMarketerCode],
 ]);
 
+function setPreflightHeaders(req, res) {
+  const origin = String(req.headers?.origin || '');
+  const allowedOrigins = new Set([
+    'https://cityeve.online',
+    'https://www.cityeve.online',
+    'https://dance-with-me-1-git-ai-studio-cityeve-waelcityapps-projects.vercel.app',
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '',
+  ].filter(Boolean));
+  if (allowedOrigins.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Access-Control-Max-Age', '600');
+}
+
 function routeFromRequest(req) {
+  const dynamicPath = req.query?.path;
+  const dynamicParts = Array.isArray(dynamicPath) ? dynamicPath : [dynamicPath];
+  const dynamicRoute = `/${dynamicParts.filter(Boolean).join('/')}`.replace(/\/$/, '') || '/';
   const requestUrl = String(req.url || '');
+
+  // Vercel normally preserves the original URL. If it exposes the literal
+  // catch-all filename instead, prefer the dynamic route parameter.
+  if (dynamicRoute !== '/' && !requestUrl.includes('/api/')) return dynamicRoute;
+  if (requestUrl.includes('/[...path]') && dynamicRoute !== '/') return dynamicRoute;
+
   try {
     const pathname = new URL(requestUrl, 'http://cityeve.internal').pathname;
     const apiIndex = pathname.indexOf('/api/');
@@ -40,13 +66,13 @@ function routeFromRequest(req) {
     // Fall back to Vercel's dynamic route query below.
   }
 
-  const dynamicPath = req.query?.path;
-  const parts = Array.isArray(dynamicPath) ? dynamicPath : [dynamicPath];
-  const route = `/${parts.filter(Boolean).join('/')}`;
-  return route === '/' ? '/' : route.replace(/\/$/, '');
+  return dynamicRoute;
 }
 
 export default async function handler(req, res) {
+  setPreflightHeaders(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+
   const route = routeFromRequest(req);
   const target = handlers.get(route);
 

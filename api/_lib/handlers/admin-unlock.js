@@ -9,7 +9,11 @@ function sameSecret(input, secret) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return reply(res, 405, { error: 'METHOD_NOT_ALLOWED' });
+  if (req.method === 'OPTIONS') return reply(res, 204, {});
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST, OPTIONS');
+    return reply(res, 405, { error: 'METHOD_NOT_ALLOWED' });
+  }
   try {
     const actor = await verifyRequestUser(req);
     const ownerEmail = String(process.env.ADMIN_EMAIL || 'waelvts@gmail.com').trim().toLowerCase();
