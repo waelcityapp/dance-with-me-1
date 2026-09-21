@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { SITE_URL, LOGO, CATEGORIES, escapeHtml as esc, jsonLd, text, hasEnglish, readPublicEvent, listPublicEvents, eventDetails } from './_lib/publicSeo.js';
+import { SITE_URL, LOGO, CATEGORIES, escapeHtml as esc, jsonLd, text, hasEnglish, readPublicEvent, listPublicEvents, eventDetails } from '../publicSeo.js';
 
 let template;
 function appTemplate() {

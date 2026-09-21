@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
+import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
 function reply(res, status, body) { return res.status(status).json(body); }
 function sameSecret(input, secret) {
@@ -9,7 +9,11 @@ function sameSecret(input, secret) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return reply(res, 405, { error: 'METHOD_NOT_ALLOWED' });
+  if (req.method === 'OPTIONS') return reply(res, 204, {});
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST, OPTIONS');
+    return reply(res, 405, { error: 'METHOD_NOT_ALLOWED' });
+  }
   try {
     const actor = await verifyRequestUser(req);
     const ownerEmail = String(process.env.ADMIN_EMAIL || 'waelvts@gmail.com').trim().toLowerCase();

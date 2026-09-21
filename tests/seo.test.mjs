@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import handler, {renderDocument} from '../api/og-event.js';
-import sitemap from '../api/sitemap.js';
+import handler, {renderDocument} from '../api/_lib/handlers/og-event.js';
+import sitemap from '../api/_lib/handlers/sitemap.js';
 import {isPublicEvent,schemaDate,eventDetails} from '../api/_lib/publicSeo.js';
 
 const approved = {id:'published',seoIndexable:true,category:'party',titleAr:'حفلة سالسا',titleEn:'Salsa night',descriptionAr:'تفاصيل الحفلة',descriptionEn:'A salsa night',eventDate:'2026-09-15T00:00:00.000Z',location:{nameAr:'مكان الحفلة',nameEn:'The venue',addressAr:'عنوان المكان',addressEn:'Venue address',governorateAr:'الإسكندرية',governorateEn:'Alexandria'},contact:{organizerName:'Actual organizer'}};

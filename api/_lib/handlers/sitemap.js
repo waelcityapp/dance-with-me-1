@@ -1,4 +1,4 @@
-import {SITE_URL,CATEGORIES,escapeHtml as esc,text,hasEnglish,listPublicEvents} from './_lib/publicSeo.js';
+import {SITE_URL,CATEGORIES,escapeHtml as esc,text,hasEnglish,listPublicEvents} from '../publicSeo.js';
 
 export default async function handler(req,res) {
   try {

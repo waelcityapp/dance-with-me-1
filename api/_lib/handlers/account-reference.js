@@ -1,4 +1,4 @@
-import { getAdminDb, verifyRequestUser } from './_lib/firebaseAdmin.js';
+import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
 const FIRST_ACCOUNT_NUMBER = 10001;
 const OWNER_ACCOUNT_REFERENCE = 'CE1000';
