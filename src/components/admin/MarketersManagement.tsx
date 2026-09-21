@@ -329,10 +329,23 @@ export const MarketersManagement: React.FC<MarketersManagementProps> = ({ onBack
 
   const copyText = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
-      setMessage(lang === 'ar' ? 'تم النسخ.' : 'Copied.');
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const helper = document.createElement('textarea');
+        helper.value = value;
+        helper.setAttribute('readonly', '');
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.select();
+        const copied = document.execCommand('copy');
+        helper.remove();
+        if (!copied) throw new Error('COPY_FAILED');
+      }
+      setMessage(lang === 'ar' ? 'تم نسخ الكود.' : 'Code copied.');
     } catch {
-      setMessage(lang === 'ar' ? 'تعذر النسخ تلقائياً.' : 'Could not copy automatically.');
+      setMessage(lang === 'ar' ? 'تعذر النسخ تلقائياً. حدّد الكود وانسخه يدوياً.' : 'Could not copy automatically. Select the code and copy it manually.');
     }
   };
 
