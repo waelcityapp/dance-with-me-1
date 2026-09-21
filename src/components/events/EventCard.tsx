@@ -49,7 +49,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackCountedRef = useRef(false);
-  const autoStartedRef = useRef(false);
+
   const viewerKey = getVideoViewerKey(user?.id);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -62,32 +62,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (videoRef.current) {
-            if (entry.isIntersecting && !autoStartedRef.current) {
-              autoStartedRef.current = true;
-              startVideoPlayback();
-            } else {
-              videoRef.current.pause();
-              setIsPlaying(false);
-            }
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    if (videoRef.current) {
-      observer.observe(videoRef.current);
-    }
-
-    return () => {
-      if (videoRef.current) {
-        observer.unobserve(videoRef.current);
-      }
-    };
+    playbackCountedRef.current = false;
   }, [event.id, viewerKey]);
 
   const startVideoPlayback = () => {
@@ -106,7 +81,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   };
 
   useEffect(() => {
-    autoStartedRef.current = false;
     playbackCountedRef.current = false;
     setAspectRatioClass('aspect-[16/10]');
     setImageAspectRatioClass('aspect-[16/10]');
@@ -375,7 +349,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           <iframe
             src={getGoogleDrivePreviewUrl(event.mediaUrl) || event.mediaUrl}
             className="h-full w-full border-0 bg-neutral-950"
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="encrypted-media; picture-in-picture"
             referrerPolicy="no-referrer"
           />
         ) : getSafePlayableVideoUrl(event.mediaUrl) ? (
@@ -385,6 +359,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             poster={event.thumbnailUrl || undefined}
             playsInline
             muted={isMuted}
+            loop={false}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             onEnded={() => {
