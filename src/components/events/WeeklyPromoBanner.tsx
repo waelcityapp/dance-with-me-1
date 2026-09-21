@@ -73,7 +73,6 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   };
 
   useEffect(() => {
-    autoStartedRef.current = false;
     playbackCountedRef.current = false;
     setAspectRatioClass('aspect-video');
     setImageAspectRatioClass('aspect-video');
