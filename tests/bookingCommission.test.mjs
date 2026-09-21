@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { settleCommission } from '../api/bookings.js';
+import { settleCommission } from '../api/_lib/handlers/bookings.js';
 
 function scenario(initialStatus) {
   const writes = [];
