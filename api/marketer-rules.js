@@ -29,6 +29,18 @@ export default async function handler(req, res) {
     const adminId = await requireAdmin(req);
     const firestore = getAdminDb();
     const action = String(req.body?.action || '');
+    if (action === 'general_list') {
+      const snapshot = await firestore.collection('marketer_rules').where('marketerId', '==', '__all_marketers__').limit(20).get();
+      const rules = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).filter((item) => item.configurationSource === 'admin_general_plan').sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+      return reply(res, 200, { ok: true, rules });
+    }
+    if (action === 'general_save') {
+      const targetType = req.body?.targetType === 'booking' ? 'booking' : 'advertisement';
+      const ruleId = 'general_' + targetType + '_default';
+      const rule = { id: ruleId, marketerId: '__all_marketers__', scope: 'default', targetType, targetId: 'default', targetReference: '', customerDiscount: ruleValue(req.body?.customerDiscount, 'CUSTOMER_DISCOUNT'), marketerReward: ruleValue(req.body?.marketerReward, 'MARKETER_REWARD'), active: true, startsAt: String(req.body?.startsAt || ''), endsAt: String(req.body?.endsAt || ''), eventSnapshot: null, configurationSource: 'admin_general_plan', appliedToLivePricing: true, updatedAt: now(), updatedBy: adminId };
+      await firestore.collection('marketer_rules').doc(ruleId).set(rule, { merge: true });
+      return reply(res, 200, { ok: true, rule });
+    }
     const marketerId = cleanId(req.body?.marketerId, 'MARKETER_ID');
     const marketer = await firestore.collection('users').doc(marketerId).get();
     if (!marketer.exists || (!marketer.data()?.isMarketer && !marketer.data()?.marketerCode)) throw new Error('MARKETER_NOT_FOUND');
