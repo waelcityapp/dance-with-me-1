@@ -8,6 +8,7 @@ import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } f
 import { FullscreenVideoModal } from './FullscreenVideoModal';
 import { EventImageLightboxModal } from './EventImageLightboxModal';
 import { BroadcastPushModal } from '../modals/BroadcastPushModal';
+import { getVideoLimitMessage, getVideoViewerKey, reserveVideoPlay } from '../../lib/videoPlaybackLimit';
 
 interface WeeklyPromoBannerProps {
   promoEvent: DanceEvent;
@@ -39,6 +40,9 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
     }
   }, [promoEvent?.id]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playbackCountedRef = useRef(false);
+
+  const viewerKey = getVideoViewerKey(user?.id);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
@@ -49,34 +53,26 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (videoRef.current) {
-            if (entry.isIntersecting) {
-              videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-            } else {
-              videoRef.current.pause();
-              setIsPlaying(false);
-            }
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
+    playbackCountedRef.current = false;
+  }, [promoEvent.id, viewerKey]);
 
-    if (videoRef.current) {
-      observer.observe(videoRef.current);
-    }
-
-    return () => {
-      if (videoRef.current) {
-        observer.unobserve(videoRef.current);
+  const startVideoPlayback = () => {
+    if (!videoRef.current) return;
+    if (!playbackCountedRef.current) {
+      const reservation = reserveVideoPlay(promoEvent.id, viewerKey);
+      if (!reservation.allowed) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+        alert(getVideoLimitMessage(lang === 'ar'));
+        return;
       }
-    };
-  }, []);
+      playbackCountedRef.current = true;
+    }
+    videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+  };
 
   useEffect(() => {
+    playbackCountedRef.current = false;
     setAspectRatioClass('aspect-video');
   }, [promoEvent.mediaUrl]);
 
@@ -107,11 +103,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
     }
     if (videoRef.current) {
       if (videoRef.current.paused || videoRef.current.ended) {
-        videoRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch((err) => {
-          console.error("Playback failed:", err);
-        });
+        startVideoPlayback();
       } else {
         videoRef.current.pause();
         setIsPlaying(false);
@@ -306,7 +298,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
           <iframe
             src={getGoogleDrivePreviewUrl(promoEvent.mediaUrl) || promoEvent.mediaUrl}
             className="h-full w-full border-0 bg-neutral-950"
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="encrypted-media; picture-in-picture"
             referrerPolicy="no-referrer"
           />
         ) : getSafePlayableVideoUrl(promoEvent.mediaUrl) ? (
@@ -316,10 +308,13 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
             poster={promoEvent.thumbnailUrl || undefined}
             playsInline
             muted={isMuted}
-            loop
-            autoPlay
+            loop={false}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
+            onEnded={() => {
+              playbackCountedRef.current = false;
+              setIsPlaying(false);
+            }}
             onLoadedMetadata={(e) => {
               const video = e.currentTarget;
               if (video.videoHeight > video.videoWidth) {
@@ -362,7 +357,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
                 }
               }
             }}
-            className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 opacity-0 hover:opacity-100 transition-opacity cursor-pointer group/play"
+            className={`absolute inset-0 z-10 flex items-center justify-center bg-black/5 transition-opacity cursor-pointer group/play ${isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}
           >
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-950/80 text-white backdrop-blur-md border border-white/10 group-hover/play:scale-110 transition-transform">
               {isPlaying ? <Pause className="h-8 w-8 fill-current" /> : <Play className="h-8 w-8 fill-current ml-1" />}
@@ -722,6 +717,9 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
         posterUrl={promoEvent.thumbnailUrl || undefined}
         titleAr={promoEvent.titleAr}
         titleEn={promoEvent.titleEn}
+        videoId={promoEvent.id}
+        viewerKey={viewerKey}
+        initialPlaybackCounted={playbackCountedRef.current}
       />
 
       {/* Broadcast Push Modal for Admins */}
