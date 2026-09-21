@@ -81,7 +81,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   };
 
   useEffect(() => {
-    autoStartedRef.current = false;
     playbackCountedRef.current = false;
     setAspectRatioClass('aspect-[16/10]');
     setImageAspectRatioClass('aspect-[16/10]');
