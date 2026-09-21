@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, BarChart3, CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, ClipboardList, Megaphone, Search, Settings2, Ticket, UserCheck, Users, Wallet } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { UserProfile } from '../../types';
