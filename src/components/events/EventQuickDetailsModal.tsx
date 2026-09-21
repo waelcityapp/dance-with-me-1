@@ -150,6 +150,7 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
                     src={playableVideoUrl}
                     poster={event.thumbnailUrl}
                     className="w-full h-full object-contain"
+                    loop={false}
                     muted={isMuted}
                     playsInline
                     onPlay={() => setIsPlaying(true)}
