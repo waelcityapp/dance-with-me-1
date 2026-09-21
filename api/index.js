@@ -51,22 +51,16 @@ function routeFromRequest(req) {
   const dynamicPath = req.query?.path;
   const dynamicParts = Array.isArray(dynamicPath) ? dynamicPath : [dynamicPath];
   const dynamicRoute = `/${dynamicParts.filter(Boolean).join('/')}`.replace(/\/$/, '') || '/';
-  const requestUrl = String(req.url || '');
-
-  // Vercel normally preserves the original URL. If it exposes the literal
-  // catch-all filename instead, prefer the dynamic route parameter.
-  if (dynamicRoute !== '/' && !requestUrl.includes('/api/')) return dynamicRoute;
-  if (requestUrl.includes('/[...path]') && dynamicRoute !== '/') return dynamicRoute;
+  if (dynamicRoute !== '/') return dynamicRoute;
 
   try {
-    const pathname = new URL(requestUrl, 'http://cityeve.internal').pathname;
-    const apiIndex = pathname.indexOf('/api/');
-    if (apiIndex >= 0) return pathname.slice(apiIndex + 4).replace(/\/$/, '') || '/';
+    const pathname = new URL(String(req.url || ''), 'http://cityeve.internal').pathname;
+    const match = pathname.match(/^\/api\/([^/]+)\/?$/);
+    if (match && match[1] !== 'index') return `/${match[1]}`;
   } catch {
-    // Fall back to Vercel's dynamic route query below.
+    // The query-string route is the normal Vercel path.
   }
-
-  return dynamicRoute;
+  return '/';
 }
 
 export default async function handler(req, res) {

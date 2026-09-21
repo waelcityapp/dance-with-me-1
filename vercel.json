@@ -10,11 +10,15 @@
     }
   ],
   "functions": {
-    "api/[...path].js": {
+    "api/index.js": {
       "includeFiles": "dist/index.html"
     }
   },
   "routes": [
+    {
+      "src": "^/api/(.*)$",
+      "dest": "/api/index?path=$1"
+    },
     {
       "src": "^/__/auth/(.*)$",
       "dest": "https://dance-with-me-35e98.firebaseapp.com/__/auth/$1"
@@ -29,23 +33,23 @@
     },
     {
       "src": "^/sitemap.xml$",
-      "dest": "/api/sitemap"
+      "dest": "/api/index?path=sitemap"
     },
     {
       "src": "^/e/([^/]+)/?$",
-      "dest": "/api/og-event?event=$1"
+      "dest": "/api/index?path=og-event&event=$1"
     },
     {
       "src": "^/event/([^/]+)/?$",
-      "dest": "/api/og-event?event=$1"
+      "dest": "/api/index?path=og-event&event=$1"
     },
     {
       "src": "^/categories/([^/]+)\\.html$",
-      "dest": "/api/og-event?page=$1"
+      "dest": "/api/index?path=og-event&page=$1"
     },
     {
       "src": "^/$",
-      "dest": "/api/og-event?page=home"
+      "dest": "/api/index?path=og-event&page=home"
     },
     {
       "handle": "filesystem"
