@@ -40,8 +40,12 @@ async function call<T>(action: string, payload: Record<string, unknown>): Promis
   return body as T;
 }
 
+export type GeneralMarketerPlan = Omit<MarketerRule, 'marketerId'>;
+
 export const marketerRulesApi = {
   list: (marketerId: string) => call<{ rules: MarketerRule[] }>('list', { marketerId }),
   save: (input: Omit<MarketerRule, 'id' | 'eventSnapshot'>) => call<{ rule: MarketerRule }>('save', input),
   setStatus: (marketerId: string, ruleId: string, active: boolean) => call<{ rule: MarketerRule }>('set_status', { marketerId, ruleId, active }),
+  listGeneralPlans: () => call<{ rules: GeneralMarketerPlan[] }>('general_list', {}),
+  saveGeneralPlan: (input: { targetType: 'advertisement' | 'booking'; customerDiscount: RuleValue; marketerReward: RuleValue; startsAt?: string; endsAt?: string }) => call<{ rule: GeneralMarketerPlan }>('general_save', input),
 };
