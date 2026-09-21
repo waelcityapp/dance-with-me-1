@@ -189,6 +189,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
   const [expandedSubId, setExpandedSubId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
+  const [showBookingArchive, setShowBookingArchive] = useState(false);
   const [editTitleAr, setEditTitleAr] = useState('');
   const [editTitleEn, setEditTitleEn] = useState('');
   const [editDescAr, setEditDescAr] = useState('');
@@ -253,6 +254,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     });
     return Array.from(map.values());
   }, [bookings, user]);
+
+  const bookingBuckets = useMemo(() => {
+    const isArchivedBooking = (booking: EventBooking) => {
+      if (booking.status === 'rejected' || booking.status === 'cancelled') return true;
+      const matchedEvent = events.find(event => event.id === booking.eventId);
+      const eventDate = booking.eventDate || matchedEvent?.eventDate;
+      if (!eventDate) return false;
+      const eventTime = new Date(eventDate).getTime();
+      return Number.isFinite(eventTime) && Date.now() > eventTime + (24 * 60 * 60 * 1000);
+    };
+
+    return {
+      active: myBookings.filter(booking => !isArchivedBooking(booking)),
+      archived: myBookings.filter(isArchivedBooking),
+    };
+  }, [events, myBookings]);
+
+  const activeBookings = bookingBuckets.active;
+  const archivedBookings = bookingBuckets.archived;
 
   const handleDeleteBooking = async (bookingId: string) => {
     setDeleteBkgLoading(true);
@@ -1714,7 +1734,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {lang === 'ar' ? `تذاكر وحجوزات الحفلات (${myBookings.length})` : `My Bookings & Event Tickets (${myBookings.length})`}
             </h3>
           </div>
-          {myBookings.length > 0 && (
+          {activeBookings.length > 0 && (
             <button
               onClick={() => setConfirmDeleteAll(true)}
               className="px-3 py-1.5 rounded-xl border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/15 text-xs font-bold text-red-400 transition-all cursor-pointer flex items-center gap-1.5"
@@ -1725,7 +1745,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           )}
         </div>
 
-        {myBookings.length === 0 ? (
+        {activeBookings.length === 0 ? (
           <div className="rounded-3xl border border-slate-200/80 dark:border-white/5 bg-white/90 dark:bg-neutral-900/50 p-12 text-center text-slate-500 dark:text-neutral-400 max-w-lg mx-auto">
             <Ticket className="w-12 h-12 text-zinc-600 mx-auto mb-4 stroke-[1.5]" />
             <p className="text-sm font-semibold mb-2 text-zinc-300">
@@ -1739,7 +1759,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {myBookings.map((b) => {
+            {activeBookings.map((b) => {
               const isArabic = lang === 'ar';
               return (
                 <div 
@@ -2152,6 +2172,61 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
       </div>
       )}
+
+        {archivedBookings.length > 0 && (
+          <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-950/40 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowBookingArchive(value => !value)}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-zinc-300 hover:bg-zinc-900/70 transition-colors cursor-pointer"
+              dir={lang === 'ar' ? 'rtl' : 'ltr'}
+            >
+              <span className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-zinc-500" />
+                {lang === 'ar' ? `أرشيف الحجوزات (${archivedBookings.length})` : `Booking Archive (${archivedBookings.length})`}
+              </span>
+              <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform ${showBookingArchive ? 'rotate-180' : ''}`} />
+            </button>
+            {showBookingArchive && (
+              <div className="border-t border-zinc-800 divide-y divide-zinc-800/80">
+                {archivedBookings.map((booking) => {
+                  const title = lang === 'ar'
+                    ? (booking.eventTitleAr || booking.eventTitleEn)
+                    : (booking.eventTitleEn || booking.eventTitleAr);
+                  const eventDate = booking.eventDate || events.find(event => event.id === booking.eventId)?.eventDate;
+                  return (
+                    <div key={booking.id} className="flex items-center justify-between gap-3 px-4 py-3" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-zinc-300 truncate">{title}</p>
+                        <p className="text-[10px] text-zinc-500 mt-1">
+                          {eventDate ? new Date(eventDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : ''}
+                          {booking.refNumber ? ` • #${booking.refNumber}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-bold text-zinc-500">
+                          {booking.status === 'approved'
+                            ? (lang === 'ar' ? 'منتهٍ' : 'Ended')
+                            : booking.status === 'cancelled'
+                              ? (lang === 'ar' ? 'ملغي' : 'Cancelled')
+                              : (lang === 'ar' ? 'مرفوض' : 'Rejected')}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setBookingToDelete(booking.id)}
+                          className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                          title={lang === 'ar' ? 'حذف سجل الحجز' : 'Delete booking record'}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Liked Events Section */}
       {activeSection === 'liked' && (
