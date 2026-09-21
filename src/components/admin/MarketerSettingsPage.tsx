@@ -12,7 +12,7 @@ const RuleInput = ({ label, value, onChange }: { label: string; value: FormValue
   <label className="block text-sm font-black text-neutral-800 dark:text-neutral-200">
     {label}
     <div className="mt-2 grid grid-cols-[1fr_130px] gap-2">
-      <input type="number" min="0" step="0.01" value={value.value} onChange={(event) => onChange({ ...value, value: event.target.value })} className="h-11 min-w-0 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-3" />
+      <input type="number" min="0" step="0.01" value={value.value} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onChange({ ...value, value: event.target.value })} className="h-11 min-w-0 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-3" />
       <select value={value.type} onChange={(event) => onChange({ ...value, type: event.target.value as RuleValueType })} className="h-11 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-2">
         <option value="percentage">نسبة %</option>
         <option value="fixed">مبلغ ثابت</option>
