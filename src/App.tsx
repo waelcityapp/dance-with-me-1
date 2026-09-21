@@ -29,6 +29,7 @@ import { FloatingNotificationBanner } from './components/pwa/FloatingNotificatio
 import { AdViewsDetailsModal } from './components/modals/AdViewsDetailsModal';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { MarketersManagement } from './components/admin/MarketersManagement';
+import { MarketerAdminWorkspace } from './components/admin/MarketerAdminWorkspace';
 import { MarketerWalletPage } from './components/marketer/MarketerWalletPage';
 import { MainHeroHeaderBanner } from './components/home/MainHeroHeaderBanner';
 import { WhyBookModal } from './components/modals/WhyBookModal';
@@ -366,7 +367,7 @@ const AppContent: React.FC = () => {
             )}
             {activeTab === 'admin' && (
               adminWorkspace === 'marketers' ? (
-                <MarketersManagement onBack={() => setAdminWorkspace('main')} />
+                <MarketerAdminWorkspace onBack={() => setAdminWorkspace('main')} />
               ) : (
                 <>
                   <AdminPanel />
