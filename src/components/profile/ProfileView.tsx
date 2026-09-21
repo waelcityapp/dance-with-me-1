@@ -1840,7 +1840,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <Ticket className="h-4 w-4" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white font-sans">
-              {lang === 'ar' ? `تذاكر وحجوزات الحفلات (${myBookings.length})` : `My Bookings & Event Tickets (${myBookings.length})`}
+              {lang === 'ar' ? `حجوزاتي الحالية (${activeBookings.length})` : `My Current Bookings (${activeBookings.length})`}
             </h3>
           </div>
           {activeBookings.length > 0 && (
