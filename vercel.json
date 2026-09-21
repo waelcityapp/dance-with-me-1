@@ -3,6 +3,10 @@
     {
       "path": "/api/cleanup-archived-ads",
       "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cleanup-booking-receipts",
+      "schedule": "45 2 * * *"
     }
   ],
   "functions": {
