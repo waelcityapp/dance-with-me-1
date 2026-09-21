@@ -10,6 +10,7 @@ import { DanceEvent, getStyleLabel } from '../../types';
 import { formatDate } from '../../utils/dateUtils';
 import { getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
+import { getVideoLimitMessage, getVideoViewerKey, reserveVideoPlay } from '../../lib/videoPlaybackLimit';
 
 interface EventQuickDetailsModalProps {
   event: DanceEvent | null;
@@ -26,18 +27,34 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
 }) => {
   const { lang, user, toggleLikeEvent, setSelectedBookingEvent, openGuestAlert, recordEventView } = useApp();
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playbackCountedRef = useRef(false);
+  const viewerKey = getVideoViewerKey(user?.id);
+
+  const startVideoPlayback = () => {
+    if (!videoRef.current) return;
+    if (!playbackCountedRef.current) {
+      const reservation = reserveVideoPlay(event?.id || '', viewerKey);
+      if (!reservation.allowed) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+        alert(getVideoLimitMessage(lang === 'ar'));
+        return;
+      }
+      playbackCountedRef.current = true;
+    }
+    videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+  };
 
   useEffect(() => {
     if (event && event.id) {
       recordEventView(event.id);
     }
-    if (event && videoRef.current) {
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-    }
-  }, [event]);
+    playbackCountedRef.current = false;
+    if (event && videoRef.current) startVideoPlayback();
+  }, [event, viewerKey]);
 
   if (!event) return null;
 
@@ -133,22 +150,42 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
                     src={playableVideoUrl}
                     poster={event.thumbnailUrl}
                     className="w-full h-full object-contain"
-                    loop
                     muted={isMuted}
                     playsInline
-                    autoPlay
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => {
+                      playbackCountedRef.current = false;
+                      setIsPlaying(false);
+                    }}
                     onClick={() => {
                       if (videoRef.current) {
                         if (isPlaying) {
                           videoRef.current.pause();
                           setIsPlaying(false);
                         } else {
-                          videoRef.current.play();
-                          setIsPlaying(true);
+                          startVideoPlayback();
                         }
                       }
                     }}
                   />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isPlaying) {
+                        videoRef.current?.pause();
+                      } else {
+                        startVideoPlayback();
+                      }
+                    }}
+                    className={`absolute inset-0 flex items-center justify-center bg-black/5 transition-opacity cursor-pointer ${isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}
+                    aria-label={isPlaying ? (lang === 'ar' ? 'إيقاف الفيديو' : 'Pause video') : (lang === 'ar' ? 'تشغيل الفيديو' : 'Play video')}
+                  >
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white border border-white/10">
+                      {isPlaying ? <Pause className="h-7 w-7 fill-current" /> : <Play className="h-7 w-7 fill-current ms-1" />}
+                    </span>
+                  </button>
                   {/* Video Controls Overlay */}
                   <div className="absolute bottom-3 inset-x-3 flex items-center justify-between pointer-events-auto">
                     <button
@@ -341,6 +378,9 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
           videoUrl={playableVideoUrl}
           posterUrl={event.thumbnailUrl}
           title={lang === 'ar' ? (event.titleAr || event.titleEn) : (event.titleEn || event.titleAr)}
+          videoId={event.id}
+          viewerKey={viewerKey}
+          initialPlaybackCounted={playbackCountedRef.current}
           onClose={() => setIsFullscreenVideoOpen(false)}
         />
       )}
