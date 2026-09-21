@@ -53,7 +53,6 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
       recordEventView(event.id);
     }
     playbackCountedRef.current = false;
-    if (event && videoRef.current) startVideoPlayback();
   }, [event, viewerKey]);
 
   if (!event) return null;
@@ -150,6 +149,7 @@ export const EventQuickDetailsModal: React.FC<EventQuickDetailsModalProps> = ({
                     src={playableVideoUrl}
                     poster={event.thumbnailUrl}
                     className="w-full h-full object-contain"
+                    loop={false}
                     muted={isMuted}
                     playsInline
                     onPlay={() => setIsPlaying(true)}
