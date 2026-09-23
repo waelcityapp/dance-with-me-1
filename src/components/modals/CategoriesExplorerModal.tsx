@@ -183,7 +183,7 @@ export const CategoriesExplorerModal: React.FC<CategoriesExplorerModalProps> = (
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-neutral-950/70 dark:bg-neutral-950/80 backdrop-blur-md animate-fade-in">
       <div 
-        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700/70 shadow-2xl overflow-hidden text-neutral-900 dark:text-neutral-100"
+        className="relative w-full max-w-3xl max-h-[90vh] min-h-0 flex flex-col rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700/70 shadow-2xl overflow-hidden text-neutral-900 dark:text-neutral-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -297,7 +297,7 @@ export const CategoriesExplorerModal: React.FC<CategoriesExplorerModalProps> = (
         </div>
 
         {/* Active Section Description & Subcategories List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar">
           {/* Section banner */}
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/80 dark:border-neutral-700/50">
             <div className="flex items-center gap-3">
@@ -334,22 +334,22 @@ export const CategoriesExplorerModal: React.FC<CategoriesExplorerModalProps> = (
                   <button
                     key={sub.id}
                     onClick={() => handleSelectSub(sub.id)}
-                    className={`flex items-center justify-between p-3 rounded-xl border text-right transition-all cursor-pointer group ${
+                    className={`flex min-w-0 items-center justify-between gap-3 p-3 rounded-xl border text-start transition-all cursor-pointer group ${
                       isSelected
                         ? 'bg-amber-500/15 dark:bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-300 font-bold shadow-xs'
                         : 'bg-white dark:bg-neutral-800/50 hover:bg-amber-50/50 dark:hover:bg-neutral-800 border-neutral-200/80 dark:border-neutral-700/60 hover:border-amber-300 dark:hover:border-neutral-500 text-neutral-800 dark:text-neutral-200 shadow-xs'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className={`h-2 w-2 rounded-full ${isSelected ? 'bg-amber-500 dark:bg-amber-400' : 'bg-neutral-300 dark:bg-neutral-600 group-hover:bg-amber-500 dark:group-hover:bg-amber-400'} transition-colors`} />
-                      <span className="text-xs sm:text-sm font-bold">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <div className={`h-2 w-2 shrink-0 rounded-full ${isSelected ? 'bg-amber-500 dark:bg-amber-400' : 'bg-neutral-300 dark:bg-neutral-600 group-hover:bg-amber-500 dark:group-hover:bg-amber-400'} transition-colors`} />
+                      <span className="min-w-0 break-words text-xs sm:text-sm font-bold leading-relaxed">
                         {isAr ? sub.labelAr : sub.labelEn}
                       </span>
                     </div>
                     {isAr ? (
-                      <ChevronLeft className="h-4 w-4 text-neutral-400 dark:text-neutral-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:-translate-x-0.5 transition-all" />
+                      <ChevronLeft className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:-translate-x-0.5 transition-all" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-neutral-400 dark:text-neutral-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+                      <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
                     )}
                   </button>
                 );
