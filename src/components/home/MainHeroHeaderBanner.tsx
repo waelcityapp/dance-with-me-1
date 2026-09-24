@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -27,6 +28,9 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   const isAr = lang === 'ar';
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<DanceCategory | null>(null);
+  const [desktopMenuPosition, setDesktopMenuPosition] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
+  const desktopCategoryNavRef = useRef<HTMLDivElement>(null);
+  const desktopCategoryPanelRef = useRef<HTMLDivElement>(null);
   const [chosenCategoryId, setChosenCategoryId] = useState<DanceCategory | null>(null);
   const [chosenSubcategoryId, setChosenSubcategoryId] = useState('all');
   const [heroSearchQuery, setHeroSearchQuery] = useState('');
@@ -89,6 +93,53 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   const selectedSubcategoryLabel = chosenCategoryId && chosenSubcategoryId !== 'all'
     ? getSubcategoriesForCategory(chosenCategoryId).find(sub => sub.id === chosenSubcategoryId)
     : null;
+
+  useEffect(() => {
+    if (!activeCategoryId || isCategoryMenuOpen) {
+      setDesktopMenuPosition(null);
+      return;
+    }
+
+    const updateMenuPosition = () => {
+      const anchor = desktopCategoryNavRef.current;
+      if (!anchor) return;
+      const bounds = anchor.getBoundingClientRect();
+      const width = Math.min(640, window.innerWidth - 32);
+      const left = Math.max(16, (window.innerWidth - width) / 2);
+      const top = Math.min(bounds.bottom + 8, Math.max(12, window.innerHeight - 160));
+      const maxHeight = Math.max(120, Math.min(560, window.innerHeight * 0.72, window.innerHeight - top - 12));
+      setDesktopMenuPosition({ top, left, width, maxHeight });
+    };
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [activeCategoryId, isCategoryMenuOpen]);
+
+  useEffect(() => {
+    if (!activeCategoryId || isCategoryMenuOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (desktopCategoryNavRef.current?.contains(target) || desktopCategoryPanelRef.current?.contains(target)) return;
+      setActiveCategoryId(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setActiveCategoryId(null);
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [activeCategoryId, isCategoryMenuOpen]);
 
   const mobileCategoryLabel = selectedSubcategoryLabel
     ? (isAr ? selectedSubcategoryLabel.labelAr : selectedSubcategoryLabel.labelEn)
@@ -317,58 +368,84 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
               </div>
             )}
 
-            <div className="hidden flex-wrap justify-center gap-1 md:flex md:gap-2">
+            <div ref={desktopCategoryNavRef} className="hidden flex-wrap justify-center gap-1 md:flex md:gap-2">
             {categories.map((category) => (
               <motion.button
                 key={category.id}
                 type="button"
                 whileTap={{ scale: 0.96 }}
-                onClick={() => chooseCategory(category.id)}
-                className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2 py-1 text-[9px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] md:px-3 md:text-xs"
+                onClick={() => {
+                  setIsCategoryMenuOpen(false);
+                  setActiveCategoryId(current => current === category.id ? null : category.id);
+                }}
+                aria-haspopup="true"
+                aria-expanded={activeCategoryId === category.id}
+                aria-controls="desktop-subcategory-menu"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2 py-1 text-[9px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] md:px-3 md:text-xs"
               >
                 {isAr ? category.ar : category.en}
+                <ChevronDown className="h-3 w-3 shrink-0" />
               </motion.button>
             ))}
             </div>
 
-            {activeCategoryId && (
-              <div className="mx-auto mt-3 hidden w-full max-w-2xl rounded-2xl border border-[#d4af67]/65 bg-[#3d0711]/95 p-3 text-right shadow-2xl backdrop-blur-md md:block">
-                <div className="mb-2 flex items-center justify-between border-b border-[#d4af67]/25 px-1 pb-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveCategoryId(null)}
-                    aria-label={isAr ? 'إغلاق القائمة' : 'Close menu'}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#e8c978] transition hover:bg-[#791524] hover:text-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  <span className="text-xs font-black text-[#fff0c8]">
-                    {activeCategory && (isAr ? `تصنيفات ${activeCategory.ar}` : `${activeCategory.en} categories`)}
-                  </span>
-                </div>
-                <div className="flex flex-wrap justify-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => chooseSubcategory(activeCategoryId, 'all')}
-                    className="rounded-full border border-[#d4a84f] bg-[#d4a84f]/15 px-3 py-1.5 text-[11px] font-black text-[#f8df9b] transition hover:bg-[#d4a84f]/30"
-                  >
-                    {isAr ? activeCategory.allAr : activeCategory.allEn}
-                  </button>
-                  {getSubcategoriesForCategory(activeCategoryId).map(sub => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
-                      className="rounded-full border border-[#f4d78d]/45 bg-[#4a0913]/75 px-3 py-1.5 text-[10px] font-bold text-[#fff0c8] transition hover:border-[#f4d78d] hover:bg-[#791524]"
-                    >
-                      {isAr ? sub.labelAr : sub.labelEn}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
+      {activeCategoryId && !isCategoryMenuOpen && desktopMenuPosition && createPortal(
+        <div
+          ref={desktopCategoryPanelRef}
+          id="desktop-subcategory-menu"
+          role="region"
+          aria-label={isAr ? 'التصنيفات الفرعية' : 'Subcategories'}
+          dir={isAr ? 'rtl' : 'ltr'}
+          style={{ top: desktopMenuPosition.top, left: desktopMenuPosition.left, width: desktopMenuPosition.width, maxHeight: desktopMenuPosition.maxHeight }}
+          className="fixed z-[100] flex flex-col overflow-hidden rounded-2xl border border-[#d4af67]/70 bg-[#3d0711]/[0.98] p-3 text-right text-[#fff0c8] shadow-2xl shadow-black/40 backdrop-blur-xl"
+        >
+          <div className="mb-2 flex shrink-0 items-center justify-between gap-3 border-b border-[#d4af67]/30 px-1 pb-2">
+            <button
+              type="button"
+              onClick={() => setActiveCategoryId(null)}
+              aria-label={isAr ? 'إغلاق التصنيفات' : 'Close subcategories'}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#e8c978] transition hover:bg-[#791524] hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="min-w-0 text-end">
+              <h3 className="truncate text-sm font-black text-white">
+                {isAr ? 'تصنيفات' : 'Categories'} {isAr ? activeCategory?.ar : activeCategory?.en}
+              </h3>
+              <p className="mt-0.5 text-[10px] text-[#e7c98b]/80">
+                {isAr ? 'اختر تصنيفًا لعرض الإعلانات المناسبة' : 'Choose a category to filter listings'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid min-h-0 grid-cols-1 gap-1.5 overflow-y-auto overscroll-contain p-0.5 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => chooseSubcategory(activeCategoryId, 'all')}
+              className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-[#d4a84f]/70 bg-[#d4a84f]/15 px-3 py-2.5 text-start text-xs font-black text-[#f8df9b] transition hover:bg-[#d4a84f]/25"
+            >
+              <span className="min-w-0 break-words leading-relaxed">{isAr ? activeCategory?.allAr || 'الكل' : activeCategory?.allEn || 'All'}</span>
+              <span className="shrink-0 text-[#edc56d]">✓</span>
+            </button>
+
+            {getSubcategoriesForCategory(activeCategoryId).map(sub => (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
+                className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-[#f4d78d]/25 bg-[#4a0913]/75 px-3 py-2.5 text-start text-xs font-semibold text-[#fff0c8] transition hover:border-[#f4d78d]/70 hover:bg-[#791524]"
+              >
+                <span className="min-w-0 break-words leading-relaxed">{isAr ? sub.labelAr : sub.labelEn}</span>
+                {isAr ? <ChevronLeft className="h-4 w-4 shrink-0 text-[#d4a84f]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[#d4a84f]" />}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
       </div>
     </section>
   );
