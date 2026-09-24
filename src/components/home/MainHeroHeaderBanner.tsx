@@ -317,16 +317,16 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
               </div>
             )}
 
-            <div className="hidden flex-wrap justify-center gap-1 md:flex md:gap-2">
+            <div className="hidden w-full grid-cols-6 gap-1 md:grid md:gap-2">
             {categories.map((category) => (
               <motion.button
                 key={category.id}
                 type="button"
                 whileTap={{ scale: 0.96 }}
                 onClick={() => chooseCategory(category.id)}
-                className="rounded-full border border-[#f4d78d]/55 bg-[#4a0913]/70 px-2 py-1 text-[9px] font-bold text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] md:px-3 md:text-xs"
+                className="flex min-w-0 w-full items-center justify-center gap-1 rounded-xl border border-[#f4d78d]/55 bg-[#4a0913]/70 px-1.5 py-2 text-center text-[9px] font-bold leading-tight text-[#fff0c8] backdrop-blur-sm transition hover:border-[#f4d78d] hover:bg-[#791524] md:px-2 md:text-xs"
               >
-                {isAr ? category.ar : category.en}
+                <span className="min-w-0 break-words text-center leading-tight">{isAr ? category.ar : category.en}</span>
               </motion.button>
             ))}
             </div>
