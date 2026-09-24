@@ -169,6 +169,15 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   };
 
   const [category, setCategory] = useState<AdCategory | undefined>(savedDraft?.category || editingEvent?.category);
+  const titleExamples: Record<string, { ar: string; en: string }> = {
+    party: { ar: 'مثال: مهرجان صيفي للموسيقى والفنون في القاهرة', en: 'e.g. Cairo Summer Music & Arts Festival' },
+    course: { ar: 'مثال: ورشة تصوير فوتوغرافي للمبتدئين', en: 'e.g. Beginner Photography Workshop' },
+    trip: { ar: 'مثال: رحلة يوم كامل إلى واحة الفيوم', en: 'e.g. Full-Day Trip to Fayoum Oasis' },
+    exhibition: { ar: 'مثال: معرض الفن المعاصر في القاهرة', en: 'e.g. Contemporary Art Exhibition in Cairo' },
+    services: { ar: 'مثال: شركة تنظيم حفلات ومؤتمرات', en: 'e.g. Event Planning & Conference Services' },
+    jobs: { ar: 'مثال: مطلوب منسق فعاليات بدوام جزئي', en: 'e.g. Part-Time Event Coordinator Wanted' },
+  };
+  const titlePlaceholder = titleExamples[category || 'party'] || titleExamples.party;
   const [subcategory, setSubcategory] = useState<string | undefined>(savedDraft?.subcategory || editingEvent?.subcategory);
   const [mediaType, setMediaType] = useState<'video' | 'image'>(savedDraft?.mediaType || (editingEvent ? editingEvent.mediaType : 'image'));
   const [mediaUrl, setMediaUrl] = useState(savedDraft?.mediaUrl ?? (editingEvent ? editingEvent.mediaUrl : ''));
@@ -1511,7 +1520,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={titleAr}
                     onChange={e => setTitleAr(e.target.value)}
-                    placeholder={lang === 'ar' ? 'مثال: سهرة سالسا وباتشاتا ملكية على السطح' : 'e.g. Royal Rooftop Salsa Social'}
+                    placeholder={lang === 'ar' ? titlePlaceholder.ar : titlePlaceholder.en}
                     className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner`}
                   />
                 </div>
