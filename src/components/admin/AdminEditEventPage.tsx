@@ -547,7 +547,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 type="date"
                 value={eventDate}
                 onChange={e => setEventDate(e.target.value)}
-                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
           </div>
@@ -562,7 +562,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 value={priceAr}
                 onChange={e => setPriceAr(e.target.value)}
                 className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
-                placeholder="مثال: ٢٥٠ درهم"
+                placeholder="اختياري — اتركه فارغًا إذا لا يوجد سعر"
               />
             </div>
             <div className="space-y-2">
@@ -575,7 +575,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 onChange={e => setPriceEn(e.target.value)}
                 className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all text-left"
                 dir="ltr"
-                placeholder="e.g. 250 AED"
+                placeholder="Optional — leave blank if there is no price"
               />
             </div>
           </div>
