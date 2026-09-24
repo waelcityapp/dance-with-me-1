@@ -327,6 +327,15 @@ export const AdminPanel: React.FC = () => {
   };
 
   const [adminCategory, setAdminCategory] = useState<DanceCategory>('party');
+  const adminTitleExamples: Record<string, { ar: string; en: string }> = {
+    party: { ar: 'مثال: مهرجان صيفي للموسيقى والفنون في القاهرة', en: 'e.g. Cairo Summer Music & Arts Festival' },
+    course: { ar: 'مثال: ورشة تصوير فوتوغرافي للمبتدئين', en: 'e.g. Beginner Photography Workshop' },
+    trip: { ar: 'مثال: رحلة يوم كامل إلى واحة الفيوم', en: 'e.g. Full-Day Trip to Fayoum Oasis' },
+    exhibition: { ar: 'مثال: معرض الفن المعاصر في القاهرة', en: 'e.g. Contemporary Art Exhibition in Cairo' },
+    services: { ar: 'مثال: شركة تنظيم حفلات ومؤتمرات', en: 'e.g. Event Planning & Conference Services' },
+    jobs: { ar: 'مثال: مطلوب منسق فعاليات بدوام جزئي', en: 'e.g. Part-Time Event Coordinator Wanted' },
+  };
+  const adminTitlePlaceholder = adminTitleExamples[adminCategory] || adminTitleExamples.party;
   const [adminMediaType, setAdminMediaType] = useState<'video' | 'image'>('image');
   const [adminMediaUrl, setAdminMediaUrl] = useState('');
   const [adminPriceAr, setAdminPriceAr] = useState('');
@@ -6619,7 +6628,7 @@ export const AdminPanel: React.FC = () => {
                         required
                         value={adminTitleAr}
                         onChange={(e) => setAdminTitleAr(e.target.value)}
-                        placeholder="مثال: سهرة سالسا فخمة في الزمالك"
+                        placeholder={lang === 'ar' ? adminTitlePlaceholder.ar : adminTitlePlaceholder.en}
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
                       />
                     </div>
