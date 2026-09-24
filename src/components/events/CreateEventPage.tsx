@@ -1742,7 +1742,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={titleAr}
                     onChange={e => setTitleAr(e.target.value)}
-                    placeholder={lang === 'ar' ? 'مثال: سهرة سالسا وباتشاتا ملكية على السطح' : 'e.g. Royal Rooftop Salsa Social'}
+                    placeholder={lang === 'ar' ? 'مثال: مهرجان صيفي للموسيقى والفنون في القاهرة' : 'e.g. Cairo Summer Music & Arts Festival'}
                     className={`w-full rounded-xl border ${urlRegex.test(titleAr) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner`}
                   />
                 </div>
@@ -1769,7 +1769,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     type="text"
                     value={titleEn}
                     onChange={e => setTitleEn(e.target.value)}
-                    placeholder="e.g. Royal Rooftop Salsa Social"
+                    placeholder="e.g. Cairo Summer Music & Arts Festival"
                     className={`w-full rounded-xl border ${urlRegex.test(titleEn) ? 'border-red-500 bg-red-950/20 text-red-500' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm outline-none transition-colors shadow-inner`}
                   />
                 </div>
