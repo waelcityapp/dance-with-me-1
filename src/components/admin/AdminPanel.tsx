@@ -6265,7 +6265,7 @@ export const AdminPanel: React.FC = () => {
                         required
                         value={adminTitleAr}
                         onChange={(e) => setAdminTitleAr(e.target.value)}
-                        placeholder="مثال: سهرة سالسا فخمة في الزمالك"
+                        placeholder="مثال: مهرجان صيفي للموسيقى والفنون في القاهرة"
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-right"
                       />
                     </div>
@@ -6291,7 +6291,7 @@ export const AdminPanel: React.FC = () => {
                         required
                         value={adminTitleEn}
                         onChange={(e) => setAdminTitleEn(e.target.value)}
-                        placeholder="e.g. Luxury Salsa Night in Zamalek"
+                        placeholder="e.g. Cairo Summer Music & Arts Festival"
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors text-left"
                       />
                     </div>
