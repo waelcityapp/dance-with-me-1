@@ -37,12 +37,13 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     setVisibleCount(5);
   }, [selectedCategory, searchQuery, selectedStyleFilter, selectedTimeFilter, selectedGovernorate, selectedArea]);
 
-  // Apply the hierarchical category selection made in the mobile hero menu.
+  // Apply the category selection made in the hero menu.
   useEffect(() => {
     const handleHeroFilter = (event: Event) => {
       const detail = (event as CustomEvent<{ category?: DanceCategory; subcategory?: string }>).detail;
       if (!detail?.category) return;
       setSelectedCategory(detail.category);
+      setSearchQuery('');
       setTimeout(() => {
         setSelectedStyleFilter(detail.subcategory || 'all');
         document.getElementById('events-feed')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -56,6 +57,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
     const handleHeroSearch = (event: Event) => {
       const query = (event as CustomEvent<{ query?: string }>).detail?.query || '';
       setSearchQuery(query);
+      if (query) {
+        setSelectedCategory('all');
+        setSelectedStyleFilter('all');
+      }
     };
     window.addEventListener('cityeve-hero-search', handleHeroSearch);
     return () => window.removeEventListener('cityeve-hero-search', handleHeroSearch);
@@ -70,6 +75,23 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const subcategories = useMemo(() => {
     return getSubcategoriesForCategory(selectedCategory);
   }, [selectedCategory]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('cityeve-filter-state', {
+      detail: { category: selectedCategory, subcategory: selectedStyleFilter },
+    }));
+  }, [selectedCategory, selectedStyleFilter]);
+
+  const changeCategorySelection = () => {
+    window.dispatchEvent(new CustomEvent('cityeve-open-category-menu', {
+      detail: { category: selectedCategory },
+    }));
+  };
+
+  const clearCategorySelection = () => {
+    setSelectedCategory('all');
+    setSelectedStyleFilter('all');
+  };
 
   // Scroll instantly to specific event from URL if present
   useEffect(() => {
@@ -443,7 +465,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
   const areas = useMemo(() => Array.from(new Set(activeEvents.filter(ev => selectedGovernorate === 'all' || ev.location?.governorateAr === selectedGovernorate).map(ev => ev.location?.areaAr).filter(Boolean) as string[])).sort(), [activeEvents, selectedGovernorate]);
 
   return (
-    <div className="space-y-2 sm:space-y-2.5 pb-12">
+    <div id="events-feed" className="space-y-2 sm:space-y-2.5 pb-12">
       {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
       <div id="search-section" dir={lang === "ar" ? "rtl" : "ltr"} className="rounded-2xl border border-[#b08d57]/12 bg-[#FBF3E2] dark:bg-neutral-950 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
         <div className="flex items-center justify-between gap-2 border-b border-[#b08d57]/10 pb-1">
@@ -462,6 +484,27 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
             {isLoadingEvents ? '...' : filteredEvents.length} {lang === 'ar' ? 'إعلان' : 'events'}
           </span>
         </div>
+
+        {selectedCategory !== 'all' && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#b08d57]/30 bg-white/75 px-2.5 py-2 text-[11px] text-[#5b1220] dark:bg-neutral-900 dark:text-[#f4d58d] sm:px-3 sm:text-xs" aria-label={lang === 'ar' ? 'اختيارات التصفح الحالية' : 'Current browsing selection'}>
+            <span className="font-semibold text-neutral-600 dark:text-neutral-300">{lang === 'ar' ? 'تتصفح الآن:' : 'Browsing:'}</span>
+            <span className="font-black">{categories.find(c => c.id === selectedCategory)?.[lang === 'ar' ? 'labelAr' : 'labelEn']}</span>
+            {selectedStyleFilter !== 'all' && (
+              <>
+                <span aria-hidden="true" className="text-[#b08d57]">/</span>
+                <span className="font-black">{subcategories.find(sub => sub.id === selectedStyleFilter)?.[lang === 'ar' ? 'labelAr' : 'labelEn'] || selectedStyleFilter}</span>
+              </>
+            )}
+            <div className="flex w-full flex-wrap gap-2 sm:ms-auto sm:w-auto">
+              <button type="button" onClick={changeCategorySelection} className="rounded-lg border border-[#b08d57]/60 px-2.5 py-1.5 font-bold transition hover:bg-[#b08d57]/15">
+                {lang === 'ar' ? 'تغيير الاختيار' : 'Change selection'}
+              </button>
+              <button type="button" onClick={clearCategorySelection} className="rounded-lg px-2.5 py-1.5 font-bold text-neutral-600 underline underline-offset-2 transition hover:text-[#5b1220] dark:text-neutral-300 dark:hover:text-[#f4d58d]">
+                {lang === 'ar' ? 'عرض كل الأقسام' : 'Show all sections'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Compact Mobile Date & Location Filters */}
         <div className="relative z-10 grid grid-cols-3 items-stretch gap-1.5 pb-0.5 pt-0.5 w-full pointer-events-auto" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
@@ -566,7 +609,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
               : 'Try resetting style filters or search terms, or post a new announcement today!'}
           </p>
           <button
-            onClick={() => { setSelectedCategory('all'); setSearchQuery(''); setSelectedStyleFilter('all'); }}
+            onClick={() => { clearCategorySelection(); setSearchQuery(''); }}
             className="rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 px-6 py-3 text-xs font-bold text-neutral-900 dark:text-white transition-colors cursor-pointer"
           >
             {lang === 'ar' ? 'إعادة ضبط عوامل التصفية' : 'Reset All Filters'}
