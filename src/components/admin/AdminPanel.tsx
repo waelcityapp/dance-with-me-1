@@ -329,8 +329,8 @@ export const AdminPanel: React.FC = () => {
   const [adminCategory, setAdminCategory] = useState<DanceCategory>('party');
   const [adminMediaType, setAdminMediaType] = useState<'video' | 'image'>('image');
   const [adminMediaUrl, setAdminMediaUrl] = useState('');
-  const [adminPriceAr, setAdminPriceAr] = useState('250 ج.م');
-  const [adminPriceEn, setAdminPriceEn] = useState('250 EGP');
+  const [adminPriceAr, setAdminPriceAr] = useState('');
+  const [adminPriceEn, setAdminPriceEn] = useState('');
   const [adminEventDate, setAdminEventDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
   const [adminPhone, setAdminPhone] = useState('+201011223344');
   const [adminWhatsapp, setAdminWhatsapp] = useState('201011223344');
@@ -774,8 +774,8 @@ export const AdminPanel: React.FC = () => {
         uploadDate: new Date().toISOString(),
         eventRef: newEventRef,
         eventDate: safeDateStr,
-        priceAr: (adminPriceAr || '').trim() || '250 ج.م',
-        priceEn: (adminPriceEn || '').trim() || '250 EGP',
+        priceAr: (adminPriceAr || '').trim(),
+        priceEn: (adminPriceEn || '').trim(),
         location: {
           nameAr: (adminLocationNameAr || '').trim() || 'أستوديو الرقص - الزمالك',
           nameEn: (adminLocationNameEn || '').trim() || 'Dance Studio - Zamalek',
@@ -1674,8 +1674,8 @@ export const AdminPanel: React.FC = () => {
         thumbnailUrl: thumbUrlToUse,
         uploadDate: new Date().toISOString(),
         eventDate: safeEventDate,
-        priceAr: sub.eventData?.priceAr || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'دخول مجاني' : `${sub.pricing.total} ج.م`) : '250 ج.م'),
-        priceEn: sub.eventData?.priceEn || (sub.pricing?.total !== undefined ? (sub.pricing.total === 0 ? 'Free Entry' : `${sub.pricing.total} EGP`) : '250 EGP'),
+        priceAr: sub.eventData?.priceAr?.trim() || '',
+        priceEn: sub.eventData?.priceEn?.trim() || '',
         location: sub.eventData?.location || {
           nameAr: 'القاهرة، مصر',
           nameEn: 'Cairo, Egypt',
@@ -4565,7 +4565,7 @@ export const AdminPanel: React.FC = () => {
                     <span>{lang === 'ar' ? 'المبلغ المطلوب:' : 'Total Amount:'}</span>
                   </span>
                   <span className="text-lg font-black text-emerald-400 block">
-                    {sub.pricing?.total || 250} {lang === 'ar' ? 'جنيه مصري' : 'EGP'}
+                    {sub.pricing.total} {lang === 'ar' ? 'جنيه مصري' : 'EGP'}
                   </span>
                 </div>
               </div>
@@ -6836,8 +6836,8 @@ export const AdminPanel: React.FC = () => {
                         type="text"
                         value={adminPriceAr}
                         onChange={(e) => setAdminPriceAr(e.target.value)}
-                        placeholder="مثال: 250 ج.م شامل المشروب"
-                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                        placeholder="اختياري — اتركه فارغًا إذا لا يوجد سعر"
+                        className="placeholder-neutral-400 dark:placeholder-neutral-600 w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -6850,8 +6850,8 @@ export const AdminPanel: React.FC = () => {
                         type="text"
                         value={adminPriceEn}
                         onChange={(e) => setAdminPriceEn(e.target.value)}
-                        placeholder="e.g. 250 EGP (Includes Soft Drink)"
-                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                        placeholder="Optional — leave blank if there is no price"
+                        className="placeholder-neutral-400 dark:placeholder-neutral-600 w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
                   </div>
@@ -6958,8 +6958,8 @@ export const AdminPanel: React.FC = () => {
                           />
                           <p className="text-[11px] text-neutral-500">
                             {lang === 'ar'
-                              ? 'إذا تركته فارغاً، سيتم عرض السعر الإفتراضي المحدد بأعلى (مثل 250 ج.م).'
-                              : 'If left empty, the default price specified above will be displayed.'}
+                              ? 'إذا تركته فارغاً، يظهر السعر فقط إذا أدخلته في حقل السعر أعلاه.'
+                              : 'If left empty, the price appears only if entered in the price field above.'}
                           </p>
                         </div>
 
@@ -7475,8 +7475,8 @@ export const AdminPanel: React.FC = () => {
                               : adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                             uploadDate: new Date().toISOString(),
                             eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
-                            priceAr: adminPriceAr.trim() || '250 ج.م',
-                            priceEn: adminPriceEn.trim() || '250 EGP',
+                            priceAr: adminPriceAr.trim(),
+                            priceEn: adminPriceEn.trim(),
                             showBookingButton: adminShowBookingButton,
                             showViewsCount: adminShowViewsCount,
                             location: {
