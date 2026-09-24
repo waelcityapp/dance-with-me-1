@@ -95,6 +95,31 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
     : null;
 
   useEffect(() => {
+    const syncSelection = (event: Event) => {
+      const detail = (event as CustomEvent<{ category?: DanceCategory; subcategory?: string }>).detail;
+      setChosenCategoryId(detail?.category && detail.category !== 'all' ? detail.category : null);
+      setChosenSubcategoryId(detail?.subcategory || 'all');
+    };
+    const openCategoryMenu = (event: Event) => {
+      const detail = (event as CustomEvent<{ category?: DanceCategory }>).detail;
+      document.getElementById('cityeve-hero-categories')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (window.matchMedia('(min-width: 768px)').matches) {
+        setIsCategoryMenuOpen(false);
+        setActiveCategoryId(detail?.category && detail.category !== 'all' ? detail.category : 'party');
+      } else {
+        setActiveCategoryId(detail?.category && detail.category !== 'all' ? detail.category : null);
+        setIsCategoryMenuOpen(true);
+      }
+    };
+    window.addEventListener('cityeve-filter-state', syncSelection);
+    window.addEventListener('cityeve-open-category-menu', openCategoryMenu);
+    return () => {
+      window.removeEventListener('cityeve-filter-state', syncSelection);
+      window.removeEventListener('cityeve-open-category-menu', openCategoryMenu);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!activeCategoryId || isCategoryMenuOpen) {
       setDesktopMenuPosition(null);
       return;
@@ -164,6 +189,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
     setActiveCategoryId(null);
     setChosenCategoryId(categoryId);
     setChosenSubcategoryId(subcategoryId);
+    setHeroSearchQuery('');
     setIsCategoryMenuOpen(false);
     window.dispatchEvent(new CustomEvent('cityeve-hero-filter', {
       detail: { category: categoryId, subcategory: subcategoryId },
@@ -183,7 +209,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
   return (
     <section
       aria-label={isAr ? 'بانر CityEve الرئيسي' : 'CityEve main banner'}
-      className="relative w-full overflow-hidden px-1 pb-1 pt-1 md:px-5 md:pb-5"
+      className="relative w-full overflow-visible px-1 pb-1 pt-1 md:px-5 md:pb-5"
     >
       <div
         className="relative isolate mx-auto h-[clamp(270px,75vw,330px)] max-w-6xl overflow-hidden rounded-[18px] border border-[#d4af67]/45 bg-[#3a0710] shadow-[0_18px_55px_rgba(67,8,19,0.22)] md:h-[340px] md:rounded-[24px]"
@@ -286,7 +312,7 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
             )}
           </div>
 
-          <div className="relative mt-[clamp(8px,2vw,12px)] w-full max-w-4xl px-1 md:mt-3">
+          <div id="cityeve-hero-categories" className="relative mt-[clamp(8px,2vw,12px)] w-full max-w-4xl px-1 md:mt-3">
             <button
               type="button"
               onClick={() => setIsCategoryMenuOpen(open => !open)}
@@ -298,75 +324,6 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
               <span className="truncate text-[#edc56d]">{mobileCategoryLabel}</span>
               <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isCategoryMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-
-            {isCategoryMenuOpen && (
-              <div className="relative z-30 mx-auto mt-2 w-[calc(100%-8px)] max-w-[360px] rounded-2xl border border-[#d4af67]/70 bg-[#3d0711]/98 p-2 text-right shadow-2xl backdrop-blur-md md:hidden">
-                <div className="mb-1 flex items-center justify-between border-b border-[#d4af67]/25 px-2 pb-2">
-                  <button
-                    type="button"
-                    onClick={closeCategoryMenu}
-                    aria-label={isAr ? 'إغلاق القائمة' : 'Close menu'}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#e8c978] transition hover:bg-[#791524] hover:text-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  <span className="text-[11px] font-black text-[#fff0c8]">
-                    {activeCategoryId
-                      ? (isAr ? 'اختر التصنيف الفرعي' : 'Choose a subcategory')
-                      : (isAr ? 'اختر القسم الرئيسي' : 'Choose a main section')}
-                  </span>
-                </div>
-                {!activeCategoryId ? (
-                  <div className="grid grid-cols-1 gap-1">
-                    {categories.map(category => (
-                      <button
-                        key={category.id}
-                        type="button"
-                        onClick={() => chooseCategory(category.id)}
-                        className="flex items-center justify-between rounded-xl px-3 py-2 text-[11px] font-bold text-[#fff0c8] transition hover:bg-[#791524]"
-                      >
-                        <ChevronLeft className="h-4 w-4 text-[#d4a84f]" />
-                        <span>{isAr ? category.ar : category.en}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveCategoryId(null)}
-                      className="mb-1 flex w-full items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold text-[#e3b85e] hover:bg-[#791524]"
-                    >
-                      {isAr ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-                      <span>{isAr ? 'رجوع إلى الأقسام الرئيسية' : 'Back to main sections'}</span>
-                    </button>
-                    <div className="mb-1 border-b border-[#d4af67]/25 px-3 pb-2 text-[11px] font-black text-white">
-                      {activeCategory && (isAr ? activeCategory.ar : activeCategory.en)}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => chooseSubcategory(activeCategoryId, 'all')}
-                      className="mb-1 flex w-full items-center justify-between rounded-xl bg-[#d4a84f]/15 px-3 py-2 text-[11px] font-black text-[#f8df9b] hover:bg-[#d4a84f]/25"
-                    >
-                      <span>{isAr ? activeCategory?.allAr || 'الكل' : activeCategory?.allEn || 'All'}</span>
-                      <span>✓</span>
-                    </button>
-                    <div className="grid max-h-52 gap-1 overflow-y-auto">
-                      {getSubcategoriesForCategory(activeCategoryId).map(sub => (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
-                          className="rounded-xl px-3 py-2 text-right text-[10px] font-bold text-[#fff0c8] transition hover:bg-[#791524]"
-                        >
-                          {isAr ? sub.labelAr : sub.labelEn}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             <div ref={desktopCategoryNavRef} className="hidden w-full grid-cols-6 gap-1 md:grid md:gap-2">
             {categories.map((category) => (
@@ -425,10 +382,11 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
             <button
               type="button"
               onClick={() => chooseSubcategory(activeCategoryId, 'all')}
-              className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-[#d4a84f]/70 bg-[#d4a84f]/15 px-3 py-2.5 text-start text-xs font-black text-[#f8df9b] transition hover:bg-[#d4a84f]/25"
+              aria-pressed={chosenCategoryId === activeCategoryId && chosenSubcategoryId === 'all'}
+              className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-start text-xs font-black text-[#f8df9b] transition hover:bg-[#d4a84f]/25 ${chosenCategoryId === activeCategoryId && chosenSubcategoryId === 'all' ? 'border-[#d4a84f]/70 bg-[#d4a84f]/15' : 'border-[#f4d78d]/25 bg-[#4a0913]/75'}`}
             >
               <span className="min-w-0 break-words leading-relaxed">{isAr ? activeCategory?.allAr || 'الكل' : activeCategory?.allEn || 'All'}</span>
-              <span className="shrink-0 text-[#edc56d]">✓</span>
+              {chosenCategoryId === activeCategoryId && chosenSubcategoryId === 'all' && <span className="shrink-0 text-[#edc56d]">✓</span>}
             </button>
 
             {getSubcategoriesForCategory(activeCategoryId).map(sub => (
@@ -436,10 +394,13 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
                 key={sub.id}
                 type="button"
                 onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
-                className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-[#f4d78d]/25 bg-[#4a0913]/75 px-3 py-2.5 text-start text-xs font-semibold text-[#fff0c8] transition hover:border-[#f4d78d]/70 hover:bg-[#791524]"
+                aria-pressed={chosenCategoryId === activeCategoryId && chosenSubcategoryId === sub.id}
+                className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-start text-xs font-semibold text-[#fff0c8] transition hover:border-[#f4d78d]/70 hover:bg-[#791524] ${chosenCategoryId === activeCategoryId && chosenSubcategoryId === sub.id ? 'border-[#d4a84f]/70 bg-[#d4a84f]/20' : 'border-[#f4d78d]/25 bg-[#4a0913]/75'}`}
               >
                 <span className="min-w-0 break-words leading-relaxed">{isAr ? sub.labelAr : sub.labelEn}</span>
-                {isAr ? <ChevronLeft className="h-4 w-4 shrink-0 text-[#d4a84f]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[#d4a84f]" />}
+                {chosenCategoryId === activeCategoryId && chosenSubcategoryId === sub.id
+                  ? <span className="shrink-0 text-[#edc56d]">✓</span>
+                  : isAr ? <ChevronLeft className="h-4 w-4 shrink-0 text-[#d4a84f]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[#d4a84f]" />}
               </button>
             ))}
           </div>
@@ -447,6 +408,78 @@ export const MainHeroHeaderBanner: React.FC<MainHeroHeaderBannerProps> = ({
         document.body
       )}
       </div>
+            {isCategoryMenuOpen && (
+              <div className="relative z-30 mx-auto mt-2 w-[calc(100%-8px)] max-w-[360px] rounded-2xl border border-[#d4af67]/70 bg-[#3d0711]/98 p-2 text-right shadow-2xl backdrop-blur-md md:hidden">
+                <div className="mb-1 flex items-center justify-between border-b border-[#d4af67]/25 px-2 pb-2">
+                  <button
+                    type="button"
+                    onClick={closeCategoryMenu}
+                    aria-label={isAr ? 'إغلاق القائمة' : 'Close menu'}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#e8c978] transition hover:bg-[#791524] hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <span className="text-[11px] font-black text-[#fff0c8]">
+                    {activeCategoryId
+                      ? (isAr ? 'اختر التصنيف الفرعي' : 'Choose a subcategory')
+                      : (isAr ? 'اختر القسم الرئيسي' : 'Choose a main section')}
+                  </span>
+                </div>
+                {!activeCategoryId ? (
+                  <div className="grid grid-cols-1 gap-1">
+                    {categories.map(category => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => chooseCategory(category.id)}
+                        className="flex items-center justify-between rounded-xl px-3 py-2 text-[11px] font-bold text-[#fff0c8] transition hover:bg-[#791524]"
+                      >
+                        <ChevronLeft className="h-4 w-4 text-[#d4a84f]" />
+                        <span>{isAr ? category.ar : category.en}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveCategoryId(null)}
+                      className="mb-1 flex w-full items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold text-[#e3b85e] hover:bg-[#791524]"
+                    >
+                      {isAr ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                      <span>{isAr ? 'رجوع إلى الأقسام الرئيسية' : 'Back to main sections'}</span>
+                    </button>
+                    <div className="mb-1 border-b border-[#d4af67]/25 px-3 pb-2 text-[11px] font-black text-white">
+                      {activeCategory && (isAr ? activeCategory.ar : activeCategory.en)}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => chooseSubcategory(activeCategoryId, 'all')}
+                      aria-pressed={chosenCategoryId === activeCategoryId && chosenSubcategoryId === 'all'}
+                      className={`mb-1 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-[11px] font-black text-[#f8df9b] hover:bg-[#d4a84f]/25 ${chosenCategoryId === activeCategoryId && chosenSubcategoryId === 'all' ? 'border-[#d4a84f]/70 bg-[#d4a84f]/20' : 'border-transparent'}`}
+                    >
+                      <span>{isAr ? activeCategory?.allAr || 'الكل' : activeCategory?.allEn || 'All'}</span>
+                      {chosenCategoryId === activeCategoryId && chosenSubcategoryId === 'all' && <span>✓</span>}
+                    </button>
+                    <div className="grid max-h-52 gap-1 overflow-y-auto">
+                      {getSubcategoriesForCategory(activeCategoryId).map(sub => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => chooseSubcategory(activeCategoryId, sub.id)}
+                          aria-pressed={chosenCategoryId === activeCategoryId && chosenSubcategoryId === sub.id}
+                          className={`flex items-center justify-between rounded-xl border px-3 py-2 text-start text-[10px] font-bold text-[#fff0c8] transition hover:bg-[#791524] ${chosenCategoryId === activeCategoryId && chosenSubcategoryId === sub.id ? 'border-[#d4a84f]/70 bg-[#d4a84f]/20' : 'border-transparent'}`}
+                        >
+                          <span>{isAr ? sub.labelAr : sub.labelEn}</span>
+                          {chosenCategoryId === activeCategoryId && chosenSubcategoryId === sub.id && <span>✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
     </section>
   );
 };
