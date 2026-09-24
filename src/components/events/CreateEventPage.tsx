@@ -2195,7 +2195,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       value={priceAr}
                       onChange={e => setPriceAr(e.target.value)}
                       placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
-                      className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
+                      className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono placeholder-neutral-400 dark:placeholder-neutral-600 outline-none"
                     />
                     <input
                       type="text"
