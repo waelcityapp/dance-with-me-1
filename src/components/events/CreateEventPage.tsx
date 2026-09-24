@@ -1257,8 +1257,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         : mediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                       uploadDate: new Date().toISOString(),
                       eventDate: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
-                      priceAr: priceAr.trim() || '250 ج.م',
-                      priceEn: priceEn.trim() || '250 EGP',
+                      priceAr: priceAr.trim(),
+                      priceEn: priceEn.trim(),
                       location: {
                         nameAr: locationNameAr.trim() || 'أستوديو الرقص - الزمالك',
                         nameEn: locationNameEn.trim() || 'Dance Studio - Zamalek',
@@ -1956,14 +1956,14 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       value={priceAr}
                       onChange={e => setPriceAr(e.target.value)}
                       placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
-                      className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
+                      className="placeholder-neutral-400 dark:placeholder-neutral-600 w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
                     />
                     <input
                       type="text"
                       value={priceEn}
                       onChange={e => setPriceEn(e.target.value)}
                       placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
-                      className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
+                      className="placeholder-neutral-400 dark:placeholder-neutral-600 w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-3 text-xs sm:text-sm font-mono outline-none"
                     />
                   </div>
                 ) : contentLangMode === 'ar' ? (
@@ -1972,7 +1972,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={priceAr}
                     onChange={e => setPriceAr(e.target.value)}
                     placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
-                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
+                    className="placeholder-neutral-400 dark:placeholder-neutral-600 w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
                   />
                 ) : (
                   <input
@@ -1980,7 +1980,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                     value={priceEn}
                     onChange={e => setPriceEn(e.target.value)}
                     placeholder={lang === 'ar' ? 'اختياري — اتركه فارغًا إذا لا يوجد سعر' : 'Optional — leave blank if there is no price'}
-                    className="w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
+                    className="placeholder-neutral-400 dark:placeholder-neutral-600 w-full rounded-xl border border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500 py-3 px-4 text-xs sm:text-sm font-mono outline-none"
                   />
                 )}
               </div>
