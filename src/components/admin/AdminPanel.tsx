@@ -6482,8 +6482,8 @@ export const AdminPanel: React.FC = () => {
                         type="text"
                         value={adminPriceAr}
                         onChange={(e) => setAdminPriceAr(e.target.value)}
-                        placeholder="مثال: 250 ج.م شامل المشروب"
-                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                        placeholder="اختياري — اتركه فارغًا إذا لا يوجد سعر"
+                        className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -6496,7 +6496,7 @@ export const AdminPanel: React.FC = () => {
                         type="text"
                         value={adminPriceEn}
                         onChange={(e) => setAdminPriceEn(e.target.value)}
-                        placeholder="e.g. 250 EGP (Includes Soft Drink)"
+                        placeholder="Optional — leave blank if there is no price"
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
