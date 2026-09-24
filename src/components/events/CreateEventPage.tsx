@@ -138,11 +138,31 @@ const CREATE_AD_DRAFT_KEY = 'cityeve:create-ad-draft:v1';
 
 type CreateAdDraft = Record<string, any>;
 
+const hasCreateAdDraftContent = (draft: CreateAdDraft | null): boolean => {
+  if (!draft || typeof draft !== 'object') return false;
+  const contentKeys = [
+    'titleAr', 'titleEn', 'descAr', 'descEn', 'category', 'subcategory',
+    'mediaUrl', 'priceAr', 'priceEn', 'eventDate', 'phone', 'whatsapp',
+    'organizerName', 'locationNameAr', 'locationNameEn', 'addressAr',
+    'addressEn', 'governorateAr', 'governorateEn', 'areaAr', 'areaEn',
+    'googleMapsUrl', 'searchKeywordsText', 'marketerCodeInput',
+  ];
+  return contentKeys.some(key => {
+    const value = draft[key];
+    if (Array.isArray(value)) return value.length > 0;
+    return typeof value === 'string' ? value.trim().length > 0 : Boolean(value);
+  }) || (Array.isArray(draft.selectedStyles) && draft.selectedStyles.length > 0);
+};
+
 const readCreateAdDraft = (): CreateAdDraft | null => {
   try {
     const raw = localStorage.getItem(CREATE_AD_DRAFT_KEY);
     const draft = raw ? JSON.parse(raw) : null;
-    return draft && typeof draft === 'object' ? draft : null;
+    if (!hasCreateAdDraftContent(draft)) {
+      localStorage.removeItem(CREATE_AD_DRAFT_KEY);
+      return null;
+    }
+    return draft;
   } catch (e) {
     return null;
   }
@@ -541,13 +561,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       showViewsCount, createTab, previewLang, subscriptionDays, agreedToTerms, paymentMethod,
       marketerCodeInput
     };
-    const hasContent = Boolean(
-      draft.titleAr || draft.titleEn || draft.descAr || draft.descEn || draft.category ||
-      draft.mediaUrl || draft.priceAr || draft.priceEn || draft.phone || draft.whatsapp ||
-      draft.locationNameAr || draft.locationNameEn || draft.addressAr || draft.addressEn ||
-      draft.governorateAr || draft.governorateEn || draft.areaAr || draft.areaEn ||
-      draft.googleMapsUrl || draft.searchKeywordsText || draft.adType
-    );
+    const hasContent = hasCreateAdDraftContent(draft);
     try {
       if (hasContent) localStorage.setItem(CREATE_AD_DRAFT_KEY, JSON.stringify(draft));
       else localStorage.removeItem(CREATE_AD_DRAFT_KEY);
