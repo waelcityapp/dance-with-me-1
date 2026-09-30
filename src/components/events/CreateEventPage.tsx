@@ -176,10 +176,15 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   const [adType, setAdType] = useState<'vip' | 'standard' | 'free' | null>(savedDraft?.adType || initialAdType || (editingEvent ? ((editingEvent.adType as any) || 'vip') : null));
   const isFreeAd = adType === 'free';
+  const isSingleLanguageFreeAd = isFreeAd && !editingEvent;
   const isFreeAdRef = useRef(isFreeAd);
   isFreeAdRef.current = isFreeAd;
   const [isEditingAdType, setIsEditingAdType] = useState(false);
-  const [contentLangMode, setContentLangMode] = useState<'both' | 'ar' | 'en' | null>(savedDraft?.contentLangMode || (editingEvent ? 'both' : null));
+  const [contentLangMode, setContentLangMode] = useState<'both' | 'ar' | 'en' | null>(() => {
+    const freeAdSelected = savedDraft?.adType === 'free' || initialAdType === 'free';
+    const savedMode = savedDraft?.contentLangMode || (editingEvent ? 'both' : null);
+    return freeAdSelected && !editingEvent && savedMode === 'both' ? 'ar' : savedMode;
+  });
   const [isEditingLangMode, setIsEditingLangMode] = useState(false);
   const [isLoadingPricing, setIsLoadingPricing] = useState(false);
   const [step, setStep] = useState<'form' | 'payment'>(savedDraft?.step === 'payment' ? 'payment' : 'form');
@@ -267,9 +272,24 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   
   const [createTab, setCreateTab] = useState<'form' | 'preview'>(savedDraft?.createTab === 'preview' ? 'preview' : 'form');
-  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>(savedDraft?.previewLang === 'en' ? 'en' : 'ar');
+  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>(() => isSingleLanguageFreeAd ? (contentLangMode === 'en' ? 'en' : 'ar') : (savedDraft?.previewLang === 'en' ? 'en' : 'ar'));
   const [previewAlert, setPreviewAlert] = useState<string | null>(null);
   const [classificationError, setClassificationError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isSingleLanguageFreeAd) return;
+    if (!contentLangMode || contentLangMode === 'both') {
+      setContentLangMode('ar');
+      setPreviewLang('ar');
+      setIsEditingLangMode(false);
+    } else if (previewLang !== contentLangMode) {
+      setPreviewLang(contentLangMode);
+    }
+  }, [isSingleLanguageFreeAd, contentLangMode, previewLang]);
+
+  const adTitleAr = isSingleLanguageFreeAd && contentLangMode !== 'ar' ? '' : titleAr;
+  const adTitleEn = isSingleLanguageFreeAd && contentLangMode !== 'en' ? '' : titleEn;
+  const adDescriptionAr = isSingleLanguageFreeAd && contentLangMode !== 'ar' ? '' : descAr;
+  const adDescriptionEn = isSingleLanguageFreeAd && contentLangMode !== 'en' ? '' : descEn;
 
   // Apply free-ad limits to restored drafts and when changing the selected plan.
   useEffect(() => {
@@ -365,9 +385,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   React.useEffect(() => {
     // Only block URLs in text fields, not in the mediaUrl or googleMapsUrl
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|net|org|io|me|co|eg|sa|ae|app|link)(?:\/[^\s]*)?)/i;
-    const hasViolation = [titleAr, titleEn, descAr, descEn].some(text => urlRegex.test(text));
+    const hasViolation = [adTitleAr, adTitleEn, adDescriptionAr, adDescriptionEn].some(text => urlRegex.test(text));
     setHasUrlViolation(hasViolation);
-  }, [titleAr, titleEn, descAr, descEn]);
+  }, [adTitleAr, adTitleEn, adDescriptionAr, adDescriptionEn]);
 
   React.useEffect(() => {
     if (googleMapsUrl && googleMapsUrl.trim() !== '') {
@@ -687,7 +707,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   };
 
   const checkLinksAndWarn = () => {
-    if (containsExternalLink(titleAr) || containsExternalLink(titleEn) || containsExternalLink(descAr) || containsExternalLink(descEn)) {
+    if (containsExternalLink(adTitleAr) || containsExternalLink(adTitleEn) || containsExternalLink(adDescriptionAr) || containsExternalLink(adDescriptionEn)) {
       alert(lang === 'ar' ? '⚠️ عذراً، ممنوع وضع أي روابط خارجية في العنوان أو الوصف لأسباب أمنية.' : '⚠️ Sorry, external links are not allowed in the title or description for security reasons.');
       return true;
     }
@@ -803,10 +823,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       // Admins publish directly; guests and regular users create a pending submission for admin review.
       if (user?.isAdmin || isAdminUnlocked) {
         const createdEvent = addNewEvent({
-          titleAr,
-          titleEn,
-          descriptionAr: descAr,
-          descriptionEn: descEn,
+          titleAr: adTitleAr,
+          titleEn: adTitleEn,
+          descriptionAr: adDescriptionAr,
+          descriptionEn: adDescriptionEn,
           category: category as AdCategory,
           subcategory,
           styles: selectedStyles,
@@ -849,10 +869,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       } else {
         const submissionId = `guest-submission-${Date.now()}`;
         const submittedEventData: Partial<DanceEvent> = {
-          titleAr: titleAr || 'إعلان تجريبي جديد',
-          titleEn: titleEn || 'New Event Announcement',
-          descriptionAr: descAr || '',
-          descriptionEn: descEn || '',
+          titleAr: adTitleAr || (isSingleLanguageFreeAd ? '' : 'إعلان تجريبي جديد'),
+          titleEn: adTitleEn || (isSingleLanguageFreeAd ? '' : 'New Event Announcement'),
+          descriptionAr: adDescriptionAr || '',
+          descriptionEn: adDescriptionEn || '',
           category: category as AdCategory,
           subcategory,
           styles: selectedStyles,
@@ -912,7 +932,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           marketerCode: verifiedMarketer?.code,
           marketerId: verifiedMarketer?.marketerId,
           attributionSource: verifiedMarketer ? 'code' : undefined,
-          contentLangMode: contentLangMode || 'both',
+          contentLangMode: contentLangMode || (isSingleLanguageFreeAd ? 'ar' : 'both'),
           status: 'pending',
           userRead: false,
           submittedAt: new Date().toISOString(),
@@ -975,10 +995,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         adType={adType as 'vip' | 'standard' | 'free'}
         contentLangMode={contentLangMode}
         eventData={{
-          titleAr: titleAr || 'سهرة سالسا وباتشاتا ملكية جديدة',
-          titleEn: titleEn || 'Royal Salsa & Bachata Night',
-          descriptionAr: descAr || 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.',
-          descriptionEn: descEn || 'Join us for an exclusive Latin night with top instructors and professionals from across the region.',
+          titleAr: adTitleAr || (isSingleLanguageFreeAd ? '' : 'سهرة سالسا وباتشاتا ملكية جديدة'),
+          titleEn: adTitleEn || (isSingleLanguageFreeAd ? '' : 'Royal Salsa & Bachata Night'),
+          descriptionAr: adDescriptionAr || (isSingleLanguageFreeAd ? '' : 'انضموا إلينا في سهرة لاتينية فاخرة بمشاركة نخبة المدربين والمحترفين في الوطن العربي.'),
+          descriptionEn: adDescriptionEn || (isSingleLanguageFreeAd ? '' : 'Join us for an exclusive Latin night with top instructors and professionals from across the region.'),
           category: category as AdCategory,
           subcategory,
           styles: selectedStyles,
@@ -1290,7 +1310,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             <div className="block sm:hidden w-full h-px bg-amber-100 dark:bg-neutral-800" />
 
             {/* 2. Content Language Selector or Chosen Language Display on the EXACT SAME ROW */}
-            <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 flex-1 min-w-0">
+            <div className={`flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 flex-1 min-w-0 ${isSingleLanguageFreeAd ? 'flex-wrap' : ''}`}>
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 shrink-0">
                   {lang === 'ar' ? 'لغة المحتوى:' : 'Language:'}
@@ -1346,7 +1366,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       <span className="xs:hidden">{lang === 'ar' ? 'إنجليزي' : 'EN'}</span>
                     </button>
 
-                    <button
+                    {!isSingleLanguageFreeAd && <button
                       type="button"
                       onClick={() => {
                         setContentLangMode('both');
@@ -1361,10 +1381,18 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                       <span>🌐</span>
                       <span className="hidden xs:inline">{lang === 'ar' ? 'عربي وإنجليزي' : 'Both'}</span>
                       <span className="xs:hidden">{lang === 'ar' ? 'كلاهما' : 'Both'}</span>
-                    </button>
+                    </button>}
                   </div>
                 )}
               </div>
+
+              {isSingleLanguageFreeAd && (
+                <p className="basis-full text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 sm:text-right" role="note">
+                  {lang === 'ar'
+                    ? 'الإعلان المجاني بلغة واحدة فقط. الإعلان باللغتين متاح في الإعلان المدفوع.'
+                    : 'Free ads can use one language only. Bilingual ads are available with a paid ad.'}
+                </p>
+              )}
 
               {contentLangMode && !isEditingLangMode && (
                 <button
@@ -1390,9 +1418,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             {lang === 'ar' ? 'يرجى اختيار لغة محتوى الإعلان' : 'Please Select Ad Content Language'}
           </h4>
           <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 max-w-md mx-auto">
-            {lang === 'ar' 
-              ? 'اختر لغة الإعلان من الشريط أعلاه (عربي فقط، إنجليزي فقط، أو كلاهما) لفتح حقول النموذج المخصصة.' 
-              : 'Choose the ad language from the bar above (Arabic Only, English Only, or Both) to open the tailored form.'}
+            {isSingleLanguageFreeAd
+              ? (lang === 'ar' ? 'الإعلان المجاني بلغة واحدة فقط. الإعلان باللغتين متاح في الإعلان المدفوع.' : 'Free ads can use one language only. Bilingual ads are available with a paid ad.')
+              : (lang === 'ar' ? 'اختر لغة الإعلان من الشريط أعلاه (عربي فقط، إنجليزي فقط، أو كلاهما) لفتح حقول النموذج المخصصة.' : 'Choose the ad language from the bar above (Arabic Only, English Only, or Both) to open the tailored form.')}
           </p>
         </div>
       ) : adType && contentLangMode ? (
@@ -1424,7 +1452,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider px-2 font-mono">
                   {lang === 'ar' ? 'لغة المعاينة:' : 'Preview Lang:'}
                 </span>
-                <button
+                {(!isSingleLanguageFreeAd || contentLangMode === 'ar') && <button
                   type="button"
                   onClick={() => {
                     setPreviewLang('ar');
@@ -1437,8 +1465,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   }`}
                 >
                   العربية (AR)
-                </button>
-                <button
+                </button>}
+                {(!isSingleLanguageFreeAd || contentLangMode === 'en') && <button
                   type="button"
                   onClick={() => {
                     setPreviewLang('en');
@@ -1451,7 +1479,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   }`}
                 >
                   English (EN)
-                </button>
+                </button>}
               </div>
             </div>
 
@@ -1493,10 +1521,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   <EventCard
                     event={{
                       id: 'user-preview-id',
-                      titleAr: titleAr.trim() || (lang === 'ar' ? 'سهرة سالسا فخمة في الزمالك' : 'Luxury Salsa Night in Zamalek'),
-                      titleEn: titleEn.trim() || 'Luxury Salsa Night in Zamalek',
-                      descriptionAr: descAr.trim() || (lang === 'ar' ? 'اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور...' : 'Event details and description goes here...'),
-                      descriptionEn: descEn.trim() || 'Event details and description goes here...',
+                      titleAr: adTitleAr.trim() || (isSingleLanguageFreeAd ? '' : (lang === 'ar' ? 'سهرة سالسا فخمة في الزمالك' : 'Luxury Salsa Night in Zamalek')),
+                      titleEn: adTitleEn.trim() || (isSingleLanguageFreeAd ? '' : 'Luxury Salsa Night in Zamalek'),
+                      descriptionAr: adDescriptionAr.trim() || (isSingleLanguageFreeAd ? '' : (lang === 'ar' ? 'اكتب تفاصيل الفعالية، المدربين، نوع الموسيقى، شروط الحضور...' : 'Event details and description goes here...')),
+                      descriptionEn: adDescriptionEn.trim() || (isSingleLanguageFreeAd ? '' : 'Event details and description goes here...'),
                       category: category as AdCategory,
                       styles: selectedStyles,
 
