@@ -175,6 +175,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
 
   const [adType, setAdType] = useState<'vip' | 'standard' | 'free' | null>(savedDraft?.adType || initialAdType || (editingEvent ? ((editingEvent.adType as any) || 'vip') : null));
+  const isFreeAd = adType === 'free';
+  const isFreeAdRef = useRef(isFreeAd);
+  isFreeAdRef.current = isFreeAd;
   const [isEditingAdType, setIsEditingAdType] = useState(false);
   const [contentLangMode, setContentLangMode] = useState<'both' | 'ar' | 'en' | null>(savedDraft?.contentLangMode || (editingEvent ? 'both' : null));
   const [isEditingLangMode, setIsEditingLangMode] = useState(false);
@@ -268,9 +271,35 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [previewAlert, setPreviewAlert] = useState<string | null>(null);
   const [classificationError, setClassificationError] = useState<string | null>(null);
 
+  // Apply free-ad limits to restored drafts and when changing the selected plan.
+  useEffect(() => {
+    if (!isFreeAd) return;
+    setSubscriptionDays(7);
+    if (mediaType === 'video') {
+      setMediaType('image');
+      setMediaUrl('');
+      setPendingFile(null);
+      setUploadedFileName(null);
+      setCreateTab('form');
+      setStep('form');
+    }
+    if (!editingEvent) {
+      setPriceAr('');
+      setPriceEn('');
+      setSelectedStyles([]);
+      setSearchKeywordsText('');
+      setOrganizerName('');
+      setPhone('');
+      setWhatsapp('');
+      setMarketerCodeInput('');
+      setVerifiedMarketer(null);
+      setMarketerCodeStatus('idle');
+    }
+  }, [isFreeAd, mediaType, editingEvent]);
+
   const selectedCategory = AD_CATEGORIES.find(item => item.id === category);
   const selectedSubcategory = selectedCategory?.subcategories.find(item => item.id === subcategory);
-  const shouldShowDanceStyles = selectedSubcategory?.supportsDanceStyles === true;
+  const shouldShowDanceStyles = !isFreeAd && selectedSubcategory?.supportsDanceStyles === true;
   const normalizedSearchKeywords = searchKeywordsText
     .split(/[,،\n]/)
     .map(value => value.trim())
@@ -301,6 +330,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   };
 
   const validateClassification = () => {
+    if (isFreeAd && (mediaType !== 'image' || !mediaUrl || mediaUrl.startsWith('blob:') || isUploadingMedia)) {
+      alert(lang === 'ar' ? 'حمّل صورة واحدة وانتظر اكتمال رفعها قبل المتابعة.' : 'Upload one image and wait for the upload to finish before continuing.');
+      return false;
+    }
+
     if (!category) {
       setClassificationError(lang === 'ar' ? 'اختر القسم الرئيسي أولًا.' : 'Please select a main category first.');
       return false;
@@ -438,6 +472,12 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
       const isImage = validImageTypes.includes(file.type) && validImageExts.includes(ext || '');
       const isVideo = validVideoTypes.includes(file.type) && validVideoExts.includes(ext || '');
 
+      if (isFreeAd && !isImage) {
+        setUploadError(lang === 'ar' ? 'الإعلان المجاني يسمح بصورة واحدة فقط، بدون فيديو.' : 'Free ads allow one image only, without video.');
+        e.target.value = '';
+        return;
+      }
+
       if (!isImage && !isVideo) {
         alert(lang === 'ar' ? '⚠️ تحذير أمني: نوع الملف غير مدعوم أو قد يكون خبيثاً. يرجى رفع صورة أو فيديو بصيغة صحيحة.' : '⚠️ Security Warning: Unsupported or potentially malicious file type. Please upload a valid image or video.');
         e.target.value = '';
@@ -457,6 +497,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         setMediaUrl(URL.createObjectURL(fileToUpload)); // temporary preview
         try {
           const finalUrl = await performUpload(fileToUpload);
+          // The plan may change while an upload is in progress.
+          if (isFreeAdRef.current && type === 'video') return;
           
           // If editing an event and there's an old media URL on Cloudinary, delete it
           if (editingEvent && editingEvent.mediaUrl && editingEvent.mediaUrl.includes('cloudinary.com') && editingEvent.mediaUrl !== finalUrl) {
@@ -675,6 +717,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
     : generatedMediaUrl;
 
   const handleFinalPublish = async () => {
+    if (isFreeAd && !validateClassification()) return;
     setIsUploadingMedia(true);
     let finalMediaUrl = mediaUrl;
     
@@ -1194,7 +1237,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   )}
                 </div>
                 <p className={`text-[11px] sm:text-xs leading-relaxed ${adType === 'free' ? 'text-neutral-800 dark:text-neutral-200' : 'text-neutral-600 dark:text-neutral-300'}`}>
-                  {lang === 'ar' ? 'إعلان مجاني يظهر في القائمة العامة للفعاليات.' : 'Free ad listed in the general events feed.'}
+                  {lang === 'ar' ? 'عنوان، تفاصيل، صورة واحدة، قسم، تاريخ ومكان، بدون فيديو.' : 'Title, details, one image, category, date and venue. No video.'}
                 </p>
               </div>
               <div className="mt-2 pt-1.5 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
@@ -1885,7 +1928,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
 
           {/* Internal search keywords */}
-          <div className="space-y-3 border-t border-neutral-200 dark:border-neutral-800 pt-5">
+          {!isFreeAd && (
+            <div className="space-y-3 border-t border-neutral-200 dark:border-neutral-800 pt-5">
             <div>
               <h4 className="text-base font-bold text-neutral-900 dark:text-white">
                 {lang === 'ar' ? 'كلمات تساعد المستخدمين في العثور على الإعلان' : 'Search phrases that help users find this ad'}
@@ -1908,6 +1952,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               {normalizedSearchKeywords.length}/15 {lang === 'ar' ? 'عبارة — تُستخدم للبحث داخل CityEve فقط.' : 'phrases — used for search inside CityEve only.'}
             </p>
           </div>
+          )}
           {/* Section 3: Media Only */}
           <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
             <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
@@ -1915,6 +1960,11 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </h4>
 
             <div className="space-y-4 bg-white dark:bg-neutral-950/60 p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800/80 shadow-sm">
+              {isFreeAd ? (
+                <p className="text-sm font-bold text-neutral-900 dark:text-white">
+                  {lang === 'ar' ? 'صورة واحدة للإعلان المجاني' : 'One image for your free ad'}
+                </p>
+              ) : (<>
               <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
                 <span>{lang === 'ar' ? 'نوع وسائط البانر (فيديو / صورة):' : 'Banner Media Type (Video / Image):'}</span>
                 {mediaType === 'video' && (
@@ -1952,6 +2002,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </button>
               </div>
 
+              </>)}
               {/* Upload source options */}
               <div className="space-y-3 pt-1">
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300">
@@ -2190,7 +2241,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           {/* Date, Price, Contact & Location */}
           <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
             <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase">
-              {lang === 'ar' ? '5. الموعد، التذاكر، والموقع' : '5. Date, Tickets & Venue'}
+              {isFreeAd ? (lang === 'ar' ? '4. الموعد والمكان' : '4. Date & Venue') : (lang === 'ar' ? '5. الموعد، التذاكر، والموقع' : '5. Date, Tickets & Venue')}
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2206,6 +2257,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   className={`w-full rounded-xl border ${mapsUrlError ? 'border-red-500 bg-red-950/20' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm font-mono outline-none transition-colors shadow-inner`}
                 />
               </div>
+              {!isFreeAd && (
               <div>
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
                   <DollarSign className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
@@ -2246,6 +2298,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   />
                 )}
               </div>
+              )}
             </div>
 
             {/* Special Expiration Notice Box */}
@@ -2421,6 +2474,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
             </div>
 
             <div className="pt-2 space-y-4">
+              {!isFreeAd && <>
               <div>
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">
                   <UserCheck className="h-3.5 w-3.5 text-[#78101F] dark:text-amber-400" />
@@ -2466,6 +2520,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </div>
               </div>
 
+              </>}
               {/* Views Count Privacy Setting - only for unlocked admin editing an existing ad */}
           {editingEvent && (user?.isAdmin || user?.email === 'waelvts@gmail.com') && isAdminUnlocked && (
               <div className="pt-2">
@@ -2516,7 +2571,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           </div>
 
           {/* SECTION 6: Subscription Plan & Dynamic Calculation */}
-          <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
+          {!isFreeAd && (
+            <div className="space-y-4 border-t border-amber-200/60 dark:border-white/10 pt-6">
             <h4 className="text-sm font-bold text-[#78101F] dark:text-amber-400 font-mono tracking-wider uppercase flex items-center justify-between">
               <span>{lang === 'ar' ? '6. نظام ومدة الاشتراك (Ad Subscription Plan)' : '6. Ad Subscription Plan'}</span>
               <span className="text-xs text-neutral-500 dark:text-neutral-400 font-sans font-normal">
@@ -2528,12 +2584,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <label className="block text-xs sm:text-sm font-bold text-neutral-900 dark:text-white mb-1">
-                    {lang === 'ar' ? `اختر مدة اشتراك الإعلان (${adType === 'vip' ? 'مميز' : adType === 'free' ? 'مجاني' : 'عادي'}) (بالأيام):` : `Select Ad Duration (${adType === 'vip' ? 'VIP' : adType === 'free' ? 'Free' : 'Standard'}) (in Days):`}
+                    {lang === 'ar' ? `اختر مدة اشتراك الإعلان (${adType === 'vip' ? 'مميز' : 'عادي'}) (بالأيام):` : `Select Ad Duration (${adType === 'vip' ? 'VIP' : 'Standard'}) (in Days):`}
                   </label>
                   <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                    {adType === 'free'
-                      ? (lang === 'ar' ? 'الإعلان مجاني بالكامل لمدة تصل إلى 7 أيام.' : 'Ad is completely free for up to 7 days.')
-                      : (lang === 'ar'
+                    {(lang === 'ar'
                           ? `الأسبوع الأول 7 أيام بقيمة ${pricing.basePrice} ج.م، وكل يوم إضافي بزيادة ${pricing.extraDayRate} ج.م`
                           : `First 7 days for ${pricing.basePrice} EGP, each extra day is +${pricing.extraDayRate} EGP`)}
                   </p>
@@ -2555,10 +2609,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   <button
                     type="button"
                     onClick={() => {
-                      if (adType === 'free' && subscriptionDays >= 7) return;
                       setSubscriptionDays(subscriptionDays + 1);
                     }}
-                    disabled={adType === 'free' && subscriptionDays >= 7}
                     className="h-10 w-10 rounded-xl bg-gradient-to-r from-[#5B0813] via-[#78101F] to-[#5B0813] text-amber-300 hover:brightness-110 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 dark:text-amber-300 dark:border dark:border-amber-500/30 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
@@ -2599,9 +2651,9 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
               </div>
             </div>
           </div>
-
-          {/* Optional marketer attribution for paid and free ad submissions. */}
-          {!editingEvent && (
+          )}
+          {/* Optional marketer attribution for paid ad submissions. */}
+          {!editingEvent && !isFreeAd && (
             <div className="space-y-3 border-t border-amber-200/60 dark:border-white/10 pt-6">
               <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/5 p-5 sm:p-6 shadow-sm">
                 <div className="flex items-start gap-3">
