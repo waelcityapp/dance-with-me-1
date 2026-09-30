@@ -1316,7 +1316,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   {lang === 'ar' ? 'لغة المحتوى:' : 'Language:'}
                 </span>
 
-                {contentLangMode && !isEditingLangMode ? (
+                {contentLangMode && !isEditingLangMode && !isSingleLanguageFreeAd ? (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-lg border border-amber-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-black text-neutral-900 dark:text-white shadow-xs">
                     <span>{contentLangMode === 'ar' ? '🇸🇦' : contentLangMode === 'en' ? '🇬🇧' : '🌐'}</span>
                     <span className="truncate">
@@ -1394,7 +1394,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                 </p>
               )}
 
-              {contentLangMode && !isEditingLangMode && (
+              {contentLangMode && !isEditingLangMode && !isSingleLanguageFreeAd && (
                 <button
                   type="button"
                   onClick={() => setIsEditingLangMode(true)}
