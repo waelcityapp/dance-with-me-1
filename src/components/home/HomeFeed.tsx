@@ -347,6 +347,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
       if (normalizedSearchQuery && b.searchScore !== a.searchScore) {
         return b.searchScore - a.searchScore;
       }
+      const posA = a.ev.position != null && a.ev.position > 0 ? a.ev.position : 999999;
+      const posB = b.ev.position != null && b.ev.position > 0 ? b.ev.position : 999999;
+      if (posA !== posB) return posA - posB;
       return new Date(b.ev.uploadDate).getTime() - new Date(a.ev.uploadDate).getTime();
     })
     .map(({ ev }) => ev);
