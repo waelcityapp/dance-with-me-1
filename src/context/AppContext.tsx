@@ -806,10 +806,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (aIsVip && !bIsVip) return -1;
       if (!aIsVip && bIsVip) return 1;
       
-      if (aIsVip && bIsVip) {
-        if (posA !== posB) {
-          return posA - posB;
-        }
+      if (posA !== posB) {
+        return posA - posB;
       }
       
       return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
