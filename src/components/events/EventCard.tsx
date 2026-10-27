@@ -427,7 +427,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 </span>
               </div>
             )}
-          <p className={`text-[11px] sm:text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-2'}`}>
+          <p className={`text-[15px] text-neutral-700 dark:text-neutral-200 leading-[1.6] font-[Arial,system-ui,sans-serif] ${isDescExpanded ? '' : 'line-clamp-2'}`}>
             {lang === 'ar' ? (event.descriptionAr || event.descriptionEn) : (event.descriptionEn || event.descriptionAr)}
           </p>
           {((lang === 'ar' ? (event.descriptionAr || event.descriptionEn) : (event.descriptionEn || event.descriptionAr)) || '').length > 120 && (
