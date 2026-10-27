@@ -57,6 +57,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-[16/10]');
   const [imageAspectRatioClass, setImageAspectRatioClass] = useState('aspect-[16/10]');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdminTools, setShowAdminTools] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -241,6 +242,22 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       {/* Admin Floating Control Toolbar */}
       {user?.isAdmin && !hideAdminControls && (
         <div className="absolute top-14 left-4 right-4 z-30 flex flex-wrap gap-2 justify-end pointer-events-none">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setShowAdminTools((open) => !open);
+            }}
+            aria-expanded={showAdminTools}
+            aria-label={lang === 'ar' ? (showAdminTools ? 'إخفاء أدوات الإدارة' : 'إظهار أدوات الإدارة') : (showAdminTools ? 'Hide admin tools' : 'Show admin tools')}
+            title={lang === 'ar' ? (showAdminTools ? 'إخفاء أدوات الإدارة' : 'إظهار أدوات الإدارة') : (showAdminTools ? 'Hide admin tools' : 'Show admin tools')}
+            className="pointer-events-auto flex h-10 items-center gap-1.5 rounded-xl border border-amber-500/50 bg-neutral-950/90 px-3 text-xs font-bold text-amber-400 shadow-md hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+          >
+            <span aria-hidden="true">{showAdminTools ? '×' : '⋯'}</span>
+            <span>{lang === 'ar' ? 'أدوات الإدارة' : 'Admin tools'}</span>
+          </button>
+          {showAdminTools && (
           <div className="pointer-events-auto flex flex-wrap gap-2 bg-neutral-950/40 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl">
             {/* Position Display */}
             <div 
@@ -329,6 +346,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               <Trash2 className="h-4.5 w-4.5 stroke-[2.5]" />
             </button>
           </div>
+          )}
         </div>
       )}
 
