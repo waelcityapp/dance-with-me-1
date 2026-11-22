@@ -21,6 +21,11 @@ test('Use date-only values and real location/organizer, never fabricated default
   assert.equal(s.location.address.addressLocality,'Alexandria');
   assert.equal(s.organizer.name,'Actual organizer');
   assert.equal(s.startDate,'2026-09-15');
+  const timed = (eventDate, eventStartTime) => eventDetails({...approved,eventDate,eventStartTime},'en').structured.startDate;
+  assert.equal(timed('2026-11-24','22:00'),'2026-11-24T22:00:00+02:00');
+  assert.equal(timed('2026-07-24','22:00'),'2026-07-24T22:00:00+03:00');
+  assert.equal(timed('2026-11-24','00:00'),'2026-11-24T00:00:00+02:00');
+  assert.equal(timed('2026-11-24','24:00'),'2026-11-24');
   assert.equal(eventDetails({...approved,location:{},contact:{}},'en').structured['@type'],'WebPage');
   assert.equal(eventDetails({...approved,category:'jobs'},'en').structured['@type'],'WebPage');
 });

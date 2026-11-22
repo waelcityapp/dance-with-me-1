@@ -71,8 +71,13 @@ export default async function handler(req,res) {
       }
       const ended = isEndedEvent(event);
       const d = eventDetails(event,lang);
+      const dateLabel = event.eventStartTime && d.date.includes('T')
+        ? new Intl.DateTimeFormat(en ? 'en-EG' : 'ar-EG', {
+          timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short',
+        }).format(new Date(d.date))
+        : d.date.slice(0, 10);
       const endedNotice = ended ? `<p role="status"><strong>${en?'This event has ended.':'الفعالية انتهت.'}</strong></p>` : '';
-      const body = `<main class="seo-page"><a href="/${languageQuery(lang)}">CityEve</a><article><h1>${esc(d.name)}</h1>${endedNotice}<img class="seo-detail-image" src="${esc(d.image)}" alt="${esc(d.name)}" />${d.date?`<p><time datetime="${esc(d.date)}">${esc(d.date.slice(0,10))}</time></p>`:''}<p>${esc([d.place,d.address,d.city].filter(Boolean).join(' — '))}</p><p class="seo-description">${esc(d.description)}</p>${d.organizer?`<p>${en?'Organizer':'المنظم'}: ${esc(d.organizer)}</p>`:''}</article>${directoryNav(lang)}</main>`;
+      const body = `<main class="seo-page"><a href="/${languageQuery(lang)}">CityEve</a><article><h1>${esc(d.name)}</h1>${endedNotice}<img class="seo-detail-image" src="${esc(d.image)}" alt="${esc(d.name)}" />${d.date?`<p><time datetime="${esc(d.date)}">${esc(dateLabel)}</time></p>`:''}<p>${esc([d.place,d.address,d.city].filter(Boolean).join(' — '))}</p><p class="seo-description">${esc(d.description)}</p>${d.organizer?`<p>${en?'Organizer':'المنظم'}: ${esc(d.organizer)}</p>`:''}</article>${directoryNav(lang)}</main>`;
       return send(res,200,renderDocument({lang,title:d.name+' | CityEve',description:d.description.slice(0,220),url:d.url,image:d.image,structured:[d.structured],body,index:!ended&&(!en||hasEnglish(event)),alternates:hasEnglish(event),app:!ended,fallbackVisible:ended||isCrawler}));
     }
     const category = CATEGORIES.find(c=>c[0]===req.query.page);

@@ -1,3 +1,4 @@
+import { cairoEventStart } from '../../shared/eventStartTime.js';
 import { isEventExpired } from '../../shared/eventExpiry.js';
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
@@ -137,7 +138,8 @@ export function eventDetails(event, lang) {
   const address = pick(location.addressAr,location.addressEn) || text(location.address,event.address);
   const city = pick(location.governorateAr,location.governorateEn) || text(location.city,event.city);
   const organizer = text(event.contact?.organizerName,event.organizerName);
-  const date = schemaDate(event.eventDate || event.date || event.startDate);
+  const recordedDate = schemaDate(event.eventDate || event.date || event.startDate);
+  const date = cairoEventStart(recordedDate.slice(0,10), event.eventStartTime) || recordedDate;
   const endDate = schemaDate(event.endDate || event.eventEndDate);
   const url = `${SITE_URL}/e/${encodeURIComponent(event.id)}${en?'?lang=en':''}`;
   const structured = {'@context':'https://schema.org','@type':'WebPage',name,description,url,inLanguage:lang};

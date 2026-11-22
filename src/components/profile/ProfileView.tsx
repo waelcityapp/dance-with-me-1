@@ -1,3 +1,4 @@
+import { EventStartTimeField } from '../events/EventStartTimeField';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { User, Users, PlusCircle, Heart, Ticket, ShieldAlert, ShieldCheck, Sparkles, Clock, Trash2, LogOut, CheckCircle, RotateCcw, FileText, Edit3, RefreshCw, AlertTriangle, Check, X, Upload, MessageSquare, Camera, Loader2, Info, Crown, ChevronDown } from 'lucide-react';
@@ -196,6 +197,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [editDescEn, setEditDescEn] = useState('');
   const [editPriceAr, setEditPriceAr] = useState('');
   const [editPriceEn, setEditPriceEn] = useState('');
+  const [editEventStartTime, setEditEventStartTime] = useState('');
   const [editEventDate, setEditEventDate] = useState('');
   const [editLocationAr, setEditLocationAr] = useState('');
   const [editLocationEn, setEditLocationEn] = useState('');
@@ -439,6 +441,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setEditDescEn(sub.eventData?.descriptionEn || '');
     setEditPriceAr(sub.eventData?.priceAr || '');
     setEditPriceEn(sub.eventData?.priceEn || '');
+    setEditEventStartTime(sub.eventData?.eventStartTime ?? '');
     setEditEventDate(sub.eventData?.eventDate ? sub.eventData.eventDate.split('T')[0] : '');
     setEditLocationAr(sub.eventData?.location?.nameAr || '');
     setEditLocationEn(sub.eventData?.location?.nameEn || '');
@@ -515,6 +518,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           priceAr: editPriceAr || sub.eventData.priceAr,
           priceEn: editPriceEn || sub.eventData.priceEn,
           eventDate: editEventDate ? new Date(editEventDate).toISOString() : sub.eventData.eventDate,
+          eventStartTime: editEventStartTime,
           location: {
             ...sub.eventData.location,
             nameAr: editLocationAr || sub.eventData.location?.nameAr,
@@ -1264,6 +1268,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           dir="ltr"
                         />
                       </div>
+                      <EventStartTimeField lang={lang} value={editEventStartTime} onChange={setEditEventStartTime} />
 
                       {/* Location */}
                       <div className="grid grid-cols-2 gap-4">

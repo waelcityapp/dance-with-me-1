@@ -1,3 +1,4 @@
+import { cairoEventStart } from '../../../shared/eventStartTime.js';
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
@@ -38,6 +39,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
     recordEventView
   } = useApp();
 
+  const start = cairoEventStart(event.eventDate?.slice(0, 10), event.eventStartTime);
+  const startLabel = start && new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-US', {
+    timeZone: 'Africa/Cairo', hour: 'numeric', minute: '2-digit',
+  }).format(new Date(start));
   const displayAdType = overrideAdType || event.adType;
 
   // Auto record view when event is mounted / displayed
@@ -472,7 +477,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           {/* Event Date */}
           <div className="flex items-center gap-2.5 text-neutral-950 dark:text-neutral-200">
             <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span className="font-bold">{formatDate(event.eventDate, lang)}</span>
+            <span className="font-bold">{formatDate(event.eventDate, lang)}{startLabel && ` · ${startLabel}`}</span>
           </div>
 
           {/* Organizer Name */}

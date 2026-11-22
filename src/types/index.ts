@@ -104,6 +104,7 @@ export interface DanceEvent {
   uploadDate: string; // ISO string e.g. "2026-07-01T10:00:00Z"
   createdSource?: 'admin' | 'approved_submission';
   eventDate: string;  // ISO string e.g. "2026-07-15T21:00:00Z"
+  eventStartTime?: string; // Optional HH:mm in Africa/Cairo
   priceAr: string;
   priceEn: string;
   location: LocationInfo;
