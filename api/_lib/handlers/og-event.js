@@ -69,6 +69,7 @@ ${structured.map(s => `<script type="application/ld+json">${jsonLd(s)}</script>`
     .replace('</head>', `${metadata}</head>`)
     .replace('<div id="root"></div>', () => `<div id="root">${fallbackVisible ? body : '<div style="display:none" data-seo-fallback="true">'+body+'</div>'}</div>`);
   if (!app) html = html.replace(/<script\b[^>]*type="module"[^>]*>[\s\S]*?<\/script>/gi, '');
+  if (!index) html = html.replace('<script src="/chatgpt-referral.js" defer></script>', '');
   return html;
 }
 function eventCard(event,lang) {
