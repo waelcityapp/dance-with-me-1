@@ -1,3 +1,4 @@
+import { EventStartTimeField } from './EventStartTimeField';
 import React, { useEffect, useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
@@ -107,7 +108,7 @@ const hasCreateAdDraftContent = (draft: CreateAdDraft | null): boolean => {
   if (!draft || typeof draft !== 'object') return false;
   const contentKeys = [
     'titleAr', 'titleEn', 'descAr', 'descEn', 'category', 'subcategory',
-    'mediaUrl', 'priceAr', 'priceEn', 'eventDate', 'phone', 'whatsapp',
+    'mediaUrl', 'priceAr', 'priceEn', 'eventDate', 'eventStartTime', 'phone', 'whatsapp',
     'organizerName', 'locationNameAr', 'locationNameEn', 'addressAr',
     'addressEn', 'governorateAr', 'governorateEn', 'areaAr', 'areaEn',
     'googleMapsUrl', 'searchKeywordsText',
@@ -191,6 +192,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
   const [mediaUrl, setMediaUrl] = useState(savedDraft?.mediaUrl ?? (editingEvent ? editingEvent.mediaUrl : ''));
   const [priceAr, setPriceAr] = useState(savedDraft?.priceAr ?? (editingEvent?.priceAr || ''));
   const [priceEn, setPriceEn] = useState(savedDraft?.priceEn ?? (editingEvent?.priceEn || ''));
+  const [eventStartTime, setEventStartTime] = useState(savedDraft?.eventStartTime ?? editingEvent?.eventStartTime ?? '');
   const [eventDate, setEventDate] = useState(() => {
     if (savedDraft?.eventDate) return savedDraft.eventDate;
     if (editingEvent) {
@@ -545,10 +547,10 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
 
   useEffect(() => {
     if (editingEvent) return;
-    const draft = { adType, contentLangMode, step, titleAr, titleEn, descAr, descEn, category, subcategory, mediaType, mediaUrl, priceAr, priceEn, eventDate, phone, whatsapp, organizerName, locationNameAr, locationNameEn, addressAr, addressEn, governorateAr, governorateEn, areaAr, areaEn, googleMapsUrl, selectedStyles, searchKeywordsText, position, adNumber, showViewsCount, createTab, previewLang, subscriptionDays, agreedToTerms, paymentMethod };
+    const draft = { adType, contentLangMode, step, titleAr, titleEn, descAr, descEn, category, subcategory, mediaType, mediaUrl, priceAr, priceEn, eventDate, eventStartTime, phone, whatsapp, organizerName, locationNameAr, locationNameEn, addressAr, addressEn, governorateAr, governorateEn, areaAr, areaEn, googleMapsUrl, selectedStyles, searchKeywordsText, position, adNumber, showViewsCount, createTab, previewLang, subscriptionDays, agreedToTerms, paymentMethod };
     const hasContent = hasCreateAdDraftContent(draft);
     try { if (hasContent) localStorage.setItem(CREATE_AD_DRAFT_KEY, JSON.stringify(draft)); else localStorage.removeItem(CREATE_AD_DRAFT_KEY); } catch (e) {}
-  }, [editingEvent, adType, contentLangMode, step, titleAr, titleEn, descAr, descEn, category, subcategory, mediaType, mediaUrl, priceAr, priceEn, eventDate, phone, whatsapp, organizerName, locationNameAr, locationNameEn, addressAr, addressEn, governorateAr, governorateEn, areaAr, areaEn, googleMapsUrl, selectedStyles, searchKeywordsText, position, adNumber, showViewsCount, createTab, previewLang, subscriptionDays, agreedToTerms, paymentMethod]);
+  }, [editingEvent, adType, contentLangMode, step, titleAr, titleEn, descAr, descEn, category, subcategory, mediaType, mediaUrl, priceAr, priceEn, eventDate, eventStartTime, phone, whatsapp, organizerName, locationNameAr, locationNameEn, addressAr, addressEn, governorateAr, governorateEn, areaAr, areaEn, googleMapsUrl, selectedStyles, searchKeywordsText, position, adNumber, showViewsCount, createTab, previewLang, subscriptionDays, agreedToTerms, paymentMethod]);
 
   // Calculate Subscription Pricing
   const getPriceBreakdown = () => {
@@ -666,6 +668,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
         mediaUrl: finalMediaUrl,
         thumbnailUrl: finalThumbnailUrl,
         eventDate: new Date(eventDate).toISOString(),
+        eventStartTime,
         priceAr,
         priceEn,
         location: {
@@ -736,6 +739,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           mediaUrl: finalMediaUrl,
           thumbnailUrl: finalThumbnailUrl,
           eventDate: new Date(eventDate).toISOString(),
+          eventStartTime,
           priceAr,
           priceEn,
           location: {
@@ -832,6 +836,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
           mediaUrl: generatedMediaUrl,
           thumbnailUrl: generatedThumbnailUrl,
           eventDate: new Date(eventDate).toISOString(),
+          eventStartTime,
           priceAr,
           priceEn,
           location: {
@@ -1355,6 +1360,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                         : mediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                       uploadDate: new Date().toISOString(),
                       eventDate: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
+                      eventStartTime,
                       priceAr: priceAr.trim(),
                       priceEn: priceEn.trim(),
                       location: {
@@ -2050,6 +2056,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onComplete, on
                   className={`w-full rounded-xl border ${mapsUrlError ? 'border-red-500 bg-red-950/20' : 'border-neutral-200 bg-white text-neutral-900 focus:border-[#78101F] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-amber-500'} py-3 px-4 text-xs sm:text-sm font-mono outline-none transition-colors shadow-inner`}
                 />
               </div>
+              <EventStartTimeField lang={lang} value={eventStartTime} onChange={setEventStartTime} />
               {!isFreeAd && (
               <div>
                 <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5">

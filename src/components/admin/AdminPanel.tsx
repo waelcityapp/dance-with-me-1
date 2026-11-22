@@ -1,3 +1,4 @@
+import { EventStartTimeField } from '../events/EventStartTimeField';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -340,6 +341,7 @@ export const AdminPanel: React.FC = () => {
   const [adminMediaUrl, setAdminMediaUrl] = useState('');
   const [adminPriceAr, setAdminPriceAr] = useState('');
   const [adminPriceEn, setAdminPriceEn] = useState('');
+  const [adminEventStartTime, setAdminEventStartTime] = useState('');
   const [adminEventDate, setAdminEventDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
   const [adminPhone, setAdminPhone] = useState('+201011223344');
   const [adminWhatsapp, setAdminWhatsapp] = useState('201011223344');
@@ -410,6 +412,7 @@ export const AdminPanel: React.FC = () => {
         if (draft.adminWhatsapp) setAdminWhatsapp(draft.adminWhatsapp);
         if (draft.adminOrganizerName) setAdminOrganizerName(draft.adminOrganizerName);
         if (draft.adminEventDate) setAdminEventDate(draft.adminEventDate);
+        if (draft.adminEventStartTime) setAdminEventStartTime(draft.adminEventStartTime);
         if (draft.adminPosition) setAdminPosition(draft.adminPosition);
         if (typeof draft.adminIsFeatured !== 'undefined') setAdminIsFeatured(draft.adminIsFeatured);
         if (typeof draft.adminIsWeeklyPromo !== 'undefined') setAdminIsWeeklyPromo(draft.adminIsWeeklyPromo);
@@ -426,14 +429,14 @@ export const AdminPanel: React.FC = () => {
       adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
       adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
       adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGovernorateAr, adminGovernorateEn, adminAreaAr, adminAreaEn, adminGoogleMapsUrl,
-      adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminShowViewsCount, adminBookingSubtextAr, adminBookingSubtextEn
+      adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminEventStartTime, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminShowViewsCount, adminBookingSubtextAr, adminBookingSubtextEn
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [
     adminTitleAr, adminTitleEn, adminDescAr, adminDescEn, adminPriceAr, adminPriceEn,
     adminCategory, adminSelectedStyles, adminMediaType, adminMediaUrl,
     adminLocationNameAr, adminLocationNameEn, adminAddressAr, adminAddressEn, adminGovernorateAr, adminGovernorateEn, adminAreaAr, adminAreaEn, adminGoogleMapsUrl,
-    adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminShowViewsCount, adminBookingSubtextAr, adminBookingSubtextEn
+    adminPhone, adminWhatsapp, adminOrganizerName, adminEventDate, adminEventStartTime, adminPosition, adminIsFeatured, adminIsWeeklyPromo, adminShowBookingButton, adminShowViewsCount, adminBookingSubtextAr, adminBookingSubtextEn
   ]);
 
   
@@ -783,6 +786,7 @@ export const AdminPanel: React.FC = () => {
         uploadDate: new Date().toISOString(),
         eventRef: newEventRef,
         eventDate: safeDateStr,
+        eventStartTime: adminEventStartTime,
         priceAr: (adminPriceAr || '').trim(),
         priceEn: (adminPriceEn || '').trim(),
         location: {
@@ -1683,6 +1687,7 @@ export const AdminPanel: React.FC = () => {
         thumbnailUrl: thumbUrlToUse,
         uploadDate: new Date().toISOString(),
         eventDate: safeEventDate,
+        eventStartTime: sub.eventData?.eventDate === safeEventDate ? sub.eventData.eventStartTime || '' : '',
         priceAr: sub.eventData?.priceAr?.trim() || '',
         priceEn: sub.eventData?.priceEn?.trim() || '',
         location: sub.eventData?.location || {
@@ -6835,6 +6840,7 @@ export const AdminPanel: React.FC = () => {
                         className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
                       />
                     </div>
+                    <EventStartTimeField lang={lang} value={adminEventStartTime} onChange={setAdminEventStartTime} />
 
                     {/* Price Arabic */}
                     <div className="space-y-2">
@@ -7484,6 +7490,7 @@ export const AdminPanel: React.FC = () => {
                               : adminMediaUrl.trim() || 'https://images.unsplash.com/photo-1545224144-b38cd309ef69?q=80&w=1200',
                             uploadDate: new Date().toISOString(),
                             eventDate: adminEventDate ? new Date(adminEventDate).toISOString() : new Date().toISOString(),
+                            eventStartTime: adminEventStartTime,
                             priceAr: adminPriceAr.trim(),
                             priceEn: adminPriceEn.trim(),
                             showBookingButton: adminShowBookingButton,

@@ -1,3 +1,4 @@
+import { EventStartTimeField } from '../events/EventStartTimeField';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -54,6 +55,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
   const [category, setCategory] = useState<DanceCategory>(editingEvent?.category || 'party');
   const [mediaType, setMediaType] = useState<'video' | 'image'>(editingEvent?.mediaType || 'image');
   const [mediaUrl, setMediaUrl] = useState(editingEvent?.mediaUrl || '');
+  const [eventStartTime, setEventStartTime] = useState(editingEvent?.eventStartTime ?? '');
   const [eventDate, setEventDate] = useState(() => {
     if (editingEvent?.eventDate) {
       try {
@@ -109,6 +111,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
     setMediaType(editingEvent.mediaType || 'image');
     setMediaUrl(editingEvent.mediaUrl || '');
     try {
+      setEventStartTime(editingEvent.eventStartTime ?? '');
       if (editingEvent.eventDate) {
         setEventDate(new Date(editingEvent.eventDate).toISOString().split('T')[0]);
       } else {
@@ -235,6 +238,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
         priceAr,
         priceEn,
         eventDate: eventDate ? new Date(eventDate).toISOString() : editingEvent.eventDate,
+        eventStartTime,
         location: {
           nameAr: locationNameAr,
           nameEn: locationNameEn,
@@ -552,6 +556,7 @@ export const AdminEditEventPage: React.FC<AdminEditEventPageProps> = ({ onComple
                 className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl px-4 py-3 text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
+            <EventStartTimeField lang={lang} value={eventStartTime} onChange={setEventStartTime} />
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
