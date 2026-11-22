@@ -1,8 +1,8 @@
-import {SITE_URL,CATEGORIES,escapeHtml as esc,text,hasEnglish,listPublicEvents} from '../publicSeo.js';
+import {SITE_URL,CATEGORIES,escapeHtml as esc,text,hasEnglish,listCurrentPublicEvents} from '../publicSeo.js';
 
 export default async function handler(req,res) {
   try {
-    const events = await listPublicEvents();
+    const events = await listCurrentPublicEvents();
     const pages = [
       {url:SITE_URL+'/',english:true},
       ...CATEGORIES.map(c=>({url:`${SITE_URL}/categories/${c[0]}.html`,english:true})),

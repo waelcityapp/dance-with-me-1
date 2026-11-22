@@ -1,3 +1,4 @@
+import { isEventExpired } from '../../shared/eventExpiry.js';
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
 
@@ -41,6 +42,15 @@ export function isPublicEvent(event) {
   if (['isArchived','archived','isPaused','paused','isEmpty'].some(k => event[k] === true)) return false;
   return ['status','approvalStatus','moderationStatus','publishStatus'].every(k =>
     !text(event[k]) || ['published','approved','active','live'].includes(text(event[k]).toLowerCase()));
+}
+
+export const isEndedEvent = (event, now) =>
+  Boolean(event.isExpiredBy15DaysRule || isEventExpired(event.eventDate, now));
+
+export async function listCurrentPublicEvents() {
+  const events = await listPublicEvents();
+  const now = Date.now();
+  return events.filter(event => !isEndedEvent(event, now));
 }
 
 export const hasEnglish = event => Boolean(text(event.titleEn) && text(event.descriptionEn));

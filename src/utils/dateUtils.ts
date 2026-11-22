@@ -2,19 +2,8 @@
  * Utility functions for Event Expiry (at end of event day) & Formatting
  */
 
-/**
- * Check if an event or ad has expired (when the event date day has ended)
- */
-export function isEventExpired(eventDateStr: string): boolean {
-  try {
-    if (!eventDateStr) return false;
-    const eventTime = new Date(eventDateStr);
-    const endOfDay = new Date(eventTime.getFullYear(), eventTime.getMonth(), eventTime.getDate(), 23, 59, 59, 999).getTime();
-    return Date.now() > endOfDay;
-  } catch (e) {
-    return false;
-  }
-}
+import { isEventExpired } from '../../shared/eventExpiry.js';
+export { isEventExpired };
 
 /**
  * Legacy compatibility alias
