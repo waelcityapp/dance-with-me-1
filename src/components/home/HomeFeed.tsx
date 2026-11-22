@@ -1,3 +1,4 @@
+import { discoNightEvent, discoNightExpiresAt } from '../../data/discoNightEvent';
 import { requestedEventId } from '../../utils/seoUrl';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -447,6 +448,17 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onOpenMap, onOpenShare, onOp
 
   return (
     <div className="space-y-2 sm:space-y-2.5 pb-12">
+      {Date.now() < discoNightExpiresAt && (
+        <section id="disco-night" className="max-w-2xl scroll-mt-24" aria-label={discoNightEvent.titleEn}>
+          <EventCard
+            event={discoNightEvent}
+            onOpenMap={(event) => window.open(event.location.googleMapsUrl, '_blank', 'noopener,noreferrer')}
+            onOpenShare={onOpenShare}
+            hideAdminControls
+            externalBookingOnly
+          />
+        </section>
+      )}
       {/* Section Header & Prominent Search Bar (Moved directly under category tabs) */}
       <div id="search-section" dir={lang === "ar" ? "rtl" : "ltr"} className="rounded-2xl border border-[#b08d57]/12 bg-[#FBF3E2] dark:bg-neutral-950 p-1.5 sm:p-2 shadow-sm backdrop-blur-md space-y-1.5 transition-colors">
         <div className="flex items-center justify-between gap-2 border-b border-[#b08d57]/10 pb-1">
