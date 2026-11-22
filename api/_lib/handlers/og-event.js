@@ -90,7 +90,7 @@ function categoryDirectory(category, lang, title, description, events) {
     return `<article class="category-card"><a href="${esc(d.url)}"><img src="${esc(d.image)}" alt="${esc(d.name)}" loading="lazy" /></a><div class="category-card-body"><h2><a href="${esc(d.url)}">${esc(d.name)}</a></h2>${dateLabel?`<time datetime="${esc(d.date)}">${esc(dateLabel)}</time>`:''}${place?`<p>${esc(place)}</p>`:''}${d.description?`<p>${esc(d.description.slice(0,240))}</p>`:''}</div></article>`;
   }).join('');
   return `<main class="category-directory">
-    <header class="category-top"><a class="category-brand" href="/${languageQuery(lang)}"><img src="/logo.svg" alt="" />CityEve</a><a hreflang="${otherLang}" lang="${otherLang}" href="${categoryUrl(category[0],otherLang)}">${en?'العربية':'English'}</a></header>
+    <header class="category-top"><a class="category-brand" href="/${languageQuery(lang)}"><img src="${esc(LOGO)}" alt="" />CityEve</a><a hreflang="${otherLang}" lang="${otherLang}" href="${categoryUrl(category[0],otherLang)}">${en?'العربية':'English'}</a></header>
     <section class="category-intro"><div><h1>${esc(title)}</h1><p>${esc(description)}</p></div><a class="category-cta" href="/?category=${category[1]}${en?'&amp;lang=en':''}">${en?'Browse and book in the app':'التصفح والحجز داخل التطبيق'}</a></section>
     <nav class="category-nav" aria-label="${en?'Event categories':'أقسام الفعاليات'}">${nav}</nav>
     <section class="category-grid">${cards||`<p>${en?'No published listings are available in this language yet.':'لا توجد إعلانات منشورة في هذا القسم حاليًا.'}</p>`}</section>
