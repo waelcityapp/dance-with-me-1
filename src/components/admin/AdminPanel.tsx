@@ -5678,6 +5678,11 @@ export const AdminPanel: React.FC = () => {
 
       {adminSection === 'analytics' && (
         <div className="space-y-6 animate-fadeIn text-right" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="rounded-2xl border border-cyan-500/30 bg-neutral-900/60 p-5">
+            <p className="text-sm font-bold text-cyan-300">{lang === 'ar' ? 'زيارات من ChatGPT' : 'Visits from ChatGPT'}</p>
+            <p className="mt-2 font-mono text-3xl font-black text-white">{analyticsCounters.chatgpt_visits || 0}</p>
+            <p className="mt-1 text-xs text-neutral-300">{lang === 'ar' ? 'الزيارات عبر روابط ChatGPT المعلّمة منذ تفعيل التتبع' : 'Visits via tagged ChatGPT links since tracking began'}</p>
+          </div>
           {/* Summary KPIs Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* KPI 1: App Installs PWA */}
