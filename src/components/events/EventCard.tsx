@@ -20,9 +20,10 @@ interface EventCardProps {
   isFavoritesTab?: boolean;
   hideAdminControls?: boolean;
   isHighlighted?: boolean;
+  previewOnly?: boolean;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType, isFavoritesTab, hideAdminControls, isHighlighted }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, onOpenShare, overrideAdType, isFavoritesTab, hideAdminControls, isHighlighted, previewOnly = false }) => {
   const { 
     lang, 
     toggleLikeEvent, 
@@ -42,10 +43,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
 
   // Auto record view when event is mounted / displayed
   useEffect(() => {
-    if (event && event.id) {
+    if (!previewOnly && event.id) {
       recordEventView(event.id);
     }
-  }, [event?.id]);
+  }, [event.id, previewOnly]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackCountedRef = useRef(false);
@@ -490,7 +491,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           <div 
             onClick={() => {
               onOpenMap(event);
-              logAnalyticsEvent('clicks_maps');
+              if (!previewOnly) logAnalyticsEvent('clicks_maps');
             }}
             className="flex items-start justify-between gap-2 text-neutral-950 dark:text-neutral-300 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer group/map transition-colors pt-1 border-t border-neutral-100 dark:border-neutral-800/60"
           >
@@ -649,11 +650,11 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  if (!user) {
+                  if (!user && !previewOnly) {
                     openGuestAlert('contact');
                     return;
                   }
-                  logAnalyticsEvent('clicks_phone');
+                  if (!previewOnly) logAnalyticsEvent('clicks_phone');
                   window.location.href = `tel:${event.contact.phone}`;
                 }}
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 border border-neutral-200 dark:border-neutral-800 transition-all font-bold cursor-pointer shrink-0"
@@ -665,11 +666,11 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  if (!user) {
+                  if (!user && !previewOnly) {
                     openGuestAlert('contact');
                     return;
                   }
-                  logAnalyticsEvent('clicks_whatsapp');
+                  if (!previewOnly) logAnalyticsEvent('clicks_whatsapp');
                   const url = `https://wa.me/${event.contact.whatsapp}?text=${encodeURIComponent(lang === 'ar' ? `مرحباً، استفسار بخصوص: ${event.titleAr}` : `Hello, inquiry about: ${event.titleEn}`)}`;
                   window.open(url, '_blank', 'noopener,noreferrer');
                 }}
@@ -680,7 +681,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               </button>
 
               {/* Share */}
-              <motion.button
+              {!previewOnly && <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onOpenShare(event)}
@@ -688,10 +689,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                 title={lang === 'ar' ? 'مشاركة الإعلان' : 'Share'}
               >
                 <Share2 className="h-4 w-4" />
-              </motion.button>
+              </motion.button>}
 
               {/* Like / Remove from Favorites */}
-              {isFavoritesTab ? (
+              {!previewOnly && (isFavoritesTab ? (
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -720,7 +721,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
                   <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
                   <span className="font-mono">{String(event.likesCount || 0)}</span>
                 </motion.button>
-              )}
+              ))}
             </div>
           </div>
 
