@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { SITE_URL, LOGO, CATEGORIES, escapeHtml as esc, jsonLd, text, hasEnglish, readPublicEvent, listPublicEvents, eventDetails } from '../publicSeo.js';
+import { SITE_URL, LOGO, CATEGORIES, escapeHtml as esc, jsonLd, text, hasEnglish, readPublicEvent, listCurrentPublicEvents, isEndedEvent, eventDetails } from '../publicSeo.js';
 
 let template;
 function appTemplate() {
@@ -69,13 +69,15 @@ export default async function handler(req,res) {
         const title = en?'Event unavailable | CityEve':'الإعلان غير متاح | CityEve';
         return send(res,404,renderDocument({lang,title,index:false,alternates:false,app:false,body:`<main class="seo-page"><h1>${title}</h1><p>${en?'This event is unavailable. Explore the published events on CityEve.':'هذا الإعلان غير متاح. يمكنك تصفح الفعاليات المنشورة على CityEve.'}</p><a href="/${languageQuery(lang)}">${en?'Browse events':'تصفح الفعاليات'}</a></main>`}));
       }
+      const ended = isEndedEvent(event);
       const d = eventDetails(event,lang);
-      const body = `<main class="seo-page"><a href="/${languageQuery(lang)}">CityEve</a><article><h1>${esc(d.name)}</h1><img class="seo-detail-image" src="${esc(d.image)}" alt="${esc(d.name)}" />${d.date?`<p><time datetime="${esc(d.date)}">${esc(d.date.slice(0,10))}</time></p>`:''}<p>${esc([d.place,d.address,d.city].filter(Boolean).join(' — '))}</p><p class="seo-description">${esc(d.description)}</p>${d.organizer?`<p>${en?'Organizer':'المنظم'}: ${esc(d.organizer)}</p>`:''}</article>${directoryNav(lang)}</main>`;
-      return send(res,200,renderDocument({lang,title:d.name+' | CityEve',description:d.description.slice(0,220),url:d.url,image:d.image,structured:[d.structured],body,index:!en||hasEnglish(event),alternates:hasEnglish(event),fallbackVisible:isCrawler}));
+      const endedNotice = ended ? `<p role="status"><strong>${en?'This event has ended.':'الفعالية انتهت.'}</strong></p>` : '';
+      const body = `<main class="seo-page"><a href="/${languageQuery(lang)}">CityEve</a><article><h1>${esc(d.name)}</h1>${endedNotice}<img class="seo-detail-image" src="${esc(d.image)}" alt="${esc(d.name)}" />${d.date?`<p><time datetime="${esc(d.date)}">${esc(d.date.slice(0,10))}</time></p>`:''}<p>${esc([d.place,d.address,d.city].filter(Boolean).join(' — '))}</p><p class="seo-description">${esc(d.description)}</p>${d.organizer?`<p>${en?'Organizer':'المنظم'}: ${esc(d.organizer)}</p>`:''}</article>${directoryNav(lang)}</main>`;
+      return send(res,200,renderDocument({lang,title:d.name+' | CityEve',description:d.description.slice(0,220),url:d.url,image:d.image,structured:[d.structured],body,index:!ended&&(!en||hasEnglish(event)),alternates:hasEnglish(event),app:!ended,fallbackVisible:ended||isCrawler}));
     }
     const category = CATEGORIES.find(c=>c[0]===req.query.page);
     if (req.query.page !== 'home' && !category) return send(res,404,renderDocument({lang,title:'CityEve',index:false,alternates:false,app:false,body:'<main class="seo-page"><h1>404</h1><a href="/">CityEve</a></main>'}));
-    const events = (await listPublicEvents()).filter(e=>(!category || e.category===category[1]) && (!en || hasEnglish(e)));
+    const events = (await listCurrentPublicEvents()).filter(e=>(!category || e.category===category[1]) && (!en || hasEnglish(e)));
     events.sort((a,b)=>text(a.eventDate).localeCompare(text(b.eventDate)));
     const title = category ? `${category[en?3:2]} | CityEve` : siteTitle(lang);
     const url = category ? categoryUrl(category[0],lang) : `${SITE_URL}/${languageQuery(lang)}`;

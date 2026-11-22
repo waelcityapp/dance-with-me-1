@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import handler, {renderDocument} from '../api/_lib/handlers/og-event.js';
 import sitemap from '../api/_lib/handlers/sitemap.js';
-import {isPublicEvent,schemaDate,eventDetails} from '../api/_lib/publicSeo.js';
+import {isEndedEvent,isPublicEvent,schemaDate,eventDetails} from '../api/_lib/publicSeo.js';
 
 const approved = {id:'published',seoIndexable:true,category:'party',titleAr:'حفلة سالسا',titleEn:'Salsa night',descriptionAr:'تفاصيل الحفلة',descriptionEn:'A salsa night',eventDate:'2026-09-15T00:00:00.000Z',location:{nameAr:'مكان الحفلة',nameEn:'The venue',addressAr:'عنوان المكان',addressEn:'Venue address',governorateAr:'الإسكندرية',governorateEn:'Alexandria'},contact:{organizerName:'Actual organizer'}};
 const value = v => typeof v==='boolean'?{booleanValue:v}:typeof v==='string'?{stringValue:v}:{mapValue:{fields:fields(v)}};
@@ -35,22 +35,37 @@ test('English metadata and canonical are independent, structured text cannot inj
 });
 test('Published pages, missing/private events, bot parity, bilingual sitemap and category links',async()=>{
   const original=globalThis.fetch;
+  const originalNow=Date.now;
+  Date.now=()=>Date.parse('2026-09-15T12:00:00Z');
+  const past={...approved,id:'past',eventDate:'2026-09-14',titleAr:'فعالية قديمة'};
+  assert.equal(isEndedEvent(approved,Date.parse('2026-09-15T20:59:59Z')),false);
+  assert.equal(isEndedEvent(approved,Date.parse('2026-09-15T21:00:00Z')),true);
+  assert.equal(isEndedEvent({...approved,isExpiredBy15DaysRule:true},Date.now()),true);
   globalThis.fetch=async url=>{
-    if(String(url).endsWith(':runQuery')) return new Response(JSON.stringify([approved,{...approved,id:'unapproved',seoIndexable:false},{...approved,id:'arabic-only',titleEn:'',descriptionEn:''}].map(e=>({document:document(e)}))),{status:200});
+    if(String(url).endsWith(':runQuery')) return new Response(JSON.stringify([approved,past,{...approved,id:'unapproved',seoIndexable:false},{...approved,id:'arabic-only',titleEn:'',descriptionEn:''}].map(e=>({document:document(e)}))),{status:200});
     const id=String(url).split('/').pop();
+    if(id==='past')return new Response(JSON.stringify(document(past)),{status:200});
     if(id==='missing')return new Response('{}',{status:404});
     return new Response(JSON.stringify(document({...approved,id,seoIndexable:id!=='unapproved'})),{status:200});
   };
   try {
     const regular=response();await handler({query:{event:'published'},headers:{}},regular);
     const bot=response();await handler({query:{event:'published'},headers:{'user-agent':'Googlebot'}},bot);
-    assert.equal(regular.statusCode,200);assert.equal(regular.html,bot.html);
+    assert.equal(regular.statusCode,200);assert.match(bot.html,/<h1>حفلة سالسا<\/h1>/);
     assert.match(regular.html,/<h1>حفلة سالسا<\/h1>/);
     assert.doesNotMatch(regular.html,/http-equiv="refresh"|window.location.href/);
     assert.match(regular.html,/type="module"/);
     for(const id of ['missing','unapproved']) {const r=response();await handler({query:{event:id},headers:{}},r);assert.equal(r.statusCode,404);assert.match(r.html,/noindex/);assert.doesNotMatch(r.html,/حفلة سالسا|"@type":"Event"|type="module"/);}
+    const ended=response();await handler({query:{event:'past'},headers:{}},ended);
+    assert.equal(ended.statusCode,200);
+    assert.match(ended.html,/الفعالية انتهت/);
+    assert.match(ended.html,/فعالية قديمة/);
+    assert.match(ended.html,/noindex/);
+    assert.doesNotMatch(ended.html,/type="module"/);
+    const home=response();await handler({query:{page:'home'},headers:{}},home);
+    assert.doesNotMatch(home.html,/\/e\/past/);
     const category=response();await handler({query:{page:'parties',lang:'en'},headers:{}},category);
-    assert.match(category.html,/Salsa night/);assert.match(category.html,/\/e\/published\?lang=en/);assert.doesNotMatch(category.html,/unapproved|type="module"/);
-    const map=response();await sitemap({},map);assert.equal(map.statusCode,200);assert.match(map.html,/hreflang="en"/);assert.match(map.html,/\/\?lang=en<\/loc>/);assert.doesNotMatch(map.html,/unapproved|arabic-only\?lang=en/);assert.match(map.html,/\/e\/arabic-only<\/loc>/);
-  } finally {globalThis.fetch=original;}
+    assert.match(category.html,/Salsa night/);assert.match(category.html,/\/e\/published\?lang=en/);assert.doesNotMatch(category.html,/unapproved|\/e\/past|type="module"/);
+    const map=response();await sitemap({},map);assert.equal(map.statusCode,200);assert.match(map.html,/hreflang="en"/);assert.match(map.html,/\/\?lang=en<\/loc>/);assert.doesNotMatch(map.html,/unapproved|\/e\/past|arabic-only\?lang=en/);assert.match(map.html,/\/e\/arabic-only<\/loc>/);
+  } finally {globalThis.fetch=original;Date.now=originalNow;}
 });
