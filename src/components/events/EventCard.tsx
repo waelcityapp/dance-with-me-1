@@ -39,6 +39,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
     recordEventView
   } = useApp();
 
+  const videoUrl = previewOnly && event.mediaType === 'image' ? null : getSafePlayableVideoUrl(event.mediaUrl);
   const displayAdType = overrideAdType || event.adType;
 
   // Auto record view when event is mounted / displayed
@@ -352,7 +353,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
       )}
 
       {/* Banner Media Section (Video or Image) */}
-      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${isGoogleDriveUrl(event.mediaUrl) || getSafePlayableVideoUrl(event.mediaUrl) ? aspectRatioClass : imageAspectRatioClass}`}>
+      <div className={`relative w-full overflow-hidden bg-neutral-950 transition-all duration-500 ${isGoogleDriveUrl(event.mediaUrl) || videoUrl ? aspectRatioClass : imageAspectRatioClass}`}>
         {/* Paused Overlay with 'X' mark */}
         {event.isPaused && (
           <div className="absolute inset-0 z-20 bg-neutral-950/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
@@ -371,10 +372,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
             allow="encrypted-media; picture-in-picture"
             referrerPolicy="no-referrer"
           />
-        ) : getSafePlayableVideoUrl(event.mediaUrl) ? (
+        ) : videoUrl ? (
           <video
             ref={videoRef}
-            src={getSafePlayableVideoUrl(event.mediaUrl)}
+            src={videoUrl}
             poster={event.thumbnailUrl || undefined}
             playsInline
             muted={isMuted}
@@ -420,7 +421,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </div>
         )}
       </div>
-        {getSafePlayableVideoUrl(event.mediaUrl) && (
+        {videoUrl && (
           <button
             type="button"
             onClick={(e) => togglePlay(e)}
