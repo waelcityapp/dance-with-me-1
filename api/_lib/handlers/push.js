@@ -3,11 +3,21 @@ import webpush from 'web-push';
 import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
 const routes = ['push-vapid-key', 'push-subscribe', 'push-unsubscribe', 'push-stats', 'send-push'];
-export const pushHandlers = new Map(routes.map(route => [`/${route}`, (req, res) => handle(route, req, res)]));
+export function createPushHandlers({
+  verifyUser = verifyRequestUser,
+  getDb = getAdminDb,
+  sendNotification = webpush.sendNotification,
+  env = process.env,
+} = {}) {
+  return new Map(routes.map(route => [
+    `/${route}`, (req, res) => handle(route, req, res, { verifyUser, getDb, sendNotification, env }),
+  ]));
+}
+export const pushHandlers = createPushHandlers();
 
 const hash = value => createHash('sha256').update(value).digest('hex');
-const ownerOnly = actor => actor.email_verified === true &&
-  actor.email?.toLowerCase() === (process.env.ADMIN_EMAIL || 'waelvts@gmail.com').trim().toLowerCase();
+const ownerOnly = (actor, env) => actor.email_verified === true &&
+  actor.email?.toLowerCase() === (env.ADMIN_EMAIL || 'waelvts@gmail.com').trim().toLowerCase();
 
 export function validSubscription(subscription) {
   if (typeof subscription?.endpoint !== 'string' || subscription.endpoint.length > 2048) return false;
@@ -24,29 +34,29 @@ export function validSubscription(subscription) {
   }
 }
 
-async function handle(route, req, res) {
+async function handle(route, req, res, { verifyUser, getDb, sendNotification, env }) {
   const reply = (status, body) => res.status(status).json(body);
   res.setHeader('Cache-Control', 'no-store');
   const read = route === 'push-vapid-key' || route === 'push-stats';
   if (req.method !== (read ? 'GET' : 'POST')) return reply(405, { error: 'METHOD_NOT_ALLOWED' });
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const ready = process.env.PUSH_ENABLED === 'true' && publicKey && privateKey;
+  const publicKey = env.VAPID_PUBLIC_KEY;
+  const privateKey = env.VAPID_PRIVATE_KEY;
+  const ready = env.PUSH_ENABLED === 'true' && publicKey && privateKey;
   if (route === 'push-vapid-key') return ready
     ? reply(200, { publicKey })
     : reply(503, { error: 'PUSH_DISABLED' });
 
   let actor;
   try {
-    actor = await verifyRequestUser(req);
+    actor = await verifyUser(req);
   } catch {
     return reply(401, { error: 'UNAUTHENTICATED' });
   }
-  if ((route === 'send-push' || route === 'push-stats') && !ownerOnly(actor)) return reply(403, { error: 'FORBIDDEN' });
+  if ((route === 'send-push' || route === 'push-stats') && !ownerOnly(actor, env)) return reply(403, { error: 'FORBIDDEN' });
   if (!ready && route !== 'push-unsubscribe') return reply(503, { error: 'PUSH_DISABLED' });
 
   try {
-    const devices = getAdminDb().collection('push_subscribers');
+    const devices = getDb().collection('push_subscribers');
     const deviceId = req.body?.deviceId;
     if (route === 'push-subscribe' || route === 'push-unsubscribe') {
       if (typeof deviceId !== 'string' || !/^[a-zA-Z0-9_-]{8,100}$/.test(deviceId)) return reply(400, { error: 'INVALID_DEVICE' });
@@ -68,7 +78,7 @@ async function handle(route, req, res) {
     const current = devices.where('publicKey', '==', publicKey);
     if (route === 'push-stats') return reply(200, { count: (await current.count().get()).data().count });
     const pilot = req.body?.pilot === true;
-    if (!pilot && process.env.PUSH_BROADCAST_ENABLED !== 'true') return reply(503, { error: 'BROADCAST_DISABLED' });
+    if (!pilot && env.PUSH_BROADCAST_ENABLED !== 'true') return reply(503, { error: 'BROADCAST_DISABLED' });
     const { title, body, url = '/' } = req.body || {};
     if (typeof title !== 'string' || !title.trim() || title.length > 120 ||
         typeof body !== 'string' || !body.trim() || body.length > 400 ||
@@ -83,7 +93,7 @@ async function handle(route, req, res) {
         const { subscription } = doc.data();
         if (!validSubscription(subscription)) { failCount++; return; }
         try {
-          await webpush.sendNotification(subscription, JSON.stringify({ title, body, url }), {
+          await sendNotification(subscription, JSON.stringify({ title, body, url }), {
             TTL: 300, timeout: 5000, vapidDetails: { subject: 'mailto:support@cityeve.online', publicKey, privateKey },
           });
           sentCount++;
