@@ -96,15 +96,33 @@ export async function getVapidPublicKey(): Promise<string | null> {
  */
 async function pushRequest(path: string, payload?: object) {
   const user = auth.currentUser;
-  if (!user) throw new Error('SIGN_IN_REQUIRED');
+  const token = await user?.getIdToken();
   const response = await fetch(`/api/${path}`, {
     method: payload ? 'POST' : 'GET',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
     ...(payload && { body: JSON.stringify(payload) }),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'PUSH_UNAVAILABLE');
   return data;
+}
+
+function getDeviceSecret() {
+  const key = 'cityeve_push_device_secret';
+  const existing = localStorage.getItem(key);
+  if (existing && /^[a-f0-9]{64}$/.test(existing)) return existing;
+  const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
+  localStorage.setItem(key, secret);
+  return secret;
+}
+
+export function isDevicePushRegistered() {
+  return localStorage.getItem('cityeve_push_registered') === 'true';
+}
+
+function updateDevicePushState(registered: boolean) {
+  localStorage.setItem('cityeve_push_registered', String(registered));
+  window.dispatchEvent(new Event('cityeve-push-change'));
 }
 
 async function saveDevice(registration: ServiceWorkerRegistration, replace: boolean) {
@@ -126,12 +144,13 @@ async function saveDevice(registration: ServiceWorkerRegistration, replace: bool
     subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
   }
   if (!subscription) return false;
-  await pushRequest('push-subscribe', { deviceId: getDeviceId(), subscription: subscription.toJSON(), publicKey });
+  await pushRequest('push-subscribe', { deviceId: getDeviceId(), deviceSecret: getDeviceSecret(), subscription: subscription.toJSON(), publicKey });
+  updateDevicePushState(true);
   return true;
 }
 
-export async function autoRegisterDevice(userId?: string, _email?: string): Promise<void> {
-  if (!userId || auth.currentUser?.uid !== userId || !isPushSupported() || Notification.permission !== 'granted') return;
+export async function autoRegisterDevice(_userId?: string, _email?: string): Promise<void> {
+  if (localStorage.getItem('cityeve_push_registered') === 'false' || !isPushSupported() || Notification.permission !== 'granted') return;
   const registration = await navigator.serviceWorker.getRegistration();
   if (registration?.active && await registration.pushManager.getSubscription()) await saveDevice(registration, false);
 }
@@ -139,7 +158,6 @@ export async function autoRegisterDevice(userId?: string, _email?: string): Prom
 export async function subscribeUserToPush(
   _userId?: string, _email?: string, triggerTestAlert = false
 ): Promise<{ success: boolean; message?: string }> {
-  if (!auth.currentUser) return { success: false, message: 'سجّل الدخول أولًا لتفعيل إشعارات جهازك.' };
   if (!isPushSupported()) return { success: false, message: 'المتصفح لا يدعم الإشعارات على هذا الجهاز.' };
   try {
     const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
@@ -156,7 +174,8 @@ export async function subscribeUserToPush(
 export async function unsubscribeUserFromPush(_userId?: string): Promise<boolean> {
   if (!isPushSupported()) return false;
   try {
-    await pushRequest('push-unsubscribe', { deviceId: getDeviceId() });
+    await pushRequest('push-unsubscribe', { deviceId: getDeviceId(), deviceSecret: getDeviceSecret() });
+    updateDevicePushState(false);
     const registration = await navigator.serviceWorker.getRegistration();
     const subscription = await registration?.pushManager.getSubscription();
     await subscription?.unsubscribe();

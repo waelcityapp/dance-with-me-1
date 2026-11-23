@@ -47,7 +47,8 @@ import {
   showNotificationItem, 
   playNotificationChime,
   sendBroadcastPushNotification,
-  autoRegisterDevice
+  autoRegisterDevice,
+  isDevicePushRegistered
 } from '../lib/pushNotifications';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'scan_qr' | 'default';
@@ -231,7 +232,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCategory, setSelectedCategory] = useState<DanceCategory>('all');
   const [showExpiredArchive, setShowExpiredArchive] = useState<boolean>(false);
   const [pushEnabled, setPushEnabled] = useState<boolean>(() => {
-    return localStorage.getItem(STORAGE_KEYS.PUSH) === 'true';
+    return isDevicePushRegistered();
   });
 
   const [guestAlertState, setGuestAlertState] = useState<{ isOpen: boolean; reason: GuestAlertReason }>({
@@ -512,11 +513,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       autoRegisterDevice(user?.id, user?.email).catch((e) => {
         console.warn('Auto device register background note:', e);
       });
-      if ('Notification' in window && Notification.permission === 'granted') {
-        subscribeUserToPush(user?.id, user?.email).catch((e) => {
-          console.warn('Auto push sync background note:', e);
-        });
-      }
     }, 1000);
     return () => clearTimeout(syncTimer);
   }, [user?.id, user?.email]);
@@ -1456,26 +1452,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  useEffect(() => {
+    const sync = () => setPushEnabled(isDevicePushRegistered());
+    window.addEventListener('cityeve-push-change', sync);
+    return () => window.removeEventListener('cityeve-push-change', sync);
+  }, []);
+
   const togglePushNotifications = async () => {
-    const nextVal = !pushEnabled;
-    setPushEnabled(nextVal);
-    localStorage.setItem(STORAGE_KEYS.PUSH, nextVal ? 'true' : 'false');
-    if (nextVal) {
-      try {
-        const res = await subscribeUserToPush(user?.id, user?.email);
-        if (res.success) {
-          showTestNotification(lang);
-        } else if (res.message) {
-          triggerAlert(res.message);
-        }
-      } catch (e) {
-        console.warn('Push subscription failed:', e);
+    if (pushEnabled) {
+      if (!await unsubscribeUserFromPush(user?.id)) {
+        triggerAlert(lang === 'ar' ? 'تعذّر إيقاف إشعارات الجهاز.' : 'Could not turn off device notifications.');
       }
-    } else {
-      try {
-        await unsubscribeUserFromPush(user?.id);
-      } catch (e) {}
+      return;
     }
+    const result = await subscribeUserToPush(user?.id, user?.email);
+    if (!result.success && result.message) triggerAlert(result.message);
   };
 
   const sendSupportMessage = async (messageText: string): Promise<{ refNumber: string; msgId: string }> => {

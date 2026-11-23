@@ -2,68 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BellRing, X, ShieldCheck, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { subscribeUserToPush } from '../../lib/pushNotifications';
-
-const PUSH_PERM_STATUS_KEY = 'cityeve_push_permission_status';
-const PUSH_DISMISS_COUNT_KEY = 'cityeve_push_dismiss_visit_count';
-const REPROMPT_AFTER_VISITS = 4;
+import { isDevicePushRegistered, isPushSupported, subscribeUserToPush } from '../../lib/pushNotifications';
 
 export const PushPermissionPrompt: React.FC = () => {
   const { lang, user } = useApp();
   const [isVisible, setIsVisible] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
 
+  const [error, setError] = useState('');
+
   useEffect(() => {
-    // Only check in browser
-    if (typeof window === 'undefined') return;
-
-    // 1. Check if user already allowed/denied system browser permission, or marked as granted/allowed in localStorage
-    const isBrowserGranted = typeof Notification !== 'undefined' && (Notification.permission === 'granted' || Notification.permission === 'denied');
-    const isLocallyGranted = localStorage.getItem(PUSH_PERM_STATUS_KEY) === 'granted' || 
-                            localStorage.getItem(PUSH_PERM_STATUS_KEY) === 'dismissed_later' ||
-                            localStorage.getItem('cityeve_push_user_allowed') === 'true';
-    
-    if (isBrowserGranted || isLocallyGranted) {
-      localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
-      localStorage.setItem('cityeve_push_user_allowed', 'true');
-      return; // Never show again
-    }
-
-    // Check if dismissed in the current session
-    const isSessionDismissed = sessionStorage.getItem('cityeve_session_dismiss_push') === 'true';
-    if (isSessionDismissed) return;
-
-    // Show prompt smoothly after 1.5s
+    if (!isPushSupported() || isDevicePushRegistered() || Notification.permission === 'denied' ||
+        localStorage.getItem('cityeve_push_registered') === 'false' ||
+        sessionStorage.getItem('cityeve_session_dismiss_push') === 'true') return;
     const timer = setTimeout(() => {
-      setIsVisible(true);
+      if (!isDevicePushRegistered()) setIsVisible(true);
     }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
   const handleEnable = async () => {
     setIsSubscribing(true);
-    // Mark permanently in localStorage immediately so it never shows up again on next reload
-    localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
-    localStorage.setItem('cityeve_push_user_allowed', 'true');
-    localStorage.removeItem(PUSH_DISMISS_COUNT_KEY);
-
+    setError('');
     try {
-      if (typeof Notification !== 'undefined' && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-        await Notification.requestPermission();
-      }
-      await subscribeUserToPush(user?.id, user?.email, true);
-    } catch (err) {
-      console.warn('Push subscribe prompt note:', err);
+      const result = await subscribeUserToPush(user?.id, user?.email);
+      if (result.success) setIsVisible(false);
+      else setError(lang === 'ar' ? (result.message || 'تعذّر تفعيل الإشعارات.') : 'Could not enable notifications. Check browser permissions and try again.');
     } finally {
       setIsSubscribing(false);
-      setIsVisible(false);
     }
   };
 
   const handleDismiss = () => {
     setIsVisible(false);
-    localStorage.setItem(PUSH_PERM_STATUS_KEY, 'granted');
-    localStorage.setItem('cityeve_push_user_allowed', 'true');
     sessionStorage.setItem('cityeve_session_dismiss_push', 'true');
   };
 
@@ -125,6 +96,7 @@ export const PushPermissionPrompt: React.FC = () => {
           </span>
         </div>
 
+        {error && <p role="alert" className="mt-2 text-xs text-rose-300">{error}</p>}
         {/* Action Buttons */}
         <div className="mt-4 flex items-center gap-2">
           <button

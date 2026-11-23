@@ -16,7 +16,7 @@ async function call(path, method) {
 test('Vercel registers all push routes and protects private operations', async () => {
   assert.equal((await call('push-vapid-key', 'POST')).code, 405);
   for (const [path, method] of [
-    ['push-subscribe', 'POST'], ['push-unsubscribe', 'POST'], ['push-stats', 'GET'], ['send-push', 'POST'],
+    ['push-stats', 'GET'], ['send-push', 'POST'],
   ]) {
     assert.equal((await call(path, method)).code, 401);
   }

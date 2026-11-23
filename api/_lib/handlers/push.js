@@ -1,4 +1,5 @@
-import { createHash } from 'node:crypto';
+import { isIP } from 'node:net';
+import { createHash, createHmac } from 'node:crypto';
 import webpush from 'web-push';
 import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
@@ -46,32 +47,60 @@ async function handle(route, req, res, { verifyUser, getDb, sendNotification, en
     ? reply(200, { publicKey })
     : reply(503, { error: 'PUSH_DISABLED' });
 
+  const deviceRoute = route === 'push-subscribe' || route === 'push-unsubscribe';
+  if (deviceRoute && req.headers['sec-fetch-site'] === 'cross-site') return reply(403, { error: 'INVALID_ORIGIN' });
   let actor;
-  try {
-    actor = await verifyUser(req);
-  } catch {
-    return reply(401, { error: 'UNAUTHENTICATED' });
+  if (!deviceRoute || req.headers.authorization) {
+    try {
+      actor = await verifyUser(req);
+    } catch {
+      return reply(401, { error: 'UNAUTHENTICATED' });
+    }
   }
   if ((route === 'send-push' || route === 'push-stats') && !ownerOnly(actor, env)) return reply(403, { error: 'FORBIDDEN' });
   if (!ready && route !== 'push-unsubscribe') return reply(503, { error: 'PUSH_DISABLED' });
 
   try {
-    const devices = getDb().collection('push_subscribers');
-    const deviceId = req.body?.deviceId;
-    if (route === 'push-subscribe' || route === 'push-unsubscribe') {
+    const db = getDb();
+    const devices = db.collection('push_subscribers');
+    if (deviceRoute) {
+      const { deviceId, deviceSecret, subscription } = req.body || {};
       if (typeof deviceId !== 'string' || !/^[a-zA-Z0-9_-]{8,100}$/.test(deviceId)) return reply(400, { error: 'INVALID_DEVICE' });
-      const ref = devices.doc(hash(JSON.stringify([actor.uid, deviceId])));
-      if (route === 'push-unsubscribe') {
-        await ref.delete();
-      } else {
-        const subscription = req.body?.subscription;
+      const legacy = actor && devices.doc(hash(JSON.stringify([actor.uid, deviceId])));
+      const hasSecret = typeof deviceSecret === 'string' && /^[0-9a-f]{64}$/.test(deviceSecret);
+      if (!hasSecret && (!legacy || deviceSecret !== undefined)) return reply(400, { error: 'INVALID_DEVICE_SECRET' });
+      const ref = hasSecret ? devices.doc(hash(deviceSecret)) : legacy;
+      if (route === 'push-subscribe') {
         if (!validSubscription(subscription) || req.body?.publicKey !== publicKey) return reply(400, { error: 'INVALID_SUBSCRIPTION' });
-        await ref.set({
-          userId: actor.uid, deviceId, publicKey,
+      }
+      const result = await db.runTransaction(async tx => {
+        const saved = await tx.get(ref);
+        if (route === 'push-unsubscribe') {
+          if (saved.exists) tx.delete(ref);
+          if (hasSecret && legacy) tx.delete(legacy);
+          return 200;
+        }
+        if (!actor && !saved.exists) {
+          const ip = String(req.headers['x-vercel-forwarded-for'] || req.ip || '').split(',')[0].trim();
+          if (!isIP(ip)) return 400;
+          const bucket = createHmac('sha256', privateKey).update(ip).digest('hex');
+          const rate = db.collection('push_registration_limits').doc(bucket);
+          const previous = (await tx.get(rate)).data();
+          const day = Math.floor(Date.now() / 86400000);
+          const count = previous?.day === day ? previous.count : 0;
+          if (count >= 20) return 429;
+          tx.set(rate, { day, count: count + 1 });
+        }
+        tx.set(ref, {
+          userId: actor?.uid ?? saved.get('userId') ?? null, deviceId, publicKey,
           subscription: { endpoint: subscription.endpoint, keys: { p256dh: subscription.keys.p256dh, auth: subscription.keys.auth } },
           updatedAt: new Date().toISOString(),
         });
-      }
+        if (hasSecret && legacy) tx.delete(legacy);
+        return 200;
+      });
+      if (result === 429) return reply(429, { error: 'PUSH_REGISTRATION_LIMIT' });
+      if (result !== 200) return reply(result, { error: 'INVALID_DEVICE_NETWORK' });
       return reply(200, { success: true });
     }
 
@@ -86,12 +115,15 @@ async function handle(route, req, res, { verifyUser, getDb, sendNotification, en
       return reply(400, { error: 'INVALID_NOTIFICATION' });
     }
     const recipients = await (pilot ? current.where('userId', '==', actor.uid) : current).get();
+    const endpoints = new Set();
     let sentCount = 0;
     let failCount = 0;
     for (let offset = 0; offset < recipients.docs.length; offset += 20) {
       await Promise.all(recipients.docs.slice(offset, offset + 20).map(async doc => {
         const { subscription } = doc.data();
         if (!validSubscription(subscription)) { failCount++; return; }
+        if (endpoints.has(subscription.endpoint)) return;
+        endpoints.add(subscription.endpoint);
         try {
           await sendNotification(subscription, JSON.stringify({ title, body, url }), {
             TTL: 300, timeout: 5000, vapidDetails: { subject: 'mailto:support@cityeve.online', publicKey, privateKey },
