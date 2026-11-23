@@ -17,8 +17,9 @@ export function createPushHandlers({
 export const pushHandlers = createPushHandlers();
 
 const hash = value => createHash('sha256').update(value).digest('hex');
-const ownerOnly = (actor, env) => actor.email_verified === true &&
-  actor.email?.toLowerCase() === (env.ADMIN_EMAIL || 'waelvts@gmail.com').trim().toLowerCase();
+const normalizedEmail = value => String(value || '').trim().replace(/^(['"])(.*)\1$/, '$2').trim().toLowerCase();
+const isPushOwner = (actor, env) =>
+  normalizedEmail(actor.email) === normalizedEmail(env.ADMIN_EMAIL || 'waelvts@gmail.com');
 
 export function validSubscription(subscription) {
   if (typeof subscription?.endpoint !== 'string' || subscription.endpoint.length > 2048) return false;
@@ -57,7 +58,10 @@ async function handle(route, req, res, { verifyUser, getDb, sendNotification, en
       return reply(401, { error: 'UNAUTHENTICATED' });
     }
   }
-  if ((route === 'send-push' || route === 'push-stats') && !ownerOnly(actor, env)) return reply(403, { error: 'FORBIDDEN' });
+  if (route === 'send-push' || route === 'push-stats') {
+    if (!isPushOwner(actor, env)) return reply(403, { error: 'PUSH_OWNER_REQUIRED' });
+    if (actor.email_verified !== true) return reply(403, { error: 'PUSH_EMAIL_UNVERIFIED' });
+  }
   if (!ready && route !== 'push-unsubscribe') return reply(503, { error: 'PUSH_DISABLED' });
 
   try {

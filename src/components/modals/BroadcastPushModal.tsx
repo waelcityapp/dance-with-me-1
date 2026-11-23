@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent } from '../../types';
 import { 
@@ -15,6 +16,7 @@ import { motion } from 'motion/react';
 import { 
   sendBroadcastPushNotification, 
   getPushSubscribersCount,
+  getPushAdminStatus,
   subscribeUserToPush
 } from '../../lib/pushNotifications';
 import { saveNotificationToFirestore } from '../../lib/firebase';
@@ -38,6 +40,22 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
   const [bodyAr, setBodyAr] = useState('');
   const [bodyEn, setBodyEn] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const sending = useRef(false);
+  const draftEvent = useRef<string | null>(null);
+  const [sendError, setSendError] = useState('');
+
+  const sendErrorMessage = (error: string) => {
+    if (error === 'PUSH_OWNER_REQUIRED') return lang === 'ar'
+      ? 'سجّل الدخول بحساب مالك CityEve المصرّح له بالبث.'
+      : 'Sign in with the CityEve owner account authorized to broadcast.';
+    if (error === 'PUSH_EMAIL_UNVERIFIED') return lang === 'ar'
+      ? 'أكّد بريد حساب المالك، ثم أعد تسجيل الدخول.'
+      : 'Verify the owner account email, then sign in again.';
+    if (error === 'UNAUTHENTICATED') return lang === 'ar'
+      ? 'سجّل الدخول بحساب الإدارة من جديد.'
+      : 'Sign in to the admin account again.';
+    return lang === 'ar' ? 'تعذّر إرسال الإشعار. حاول مرة أخرى.' : 'Could not send the notification. Try again.';
+  };
   const [isActivatingDevice, setIsActivatingDevice] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState<number | null>(null);
   const [successResult, setSuccessResult] = useState<{ sentCount: number; subscribers: number; failCount: number; inboxSaved: boolean; pilot: boolean } | null>(null);
@@ -65,7 +83,12 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
 
   // Initialize pre-filled notification content whenever the event changes
   useEffect(() => {
-    if (event) {
+    if (!isOpen || !event) {
+      draftEvent.current = null;
+      return;
+    }
+    if (draftEvent.current !== event.id) {
+      draftEvent.current = event.id;
       const defaultTitleAr = `🔥 ${event.titleAr || event.titleEn || 'فاعلية جديدة في سيتي إيف'}`;
       const defaultTitleEn = `🔥 ${event.titleEn || event.titleAr || 'New Event on CityEve'}`;
 
@@ -83,19 +106,35 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
       setBodyEn(defaultBodyEn);
       setSuccessResult(null);
 
-      // Fetch active subscribers
-      getPushSubscribersCount().then(count => setSubscribersCount(count));
+      setSendError('');
     }
   }, [event, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    setSubscribersCount(null);
+    getPushAdminStatus().then(count => {
+      if (active) setSubscribersCount(count);
+    }).catch(error => {
+      if (active && ['PUSH_OWNER_REQUIRED', 'PUSH_EMAIL_UNVERIFIED', 'UNAUTHENTICATED'].includes(error.message)) {
+        setSendError(error.message);
+      }
+    });
+    return () => { active = false; };
+  }, [isOpen]);
 
   if (!isOpen || !event) return null;
 
   const handleSend = async (pilot: boolean) => {
+    if (sending.current) return;
     if (!titleAr.trim() || !bodyAr.trim()) {
       alert(lang === 'ar' ? 'يرجى إدخال عنوان ونص الإشعار' : 'Please enter notification title and message');
       return;
     }
 
+    sending.current = true;
+    setSendError('');
     setIsSending(true);
     try {
       const activeTitle = lang === 'ar' ? titleAr : (titleEn || titleAr);
@@ -136,14 +175,16 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
       setSuccessResult({ ...summary, inboxSaved });
     } catch (err: any) {
       console.error('Error broadcasting event push:', err);
-      alert(lang === 'ar' ? `حدث خطأ: ${err?.message || 'تعذر إرسال الإشعار'}` : `Error: ${err?.message || 'Could not send notification'}`);
+      setSendError(err?.message || 'PUSH_UNAVAILABLE');
     } finally {
+      sending.current = false;
       setIsSending(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={lang === 'ar' ? 'بث إشعار' : 'Broadcast notification'}
+      onClick={event => event.stopPropagation()} className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div 
         className="w-full max-w-xl rounded-3xl bg-neutral-900 border border-amber-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.9)] overflow-hidden my-auto"
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
@@ -178,6 +219,7 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
 
         {/* Content Body */}
         <div className="p-5 space-y-5">
+          {sendError && <p role="alert" className="rounded-xl bg-red-950 p-3 text-sm text-red-200">{sendErrorMessage(sendError)}</p>}
           {successResult ? (
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
@@ -348,7 +390,7 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
                   type="button"
                   onClick={() => void handleSend(false)}
                   disabled={isSending}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-sm font-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-sm font-black shadow-lg shadow-amber-500/20 transition-all  cursor-pointer disabled:opacity-50"
                 >
                   {isSending ? (
                     <>
@@ -367,6 +409,6 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>, document.body
   );
 };

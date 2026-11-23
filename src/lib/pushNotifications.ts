@@ -96,7 +96,7 @@ export async function getVapidPublicKey(): Promise<string | null> {
  */
 async function pushRequest(path: string, payload?: object) {
   const user = auth.currentUser;
-  const token = await user?.getIdToken();
+  const token = await user?.getIdToken(path === 'send-push' || path === 'push-stats');
   const response = await fetch(`/api/${path}`, {
     method: payload ? 'POST' : 'GET',
     headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
@@ -273,9 +273,14 @@ export async function sendBroadcastPushNotification(payload: {
   }
 }
 
+export async function getPushAdminStatus() {
+  const result = await pushRequest('push-stats');
+  return result.count as number;
+}
+
 export async function getPushSubscribersCount(): Promise<number | null> {
   try {
-    return (await pushRequest('push-stats')).count;
+    return await getPushAdminStatus();
   } catch {
     return null;
   }

@@ -14,7 +14,7 @@ test('pilot delivers only to the verified owner’s marked device, and opt-out r
   const user = { uid: 'guest', email: 'guest@example.test', email_verified: true, isAdmin: true };
   const sent = [];
   const handlers = createPushHandlers({
-    env: { PUSH_BROADCAST_ENABLED: 'true', PUSH_ENABLED: 'true', VAPID_PUBLIC_KEY: publicKey, VAPID_PRIVATE_KEY: 'test-only', ADMIN_EMAIL: verifiedOwner.email },
+    env: { PUSH_BROADCAST_ENABLED: 'true', PUSH_ENABLED: 'true', VAPID_PUBLIC_KEY: publicKey, VAPID_PRIVATE_KEY: 'test-only', ADMIN_EMAIL: `  '${verifiedOwner.email.toUpperCase()}'  ` },
     getDb: () => db,
     verifyUser: async req => req.actor,
     sendNotification: async (subscription, payload) => sent.push({ subscription, payload: JSON.parse(payload) }),
@@ -38,8 +38,8 @@ test('pilot delivers only to the verified owner’s marked device, and opt-out r
     assert.equal((await subscribe(user, 'guest')).code, 200);
 
     const payload = { title: 'Pilot', body: 'Testing delivery', url: '/', pilot: true };
-    assert.equal((await call('send-push', user, payload)).code, 403);
-    assert.equal((await call('send-push', { ...verifiedOwner, email_verified: false }, payload)).code, 403);
+    assert.equal((await call('send-push', user, payload)).data.error, 'PUSH_OWNER_REQUIRED');
+    assert.equal((await call('send-push', { ...verifiedOwner, email_verified: false }, payload)).data.error, 'PUSH_EMAIL_UNVERIFIED');
 
     assert.equal((await call('send-push', verifiedOwner, payload)).data.sentCount, 1);
     assert.equal(sent.length, 1);
