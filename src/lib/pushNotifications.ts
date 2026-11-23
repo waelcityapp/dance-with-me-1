@@ -256,24 +256,6 @@ export async function showCustomNotification(params: {
 }
 
 /**
- * Display a NotificationItem with actual event details on the device screen
- */
-export async function showNotificationItem(item: any, lang: 'ar' | 'en' = 'ar'): Promise<void> {
-  if (!item) return;
-  const title = lang === 'ar' ? (item.titleAr || item.titleEn) : (item.titleEn || item.titleAr);
-  const body = lang === 'ar' ? (item.messageAr || item.messageEn) : (item.messageEn || item.messageAr);
-  const eventId = item.targetEventId || item.relatedEventId;
-  const url = eventId ? `/?event=${eventId}` : '/';
-
-  await showCustomNotification({
-    title: title || 'CityEve 🔔',
-    body: body || '',
-    url,
-    tag: item.id || ('cityeve-alert-' + Date.now())
-  });
-}
-
-/**
  * Trigger broadcast push notification via server endpoint
  */
 export async function sendBroadcastPushNotification(payload: {
@@ -283,7 +265,7 @@ export async function sendBroadcastPushNotification(payload: {
   image?: string;
   eventId?: string;
   pilot?: boolean;
-}): Promise<{ success: boolean; sentCount?: number; totalSubscribers?: number; error?: string; pilot?: boolean }> {
+}): Promise<{ success: boolean; sentCount?: number; totalSubscribers?: number; failCount?: number; error?: string; pilot?: boolean }> {
   try {
     return await pushRequest('send-push', payload);
   } catch (error) {
@@ -291,10 +273,10 @@ export async function sendBroadcastPushNotification(payload: {
   }
 }
 
-export async function getPushSubscribersCount(): Promise<number> {
+export async function getPushSubscribersCount(): Promise<number | null> {
   try {
     return (await pushRequest('push-stats')).count;
   } catch {
-    return 0;
+    return null;
   }
 }

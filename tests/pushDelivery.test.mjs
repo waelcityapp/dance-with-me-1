@@ -60,7 +60,12 @@ test('pilot delivers only to the verified owner’s marked device, and opt-out r
     assert.equal((await call('push-subscribe', null, guest)).code, 200);
     await call('push-unsubscribe', null, { deviceId: guest.deviceId, deviceSecret: 'd'.repeat(64) });
     assert.equal((await call('send-push', verifiedOwner, payload)).data.sentCount, 0);
-    assert.equal((await call('send-push', verifiedOwner, { ...payload, pilot: false })).data.sentCount, 1);
+    const duplicateSecret = 'e'.repeat(64);
+    assert.equal((await call('push-subscribe', null, { ...guest, deviceSecret: duplicateSecret })).code, 200);
+    const delivered = await call('send-push', verifiedOwner, { ...payload, pilot: false });
+    assert.equal(delivered.data.sentCount, 1);
+    assert.equal(delivered.data.totalSubscribers, 1);
+    await call('push-unsubscribe', null, { deviceId: guest.deviceId, deviceSecret: duplicateSecret });
     assert.match(sent.at(-1).subscription.endpoint, /visitor$/);
     await call('push-unsubscribe', null, { deviceId: guest.deviceId, deviceSecret: secret });
     assert.equal((await call('send-push', verifiedOwner, { ...payload, pilot: false })).data.sentCount, 0);

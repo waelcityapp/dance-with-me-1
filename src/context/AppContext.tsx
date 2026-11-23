@@ -44,7 +44,6 @@ import {
   subscribeUserToPush, 
   unsubscribeUserFromPush, 
   showTestNotification,
-  showNotificationItem, 
   playNotificationChime,
   sendBroadcastPushNotification,
   autoRegisterDevice,
@@ -616,20 +615,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
 
     // 3. Subscribe to live notifications collection
-    let isInitialNotifSync = true;
+    let seenNotificationIds: Set<string> | undefined;
     const unsubNotifs = subscribeToNotifications((liveNotifs) => {
       const currentList = liveNotifs || [];
-      if (!isInitialNotifSync && currentList.length > 0) {
-        // Find if there's a new unread notification
-        const latest = currentList[0];
-        if (latest && !latest.read) {
-          triggerPushToast(latest);
-          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            showNotificationItem(latest, lang);
-          }
-        }
-      }
-      isInitialNotifSync = false;
+      const previouslySeen = seenNotificationIds;
+      const latest = previouslySeen && currentList.find(item => !item.read && !previouslySeen.has(item.id));
+      const seen = previouslySeen ?? new Set<string>();
+      currentList.forEach(item => seen.add(item.id));
+      seenNotificationIds = seen;
+      if (latest) triggerPushToast(latest);
       setNotifications(currentList);
     });
 

@@ -135,7 +135,7 @@ async function handle(route, req, res, { verifyUser, getDb, sendNotification, en
         }
       }));
     }
-    return reply(200, { success: sentCount > 0, sentCount, failCount, totalSubscribers: recipients.size, pilot });
+    return reply(200, { success: sentCount > 0, sentCount, failCount, totalSubscribers: sentCount + failCount, pilot });
   } catch {
     return reply(503, { error: 'PUSH_UNAVAILABLE' });
   }

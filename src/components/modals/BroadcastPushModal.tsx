@@ -14,7 +14,6 @@ import {
 import { motion } from 'motion/react';
 import { 
   sendBroadcastPushNotification, 
-  playNotificationChime, 
   getPushSubscribersCount,
   subscribeUserToPush
 } from '../../lib/pushNotifications';
@@ -40,8 +39,8 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
   const [bodyEn, setBodyEn] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isActivatingDevice, setIsActivatingDevice] = useState(false);
-  const [subscribersCount, setSubscribersCount] = useState<number>(0);
-  const [successResult, setSuccessResult] = useState<{ sentCount: number; subscribers: number } | null>(null);
+  const [subscribersCount, setSubscribersCount] = useState<number | null>(null);
+  const [successResult, setSuccessResult] = useState<{ sentCount: number; subscribers: number; failCount: number; inboxSaved: boolean; pilot: boolean } | null>(null);
 
   const handleActivateMyDevice = async () => {
     setIsActivatingDevice(true);
@@ -105,10 +104,16 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
       const result = await sendBroadcastPushNotification({
         title: activeTitle, body: activeBody, pilot, url: `/?event=${event.id}`,
       });
-      if (!result.success) throw new Error(result.error || 'PUSH_DELIVERY_FAILED');
+      if (result.totalSubscribers === undefined) throw new Error(result.error || 'PUSH_DELIVERY_FAILED');
+      const summary = {
+        sentCount: result.sentCount ?? 0,
+        subscribers: result.totalSubscribers,
+        failCount: result.failCount ?? 0,
+        pilot: result.pilot === true,
+      };
 
       if (result.pilot) {
-        setSuccessResult({ sentCount: result.sentCount ?? 0, subscribers: result.totalSubscribers ?? 0 });
+        setSuccessResult({ ...summary, inboxSaved: false });
         return;
       }
 
@@ -122,24 +127,13 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
         date: new Date().toISOString(),
         read: false,
         type: 'new_party' as const,
-        targetEventId: event.id
+        relatedEventId: event.id
       };
-      if (typeof setNotifications === 'function') {
-        setNotifications(prev => [newNotif, ...prev]);
+      const inboxSaved = await saveNotificationToFirestore(newNotif);
+      if (inboxSaved && typeof setNotifications === 'function') {
+        setNotifications(prev => [newNotif, ...prev.filter(notif => notif.id !== newNotif.id)]);
       }
-      try {
-        await saveNotificationToFirestore(newNotif);
-      } catch (dbErr) {
-        console.warn('Firestore notification save note:', dbErr);
-      }
-
-      // 3. Play chime
-      playNotificationChime();
-
-      setSuccessResult({ 
-        sentCount: result.sentCount || 0,
-        subscribers: result.totalSubscribers || subscribersCount || 0
-      });
+      setSuccessResult({ ...summary, inboxSaved });
     } catch (err: any) {
       console.error('Error broadcasting event push:', err);
       alert(lang === 'ar' ? `حدث خطأ: ${err?.message || 'تعذر إرسال الإشعار'}` : `Error: ${err?.message || 'Could not send notification'}`);
@@ -194,17 +188,16 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
                 <CheckCircle2 className="w-9 h-9" />
               </div>
               <h4 className="text-xl font-bold text-white">
-                {lang === 'ar' ? 'تم إرسال الإشعار بنجاح! 🚀' : 'Notification Broadcast Successfully! 🚀'}
+                {lang === 'ar' ? 'نتيجة الإرسال' : 'Notification results'}
               </h4>
               <p className="text-sm text-neutral-300 max-w-md mx-auto leading-relaxed">
-                {lang === 'ar' 
-                  ? successResult.sentCount > 0
-                    ? `تم تسليم التنبيه الفوري لشاشات الهواتف (${successResult.sentCount} أجهزة مستلمة). عند ضغط أي مستخدم على الإشعار سيتم توجيهه مباشرة لهذه الفاعلية.`
-                    : `تم حفظ ونشر الإشعار بنجاح في مركز الإشعارات لكل مستخدمي التطبيق. (عدد أجهزة Web Push المفعّلة حالياً: ${successResult.subscribers} جهاز).`
-                  : successResult.sentCount > 0
-                    ? `Delivered to (${successResult.sentCount} subscriber devices). Tapping the notification will immediately open this event inside the app.`
-                    : `Notification published to in-app Notification Center for all users. (Active Web Push devices: ${successResult.subscribers}).`}
+                {lang === 'ar'
+                  ? `قبلت خدمة الإشعارات الإرسال إلى ${successResult.sentCount} من ${successResult.subscribers} جهاز. فشل الإرسال إلى ${successResult.failCount}.`
+                  : `Push providers accepted ${successResult.sentCount} of ${successResult.subscribers} devices. Failed: ${successResult.failCount}.`}
               </p>
+              {!successResult.pilot && <p className="text-sm text-neutral-300">{successResult.inboxSaved
+                ? (lang === 'ar' ? 'تم الحفظ في مركز الإشعارات.' : 'Saved to the notification center.')
+                : (lang === 'ar' ? 'تعذّر الحفظ في مركز الإشعارات.' : 'Could not save to the notification center.')}</p>}
               <div className="pt-3">
                 <button
                   onClick={onClose}
@@ -239,15 +232,15 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
                       <span>{lang === 'ar' ? 'تفعيل جهازي الآن 📱' : 'Activate my device 📱'}</span>
                     </button>
                     <span className="font-mono font-bold px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                      {subscribersCount} {lang === 'ar' ? 'جهاز مسجل' : 'devices'}
+                      {subscribersCount === null ? (lang === 'ar' ? 'العدد غير متاح' : 'Count unavailable') : (lang === 'ar' ? `${subscribersCount} جهاز مسجل` : `${subscribersCount} devices`)}
                     </span>
                   </div>
                 </div>
                 {subscribersCount === 0 && (
                   <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed">
                     {lang === 'ar'
-                      ? '💡 ملحوظة: العدد صفر لأن اشتراكات Web Push تُسجّل عندما يفتح المستخدم التطبيق في المتصفح أو التطبيق المثبت. اضغط زر "تفعيل جهازي الآن 📱" أعلاه لتسجيل جهازك وتجربة استلام التنبيه فوراً، وعند فتح المستخدمين للتطبيق سيتم تسجيل أجهزتهم تلقائياً.'
-                      : '💡 Note: Push subscriptions register when users open the app in Chrome/Safari or installed PWA. Click "Activate my device 📱" to register your phone now, and users will auto-register on opening.'}
+                      ? 'لا توجد أجهزة مسجلة للموقع الحالي. يمكن للزوار تفعيل الإشعارات من المتصفح.'
+                      : 'No devices are registered for this site yet. Visitors can opt in from their browser.'}
                   </div>
                 )}
               </div>
