@@ -4,10 +4,9 @@
  * saving subscriber endpoints to Firestore & server, and testing chimes.
  */
 
-import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
-import { db, sanitizeForFirestore } from './firebase';
+import { auth } from './firebase';
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
     .replace(/-/g, '+')
@@ -36,7 +35,7 @@ export function getDeviceId(): string {
 
 export function isPushSupported(): boolean {
   if (typeof window === 'undefined') return false;
-  return ('Notification' in window) || ('serviceWorker' in navigator);
+  return 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
 }
 
 export function getPushPermission(): NotificationPermission | 'unsupported' {
@@ -95,210 +94,74 @@ export async function getVapidPublicKey(): Promise<string | null> {
 /**
  * Background auto-registration of device without forcing permission prompt
  */
-export async function autoRegisterDevice(userId?: string, userEmail?: string): Promise<void> {
-  try {
-    const deviceId = getDeviceId();
-    const permission = typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
-    
-    let subJson: any = null;
-    if ('serviceWorker' in navigator && 'PushManager' in window && permission === 'granted') {
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        const existingSub = await reg.pushManager.getSubscription();
-        if (existingSub) {
-          subJson = existingSub.toJSON();
-        }
-      } catch (e) {}
-    }
-
-    const subscriberDocId = `dev_${deviceId}`;
-    const payload = {
-      id: subscriberDocId,
-      deviceId,
-      userId: userId || null,
-      userEmail: userEmail || null,
-      permission,
-      subscription: subJson,
-      endpoint: subJson?.endpoint || null,
-      platform: navigator.userAgent,
-      active: true,
-      lastSeen: new Date().toISOString()
-    };
-
-    // 1. Sync to server API
-    fetch('/api/push-subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subscriberId: subscriberDocId,
-        deviceId,
-        userId: userId || null,
-        userEmail: userEmail || null,
-        platform: navigator.userAgent,
-        permission,
-        subscription: subJson
-      })
-    }).catch(() => {});
-
-    // 2. Sync to Firestore
-    try {
-      const docRef = doc(db, 'push_subscribers', subscriberDocId);
-      await setDoc(docRef, sanitizeForFirestore(payload), { merge: true });
-    } catch (e) {
-      console.warn('Firestore device auto-register note:', e);
-    }
-  } catch (e) {
-    console.warn('Auto register device note:', e);
-  }
+async function pushRequest(path: string, payload?: object) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('SIGN_IN_REQUIRED');
+  const response = await fetch(`/api/${path}`, {
+    method: payload ? 'POST' : 'GET',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+    ...(payload && { body: JSON.stringify(payload) }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'PUSH_UNAVAILABLE');
+  return data;
 }
 
-/**
- * Subscribe current browser device to Web Push notifications
- */
+async function saveDevice(registration: ServiceWorkerRegistration, replace: boolean) {
+  const publicKey = await getVapidPublicKey();
+  if (!publicKey) return false;
+  const applicationServerKey = urlBase64ToUint8Array(publicKey);
+  let subscription = await registration.pushManager.getSubscription();
+  if (subscription) {
+    const storedKey = subscription.options.applicationServerKey;
+    const matches = storedKey && new Uint8Array(storedKey).length === applicationServerKey.length &&
+      new Uint8Array(storedKey).every((byte, index) => byte === applicationServerKey[index]);
+    if (!matches) {
+      if (!replace) return false;
+      if (!await subscription.unsubscribe()) return false;
+      subscription = null;
+    }
+  }
+  if (!subscription && replace) {
+    subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+  }
+  if (!subscription) return false;
+  await pushRequest('push-subscribe', { deviceId: getDeviceId(), subscription: subscription.toJSON(), publicKey });
+  return true;
+}
+
+export async function autoRegisterDevice(userId?: string, _email?: string): Promise<void> {
+  if (!userId || auth.currentUser?.uid !== userId || !isPushSupported() || Notification.permission !== 'granted') return;
+  const registration = await navigator.serviceWorker.getRegistration();
+  if (registration?.active && await registration.pushManager.getSubscription()) await saveDevice(registration, false);
+}
+
 export async function subscribeUserToPush(
-  userId?: string, 
-  userEmail?: string,
-  triggerTestAlert: boolean = false
+  _userId?: string, _email?: string, triggerTestAlert = false
 ): Promise<{ success: boolean; message?: string }> {
+  if (!auth.currentUser) return { success: false, message: 'سجّل الدخول أولًا لتفعيل إشعارات جهازك.' };
+  if (!isPushSupported()) return { success: false, message: 'المتصفح لا يدعم الإشعارات على هذا الجهاز.' };
   try {
-    const deviceId = getDeviceId();
-    let permission: NotificationPermission = 'default';
-
-    // 1. Request permission if supported
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      try {
-        permission = await Notification.requestPermission();
-      } catch (permErr) {
-        // Fallback for older Safari
-        permission = await new Promise((resolve) => {
-          Notification.requestPermission((p) => resolve(p));
-        });
-      }
-    }
-
-    // 2. Ensure Service Worker is registered & ready
-    let activeRegistration: ServiceWorkerRegistration | null = null;
-    if ('serviceWorker' in navigator) {
-      try {
-        let registration = await navigator.serviceWorker.getRegistration();
-        if (!registration) {
-          registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        }
-        activeRegistration = await navigator.serviceWorker.ready;
-      } catch (swErr) {
-        console.warn('Service worker setup note:', swErr);
-      }
-    }
-
-    // 3. Get VAPID Key and subscribe with PushManager if available
-    let subJson: any = null;
-    let pushSubError = '';
-    if (activeRegistration && 'PushManager' in window && permission === 'granted') {
-      try {
-        let subscription = await activeRegistration.pushManager.getSubscription();
-        if (!subscription) {
-          const vapidPublicKey = await getVapidPublicKey();
-          if (vapidPublicKey) {
-            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-            subscription = await activeRegistration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: convertedVapidKey
-            });
-          }
-        }
-        if (subscription) {
-          subJson = subscription.toJSON();
-        }
-      } catch (pushErr: any) {
-        console.warn('PushManager subscription note:', pushErr);
-        pushSubError = pushErr?.message || String(pushErr);
-      }
-    }
-
-    const subscriberDocId = `dev_${deviceId}`;
-    const payload = {
-      id: subscriberDocId,
-      deviceId,
-      userId: userId || null,
-      userEmail: userEmail || null,
-      permission,
-      subscription: subJson,
-      endpoint: subJson?.endpoint || null,
-      platform: navigator.userAgent,
-      active: true,
-      updatedAt: new Date().toISOString()
-    };
-
-    // 4. Send to Server API
-    try {
-      await fetch('/api/push-subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subscriberId: subscriberDocId,
-          deviceId,
-          userId: userId || null,
-          userEmail: userEmail || null,
-          platform: navigator.userAgent,
-          permission,
-          subscription: subJson
-        })
-      });
-    } catch (e) {
-      console.warn('Server push subscribe failed:', e);
-    }
-
-    // 5. Save in Firestore 'push_subscribers' collection
-    try {
-      const docRef = doc(db, 'push_subscribers', subscriberDocId);
-      await setDoc(docRef, sanitizeForFirestore(payload), { merge: true });
-    } catch (dbErr) {
-      console.warn('Firestore push subscriber save note:', dbErr);
-    }
-
-    // 6. Only if explicitly requested, trigger single test notification
-    if (triggerTestAlert && permission === 'granted') {
-      playNotificationChime();
-      await showTestNotification('ar');
-    }
-
-    if (permission === 'granted') {
-      const extra = subJson ? ' (تم ربط رمز التشفير بنجاح)' : (pushSubError ? ` (ملاحظة: ${pushSubError})` : '');
-      return { success: true, message: `تم تفعيل الإشعارات الفورية لجهازك بنجاح! 🔔${extra}` };
-    } else if (permission === 'denied') {
-      return { success: false, message: 'المتصفح يقرأ الإذن كـ "محظور". يرجى التأكد من تفعيل خيار الإشعارات في إعدادات الموقع.' };
-    } else {
-      return { success: true, message: 'تم تسجيل جهازك بنجاح في نظام التنبيهات.' };
-    }
-  } catch (err: any) {
-    console.error('Error during push subscription:', err);
-    return { success: false, message: err.message || 'حدث خطأ أثناء تفعيل الإشعارات' };
+    const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
+    if (permission !== 'granted') return { success: false, message: 'اسمح بالإشعارات من إعدادات الموقع أولًا.' };
+    await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    if (!await saveDevice(await navigator.serviceWorker.ready, true)) throw new Error('PUSH_UNAVAILABLE');
+    if (triggerTestAlert) await showTestNotification('ar').catch(() => {});
+    return { success: true, message: 'تم تسجيل إشعارات هذا الجهاز بنجاح.' };
+  } catch {
+    return { success: false, message: 'تعذّر تسجيل الإشعارات. حاول مرة أخرى.' };
   }
 }
 
-/**
- * Unsubscribe user device from Push Notifications
- */
-export async function unsubscribeUserFromPush(userId?: string): Promise<boolean> {
+export async function unsubscribeUserFromPush(_userId?: string): Promise<boolean> {
   if (!isPushSupported()) return false;
   try {
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.getSubscription();
-    if (subscription) {
-      const subJson = subscription.toJSON();
-      const endpoint = subJson.endpoint;
-      await subscription.unsubscribe();
-
-      // Notify Server
-      await fetch('/api/push-unsubscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint })
-      }).catch(() => {});
-    }
+    await pushRequest('push-unsubscribe', { deviceId: getDeviceId() });
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    await subscription?.unsubscribe();
     return true;
-  } catch (err) {
-    console.warn('Unsubscribe error:', err);
+  } catch {
     return false;
   }
 }
@@ -400,47 +263,19 @@ export async function sendBroadcastPushNotification(payload: {
   url?: string;
   image?: string;
   eventId?: string;
-}): Promise<{ success: boolean; sentCount?: number; totalSubscribers?: number; error?: string }> {
+  pilot?: boolean;
+}): Promise<{ success: boolean; sentCount?: number; totalSubscribers?: number; error?: string; pilot?: boolean }> {
   try {
-    const res = await fetch('/api/send-push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    return data;
-  } catch (err: any) {
-    console.error('Error broadcasting push notification:', err);
-    return { success: false, error: err.message || 'Failed to dispatch push notification' };
+    return await pushRequest('send-push', payload);
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'PUSH_UNAVAILABLE' };
   }
 }
 
-/**
- * Fetch total push subscribers count for Admin Dashboard
- */
 export async function getPushSubscribersCount(): Promise<number> {
-  let serverCount = 0;
-  let firestoreCount = 0;
-
   try {
-    const res = await fetch('/api/push-stats');
-    if (res.ok) {
-      const data = await res.json();
-      if (typeof data.count === 'number') {
-        serverCount = data.count;
-      }
-    }
-  } catch (e) {
-    console.warn('Server push-stats fetch note:', e);
+    return (await pushRequest('push-stats')).count;
+  } catch {
+    return 0;
   }
-
-  try {
-    const colRef = collection(db, 'push_subscribers');
-    const snap = await getDocs(colRef);
-    firestoreCount = snap.size;
-  } catch (e) {
-    console.warn('Firestore push_subscribers count note:', e);
-  }
-
-  return Math.max(serverCount, firestoreCount);
 }

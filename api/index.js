@@ -1,3 +1,4 @@
+import { pushHandlers } from './_lib/handlers/push.js';
 import accountReference from './_lib/handlers/account-reference.js';
 import adChangeRequests from './_lib/handlers/ad-change-requests.js';
 import adminUnlock from './_lib/handlers/admin-unlock.js';
@@ -15,6 +16,7 @@ import translate from './_lib/handlers/translate.js';
 import validateMarketerCode from './_lib/handlers/validate-marketer-code.js';
 
 const handlers = new Map([
+  ...pushHandlers,
   ['/account-reference', accountReference],
   ['/ad-change-requests', adChangeRequests],
   ['/admin-unlock', adminUnlock],

@@ -10,7 +10,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn()
         && (
-          request.auth.token.email == 'waelvts@gmail.com'
+          (request.auth.token.email == 'waelvts@gmail.com' && request.auth.token.email_verified == true)
           || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
         );
     }
@@ -51,8 +51,11 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isAdmin()
-        || (isSignedIn() && request.auth.uid == userId);
+      allow read, delete: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow create: if isAdmin() || (isSignedIn() && request.auth.uid == userId
+        && request.resource.data.get('isAdmin', false) == false);
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']));
     }
 
     match /app_assets/{assetId} {

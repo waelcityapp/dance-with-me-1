@@ -91,7 +91,7 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
 
   if (!isOpen || !event) return null;
 
-  const handleSend = async () => {
+  const handleSend = async (pilot: boolean) => {
     if (!titleAr.trim() || !bodyAr.trim()) {
       alert(lang === 'ar' ? 'يرجى إدخال عنوان ونص الإشعار' : 'Please enter notification title and message');
       return;
@@ -102,22 +102,14 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
       const activeTitle = lang === 'ar' ? titleAr : (titleEn || titleAr);
       const activeBody = lang === 'ar' ? bodyAr : (bodyEn || bodyAr);
 
-      // 1. Send Web Push to all phones & devices
-      let result: { success: boolean; sentCount?: number; totalSubscribers?: number; error?: string } = {
-        success: true,
-        sentCount: 0,
-        totalSubscribers: 0
-      };
-      try {
-        result = await sendBroadcastPushNotification({
-          title: activeTitle,
-          body: activeBody,
-          url: `/?event=${event.id}`,
-          image: event.mediaUrl,
-          eventId: event.id
-        });
-      } catch (pushErr) {
-        console.warn('Push delivery note:', pushErr);
+      const result = await sendBroadcastPushNotification({
+        title: activeTitle, body: activeBody, pilot, url: `/?event=${event.id}`,
+      });
+      if (!result.success) throw new Error(result.error || 'PUSH_DELIVERY_FAILED');
+
+      if (result.pilot) {
+        setSuccessResult({ sentCount: result.sentCount ?? 0, subscribers: result.totalSubscribers ?? 0 });
+        return;
       }
 
       // 2. Save in-app notification for all users in Firestore and Context
@@ -355,9 +347,13 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
                 >
                   {lang === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
+                <button type="button" onClick={() => void handleSend(true)} disabled={isSending}
+                  className="rounded-xl border border-neutral-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                  {lang === 'ar' ? 'اختبار على أجهزتي' : 'Test on my devices'}
+                </button>
                 <button
                   type="button"
-                  onClick={handleSend}
+                  onClick={() => void handleSend(false)}
                   disabled={isSending}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-sm font-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50"
                 >
