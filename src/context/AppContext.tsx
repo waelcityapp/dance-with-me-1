@@ -44,10 +44,10 @@ import {
   subscribeUserToPush, 
   unsubscribeUserFromPush, 
   showTestNotification,
+  showNotificationItem, 
   playNotificationChime,
   sendBroadcastPushNotification,
-  autoRegisterDevice,
-  isDevicePushRegistered
+  autoRegisterDevice
 } from '../lib/pushNotifications';
 
 export type GuestAlertReason = 'contact' | 'post_ad' | 'book' | 'favorite' | 'scan_qr' | 'default';
@@ -231,7 +231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCategory, setSelectedCategory] = useState<DanceCategory>('all');
   const [showExpiredArchive, setShowExpiredArchive] = useState<boolean>(false);
   const [pushEnabled, setPushEnabled] = useState<boolean>(() => {
-    return isDevicePushRegistered();
+    return localStorage.getItem(STORAGE_KEYS.PUSH) === 'true';
   });
 
   const [guestAlertState, setGuestAlertState] = useState<{ isOpen: boolean; reason: GuestAlertReason }>({
@@ -512,6 +512,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       autoRegisterDevice(user?.id, user?.email).catch((e) => {
         console.warn('Auto device register background note:', e);
       });
+      if ('Notification' in window && Notification.permission === 'granted') {
+        subscribeUserToPush(user?.id, user?.email).catch((e) => {
+          console.warn('Auto push sync background note:', e);
+        });
+      }
     }, 1000);
     return () => clearTimeout(syncTimer);
   }, [user?.id, user?.email]);
@@ -615,15 +620,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
 
     // 3. Subscribe to live notifications collection
-    let seenNotificationIds: Set<string> | undefined;
+    let isInitialNotifSync = true;
     const unsubNotifs = subscribeToNotifications((liveNotifs) => {
       const currentList = liveNotifs || [];
-      const previouslySeen = seenNotificationIds;
-      const latest = previouslySeen && currentList.find(item => !item.read && !previouslySeen.has(item.id));
-      const seen = previouslySeen ?? new Set<string>();
-      currentList.forEach(item => seen.add(item.id));
-      seenNotificationIds = seen;
-      if (latest) triggerPushToast(latest);
+      if (!isInitialNotifSync && currentList.length > 0) {
+        // Find if there's a new unread notification
+        const latest = currentList[0];
+        if (latest && !latest.read) {
+          triggerPushToast(latest);
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            showNotificationItem(latest, lang);
+          }
+        }
+      }
+      isInitialNotifSync = false;
       setNotifications(currentList);
     });
 
@@ -1446,21 +1456,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  useEffect(() => {
-    const sync = () => setPushEnabled(isDevicePushRegistered());
-    window.addEventListener('cityeve-push-change', sync);
-    return () => window.removeEventListener('cityeve-push-change', sync);
-  }, []);
-
   const togglePushNotifications = async () => {
-    if (pushEnabled) {
-      if (!await unsubscribeUserFromPush(user?.id)) {
-        triggerAlert(lang === 'ar' ? 'تعذّر إيقاف إشعارات الجهاز.' : 'Could not turn off device notifications.');
+    const nextVal = !pushEnabled;
+    setPushEnabled(nextVal);
+    localStorage.setItem(STORAGE_KEYS.PUSH, nextVal ? 'true' : 'false');
+    if (nextVal) {
+      try {
+        const res = await subscribeUserToPush(user?.id, user?.email);
+        if (res.success) {
+          showTestNotification(lang);
+        } else if (res.message) {
+          triggerAlert(res.message);
+        }
+      } catch (e) {
+        console.warn('Push subscription failed:', e);
       }
-      return;
+    } else {
+      try {
+        await unsubscribeUserFromPush(user?.id);
+      } catch (e) {}
     }
-    const result = await subscribeUserToPush(user?.id, user?.email);
-    if (!result.success && result.message) triggerAlert(result.message);
   };
 
   const sendSupportMessage = async (messageText: string): Promise<{ refNumber: string; msgId: string }> => {

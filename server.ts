@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { pushHandlers } from "./api/_lib/handlers/push.js";
+import webpush from "web-push";
 import { v2 as cloudinary } from "cloudinary";
 import { createVerify } from "crypto";
 import { initializeApp, getApps } from "firebase/app";
@@ -159,6 +159,23 @@ async function isAuthorizedAdminRequest(req: express.Request): Promise<boolean> 
   );
 }
 
+// Default / Persisted VAPID Configuration
+// Can be customized via environment variables VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
+let vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "BJGxmjsed25gM5oW5bD85jkU2mXfcMubN-arM5uTobCM5lUQZkUqao22afa32sVLXGvWAcrBnxsz44PYlioeL0I";
+let vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "fRVXq7WFP6pMm3a1J3FESVlyyWrP18K1xVfve6iYECE";
+
+try {
+  webpush.setVapidDetails(
+    "mailto:support@cityeve.online",
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+} catch (vapidErr) {
+  console.warn("VAPID set details note:", vapidErr);
+}
+
+const pushSubscriptionsMap = new Map<string, any>();
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -228,6 +245,7 @@ async function startServer() {
         }
       }
 
+      const { url, resourceType = "image" } = req.body || {};
       if (!url || typeof url !== "string") {
         return res.json({ success: true, message: "No URL provided" });
       }
@@ -294,9 +312,164 @@ async function startServer() {
   });
 
   // Web Push Stats Endpoint
-  for (const [path, handler] of pushHandlers) {
-    app.all(`/api${path}`, handler);
-  }
+  app.get("/api/push-stats", async (req, res) => {
+    let totalSubscribers = pushSubscriptionsMap.size;
+    const seenIds = new Set<string>();
+
+    for (const [key, item] of pushSubscriptionsMap.entries()) {
+      const id = item.deviceId || item.subscription?.endpoint || key;
+      if (id) seenIds.add(id);
+    }
+
+    try {
+      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/push_subscribers?pageSize=300");
+      if (fbRes.ok) {
+        const fbData: any = await fbRes.json();
+        if (fbData && fbData.documents && Array.isArray(fbData.documents)) {
+          for (const doc of fbData.documents) {
+            const docName = doc.name ? doc.name.split("/").pop() : null;
+            const docId = doc.fields?.id?.stringValue || doc.fields?.deviceId?.stringValue || doc.fields?.endpoint?.stringValue || docName;
+            if (docId && !seenIds.has(docId)) {
+              seenIds.add(docId);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Error reading push_subscribers stats from Firestore:", err);
+    }
+
+    totalSubscribers = Math.max(seenIds.size, pushSubscriptionsMap.size);
+    return res.json({
+      success: true,
+      count: totalSubscribers,
+      activeMemory: pushSubscriptionsMap.size
+    });
+  });
+
+  // Web Push VAPID Public Key Endpoint
+  app.get("/api/push-vapid-key", (req, res) => {
+    res.json({ publicKey: vapidPublicKey });
+  });
+
+  // Web Push / Device Subscribe Endpoint
+  app.post("/api/push-subscribe", (req, res) => {
+    const { subscription, userId, userEmail, subscriberId, deviceId, platform, permission } = req.body;
+    const id = subscriberId || deviceId || subscription?.endpoint || `sub_${Date.now()}`;
+    
+    pushSubscriptionsMap.set(id, {
+      subscription: subscription || null,
+      deviceId: deviceId || id,
+      userId: userId || null,
+      userEmail: userEmail || null,
+      platform: platform || "web",
+      permission: permission || "default",
+      subscribedAt: new Date().toISOString()
+    });
+    return res.json({ success: true, count: pushSubscriptionsMap.size, id });
+  });
+
+  // Web Push Unsubscribe Endpoint
+  app.post("/api/push-unsubscribe", (req, res) => {
+    const { endpoint, deviceId } = req.body;
+    if (endpoint || deviceId) {
+      for (const [key, val] of pushSubscriptionsMap.entries()) {
+        if ((endpoint && val.subscription?.endpoint === endpoint) || (deviceId && val.deviceId === deviceId)) {
+          pushSubscriptionsMap.delete(key);
+        }
+      }
+    }
+    return res.json({ success: true });
+  });
+
+  // Web Push Send / Broadcast Endpoint
+  app.post("/api/send-push", async (req, res) => {
+    const { title, body, url, image, eventId } = req.body;
+    const payload = JSON.stringify({
+      title: title || "CityEve | إشعار جديد 🔔",
+      body: body || "يوجد إعلان جديد أو تحديث مهم في التطبيق!",
+      url: url || "/",
+      image: image || undefined,
+      eventId: eventId || undefined,
+      timestamp: Date.now()
+    });
+
+    const subsToSend: any[] = [];
+    const seenEndpoints = new Set<string>();
+
+    // 1. From active memory subscribers
+    for (const item of pushSubscriptionsMap.values()) {
+      if (item.subscription && item.subscription.endpoint && !seenEndpoints.has(item.subscription.endpoint)) {
+        subsToSend.push(item.subscription);
+        seenEndpoints.add(item.subscription.endpoint);
+      }
+    }
+
+    // 2. From Firestore push_subscribers collection
+    try {
+      const fbRes = await fetch("https://firestore.googleapis.com/v1/projects/dance-with-me-35e98/databases/(default)/documents/push_subscribers?pageSize=300");
+      if (fbRes.ok) {
+        const fbData: any = await fbRes.json();
+        if (fbData && fbData.documents && Array.isArray(fbData.documents)) {
+          for (const doc of fbData.documents) {
+            const endpoint = doc.fields?.endpoint?.stringValue;
+            if (endpoint && !seenEndpoints.has(endpoint)) {
+              let subObj = null;
+              if (doc.fields?.subscription?.stringValue) {
+                try {
+                  subObj = JSON.parse(doc.fields.subscription.stringValue);
+                } catch (e) {}
+              } else if (doc.fields?.subscription?.mapValue?.fields) {
+                const f = doc.fields.subscription.mapValue.fields;
+                subObj = {
+                  endpoint: f.endpoint?.stringValue || endpoint,
+                  keys: {
+                    p256dh: f.keys?.mapValue?.fields?.p256dh?.stringValue,
+                    auth: f.keys?.mapValue?.fields?.auth?.stringValue
+                  }
+                };
+              }
+              if (subObj && subObj.keys) {
+                subsToSend.push(subObj);
+                seenEndpoints.add(endpoint);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Error reading push_subscribers from Firestore:", err);
+    }
+
+    let sentCount = 0;
+    let failCount = 0;
+
+    const sendPromises = subsToSend.map(async (sub) => {
+      try {
+        await webpush.sendNotification(sub, payload);
+        sentCount++;
+      } catch (err: any) {
+        failCount++;
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          for (const [key, val] of pushSubscriptionsMap.entries()) {
+            if (val.subscription?.endpoint === sub.endpoint) {
+              pushSubscriptionsMap.delete(key);
+            }
+          }
+        }
+      }
+    });
+
+    await Promise.allSettled(sendPromises);
+
+    return res.json({
+      success: true,
+      sentCount,
+      failCount,
+      totalSubscribers: subsToSend.length
+    });
+  });
+
 
   // Dynamic Open Graph / SEO Preview for Shared Events
   // Allows WhatsApp, Facebook, Twitter, and Telegram to render the event banner & details

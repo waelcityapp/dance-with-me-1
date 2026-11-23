@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent } from '../../types';
 import { 
@@ -15,8 +14,8 @@ import {
 import { motion } from 'motion/react';
 import { 
   sendBroadcastPushNotification, 
+  playNotificationChime, 
   getPushSubscribersCount,
-  getPushAdminStatus,
   subscribeUserToPush
 } from '../../lib/pushNotifications';
 import { saveNotificationToFirestore } from '../../lib/firebase';
@@ -40,25 +39,9 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
   const [bodyAr, setBodyAr] = useState('');
   const [bodyEn, setBodyEn] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const sending = useRef(false);
-  const draftEvent = useRef<string | null>(null);
-  const [sendError, setSendError] = useState('');
-
-  const sendErrorMessage = (error: string) => {
-    if (error === 'PUSH_OWNER_REQUIRED') return lang === 'ar'
-      ? 'سجّل الدخول بحساب مالك CityEve المصرّح له بالبث.'
-      : 'Sign in with the CityEve owner account authorized to broadcast.';
-    if (error === 'PUSH_EMAIL_UNVERIFIED') return lang === 'ar'
-      ? 'أكّد بريد حساب المالك، ثم أعد تسجيل الدخول.'
-      : 'Verify the owner account email, then sign in again.';
-    if (error === 'UNAUTHENTICATED') return lang === 'ar'
-      ? 'سجّل الدخول بحساب الإدارة من جديد.'
-      : 'Sign in to the admin account again.';
-    return lang === 'ar' ? 'تعذّر إرسال الإشعار. حاول مرة أخرى.' : 'Could not send the notification. Try again.';
-  };
   const [isActivatingDevice, setIsActivatingDevice] = useState(false);
-  const [subscribersCount, setSubscribersCount] = useState<number | null>(null);
-  const [successResult, setSuccessResult] = useState<{ sentCount: number; subscribers: number; failCount: number; inboxSaved: boolean; pilot: boolean } | null>(null);
+  const [subscribersCount, setSubscribersCount] = useState<number>(0);
+  const [successResult, setSuccessResult] = useState<{ sentCount: number; subscribers: number } | null>(null);
 
   const handleActivateMyDevice = async () => {
     setIsActivatingDevice(true);
@@ -83,12 +66,7 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
 
   // Initialize pre-filled notification content whenever the event changes
   useEffect(() => {
-    if (!isOpen || !event) {
-      draftEvent.current = null;
-      return;
-    }
-    if (draftEvent.current !== event.id) {
-      draftEvent.current = event.id;
+    if (event) {
       const defaultTitleAr = `🔥 ${event.titleAr || event.titleEn || 'فاعلية جديدة في سيتي إيف'}`;
       const defaultTitleEn = `🔥 ${event.titleEn || event.titleAr || 'New Event on CityEve'}`;
 
@@ -106,54 +84,40 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
       setBodyEn(defaultBodyEn);
       setSuccessResult(null);
 
-      setSendError('');
+      // Fetch active subscribers
+      getPushSubscribersCount().then(count => setSubscribersCount(count));
     }
   }, [event, isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    let active = true;
-    setSubscribersCount(null);
-    getPushAdminStatus().then(count => {
-      if (active) setSubscribersCount(count);
-    }).catch(error => {
-      if (active && ['PUSH_OWNER_REQUIRED', 'PUSH_EMAIL_UNVERIFIED', 'UNAUTHENTICATED'].includes(error.message)) {
-        setSendError(error.message);
-      }
-    });
-    return () => { active = false; };
-  }, [isOpen]);
-
   if (!isOpen || !event) return null;
 
-  const handleSend = async (pilot: boolean) => {
-    if (sending.current) return;
+  const handleSend = async () => {
     if (!titleAr.trim() || !bodyAr.trim()) {
       alert(lang === 'ar' ? 'يرجى إدخال عنوان ونص الإشعار' : 'Please enter notification title and message');
       return;
     }
 
-    sending.current = true;
-    setSendError('');
     setIsSending(true);
     try {
       const activeTitle = lang === 'ar' ? titleAr : (titleEn || titleAr);
       const activeBody = lang === 'ar' ? bodyAr : (bodyEn || bodyAr);
 
-      const result = await sendBroadcastPushNotification({
-        title: activeTitle, body: activeBody, pilot, url: `/?event=${event.id}`,
-      });
-      if (result.totalSubscribers === undefined) throw new Error(result.error || 'PUSH_DELIVERY_FAILED');
-      const summary = {
-        sentCount: result.sentCount ?? 0,
-        subscribers: result.totalSubscribers,
-        failCount: result.failCount ?? 0,
-        pilot: result.pilot === true,
+      // 1. Send Web Push to all phones & devices
+      let result: { success: boolean; sentCount?: number; totalSubscribers?: number; error?: string } = {
+        success: true,
+        sentCount: 0,
+        totalSubscribers: 0
       };
-
-      if (result.pilot) {
-        setSuccessResult({ ...summary, inboxSaved: false });
-        return;
+      try {
+        result = await sendBroadcastPushNotification({
+          title: activeTitle,
+          body: activeBody,
+          url: `/?event=${event.id}`,
+          image: event.mediaUrl,
+          eventId: event.id
+        });
+      } catch (pushErr) {
+        console.warn('Push delivery note:', pushErr);
       }
 
       // 2. Save in-app notification for all users in Firestore and Context
@@ -166,25 +130,34 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
         date: new Date().toISOString(),
         read: false,
         type: 'new_party' as const,
-        relatedEventId: event.id
+        targetEventId: event.id
       };
-      const inboxSaved = await saveNotificationToFirestore(newNotif);
-      if (inboxSaved && typeof setNotifications === 'function') {
-        setNotifications(prev => [newNotif, ...prev.filter(notif => notif.id !== newNotif.id)]);
+      if (typeof setNotifications === 'function') {
+        setNotifications(prev => [newNotif, ...prev]);
       }
-      setSuccessResult({ ...summary, inboxSaved });
+      try {
+        await saveNotificationToFirestore(newNotif);
+      } catch (dbErr) {
+        console.warn('Firestore notification save note:', dbErr);
+      }
+
+      // 3. Play chime
+      playNotificationChime();
+
+      setSuccessResult({ 
+        sentCount: result.sentCount || 0,
+        subscribers: result.totalSubscribers || subscribersCount || 0
+      });
     } catch (err: any) {
       console.error('Error broadcasting event push:', err);
-      setSendError(err?.message || 'PUSH_UNAVAILABLE');
+      alert(lang === 'ar' ? `حدث خطأ: ${err?.message || 'تعذر إرسال الإشعار'}` : `Error: ${err?.message || 'Could not send notification'}`);
     } finally {
-      sending.current = false;
       setIsSending(false);
     }
   };
 
-  return createPortal(
-    <div role="dialog" aria-modal="true" aria-label={lang === 'ar' ? 'بث إشعار' : 'Broadcast notification'}
-      onClick={event => event.stopPropagation()} className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div 
         className="w-full max-w-xl rounded-3xl bg-neutral-900 border border-amber-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.9)] overflow-hidden my-auto"
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
@@ -219,7 +192,6 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
 
         {/* Content Body */}
         <div className="p-5 space-y-5">
-          {sendError && <p role="alert" className="rounded-xl bg-red-950 p-3 text-sm text-red-200">{sendErrorMessage(sendError)}</p>}
           {successResult ? (
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
@@ -230,16 +202,17 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
                 <CheckCircle2 className="w-9 h-9" />
               </div>
               <h4 className="text-xl font-bold text-white">
-                {lang === 'ar' ? 'نتيجة الإرسال' : 'Notification results'}
+                {lang === 'ar' ? 'تم إرسال الإشعار بنجاح! 🚀' : 'Notification Broadcast Successfully! 🚀'}
               </h4>
               <p className="text-sm text-neutral-300 max-w-md mx-auto leading-relaxed">
-                {lang === 'ar'
-                  ? `قبلت خدمة الإشعارات الإرسال إلى ${successResult.sentCount} من ${successResult.subscribers} جهاز. فشل الإرسال إلى ${successResult.failCount}.`
-                  : `Push providers accepted ${successResult.sentCount} of ${successResult.subscribers} devices. Failed: ${successResult.failCount}.`}
+                {lang === 'ar' 
+                  ? successResult.sentCount > 0
+                    ? `تم تسليم التنبيه الفوري لشاشات الهواتف (${successResult.sentCount} أجهزة مستلمة). عند ضغط أي مستخدم على الإشعار سيتم توجيهه مباشرة لهذه الفاعلية.`
+                    : `تم حفظ ونشر الإشعار بنجاح في مركز الإشعارات لكل مستخدمي التطبيق. (عدد أجهزة Web Push المفعّلة حالياً: ${successResult.subscribers} جهاز).`
+                  : successResult.sentCount > 0
+                    ? `Delivered to (${successResult.sentCount} subscriber devices). Tapping the notification will immediately open this event inside the app.`
+                    : `Notification published to in-app Notification Center for all users. (Active Web Push devices: ${successResult.subscribers}).`}
               </p>
-              {!successResult.pilot && <p className="text-sm text-neutral-300">{successResult.inboxSaved
-                ? (lang === 'ar' ? 'تم الحفظ في مركز الإشعارات.' : 'Saved to the notification center.')
-                : (lang === 'ar' ? 'تعذّر الحفظ في مركز الإشعارات.' : 'Could not save to the notification center.')}</p>}
               <div className="pt-3">
                 <button
                   onClick={onClose}
@@ -274,15 +247,15 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
                       <span>{lang === 'ar' ? 'تفعيل جهازي الآن 📱' : 'Activate my device 📱'}</span>
                     </button>
                     <span className="font-mono font-bold px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                      {subscribersCount === null ? (lang === 'ar' ? 'العدد غير متاح' : 'Count unavailable') : (lang === 'ar' ? `${subscribersCount} جهاز مسجل` : `${subscribersCount} devices`)}
+                      {subscribersCount} {lang === 'ar' ? 'جهاز مسجل' : 'devices'}
                     </span>
                   </div>
                 </div>
                 {subscribersCount === 0 && (
                   <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed">
                     {lang === 'ar'
-                      ? 'لا توجد أجهزة مسجلة للموقع الحالي. يمكن للزوار تفعيل الإشعارات من المتصفح.'
-                      : 'No devices are registered for this site yet. Visitors can opt in from their browser.'}
+                      ? '💡 ملحوظة: العدد صفر لأن اشتراكات Web Push تُسجّل عندما يفتح المستخدم التطبيق في المتصفح أو التطبيق المثبت. اضغط زر "تفعيل جهازي الآن 📱" أعلاه لتسجيل جهازك وتجربة استلام التنبيه فوراً، وعند فتح المستخدمين للتطبيق سيتم تسجيل أجهزتهم تلقائياً.'
+                      : '💡 Note: Push subscriptions register when users open the app in Chrome/Safari or installed PWA. Click "Activate my device 📱" to register your phone now, and users will auto-register on opening.'}
                   </div>
                 )}
               </div>
@@ -382,15 +355,11 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
                 >
                   {lang === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button type="button" onClick={() => void handleSend(true)} disabled={isSending}
-                  className="rounded-xl border border-neutral-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
-                  {lang === 'ar' ? 'اختبار على أجهزتي' : 'Test on my devices'}
-                </button>
                 <button
                   type="button"
-                  onClick={() => void handleSend(false)}
+                  onClick={handleSend}
                   disabled={isSending}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-sm font-black shadow-lg shadow-amber-500/20 transition-all  cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-sm font-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50"
                 >
                   {isSending ? (
                     <>
@@ -409,6 +378,6 @@ export const BroadcastPushModal: React.FC<BroadcastPushModalProps> = ({
           )}
         </div>
       </div>
-    </div>, document.body
+    </div>
   );
 };

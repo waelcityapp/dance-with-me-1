@@ -148,7 +148,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
                     : 'bg-neutral-900 text-neutral-400 border-white/5 hover:border-white/10'
                 }`}
               >
-                {pushEnabled ? (lang === 'ar' ? 'إيقاف الإشعارات' : 'Turn off notifications') : (lang === 'ar' ? 'تفعيل الآن' : 'Enable')}
+                {pushEnabled ? (lang === 'ar' ? '✓ مفعلة' : '✓ ON') : (lang === 'ar' ? 'تفعيل الآن' : 'Enable')}
               </motion.button>
             </div>
           </div>

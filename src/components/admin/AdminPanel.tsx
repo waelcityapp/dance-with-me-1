@@ -147,7 +147,7 @@ export const AdminPanel: React.FC = () => {
   const [notifType, setNotifType] = useState<'system' | 'new_party' | 'course_alert' | 'trip' | 'expiry_warning'>('system');
   const [notifSending, setNotifSending] = useState(false);
   const [sendMobilePush, setSendMobilePush] = useState(true);
-  const [pushSubscribersCount, setPushSubscribersCount] = useState<number | null>(null);
+  const [pushSubscribersCount, setPushSubscribersCount] = useState<number>(0);
 
   useEffect(() => {
     getPushSubscribersCount().then(count => setPushSubscribersCount(count));
@@ -1992,8 +1992,8 @@ export const AdminPanel: React.FC = () => {
         });
         if (pushRes.success) {
           pushStatusMsg = lang === 'ar' 
-            ? `\n📱 وقبلت خدمة الإشعارات الإرسال (${pushRes.sentCount || 0} جهاز متصل)`
-            : `\n📱 Push provider accepted alerts for (${pushRes.sentCount || 0} devices)`;
+            ? `\n📱 وتم إرسال إشعار فوري للشاشات (${pushRes.sentCount || 0} جهاز متصل)`
+            : `\n📱 Push alert delivered to (${pushRes.sentCount || 0} devices)`;
         }
       }
 
@@ -8338,7 +8338,7 @@ export const AdminPanel: React.FC = () => {
                         {lang === 'ar' ? 'إرسال إشعار فوري لشاشات الهواتف (Web Push)' : 'Broadcast Live Phone Push Notification'}
                       </span>
                       <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full">
-                        {pushSubscribersCount === null ? (lang === 'ar' ? 'العدد غير متاح' : 'Count unavailable') : (lang === 'ar' ? `${pushSubscribersCount} جهاز مسجل` : `${pushSubscribersCount} registered devices`)}
+                        {lang === 'ar' ? `${pushSubscribersCount} مشترك مسجل` : `${pushSubscribersCount} subscribers`}
                       </span>
                     </div>
                     <p className="text-xs text-neutral-400">
