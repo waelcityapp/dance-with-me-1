@@ -30,3 +30,18 @@ export async function reviewAdChangeRequest(requestId: string, decision: 'approv
   return body;
 }
 
+export async function removeExpiredAdFromAccount(targetId: string): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('UNAUTHENTICATED');
+  const token = await user.getIdToken();
+  const response = await fetch('/api/ad-change-requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action: 'remove-expired', targetId }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.removedFromAdvertiserAt) {
+    throw new Error(body.error || 'AD_REMOVAL_FAILED');
+  }
+  return body.removedFromAdvertiserAt;
+}

@@ -122,7 +122,7 @@ const archiveExpiredSubmission = async (sub, now) => {
 
 const purgeArchivedSubmission = async (sub, now) => {
   const archivedAt = sub.archivedAt ? Date.parse(sub.archivedAt) : NaN;
-  if (sub.status !== 'archived' || Number.isNaN(archivedAt)) return false;
+  if (sub.removedFromAdvertiserAt || sub.status !== 'archived' || Number.isNaN(archivedAt)) return false;
   if (now - archivedAt < 30 * 24 * 60 * 60 * 1000) return false;
 
   for (const [url, resourceType] of uniqueMedia(sub)) {

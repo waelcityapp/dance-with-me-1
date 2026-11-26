@@ -1,5 +1,7 @@
 import { getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 
+import { isAdExpired } from '../../../shared/eventExpiry.js';
+
 const MAX_REQUESTS_PER_DAY = 4;
 
 function reply(res, status, body) { return res.status(status).json(body); }
@@ -18,7 +20,7 @@ function isAdminProfile(decoded, profile) {
 }
 function safeProposedData(data) {
   const copy = { ...data };
-  for (const key of ['id', 'advertiserId', 'status', 'eventRef', 'reviewedAt', 'reviewedBy', 'expiresAt', 'archivedAt', 'submittedAt']) delete copy[key];
+  for (const key of ['id', 'advertiserId', 'status', 'eventRef', 'reviewedAt', 'reviewedBy', 'expiresAt', 'archivedAt', 'removedFromAdvertiserAt', 'submittedAt']) delete copy[key];
   if (copy.eventData && typeof copy.eventData === 'object') {
     copy.eventData = { ...copy.eventData };
     delete copy.eventData.id;
@@ -28,15 +30,50 @@ function safeProposedData(data) {
   return copy;
 }
 
+export async function removeExpiredAd(firestore, targetId, ownerId, now = Date.now()) {
+  const adRef = firestore.collection('ad_submissions').doc(targetId);
+  return firestore.runTransaction(async (tx) => {
+    const ad = (await tx.get(adRef)).data();
+    if (!ad) throw new Error('AD_NOT_FOUND');
+    if (ad.advertiserId !== ownerId) throw new Error('FORBIDDEN');
+    if (ad.removedFromAdvertiserAt) return ad.removedFromAdvertiserAt;
+
+    // Older submissions can lack an expiry timestamp. Read the linked event,
+    // using its recorded owner and expiry rather than the editable submission copy.
+    if (!isAdExpired(ad, null, now)) {
+      if (ad.status !== 'approved') throw new Error('AD_NOT_EXPIRED');
+      const events = firestore.collection('events');
+      const eventId = safeId(ad.eventData?.id || targetId, 'EVENT_ID');
+      const candidate = (await tx.get(events.doc(eventId))).data();
+      let event = candidate?.creatorId === ownerId ? candidate : undefined;
+      if (!event && Number.isSafeInteger(ad.eventRef)) {
+        const matches = await tx.get(events.where('eventRef', '==', ad.eventRef));
+        event = matches.docs.map(doc => doc.data()).find(item => item.creatorId === ownerId);
+      }
+      if (!isAdExpired(ad, event, now)) throw new Error('AD_NOT_EXPIRED');
+    }
+
+    const removedFromAdvertiserAt = new Date(now).toISOString();
+    tx.update(adRef, { removedFromAdvertiserAt });
+    return removedFromAdvertiserAt;
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return reply(res, 405, { error: 'METHOD_NOT_ALLOWED' });
   try {
     const actor = await verifyRequestUser(req);
     const firestore = getAdminDb();
-    const actorProfile = await firestore.collection('users').doc(actor.uid).get();
     const action = String(req.body?.action || 'create');
 
+    if (action === 'remove-expired') {
+      const targetId = safeId(req.body?.targetId, 'TARGET_ID');
+      const removedFromAdvertiserAt = await removeExpiredAd(firestore, targetId, actor.uid);
+      return reply(res, 200, { ok: true, removedFromAdvertiserAt });
+    }
+
     if (action === 'review') {
+      const actorProfile = await firestore.collection('users').doc(actor.uid).get();
       if (!isAdminProfile(actor, actorProfile.data() || {})) return reply(res, 403, { error: 'ADMIN_REQUIRED' });
       const requestId = safeId(req.body?.requestId, 'REQUEST_ID');
       const decision = String(req.body?.decision || '');
@@ -57,6 +94,7 @@ export default async function handler(req, res) {
           return { eventId: null };
         }
         const currentAd = adSnapshot.data() || {};
+        if (currentAd.removedFromAdvertiserAt) throw new Error('AD_REMOVED');
         const change = safeProposedData(request.proposedData || {});
         const nextAd = { ...change, reviewedAt: now };
         if (request.requestType === 'renew') nextAd.renewalCount = Number(currentAd.renewalCount || 0) + 1;
@@ -105,6 +143,7 @@ export default async function handler(req, res) {
       const [adSnapshot, limitSnapshot] = await Promise.all([tx.get(adRef), tx.get(limitRef)]);
       if (!adSnapshot.exists) throw new Error('AD_NOT_FOUND');
       if (adSnapshot.data()?.advertiserId !== actor.uid) throw new Error('FORBIDDEN');
+      if (adSnapshot.data()?.removedFromAdvertiserAt) throw new Error('AD_REMOVED');
       const used = Number(limitSnapshot.data()?.count || 0);
       if (used >= MAX_REQUESTS_PER_DAY) throw new Error('DAILY_CHANGE_LIMIT_REACHED');
 
@@ -131,6 +170,8 @@ export default async function handler(req, res) {
       : message === 'FORBIDDEN' ? 403
       : message === 'DAILY_CHANGE_LIMIT_REACHED' ? 429
       : message === 'AD_NOT_FOUND' ? 404
+      : ['AD_NOT_EXPIRED', 'AD_REMOVED'].includes(message) ? 409
+      : String(error?.code || '').startsWith('auth/') ? 401
       : message.startsWith('INVALID_') ? 400 : 500;
     return reply(res, status, { error: message });
   }

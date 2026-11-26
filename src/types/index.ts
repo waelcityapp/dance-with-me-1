@@ -214,6 +214,7 @@ export interface AdSubmission {
   archivedAt?: string;
   previousMediaUrl?: string;
   deletionRequestedAt?: string;
+  removedFromAdvertiserAt?: string;
   renewalCount?: number;
   /** Marks a pending submission that is requesting a renewal rather than a new ad. */
   renewalRequest?: boolean;
