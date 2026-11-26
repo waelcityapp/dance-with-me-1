@@ -213,6 +213,7 @@ export interface AdSubmission {
   reviewedAt?: string;
   expiresAt?: string;
   archivedAt?: string;
+  removedFromAdvertiserAt?: string;
   renewalCount?: number;
   /** Marks a pending submission that is requesting a renewal rather than a new ad. */
   renewalRequest?: boolean;

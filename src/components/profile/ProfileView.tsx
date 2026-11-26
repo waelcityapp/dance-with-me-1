@@ -10,7 +10,15 @@ import { DanceEvent, AdSubmission, EventBooking, DanceStyle, ALL_DANCE_STYLES, A
 import { subscribeToAdSubmissions, saveAdSubmissionToFirestore, saveNotificationToFirestore, deleteAdSubmissionFromFirestore, deleteSupportMessageFromFirestore, saveEventToFirestore } from '../../lib/firebase';
 import { GENDER_NEUTRAL_AVATARS, DEFAULT_NEUTRAL_AVATAR } from '../../utils/avatars';
 import { compressImage, uploadToCloudinary, deleteFromCloudinary } from '../../utils/cloudinary';
-import { submitAdChangeRequest } from '../../lib/adChangeRequests';
+import { removeExpiredAdFromAccount, submitAdChangeRequest } from '../../lib/adChangeRequests';
+
+import { isAdExpired } from '../../../shared/eventExpiry.js';
+
+function matchesAdEvent(sub: AdSubmission, event: DanceEvent) {
+  return event.id === sub.eventData?.id
+    || event.id === sub.id
+    || (sub.eventRef != null && event.eventRef === sub.eventRef);
+}
 
 // Helper function to match bookings to a specific ad submission / event
 export const getSubBookings = (sub: AdSubmission, allBookings: EventBooking[], allEvents: DanceEvent[]) => {
@@ -91,12 +99,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const isAdminView = !!adminViewUser;
 
   const [adSubmissions, setAdSubmissions] = useState<AdSubmission[]>([]);
+  const findLinkedEvent = (sub: AdSubmission) => events.find(event => matchesAdEvent(sub, event));
+  const findOwnedSubmission = (event: DanceEvent) => adSubmissions.find(sub =>
+    sub.advertiserId === contextUser?.id && !!contextUser && matchesAdEvent(sub, event)
+  );
+  const visibleExpiredEvents = expiredEvents.filter(event => !findOwnedSubmission(event)?.removedFromAdvertiserAt);
+  const getDeletableArchivedSubmission = (event: DanceEvent) => {
+    const sub = findOwnedSubmission(event);
+    return !isAdminView && sub && isAdExpired(sub, event) ? sub : undefined;
+  };
   const [cleaningUp, setCleaningUp] = useState(false);
 
   // Strictly filter adSubmissions to ONLY show ads belonging to the logged in user
   const myUserAdSubmissions = useMemo(() => {
     if (!user) return [];
     return adSubmissions.filter(sub => {
+      if (sub.removedFromAdvertiserAt) return false;
       if (sub.advertiserId && sub.advertiserId === user.id) return true;
       if (user.phone && sub.phone && sub.phone === user.phone) return true;
       return false;
@@ -129,15 +147,51 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
+  const handleRemoveArchivedSubmission = async (sub: AdSubmission) => {
+    if (!contextUser || isAdminView || sub.advertiserId !== contextUser.id || archiveDeleteId) return;
+    setArchiveDeleteId(sub.id);
+    try {
+      const confirmed = await triggerConfirm(lang === 'ar'
+        ? 'هيتم حذف الإعلان المنتهي من حسابك مع الاحتفاظ بسجلات الحجز والفواتير. هل تريد المتابعة؟'
+        : 'Remove this expired ad from your account? Booking and invoice records will be kept.');
+      if (!confirmed) return;
+
+      const removedFromAdvertiserAt = await removeExpiredAdFromAccount(sub.id);
+      const markRemoved = (item: AdSubmission) =>
+        item.id === sub.id ? { ...item, removedFromAdvertiserAt } : item;
+      setAdSubmissions(current => current.map(markRemoved));
+      try {
+        const cached: AdSubmission[] = JSON.parse(localStorage.getItem('dwm_ad_submissions') || '[]');
+        localStorage.setItem('dwm_ad_submissions', JSON.stringify(cached.map(markRemoved)));
+      } catch {
+        // Firestore is the source of truth when the local cache is unavailable.
+      }
+    } catch (error) {
+      const notExpired = error instanceof Error && error.message === 'AD_NOT_EXPIRED';
+      alert(notExpired
+        ? (lang === 'ar' ? 'الإعلان لم ينتهِ بعد.' : 'This ad has not expired yet.')
+        : (lang === 'ar' ? 'تعذّر حذف الإعلان من حسابك. حاول مرة أخرى.' : 'Could not remove this ad from your account. Please try again.'));
+    } finally {
+      setArchiveDeleteId(null);
+    }
+  };
+
   const handleDeleteAdSubmission = async (submissionId: string) => {
+    const subToDelete = adSubmissions.find(sub => sub.id === submissionId);
+    if (!subToDelete) return;
+    if (isAdExpired(subToDelete, findLinkedEvent(subToDelete))) {
+      await handleRemoveArchivedSubmission(subToDelete);
+      return;
+    }
+    if (subToDelete.status === 'approved') {
+      alert(lang === 'ar'
+        ? 'لا يمكن حذف إعلان نشط من حساب المستخدم.'
+        : 'An active ad cannot be deleted from the user account.');
+      return;
+    }
     const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف هذا الإعلان بشكل نهائي؟' : 'Are you sure you want to permanently delete this ad?');
     if (!confirmed) return;
     try {
-      const subToDelete = adSubmissions.find(s => s.id === submissionId);
-      if (subToDelete) {
-        const eventId = subToDelete.eventData?.id || subToDelete.id;
-        if (eventId) deleteEvent(eventId);
-      }
       await deleteAdSubmissionFromFirestore(submissionId);
       setAdSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
       try {
@@ -151,16 +205,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   const handleDeleteAllAdSubmissions = async () => {
-    const confirmed = await triggerConfirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في حذف جميع إعلاناتك وفواتيرك بشكل نهائي؟' : 'Are you sure you want to permanently delete all your ads and invoices?');
+    const confirmed = await triggerConfirm(lang === 'ar' ? 'سيتم حذف إعلاناتك غير المنشورة نهائيًا. هل تريد المتابعة؟' : 'Permanently delete your unpublished ads?');
     if (!confirmed) return;
     try {
-      const promises = myUserAdSubmissions.map(sub => {
-        const eventId = sub.eventData?.id || sub.id;
-        if (eventId) deleteEvent(eventId);
-        return deleteAdSubmissionFromFirestore(sub.id);
-      });
-      await Promise.all(promises);
-      setAdSubmissions([]);
+      const drafts = myUserAdSubmissions.filter(sub => sub.status === 'pending' || sub.status === 'rejected');
+      const deleted = await Promise.all(drafts.map(async sub =>
+        await deleteAdSubmissionFromFirestore(sub.id) ? sub.id : null
+      ));
+      setAdSubmissions(prev => prev.filter(sub => !deleted.includes(sub.id)));
       localStorage.setItem('dwm_ad_submissions', '[]');
     } catch (err) {
       console.error('Error deleting all ads:', err);
@@ -228,8 +280,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [attendanceSub, setAttendanceSub] = useState<AdSubmission | null>(null);
   const [manageStaffSub, setManageStaffSub] = useState<AdSubmission | null>(null);
 
-  const handleArchiveDelete = async (eventId: string) => {
-    if (archiveDeleteId) return;
+  const handleArchiveDelete = async (event: DanceEvent) => {
+    const sub = getDeletableArchivedSubmission(event);
+    if (sub) {
+      await handleRemoveArchivedSubmission(sub);
+      return;
+    }
+    if (!isAdminUnlocked || archiveDeleteId) return;
+    const eventId = event.id;
 
     setArchiveDeleteId(eventId);
     try {
@@ -848,7 +906,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           >
             <Clock className="h-4 w-4" />
             <span>{lang === 'ar' ? 'الأرشيف' : 'Archive'}</span>
-            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'archive' ? 'bg-black/20' : 'bg-slate-100 dark:bg-neutral-800'}`}>{expiredEvents.length}</span>
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeSection === 'archive' ? 'bg-black/20' : 'bg-slate-100 dark:bg-neutral-800'}`}>{visibleExpiredEvents.length}</span>
           </button>
         </div>
       </div>
@@ -884,8 +942,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               }`}
             >
               {showExpiredArchive
-                ? (lang === 'ar' ? `إخفاء الأرشيف المنقضي (${expiredEvents.length})` : `Hide Archive (${expiredEvents.length})`)
-                : (lang === 'ar' ? `عرض الأرشيف المنقضي (${expiredEvents.length})` : `View Archive (${expiredEvents.length})`)}
+                ? (lang === 'ar' ? `إخفاء الأرشيف المنقضي (${visibleExpiredEvents.length})` : `Hide Archive (${visibleExpiredEvents.length})`)
+                : (lang === 'ar' ? `عرض الأرشيف المنقضي (${visibleExpiredEvents.length})` : `View Archive (${visibleExpiredEvents.length})`)}
             </button>
           </div>
         </div>
@@ -902,21 +960,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span>{lang === 'ar' ? 'يمكنك إدارتها أو حذفها' : 'Manage or delete archived items'}</span>
             </div>
 
-            {expiredEvents.length === 0 ? (
+            {visibleExpiredEvents.length === 0 ? (
               <p className="text-xs text-slate-400 dark:text-neutral-500 text-center py-4">{lang === 'ar' ? 'لا توجد إعلانات منقضية حالياً' : 'No expired items found'}</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {expiredEvents.map((ev, idx) => (
+                {visibleExpiredEvents.map((ev, idx) => (
                   <div key={ev.id} className="relative">
                     <EventCard event={ev} index={idx} onOpenMap={onOpenMap} onOpenShare={onOpenShare} hideAdminControls />
-                    <button
-                      onClick={() => handleArchiveDelete(ev.id)}
+                    {(getDeletableArchivedSubmission(ev) || isAdminUnlocked) && <button
+                      onClick={() => handleArchiveDelete(ev)}
                       disabled={archiveDeleteId !== null}
                       className="absolute top-2 left-2 z-40 flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-bold text-slate-900 dark:text-white shadow-lg hover:bg-red-700 transition-colors disabled:cursor-wait disabled:opacity-60"
                     >
                       <Trash2 className="h-3 w-3" />
                       <span>{lang === 'ar' ? 'حذف من الأرشيف' : 'Delete from Archive'}</span>
-                    </button>
+                    </button>}
                   </div>
                 ))}
               </div>
@@ -966,7 +1024,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <button
                 onClick={handleDeleteAllAdSubmissions}
                 className="flex items-center gap-2 rounded-xl bg-red-600/10 border border-red-500/30 px-3 py-2.5 text-xs font-bold text-red-400 hover:bg-red-600 hover:text-white transition-all cursor-pointer shadow-md"
-                title={lang === 'ar' ? 'حذف جميع الإعلانات والفواتير بشكل نهائي' : 'Delete all ads and invoices permanently'}
+                title={lang === 'ar' ? 'حذف الإعلانات غير المنشورة نهائيًا' : 'Permanently delete unpublished ads'}
               >
                 <Trash2 className="h-4 w-4" />
                 <span>{lang === 'ar' ? 'حذف الكل' : 'Delete All'}</span>
@@ -990,7 +1048,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         ) : (
           <div className="space-y-4">
             {myUserAdSubmissions.map((sub) => {
-              const isArchived = sub.status === 'archived' || (sub.expiresAt && new Date(sub.expiresAt).getTime() <= Date.now());
+              const isArchived = isAdExpired(sub, findLinkedEvent(sub));
               const isEditing = editingSubId === sub.id;
               const associatedEvent = events.find(e => e.id === sub.eventData?.id || e.id === sub.id);
 
@@ -1577,6 +1635,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                       <button
                         onClick={() => handleDeleteAdSubmission(sub.id)}
+                        disabled={archiveDeleteId !== null}
                         className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/15 text-red-400 hover:text-red-300 font-bold text-xs transition-all cursor-pointer"
                         title={lang === 'ar' ? 'حذف هذا الإعلان' : 'Delete this ad'}
                       >

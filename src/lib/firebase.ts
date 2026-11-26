@@ -491,6 +491,11 @@ export function subscribeToAdSubmissions(
         const seenAdKeys = new Set<string>();
         snapshot.forEach((docSnap) => {
           const sub = docSnap.data() as AdSubmission;
+          // Keep removed ads available as records without treating them as duplicate listings.
+          if (sub.removedFromAdvertiserAt) {
+            list.push(sub);
+            return;
+          }
           const hasImage = isValidMediaUrl(sub.mediaUrl) || (sub.eventData && (isValidMediaUrl(sub.eventData.mediaUrl) || isValidMediaUrl(sub.eventData.thumbnailUrl)));
           if (!hasImage) {
             console.warn('Auto-deleting ad submission without image from DB:', sub.id, sub.titleAr);
