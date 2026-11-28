@@ -27,6 +27,7 @@ import { CustomConfirmModal } from './components/modals/CustomConfirmModal';
 import { PushPermissionPrompt } from './components/pwa/PushPermissionPrompt';
 import { FloatingNotificationBanner } from './components/pwa/FloatingNotificationBanner';
 import { AdViewsDetailsModal } from './components/modals/AdViewsDetailsModal';
+import { AdReportPage } from './components/admin/AdReportPage';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { MarketersManagement } from './components/admin/MarketersManagement';
 import { MarketerAdminWorkspace } from './components/admin/MarketerAdminWorkspace';
@@ -63,6 +64,7 @@ const AppContent: React.FC = () => {
     activePushToast,
     setActivePushToast,
     selectedViewsEvent,
+    adReport,
     setSelectedViewsEvent,
     isAdminUnlocked,
     setIsAdminLockModalOpen
@@ -174,7 +176,10 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       const previousTab = event.state?.cityeveTab;
-      if (isRestorableTab(previousTab)) {
+      if (previousTab === 'ad_reports' && adReport && user?.isAdmin) {
+        setActiveTab('ad_reports');
+        window.scrollTo(0, 0);
+      } else if (isRestorableTab(previousTab)) {
         setActiveTab(previousTab);
       } else if (activeTab !== 'explore') {
         setActiveTab('explore');
@@ -185,7 +190,24 @@ const AppContent: React.FC = () => {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [activeTab, setActiveTab]);
+  }, [activeTab, setActiveTab, adReport, user?.isAdmin]);
+
+  const wasInAdReport = useRef(false);
+  useEffect(() => {
+    if (activeTab === 'ad_reports') {
+      wasInAdReport.current = true;
+      if (!user?.isAdmin || !adReport) setActiveTab('explore');
+    } else if (wasInAdReport.current) {
+      wasInAdReport.current = false;
+      if (adReport && activeTab === adReport.returnTab) {
+        requestAnimationFrame(() => {
+          const card = document.getElementById(`event-${adReport.event.id}`);
+          if (card) card.scrollIntoView({ block: 'center' });
+          else window.scrollTo(0, adReport.scrollY);
+        });
+      }
+    }
+  }, [activeTab, adReport, setActiveTab, user?.isAdmin]);
 
   // Modal States
   const [selectedMapEvent, setSelectedMapEvent] = useState<DanceEvent | null>(null);
@@ -330,7 +352,13 @@ const AppContent: React.FC = () => {
 
       {/* Main Body Content */}
       <main className={`flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pb-20 ${(!activeTab || activeTab === 'explore' || activeTab === 'parties' || activeTab === 'courses' || activeTab === 'trips') ? 'pt-0.5 sm:pt-1' : 'pt-2.5'}`}>
-        {activeTab === 'verification' ? (
+        {activeTab === 'ad_reports' && user?.isAdmin && adReport ? (
+          <AdReportPage
+            key={adReport.event.id}
+            event={adReport.event}
+            onBack={() => window.history.back()}
+          />
+        ) : activeTab === 'verification' ? (
           <VerificationView />
         ) : activeTab === 'about_us' ? (
           <AboutUsPage />

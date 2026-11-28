@@ -1,3 +1,4 @@
+import adReport from './api/_lib/handlers/ad-report.js';
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -182,6 +183,8 @@ async function startServer() {
 
   // JSON Body Parser for API routes
   app.use(express.json({ limit: "10mb" }));
+
+  app.all('/api/ad-report', adReport);
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {

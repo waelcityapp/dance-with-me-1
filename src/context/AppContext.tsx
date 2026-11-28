@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { recordAdReportAction } from '../lib/adReporting';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { DanceCategory, DanceEvent, Language, NotificationItem, TabType, ThemeMode, UserProfile, SupportMessage, DanceStyle, EventBooking, AdSubmission, AccountTier } from '../types';
 import { isEventExpired } from '../utils/dateUtils';
@@ -88,6 +89,8 @@ interface AppContextType {
   setEditingEvent: (ev: DanceEvent | null) => void;
   selectedViewsEvent: DanceEvent | null;
   setSelectedViewsEvent: (ev: DanceEvent | null) => void;
+  adReport: { event: DanceEvent; returnTab: TabType; scrollY: number } | null;
+  openAdReport: (event: DanceEvent) => void;
   recordEventView: (eventId: string) => void;
   notifications: NotificationItem[];
   setNotifications: React.Dispatch<React.SetStateAction<NotificationItem[]>>;
@@ -209,10 +212,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [adminSelectedUserId, setAdminSelectedUserId] = useState<string | null>(null);
 
-  const handleSetActiveTab = (tab: TabType) => {
+  const handleSetActiveTab = useCallback((tab: TabType) => {
     setActiveTab(tab);
     logAnalyticsEvent(`tab_${tab}`);
-  };
+  }, []);
 
   useEffect(() => {
     try {
@@ -406,6 +409,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userAdSubmissions, setUserAdSubmissions] = useState<AdSubmission[]>([]);
   const [selectedBookingEvent, setSelectedBookingEvent] = useState<DanceEvent | null>(null);
   const [selectedViewsEvent, setSelectedViewsEvent] = useState<DanceEvent | null>(null);
+  const [adReport, setAdReport] = useState<AppContextType['adReport']>(null);
+  const openAdReport = (event: DanceEvent) => {
+    if (!user?.isAdmin) return;
+    setAdReport({ event, returnTab: activeTab, scrollY: window.scrollY });
+    setActiveTab('ad_reports');
+    window.scrollTo(0, 0);
+  };
   const viewedEventsSessionRef = React.useRef<Set<string>>(new Set());
   const processedRefsSet = React.useRef<Set<string>>(new Set());
 
@@ -1078,6 +1088,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const bookTicket = (eventId: string) => {
+    if (!user?.isAdmin) recordAdReportAction(eventId, 'booking');
     if (!user) {
       openGuestAlert('book');
       return;
@@ -1563,6 +1574,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setEditingEvent,
       selectedViewsEvent,
       setSelectedViewsEvent,
+      adReport,
+      openAdReport,
       recordEventView,
       notifications,
       setNotifications,

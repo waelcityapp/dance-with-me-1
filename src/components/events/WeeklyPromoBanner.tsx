@@ -1,3 +1,4 @@
+import { recordAdReportAction, useAdReportVisit } from '../../lib/adReporting';
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
@@ -39,6 +40,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
       recordEventView(promoEvent.id);
     }
   }, [promoEvent?.id]);
+  const reportCardRef = useAdReportVisit(promoEvent.id, !user?.isAdmin && !promoEvent.isPaused);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackCountedRef = useRef(false);
 
@@ -117,7 +119,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
   const expiryInfo = getDaysRemainingBeforeExpiry(promoEvent.eventDate);
 
   return (
-    <div id={`event-${promoEvent.id}`} className="relative mb-8 overflow-hidden rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-xl dark:shadow-[0_25px_55px_rgba(0,0,0,0.8)] hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-2xl dark:hover:shadow-[0_35px_70px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 gold-glow-lg transition-all duration-300">
+    <div ref={reportCardRef} id={`event-${promoEvent.id}`} className="relative mb-8 overflow-hidden rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-xl dark:shadow-[0_25px_55px_rgba(0,0,0,0.8)] hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-2xl dark:hover:shadow-[0_35px_70px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 gold-glow-lg transition-all duration-300">
       {/* Absolute Vertical Accent Line matching Main Banner */}
       <div className="absolute start-0 top-0 bottom-0 w-1.5 z-30 bg-gradient-to-b from-[#5B0813] via-[#8B1528] to-[#5B0813] border-e border-amber-400/50 shadow-[0_0_12px_rgba(120,16,31,0.7)]" />
 
@@ -635,6 +637,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  if (!user?.isAdmin) recordAdReportAction(promoEvent.id, 'phone');
                   if (!user) {
                     openGuestAlert('contact');
                     return;
@@ -651,6 +654,7 @@ export const WeeklyPromoBanner: React.FC<WeeklyPromoBannerProps> = ({ promoEvent
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  if (!user?.isAdmin) recordAdReportAction(promoEvent.id, 'whatsapp');
                   if (!user) {
                     openGuestAlert('contact');
                     return;

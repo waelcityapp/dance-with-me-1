@@ -301,4 +301,4 @@ export interface AppAssets {
 
 export type Language = 'ar' | 'en';
 export type ThemeMode = 'light' | 'dark' | 'system';
-export type TabType = 'explore' | 'parties' | 'courses' | 'trips' | 'profile' | 'create_ad' | 'admin' | 'edit_ad_admin' | 'verification';
+export type TabType = 'explore' | 'parties' | 'courses' | 'trips' | 'profile' | 'create_ad' | 'admin' | 'edit_ad_admin' | 'verification' | 'ad_reports';

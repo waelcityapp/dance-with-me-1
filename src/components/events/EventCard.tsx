@@ -2,13 +2,14 @@ import { cairoEventStart } from '../../../shared/eventStartTime.js';
 import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DanceEvent, getStyleLabel } from '../../types';
-import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Eye, EyeOff, Crown, Sparkles, UserCheck, User, BellRing, Smartphone, Radio, ZoomIn } from 'lucide-react';
+import { Volume2, VolumeX, MapPin, Calendar, Heart, Share2, Phone, MessageCircle, Clock, CheckCircle, ShieldAlert, Trash2, Edit, Pause, Play, Maximize2, Eye, EyeOff, BarChart3, Crown, Sparkles, UserCheck, User, BellRing, Smartphone, Radio, ZoomIn } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, getDaysRemainingBeforeExpiry } from '../../utils/dateUtils';
 import { isGoogleDriveUrl, getGoogleDrivePreviewUrl, getSafePlayableVideoUrl } from '../../lib/mediaUtils';
 import { FullscreenVideoModal } from './FullscreenVideoModal';
 import { EventImageLightboxModal } from './EventImageLightboxModal';
 import { BroadcastPushModal } from '../modals/BroadcastPushModal';
+import { recordAdReportAction, useAdReportVisit } from '../../lib/adReporting';
 import { logAnalyticsEvent } from '../../lib/firebase';
 import { getVideoLimitMessage, getVideoViewerKey, reserveVideoPlay } from '../../lib/videoPlaybackLimit';
 
@@ -36,7 +37,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
     setActiveTab,
     setAdminSelectedUserId,
     setSelectedViewsEvent,
-    recordEventView
+    recordEventView,
+    openAdReport
   } = useApp();
 
   const start = cairoEventStart(event.eventDate?.slice(0, 10), event.eventStartTime);
@@ -52,6 +54,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
     }
   }, [event?.id]);
 
+  const reportCardRef = useAdReportVisit(event.id, !user?.isAdmin && !event.isPaused);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackCountedRef = useRef(false);
 
@@ -142,6 +145,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
 
   return (
     <motion.div
+      ref={reportCardRef}
       id={`event-${event.id}`}
       layout
       initial={{ opacity: 0, y: 20 }}
@@ -264,6 +268,19 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
           </button>
           {showAdminTools && (
           <div className="pointer-events-auto flex flex-wrap gap-2 bg-neutral-950/40 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setShowAdminTools(false);
+                openAdReport(event);
+              }}
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-blue-400/50 bg-blue-700 px-2.5 text-xs font-bold text-white hover:bg-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            >
+              <BarChart3 aria-hidden="true" className="h-4 w-4" />
+              {lang === 'ar' ? 'تقارير' : 'Reports'}
+            </button>
             {/* Position Display */}
             <div 
               className="flex h-9 px-3 items-center justify-center rounded-xl bg-neutral-950/80 border border-amber-500/50 text-[11px] font-black text-amber-400 font-mono shadow-md select-all"
@@ -654,6 +671,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  if (!user?.isAdmin) recordAdReportAction(event.id, 'phone');
                   if (!user) {
                     openGuestAlert('contact');
                     return;
@@ -670,6 +688,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index, onOpenMap, o
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  if (!user?.isAdmin) recordAdReportAction(event.id, 'whatsapp');
                   if (!user) {
                     openGuestAlert('contact');
                     return;

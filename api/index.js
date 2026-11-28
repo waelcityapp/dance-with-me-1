@@ -2,6 +2,7 @@ import accountReference from './_lib/handlers/account-reference.js';
 import adChangeRequests from './_lib/handlers/ad-change-requests.js';
 import adminUnlock from './_lib/handlers/admin-unlock.js';
 import bookings from './_lib/handlers/bookings.js';
+import adReport from './_lib/handlers/ad-report.js';
 import chatgptReferral from './_lib/handlers/chatgpt-referral.js';
 import cleanupArchivedAds from './_lib/handlers/cleanup-archived-ads.js';
 import cleanupBookingReceipts from './_lib/handlers/cleanup-booking-receipts.js';
@@ -19,6 +20,7 @@ const handlers = new Map([
   ['/ad-change-requests', adChangeRequests],
   ['/admin-unlock', adminUnlock],
   ['/bookings', bookings],
+  ['/ad-report', adReport],
   ['/chatgpt-referral', chatgptReferral],
   ['/cleanup-archived-ads', cleanupArchivedAds],
   ['/cleanup-booking-receipts', cleanupBookingReceipts],
