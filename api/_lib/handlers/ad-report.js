@@ -1,5 +1,6 @@
 import { isEventExpired } from '../../../shared/eventExpiry.js';
 import { admin, getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
+import { hasAdReportAccess } from '../adReportAccess.js';
 import { adReportActions, adReportSources } from '../../../shared/adReporting.js';
 
 const cairoDate = new Intl.DateTimeFormat('en', {
@@ -48,13 +49,8 @@ export default async function adReport(req, res) {
       throw error;
     });
     if (!actor) return res.status(401).end();
-    const owner = String(process.env.ADMIN_EMAIL || 'waelvts@gmail.com').trim().toLowerCase();
-    const isOwner = actor.email_verified && actor.email?.trim().toLowerCase() === owner;
-    if (!isOwner && actor.admin !== true) {
-      return res.status(403).end();
-    }
-
     const db = getAdminDb();
+    if (!(await hasAdReportAccess(db, actor))) return res.status(403).end();
     const days = requestedDays === 30 ? 30 : 7;
     // Move across calendar days using noon UTC, which also falls on that day in Cairo.
     const today = new Date(`${cairoDay()}T12:00:00Z`);

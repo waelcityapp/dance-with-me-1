@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { adReportActions, adReportSources } from '../../../shared/adReporting.js';
 import { useApp } from '../../context/AppContext';
 import { AdReportLoadError, loadAdReport } from '../../lib/adReporting';
+import { verifyAdminSecretCode } from '../../lib/firebase';
 import { DanceEvent } from '../../types';
 
 const sourceLabels: Record<string, [string, string]> = {
@@ -27,6 +28,9 @@ export const AdReportPage: React.FC<{ event: DanceEvent; onBack: () => void }> =
   const [retry, setRetry] = useState(0);
   const [report, setReport] = useState<Record<string, number> | null>(null);
   const [error, setError] = useState<number | null>(null);
+  const [adminCode, setAdminCode] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState('');
   const number = new Intl.NumberFormat(isAr ? 'ar-EG' : 'en');
 
   useEffect(() => {
@@ -47,10 +51,28 @@ export const AdReportPage: React.FC<{ event: DanceEvent; onBack: () => void }> =
   const totalViews = adReportSources.reduce((total, source) => total + (report?.[`${source}_visit`] || 0), 0);
   const errorMessage = error === 401
     ? (isAr ? 'سجّل الدخول بحساب الإدارة من جديد، ثم افتح التقرير.' : 'Sign in again with your admin account, then reopen the report.')
-    : error === 403
-      ? (isAr ? 'التقرير متاح لحساب الإدارة الموثّق.' : 'This report is available to verified admin accounts.')
-      : (isAr ? 'تعذّر تحميل التقرير. جرّب مرة أخرى.' : 'The report could not be loaded. Try again.');
+    : (isAr ? 'تعذّر تحميل التقرير. جرّب مرة أخرى.' : 'The report could not be loaded. Try again.');
   const BackArrow = isAr ? ArrowRight : ArrowLeft;
+
+  const unlockReport = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (unlocking || !adminCode.trim()) return;
+    const code = adminCode.trim();
+    setAdminCode('');
+    setUnlockError('');
+    setUnlocking(true);
+    try {
+      if (await verifyAdminSecretCode(code, 'ad_reports')) {
+        setRetry(attempt => attempt + 1);
+      } else {
+        setUnlockError(isAr ? 'رمز الإدارة غير صحيح.' : 'The admin code is incorrect.');
+      }
+    } catch {
+      setUnlockError(isAr ? 'تعذّر تأكيد جلسة الإدارة. جرّب مرة أخرى.' : 'Could not confirm your admin session. Try again.');
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   return (
     <section dir={isAr ? 'rtl' : 'ltr'} aria-labelledby="ad-report-title" className="space-y-4 px-1 py-4 text-neutral-950 dark:text-white sm:px-2">
@@ -74,7 +96,28 @@ export const AdReportPage: React.FC<{ event: DanceEvent; onBack: () => void }> =
       <p className="text-sm text-neutral-600 dark:text-neutral-300">
         {isAr ? 'تُحتسب المشاهدة بمجرد ظهور الإعلان على شاشة الزائر، حتى لو ما ضغطش على أي زر. الأرقام تبدأ من وقت تفعيل التتبّع.' : 'A view is counted when the ad appears on a visitor’s screen, even if they never click. Counts start when tracking is enabled.'}
       </p>
-      {error !== null ? (
+      {error === 403 ? (
+        <form onSubmit={unlockReport} className="space-y-3 rounded-xl border border-neutral-300 p-4 dark:border-neutral-700">
+          <label htmlFor="ad-report-admin-code" className="block text-sm font-bold">
+            {isAr ? 'أكّد جلسة الإدارة برمز الإدارة الحالي' : 'Confirm your session with your existing admin code'}
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <input
+              id="ad-report-admin-code"
+              type="password"
+              autoComplete="off"
+              required
+              value={adminCode}
+              onChange={e => setAdminCode(e.target.value)}
+              className="min-h-10 w-48 max-w-full rounded-lg border border-neutral-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+            <button type="submit" disabled={unlocking || !adminCode.trim()} className="min-h-10 rounded-lg bg-blue-700 px-3 text-sm font-bold text-white disabled:opacity-50">
+              {unlocking ? (isAr ? 'جارٍ التأكيد…' : 'Confirming…') : (isAr ? 'افتح التقرير' : 'Open report')}
+            </button>
+          </div>
+          {unlockError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{unlockError}</p>}
+        </form>
+      ) : error !== null ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-neutral-300 p-4 dark:border-neutral-700">
           <span>{errorMessage}</span>
           <button type="button" className="font-bold underline" onClick={() => setRetry(attempt => attempt + 1)}>{isAr ? 'إعادة المحاولة' : 'Try again'}</button>
