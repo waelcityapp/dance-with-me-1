@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { adReportActions, adReportSources } from '../../../shared/adReporting.js';
 import { useApp } from '../../context/AppContext';
-import { loadAdReport } from '../../lib/adReporting';
+import { AdReportLoadError, loadAdReport } from '../../lib/adReporting';
 import { DanceEvent } from '../../types';
 
 const sourceLabels: Record<string, [string, string]> = {
@@ -26,22 +26,30 @@ export const AdReportPage: React.FC<{ event: DanceEvent; onBack: () => void }> =
   const [days, setDays] = useState(7);
   const [retry, setRetry] = useState(0);
   const [report, setReport] = useState<Record<string, number> | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<number | null>(null);
   const number = new Intl.NumberFormat(isAr ? 'ar-EG' : 'en');
 
   useEffect(() => {
     const controller = new AbortController();
     setReport(null);
-    setError(false);
+    setError(null);
     loadAdReport(event.id, days, controller.signal)
       .then(data => { if (!controller.signal.aborted) setReport(data); })
-      .catch(() => { if (!controller.signal.aborted) setError(true); });
+      .catch(error => {
+        if (!controller.signal.aborted) setError(error instanceof AdReportLoadError ? error.status : 0);
+      });
     return () => controller.abort();
   }, [event.id, days, retry]);
 
   const headings = isAr
-    ? ['المصدر', 'المشاهدات', 'ضغطات واتساب', 'ضغطات الاتصال', 'ضغطات الحجز']
-    : ['Source', 'Views', 'WhatsApp clicks', 'Call clicks', 'Booking clicks'];
+    ? ['المصدر', 'مشاهدات الإعلان', 'ضغطات واتساب', 'ضغطات الاتصال', 'ضغطات الحجز']
+    : ['Source', 'Ad views', 'WhatsApp clicks', 'Call clicks', 'Booking clicks'];
+  const totalViews = adReportSources.reduce((total, source) => total + (report?.[`${source}_visit`] || 0), 0);
+  const errorMessage = error === 401
+    ? (isAr ? 'سجّل الدخول بحساب الإدارة من جديد، ثم افتح التقرير.' : 'Sign in again with your admin account, then reopen the report.')
+    : error === 403
+      ? (isAr ? 'التقرير متاح لحساب الإدارة الموثّق.' : 'This report is available to verified admin accounts.')
+      : (isAr ? 'تعذّر تحميل التقرير. جرّب مرة أخرى.' : 'The report could not be loaded. Try again.');
   const BackArrow = isAr ? ArrowRight : ArrowLeft;
 
   return (
@@ -64,31 +72,37 @@ export const AdReportPage: React.FC<{ event: DanceEvent; onBack: () => void }> =
         </label>
       </div>
       <p className="text-sm text-neutral-600 dark:text-neutral-300">
-        {isAr ? 'تبدأ الأرقام من وقت تفعيل التتبّع. ضغطات الحجز تقيس استخدام الزر، والحجوزات المؤكدة تُقاس بشكل مستقل.' : 'Counts start when tracking is enabled. Booking clicks measure button presses. Confirmed bookings are measured separately.'}
+        {isAr ? 'تُحتسب المشاهدة بمجرد ظهور الإعلان على شاشة الزائر، حتى لو ما ضغطش على أي زر. الأرقام تبدأ من وقت تفعيل التتبّع.' : 'A view is counted when the ad appears on a visitor’s screen, even if they never click. Counts start when tracking is enabled.'}
       </p>
-      {error ? (
+      {error !== null ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-neutral-300 p-4 dark:border-neutral-700">
-          <span>{isAr ? 'تعذّر تحميل التقرير.' : 'The report could not be loaded.'}</span>
+          <span>{errorMessage}</span>
           <button type="button" className="font-bold underline" onClick={() => setRetry(attempt => attempt + 1)}>{isAr ? 'إعادة المحاولة' : 'Try again'}</button>
         </div>
       ) : !report ? (
         <p role="status">{isAr ? 'جارٍ تحميل التقرير…' : 'Loading report…'}</p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-          <table aria-label={isAr ? 'مصادر زيارات الإعلان وإجراءاته' : 'Ad sources and actions'} className="w-full min-w-[34rem] text-start text-sm">
-            <thead className="bg-neutral-100 dark:bg-neutral-800">
-              <tr>{headings.map(heading => <th key={heading} scope="col" className="px-3 py-3 text-start font-bold">{heading}</th>)}</tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-              {adReportSources.map(source => (
-                <tr key={source}>
-                  <th scope="row" className="px-3 py-2 text-start font-medium">{sourceLabels[source][isAr ? 0 : 1]}</th>
-                  {adReportActions.map(action => <td key={action} className="px-3 py-2 tabular-nums">{number.format(report[`${source}_${action}`] || 0)}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100">
+            <strong className="text-xl tabular-nums">{number.format(totalViews)}</strong>
+            <span className="text-sm font-bold">{isAr ? 'إجمالي مشاهدات الإعلان في الفترة' : 'Total ad views in this period'}</span>
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+            <table aria-label={isAr ? 'مصادر زيارات الإعلان وإجراءاته' : 'Ad sources and actions'} className="w-full min-w-[34rem] text-start text-sm">
+              <thead className="bg-neutral-100 dark:bg-neutral-800">
+                <tr>{headings.map(heading => <th key={heading} scope="col" className="px-3 py-3 text-start font-bold">{heading}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                {adReportSources.map(source => (
+                  <tr key={source}>
+                    <th scope="row" className="px-3 py-2 text-start font-medium">{sourceLabels[source][isAr ? 0 : 1]}</th>
+                    {adReportActions.map(action => <td key={action} className="px-3 py-2 tabular-nums">{number.format(report[`${source}_${action}`] || 0)}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );

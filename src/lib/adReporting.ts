@@ -7,9 +7,11 @@ const visits = new Set<string>();
 
 export function recordAdReportAction(eventId: string, action: 'visit' | 'whatsapp' | 'phone' | 'booking') {
   const landingEventId = requestedEventId();
-  const source = landingEventId === eventId
-    ? classifyAdSource(window.location.search, document.referrer)
-    : 'internal';
+  const referrer = document.referrer;
+  const cameFromCityEve = referrer.startsWith(`${window.location.origin}/`);
+  const source = (landingEventId && landingEventId !== eventId) || cameFromCityEve
+    ? 'internal'
+    : classifyAdSource(window.location.search, referrer);
   const visitKey = JSON.stringify([eventId, source]);
 
   if (action === 'visit') {
@@ -45,17 +47,32 @@ export function useAdReportVisit(eventId: string, enabled: boolean) {
   return ref;
 }
 
+export class AdReportLoadError extends Error {
+  constructor(public readonly status: number) {
+    super('Ad report could not be loaded');
+  }
+}
+
 export async function loadAdReport(eventId: string, days: number, signal: AbortSignal): Promise<Record<string, number>> {
+  await auth.authStateReady();
+  signal.throwIfAborted();
   const user = auth.currentUser;
-  if (!user) throw new Error('UNAUTHENTICATED');
-  const token = await user.getIdToken();
+  if (!user) throw new AdReportLoadError(401);
+
+  let response = await requestAdReport(eventId, days, await user.getIdToken(), signal);
+  if (response.status === 401 && auth.currentUser === user) {
+    response = await requestAdReport(eventId, days, await user.getIdToken(true), signal);
+  }
+  if (!response.ok) throw new AdReportLoadError(response.status);
+  return (await response.json()).totals;
+}
+
+function requestAdReport(eventId: string, days: number, token: string, signal: AbortSignal) {
   // POST keeps private report responses outside the PWA's GET cache.
-  const response = await fetch('/api/ad-report', {
+  return fetch('/api/ad-report', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ eventId, action: 'summary', days }),
     signal,
   });
-  if (!response.ok) throw new Error('AD_REPORT_UNAVAILABLE');
-  return (await response.json()).totals;
 }

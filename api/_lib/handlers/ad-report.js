@@ -2,7 +2,14 @@ import { isEventExpired } from '../../../shared/eventExpiry.js';
 import { admin, getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 import { adReportActions, adReportSources } from '../../../shared/adReporting.js';
 
-const cairoDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' });
+const cairoDate = new Intl.DateTimeFormat('en', {
+  timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit',
+});
+
+function cairoDay(now = new Date()) {
+  const parts = Object.fromEntries(cairoDate.formatToParts(now).map(({ type, value }) => [type, value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
 const validEventId = id => typeof id === 'string' && id.length > 0 && id.length <= 150 && id !== '.' && id !== '..' && !/[\\/\u0000-\u001f]/.test(id);
 
 export default async function adReport(req, res) {
@@ -21,7 +28,7 @@ export default async function adReport(req, res) {
       const db = getAdminDb();
       const event = (await db.collection('events').doc(eventId).get()).data();
       if (!event || event.isPaused || event.isEmpty || event.isArchived || event.isExpiredBy15DaysRule || isEventExpired(event.eventDate)) return res.status(204).end();
-      const day = cairoDate.format(new Date());
+      const day = cairoDay();
       const field = `${source}_${action}`;
       await db.collection('ad_reports').doc(eventId).collection('days').doc(day).set({
         [field]: admin.firestore.FieldValue.increment(1),
@@ -34,18 +41,23 @@ export default async function adReport(req, res) {
   }
 
   try {
-    const actor = await verifyRequestUser(req).catch(() => null);
+    const actor = await verifyRequestUser(req).catch(error => {
+      if (error.message === 'UNAUTHENTICATED' || [
+        'auth/argument-error', 'auth/id-token-expired', 'auth/id-token-revoked', 'auth/invalid-id-token',
+      ].includes(error.code)) return null;
+      throw error;
+    });
     if (!actor) return res.status(401).end();
-    const db = getAdminDb();
     const owner = String(process.env.ADMIN_EMAIL || 'waelvts@gmail.com').trim().toLowerCase();
     const isOwner = actor.email_verified && actor.email?.trim().toLowerCase() === owner;
     if (!isOwner && actor.admin !== true) {
       return res.status(403).end();
     }
 
+    const db = getAdminDb();
     const days = requestedDays === 30 ? 30 : 7;
     // Move across calendar days using noon UTC, which also falls on that day in Cairo.
-    const today = new Date(`${cairoDate.format(new Date())}T12:00:00Z`);
+    const today = new Date(`${cairoDay()}T12:00:00Z`);
     today.setUTCDate(today.getUTCDate() - days + 1);
     const start = today.toISOString().slice(0, 10);
     const snapshot = await db.collection('ad_reports').doc(eventId).collection('days')
