@@ -1,3 +1,4 @@
+import { adReportRegion, adReportRegionLabels } from '../../../shared/adReportRegions.js';
 import { isEventExpired } from '../../../shared/eventExpiry.js';
 import { admin, getAdminDb, verifyRequestUser } from '../firebaseAdmin.js';
 import { hasAdReportAccess } from '../adReportAccess.js';
@@ -31,9 +32,12 @@ export default async function adReport(req, res) {
       if (!event || event.isPaused || event.isEmpty || event.isArchived || event.isExpiredBy15DaysRule || isEventExpired(event.eventDate)) return res.status(204).end();
       const day = cairoDay();
       const field = `${source}_${action}`;
-      await db.collection('ad_reports').doc(eventId).collection('days').doc(day).set({
-        [field]: admin.firestore.FieldValue.increment(1),
-      }, { merge: true });
+      const count = admin.firestore.FieldValue.increment(1);
+      const update = { [field]: count };
+      if (action === 'visit') {
+        update.regions = { [source]: { [adReportRegion(req.headers)]: count } };
+      }
+      await db.collection('ad_reports').doc(eventId).collection('days').doc(day).set(update, { merge: true });
       return res.status(204).end();
     } catch (error) {
       console.error('Ad report write failed:', error.message);
@@ -59,9 +63,15 @@ export default async function adReport(req, res) {
     const snapshot = await db.collection('ad_reports').doc(eventId).collection('days')
       .where(admin.firestore.FieldPath.documentId(), '>=', start).limit(days).get();
     const totals = {};
+    const regions = {};
     for (const day of snapshot.docs) {
       const counts = day.data();
       for (const source of adReportSources) {
+        for (const [region, count] of Object.entries(counts.regions?.[source] ?? {})) {
+          if (!Object.hasOwn(adReportRegionLabels, region) || !Number.isSafeInteger(count) || count <= 0) continue;
+          const sourceRegions = regions[source] ??= {};
+          sourceRegions[region] = (sourceRegions[region] || 0) + count;
+        }
         for (const action of adReportActions) {
           const field = `${source}_${action}`;
           const count = counts[field];
@@ -69,7 +79,7 @@ export default async function adReport(req, res) {
         }
       }
     }
-    return res.status(200).json({ totals });
+    return res.status(200).json({ totals, regions });
   } catch (error) {
     console.error('Ad report read failed:', error.message);
     return res.status(503).end();

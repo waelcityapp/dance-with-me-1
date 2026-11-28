@@ -53,7 +53,12 @@ export class AdReportLoadError extends Error {
   }
 }
 
-export async function loadAdReport(eventId: string, days: number, signal: AbortSignal): Promise<Record<string, number>> {
+export interface AdReport {
+  totals: Record<string, number>;
+  regions: Record<string, Record<string, number>>;
+}
+
+export async function loadAdReport(eventId: string, days: number, signal: AbortSignal): Promise<AdReport> {
   await auth.authStateReady();
   signal.throwIfAborted();
   const user = auth.currentUser;
@@ -64,7 +69,8 @@ export async function loadAdReport(eventId: string, days: number, signal: AbortS
     response = await requestAdReport(eventId, days, await user.getIdToken(true), signal);
   }
   if (!response.ok) throw new AdReportLoadError(response.status);
-  return (await response.json()).totals;
+  const { totals, regions = {} } = await response.json();
+  return { totals, regions };
 }
 
 function requestAdReport(eventId: string, days: number, token: string, signal: AbortSignal) {
